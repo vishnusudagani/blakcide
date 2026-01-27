@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BLAKCIDE | Coming Soon</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Sacramento&family=Inter:wght@200;300;400&display=swap" rel="stylesheet">
+
+    <style>
+        /* --- 1. SETTING THE STAGE (Light & Airy) --- */
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #F0F4F8; /* Soft Cloud White Fallback */
+            overflow: hidden;
+            font-family: 'Inter', sans-serif;
+        }
+
+        /* --- 2. THE THERAPY ENGINE (Canvas) --- */
+        canvas {
+            display: block;
+            width: 100vw;
+            height: 100vh;
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 1;
+        }
+
+        /* Soft Vignette (White glow instead of dark shadow) */
+        .vignette {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at 50% 50%, transparent 40%, rgba(255,255,255,0.8) 100%);
+            z-index: 2;
+            pointer-events: none;
+        }
+
+        /* --- 3. TYPOGRAPHY --- */
+        #content-layer {
+            position: relative;
+            z-index: 10;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+        }
+
+        /* HANDWRITING (The "Hello" Vibe) */
+        .handwriting {
+            position: absolute;
+            font-family: 'Sacramento', cursive;
+            font-size: 4rem; /* Large and friendly */
+            color: #333; /* Dark Ink color */
+            opacity: 0;
+            transform: translateY(10px) rotate(-5deg); /* Slight tilt like real writing */
+            transition: all 1.5s ease-out;
+            z-index: 20;
+        }
+        
+        /* Simulating the "Write-on" wipe effect using clip-path */
+        .handwriting.writing {
+            opacity: 1;
+            transform: translateY(0) rotate(-5deg);
+        }
+
+        /* MAIN BRAND CONTAINER */
+        .brand-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            opacity: 0;
+            filter: blur(10px);
+            transform: scale(0.95);
+            transition: all 2.5s cubic-bezier(0.2, 0.8, 0.2, 1);
+        }
+
+        .brand-container.visible {
+            opacity: 1;
+            filter: blur(0px);
+            transform: scale(1);
+        }
+
+        .brand-name {
+            font-size: 10vw;
+            font-weight: 800; /* Thicker for impact */
+            letter-spacing: 0.1em;
+            margin: 0;
+            line-height: 1;
+            
+            /* LIQUID MERCURY GRADIENT (Dark Chrome) */
+            /* This ensures contrast against the light pastel background */
+            background: linear-gradient(135deg, #2a2a2a 0%, #555 40%, #2a2a2a 60%, #000 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            
+            filter: drop-shadow(0 10px 20px rgba(0,0,0,0.1));
+        }
+
+        .tagline {
+            margin-top: 1.5rem;
+            font-size: 1.5rem; /* Prominent size */
+            font-weight: 400; /* Readable weight */
+            letter-spacing: 0.05em;
+            color: #4a4a4a; /* Dark Grey for readability */
+            max-width: 80%;
+            line-height: 1.4;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 1.5s ease 0.5s; /* Delay slightly after logo */
+        }
+
+        .tagline.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* FOOTER */
+        .footer-status {
+            position: absolute;
+            bottom: 40px;
+            font-size: 0.9rem;
+            letter-spacing: 0.2em;
+            color: #666; /* Subtle Grey */
+            text-transform: uppercase;
+            font-weight: 300;
+            opacity: 0;
+            transition: opacity 2s ease;
+        }
+        .footer-status.visible { opacity: 1; }
+
+    </style>
+</head>
+<body>
+
+    <canvas id="glcanvas"></canvas>
+    
+    <div class="vignette"></div>
+
+    <div id="content-layer">
+        
+        <div class="handwriting" id="intro-msg">welcome to</div>
+        
+        <div class="brand-container" id="main-msg">
+            <h1 class="brand-name">BLAKCIDE</h1>
+            <div class="tagline" id="tagline-msg">a place for thoughts you carry alone</div>
+        </div>
+
+        <div class="footer-status" id="footer-msg">being crafted for you, available soon</div>
+    </div>
+
+    <script id="vertex-shader" type="x-shader/x-vertex">
+        attribute vec2 position;
+        void main() { gl_Position = vec4(position, 0.0, 1.0); }
+    </script>
+
+    <script id="fragment-shader" type="x-shader/x-fragment">
+        precision highp float;
+        uniform vec2 u_resolution;
+        uniform float u_time;
+
+        // NOISE FUNCTIONS
+        vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
+        vec2 mod289(vec2 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
+        vec3 permute(vec3 x) { return mod289(((x*34.0)+1.0)*x); }
+        float snoise(vec2 v) {
+            const vec4 C = vec4(0.211324865405187, 0.366025403784439, -0.577350269189626, 0.024390243902439);
+            vec2 i  = floor(v + dot(v, C.yy) );
+            vec2 x0 = v - i + dot(i, C.xx);
+            vec2 i1;
+            i1 = (x0.x > x0.y) ? vec2(1.0, 0.0) : vec2(0.0, 1.0);
+            vec4 x12 = x0.xyxy + C.xxzz;
+            x12.xy -= i1;
+            i = mod289(i);
+            vec3 p = permute( permute( i.y + vec3(0.0, i1.y, 1.0 )) + i.x + vec3(0.0, i1.x, 1.0 ));
+            vec3 m = max(0.5 - vec3(dot(x0,x0), dot(x12.xy,x12.xy), dot(x12.zw,x12.zw)), 0.0);
+            m = m*m ;
+            m = m*m ;
+            vec3 x = 2.0 * fract(p * C.www) - 1.0;
+            vec3 h = abs(x) - 0.5;
+            vec3 ox = floor(x + 0.5);
+            vec3 a0 = x - ox;
+            m *= 1.79284291400159 - 0.85373472095314 * ( a0*a0 + h*h );
+            vec3 g;
+            g.x  = a0.x  * x0.x  + h.x  * x0.y;
+            g.yz = a0.yz * x12.xz + h.yz * x12.yw;
+            return 130.0 * dot(m, g);
+        }
+
+        // DOMAIN WARPING (Fluid Clouds)
+        float fbm(vec2 st) {
+            float value = 0.0;
+            float amp = 0.5;
+            for (int i = 0; i < 4; i++) {
+                value += amp * snoise(st);
+                st *= 2.0;
+                amp *= 0.5;
+            }
+            return value;
+        }
+        
+        float pattern(in vec2 p, out vec2 q, out vec2 r, float t) {
+            q.x = fbm(p + vec2(0.0, 0.0) + 0.2*t);
+            q.y = fbm(p + vec2(5.2, 1.3) + 0.3*t);
+            r.x = fbm(p + 4.0*q + vec2(1.7, 9.2) + 0.15*t);
+            r.y = fbm(p + 4.0*q + vec2(8.3, 2.8) + 0.126*t);
+            return fbm(p + 4.0*r);
+        }
+
+        void main() {
+            vec2 st = gl_FragCoord.xy / u_resolution.xy;
+            st.x *= u_resolution.x / u_resolution.y;
+            
+            // Very Slow, Breathing Movement
+            float t = u_time * 0.08;
+            
+            vec2 q, r;
+            float density = pattern(st * 1.0, q, r, t);
+
+            // --- THERAPY COLOR PALETTE (Light Mode) ---
+            
+            // Base: Soft Cloud White / Very Pale Blue
+            vec3 baseColor = vec3(0.96, 0.98, 1.0);
+            
+            // Therapy Colors (Active)
+            vec3 calmBlue = vec3(0.7, 0.85, 0.95);  // Peace/Clarity
+            vec3 softPink = vec3(1.0, 0.85, 0.88);  // Comfort/Love
+            vec3 lavender = vec3(0.9, 0.85, 1.0);   // Spirit/Calm
+
+            // Cycle through emotions gently
+            float cycle = sin(t * 0.5) * 0.5 + 0.5;
+            vec3 activeColor = mix(calmBlue, softPink, cycle);
+            
+            // Mix: Instead of fading to black, we fade to color from white
+            // "density" determines where the color "ink" is in the water
+            vec3 color = mix(baseColor, activeColor, density * 1.2);
+            
+            // Add subtle "Sunlight" highlights (White)
+            color += mix(vec3(0.0), vec3(0.1, 0.1, 0.1), length(r) * 0.1);
+
+            gl_FragColor = vec4(color, 1.0);
+        }
+    </script>
+
+    <script>
+        // --- 1. WEBGL ENGINE ---
+        const canvas = document.getElementById("glcanvas");
+        const gl = canvas.getContext("webgl");
+
+        function resize() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            gl.viewport(0, 0, canvas.width, canvas.height);
+        }
+        window.addEventListener("resize", resize);
+        resize();
+
+        function createShader(gl, type, src) {
+            const s = gl.createShader(type);
+            gl.shaderSource(s, src);
+            gl.compileShader(s);
+            if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) console.error(gl.getShaderInfoLog(s));
+            return s;
+        }
+        
+        const prog = gl.createProgram();
+        gl.attachShader(prog, createShader(gl, gl.VERTEX_SHADER, document.getElementById("vertex-shader").text));
+        gl.attachShader(prog, createShader(gl, gl.FRAGMENT_SHADER, document.getElementById("fragment-shader").text));
+        gl.linkProgram(prog);
+        gl.useProgram(prog);
+
+        const posLoc = gl.getAttribLocation(prog, "position");
+        gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, -1,1, -1,1, 1,-1, 1,1]), gl.STATIC_DRAW);
+        gl.enableVertexAttribArray(posLoc);
+        gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, 0, 0);
+
+        const uRes = gl.getUniformLocation(prog, "u_resolution");
+        const uTime = gl.getUniformLocation(prog, "u_time");
+
+        function render(time) {
+            gl.uniform2f(uRes, canvas.width, canvas.height);
+            gl.uniform1f(uTime, time * 0.001);
+            gl.drawArrays(gl.TRIANGLES, 0, 6);
+            requestAnimationFrame(render);
+        }
+        requestAnimationFrame(render);
+
+        // --- 2. THE STORY SEQUENCE ---
+        const intro = document.getElementById('intro-msg');
+        const main = document.getElementById('main-msg');
+        const tagline = document.getElementById('tagline-msg');
+        const footer = document.getElementById('footer-msg');
+
+        // 1.0s: "Welcome to" writes on
+        setTimeout(() => {
+            intro.classList.add('writing');
+        }, 1000);
+        
+        // 3.5s: "Welcome to" fades out
+        setTimeout(() => {
+            intro.style.opacity = 0;
+            intro.style.transform = "translateY(-20px) rotate(-5deg)"; // Float up away
+        }, 3500);
+
+        // 4.5s: BLAKCIDE Blooms
+        setTimeout(() => {
+            main.classList.add('visible');
+        }, 4500);
+
+        // 5.0s: Tagline slides up (handled by CSS transition delay)
+        setTimeout(() => {
+            tagline.classList.add('visible');
+        }, 5000);
+
+        // 7.0s: Footer appears
+        setTimeout(() => {
+            footer.classList.add('visible');
+        }, 7000);
+
+    </script>
+</body>
+</html>

@@ -1,0 +1,125 @@
+:root {
+    --bg-base: #fdfbfb;
+    /* Pastel Palette */
+    --sky: #e0f2f1;
+    --water: #e3f2fd;
+    --fire: #fff1f0;
+    --air: #f5f5f5;
+    --earth: #f1f8e9;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body, html {
+    width: 100%; height: 100%;
+    font-family: 'Inter', sans-serif;
+    background-color: var(--bg-base);
+}
+
+/* The Inversion Logic */
+.reveal-zone {
+    mix-blend-mode: difference; /* This creates the stunning "Invert" effect */
+    z-index: 10;
+    text-align: center;
+}
+
+/* Pastel Nebula Background */
+.nebula-canvas {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    transition: background 2s cubic-bezier(0.23, 1, 0.32, 1);
+    background: radial-gradient(circle at 50% 50%, var(--sky), #ffffff);
+}
+
+.hero-screen {
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: sticky;
+    top: 0;
+}
+
+/* 1. Ink Bleed Animation */
+.welcome-bleed {
+    font-family: 'Dancing Script', cursive;
+    font-size: 3.5rem;
+    color: #fff; /* Appears inverted against pastel */
+    opacity: 0;
+    filter: blur(10px);
+    display: block;
+    margin-bottom: -10px;
+    animation: inkBleed 3s forwards 0.5s;
+}
+
+@keyframes inkBleed {
+    to { opacity: 1; filter: blur(0); letter-spacing: 2px; }
+}
+
+/* 2. Letter Bloom Animation */
+.brand-bloom {
+    display: flex;
+    justify-content: center;
+    color: #fff;
+    font-size: clamp(3rem, 15vw, 10rem);
+    letter-spacing: -5px; /* Tight spacing for prominence */
+}
+
+.brand-bloom span {
+    display: inline-block;
+    opacity: 0;
+    transform: scale(0) translateY(50px);
+    filter: blur(20px);
+}
+
+.brand-bloom.active span {
+    animation: bloomEffect 1.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Staggering the letters for the "Bloom" feel */
+.brand-bloom span:nth-child(1) { animation-delay: 2.0s; }
+.brand-bloom span:nth-child(2) { animation-delay: 2.1s; }
+.brand-bloom span:nth-child(3) { animation-delay: 2.2s; }
+.brand-bloom span:nth-child(4) { animation-delay: 2.3s; }
+.brand-bloom span:nth-child(5) { animation-delay: 2.4s; }
+.brand-bloom span:nth-child(6) { animation-delay: 2.5s; }
+.brand-bloom span:nth-child(7) { animation-delay: 2.6s; }
+.brand-bloom span:nth-child(8) { animation-delay: 2.7s; }
+
+@keyframes bloomEffect {
+    to { opacity: 1; transform: scale(1) translateY(0); filter: blur(0); }
+}
+
+.tagline {
+    color: #fff;
+    font-size: 1.2rem;
+    letter-spacing: 2px;
+    opacity: 0;
+    margin-top: 20px;
+    transition: opacity 2s ease 3.5s;
+}
+
+.tagline.visible { opacity: 0.6; }
+
+/* 3. Static Breath Footer */
+.static-breath {
+    position: absolute;
+    bottom: 50px;
+    width: 100%;
+}
+
+.crafting-label {
+    text-transform: uppercase;
+    letter-spacing: 10px;
+    font-size: 0.7rem;
+    color: #fff;
+    animation: breathPulse 4s ease-in-out infinite;
+}
+
+@keyframes breathPulse {
+    0%, 100% { opacity: 0.2; }
+    50% { opacity: 0.6; }
+}
+
+.scroll-spacer { height: 100vh; }
