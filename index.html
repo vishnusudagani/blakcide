@@ -2,21 +2,23 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>BLAKCIDE | The Companion</title>
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,400&family=Outfit:wght@100;200;300;400&family=Sacramento&display=swap" rel="stylesheet">
+    
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
     <style>
-        /* --- 1. CORE --- */
+        /* --- 1. CORE LAYOUT --- */
         body, html {
             margin: 0;
             padding: 0;
             width: 100%;
             height: 100%;
-            background-color: #F0F4F8;
+            background: #F0F4F8;
             overflow: hidden;
             font-family: 'Outfit', sans-serif;
             color: #333;
@@ -31,7 +33,6 @@
             z-index: 10;
         }
 
-        /* --- 2. BACKGROUND --- */
         canvas {
             display: block;
             width: 100vw;
@@ -42,55 +43,95 @@
             z-index: 1;
         }
 
-        /* --- 3. SECTIONS --- */
+        /* --- 2. THE GRID SECTION (Prevents Overlap) --- */
         .section {
             height: 100vh;
             width: 100%;
             scroll-snap-align: start;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
+            /* Use Grid to physically separate content */
+            display: grid;
+            grid-template-columns: 1fr minmax(300px, 800px) 1fr;
+            grid-template-rows: 1fr;
             align-items: center;
-            text-align: center;
+            justify-items: center;
             position: relative;
             padding: 2rem;
             box-sizing: border-box;
             overflow: hidden;
         }
 
-        .content-wrapper {
+        /* The Content sits in the center column */
+        .content-column {
+            grid-column: 2;
             opacity: 0;
             transform: translateY(30px);
             transition: all 1s ease-out;
-            max-width: 900px;
             width: 100%;
             display: flex;
             flex-direction: column;
             align-items: center;
             z-index: 20;
-            position: relative;
         }
 
-        .section.active .content-wrapper {
+        .section.active .content-column {
             opacity: 1;
             transform: translateY(0);
+        }
+
+        /* --- 3. CHAT BUBBLES (Grid Based) --- */
+        .chat-bubble-container {
+            /* Bubbles sit in the side columns */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            height: 100%;
+            pointer-events: none; /* Let clicks pass through empty space */
+        }
+        
+        /* Specific positioning in grid */
+        .left-col { grid-column: 1; }
+        .right-col { grid-column: 3; }
+
+        .chat-bubble {
+            background: #fff;
+            padding: 1.5rem 2rem;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.1);
+            font-family: 'Sacramento', cursive;
+            font-size: 1.8rem;
+            color: #444;
+            z-index: 100;
+            max-width: 250px;
+            text-align: center;
+            border-radius: 40px;
+            opacity: 0;
+            transform: scale(0.5);
+            transition: all 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+            pointer-events: auto;
+        }
+
+        .section.active .chat-bubble {
+            opacity: 1;
+            transform: scale(1);
+            transition-delay: 0.3s;
         }
 
         /* --- 4. TYPOGRAPHY --- */
         .handwritten {
             font-family: 'Sacramento', cursive;
-            font-size: 3.5rem;
+            font-size: clamp(2.5rem, 4vw, 3.5rem);
             color: #666;
             margin-bottom: 0.5rem;
             transform: rotate(-3deg);
+            line-height: 1;
         }
 
         .brand-name {
             font-family: 'Outfit', sans-serif;
-            font-size: 11vw;
-            font-weight: 100; /* ULTRA THIN & ELEGANT */
-            letter-spacing: 0.2em; /* WIDE SPACING */
-            line-height: 1;
+            font-size: clamp(3.5rem, 12vw, 10rem);
+            font-weight: 100; /* Ultra Thin */
+            letter-spacing: 0.15em;
+            line-height: 1.1;
             margin: 0;
             color: #111;
             text-transform: uppercase;
@@ -98,7 +139,7 @@
 
         .headline {
             font-family: 'Cormorant Garamond', serif;
-            font-size: 3.5rem;
+            font-size: clamp(2.2rem, 5vw, 3.5rem);
             font-weight: 300;
             color: #111;
             margin-bottom: 1rem;
@@ -106,49 +147,17 @@
         }
 
         .subtext {
-            font-size: 1.25rem;
+            font-size: clamp(1rem, 1.2vw, 1.25rem);
             line-height: 1.6;
-            max-width: 650px;
             color: #444;
             font-weight: 300;
             margin-bottom: 2rem;
+            padding: 0 1rem;
         }
 
-        /* --- 5. BUBBLES (Z-Index Fixed) --- */
-        .chat-bubble {
-            position: absolute;
-            background: #fff;
-            padding: 1.5rem 2rem;
-            border-radius: 40px;
-            box-shadow: 0 15px 40px rgba(0,0,0,0.08);
-            font-family: 'Sacramento', cursive;
-            font-size: 1.8rem;
-            color: #555;
-            
-            /* KEY FIX: Z-Index higher than content wrapper/glass */
-            z-index: 50;
-            
-            opacity: 0;
-            transform: scale(0.5) translateY(50px);
-            transition: all 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            max-width: 280px;
-            text-align: left;
-        }
-
-        .section.active .chat-bubble {
-            opacity: 1;
-            transform: scale(1) translateY(0);
-            transition-delay: 0.4s;
-        }
-
-        /* Positions */
-        .pos-left { bottom: 15%; left: 5%; border-radius: 40px 40px 40px 0; }
-        .pos-right { top: 15%; right: 5%; border-radius: 40px 40px 0 40px; }
-        .pos-center { top: 12%; left: 50%; transform: translateX(-50%); border-radius: 40px; }
-
-        /* --- 6. GLASS CARDS --- */
+        /* --- 5. GLASS CARDS --- */
         .glass-panel {
-            background: rgba(255, 255, 255, 0.45);
+            background: rgba(255, 255, 255, 0.5);
             backdrop-filter: blur(20px);
             -webkit-backdrop-filter: blur(20px);
             border: 1px solid rgba(255, 255, 255, 0.8);
@@ -157,7 +166,7 @@
             box-shadow: 0 20px 60px rgba(0,0,0,0.03);
             width: 100%;
             position: relative;
-            z-index: 10; /* Lower than bubble */
+            z-index: 10;
         }
 
         .feature-grid {
@@ -166,53 +175,30 @@
             gap: 2rem;
             text-align: left;
         }
-        
-        .feature-item h3 { font-size: 1.5rem; font-weight: 400; margin-bottom: 0.5rem; color: #222; }
+        .feature-item h3 { font-size: 1.4rem; font-weight: 400; margin-bottom: 0.5rem; color: #222; }
         .feature-item p { font-size: 1rem; color: #555; font-weight: 300; }
 
-        /* --- 7. NAV DOTS --- */
-        .nav-dots {
-            position: fixed;
-            right: 25px;
-            top: 50%;
-            transform: translateY(-50%);
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-            z-index: 100;
-        }
-
-        .dot {
-            width: 8px; height: 8px;
-            background: rgba(0,0,0,0.2);
-            border-radius: 50%;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-
-        .dot.active { background: #222; transform: scale(1.4); }
-
-        /* --- 8. FORM --- */
+        /* --- 6. FORM --- */
         input {
             width: 100%;
-            padding: 1.5rem;
+            padding: 1.2rem;
             background: rgba(255,255,255,0.7);
             border: 1px solid #ddd;
-            border-radius: 15px;
-            font-size: 1.2rem;
+            border-radius: 12px;
+            font-size: 1rem;
             font-family: 'Outfit', sans-serif;
             margin-bottom: 1rem;
             box-sizing: border-box;
             transition: 0.3s;
         }
-        input:focus { background: white; outline: none; border-color: #999; }
+        input:focus { background: white; outline: none; border-color: #888; }
         
         button {
             width: 100%;
-            padding: 1.5rem;
+            padding: 1.2rem;
             background: #222;
             color: #fff;
-            font-size: 1.1rem;
+            font-size: 1rem;
             text-transform: uppercase;
             letter-spacing: 0.2em;
             border-radius: 50px;
@@ -222,12 +208,49 @@
             font-weight: 300;
         }
         button:hover { background: #000; letter-spacing: 0.25em; }
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
 
-        @media (max-width: 768px) {
-            .brand-name { font-size: 15vw; letter-spacing: 0.1em; }
-            .feature-grid { grid-template-columns: 1fr; }
-            .chat-bubble { display: none; /* Cleaner mobile view */ }
-            .section { padding: 1.5rem; }
+        /* --- 7. MOBILE RESPONSIVE (Stacking) --- */
+        @media (max-width: 1024px) {
+            .section {
+                /* Switch to vertical stack */
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                padding: 1.5rem;
+            }
+
+            .content-column {
+                order: 2; /* Content second */
+                width: 100%;
+            }
+
+            .chat-bubble-container {
+                display: none; /* Hide side containers */
+            }
+
+            /* Create a mobile-only bubble logic inside content */
+            .mobile-bubble {
+                display: block !important;
+                background: #fff;
+                padding: 1rem 1.5rem;
+                border-radius: 30px;
+                box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+                font-family: 'Sacramento', cursive;
+                font-size: 1.4rem;
+                color: #555;
+                margin-bottom: 1.5rem;
+                max-width: 90%;
+            }
+
+            .feature-grid { grid-template-columns: 1fr; gap: 1.5rem; }
+            .glass-panel { padding: 1.5rem; border-radius: 20px; }
+            .brand-name { font-size: 14vw; }
+        }
+
+        /* Hide mobile bubbles on desktop */
+        @media (min-width: 1025px) {
+            .mobile-bubble { display: none !important; }
         }
     </style>
 </head>
@@ -235,124 +258,137 @@
 
     <canvas id="glcanvas"></canvas>
     
-    <div class="nav-dots">
-        <div class="dot active" onclick="scrollToSec(0)"></div>
-        <div class="dot" onclick="scrollToSec(1)"></div>
-        <div class="dot" onclick="scrollToSec(2)"></div>
-        <div class="dot" onclick="scrollToSec(3)"></div>
-        <div class="dot" onclick="scrollToSec(4)"></div>
-        <div class="dot" onclick="scrollToSec(5)"></div>
-    </div>
-
     <div id="scroll-container">
         
         <div class="section active" id="sec-0">
-            <div class="content-wrapper">
+            <div class="content-column">
                 <div class="handwritten">welcome to</div>
                 <h1 class="brand-name">BLAKCIDE</h1>
-                <p class="subtext" style="font-size: 1.4rem; margin-top: 1.5rem; letter-spacing: 0.05em;">
+                <p class="subtext" style="margin-top: 1.5rem; opacity: 0.8;">
                     A sanctuary for the thoughts you carry alone.
                 </p>
             </div>
-            <div style="position: absolute; bottom: 30px; opacity: 0.4; font-weight: 200;">Scroll to begin</div>
+            <div style="position: absolute; bottom: 30px; opacity: 0.4; font-size: 0.8rem; letter-spacing: 0.1em;">SCROLL TO BEGIN</div>
         </div>
 
         <div class="section" id="sec-1">
-            <div class="chat-bubble pos-right">I'm here. 3 AM or 3 PM. Just talk.</div>
+            <div class="chat-bubble-container left-col"></div>
             
-            <div class="content-wrapper">
+            <div class="content-column">
+                <div class="mobile-bubble">I'm here. 3 AM or 3 PM. Just talk.</div>
+                
                 <div class="handwritten">always with you</div>
                 <h2 class="headline">The AI Companion</h2>
                 <div class="glass-panel">
                     <div class="feature-grid">
                         <div class="feature-item">
                             <h3>💬 Smart Chat</h3>
-                            <p>An intelligent companion that remembers your story. It doesn't just reply; it understands the context of your life.</p>
+                            <p>An intelligent companion that remembers your story. It doesn't just reply; it understands context.</p>
                         </div>
                         <div class="feature-item">
                             <h3>🗣️ Talk Mode</h3>
-                            <p>Too tired to type? Just speak. Have a natural, flowing voice conversation with an AI that listens with empathy.</p>
+                            <p>Too tired to type? Just speak. Have a natural, flowing voice conversation.</p>
                         </div>
                     </div>
                 </div>
+            </div>
+
+            <div class="chat-bubble-container right-col">
+                <div class="chat-bubble">I'm here. 3 AM or 3 PM. Just talk.</div>
             </div>
         </div>
 
         <div class="section" id="sec-2">
-            <div class="chat-bubble pos-left">You sound lighter today.</div>
+            <div class="chat-bubble-container left-col">
+                <div class="chat-bubble">You sound lighter today.</div>
+            </div>
 
-            <div class="content-wrapper">
+            <div class="content-column">
+                <div class="mobile-bubble">You sound lighter today.</div>
+
                 <div class="handwritten">release it</div>
                 <h2 class="headline">Speak. Snap. Write.</h2>
-                <p class="subtext">The Snap Journal captures moments. The Voice Journal captures feelings.</p>
                 <div class="glass-panel">
                     <div class="feature-grid">
                         <div class="feature-item">
                             <h3>🎙️ Voice Journal</h3>
-                            <p>We analyze the tone and cadence of your voice to track your emotional trends over time.</p>
+                            <p>We analyze the tone of your voice to track emotional trends.</p>
                         </div>
                         <div class="feature-item">
                             <h3>📸 Snap Journal</h3>
-                            <p>Capture a photo of your view. Sometimes a picture holds more emotion than a paragraph.</p>
+                            <p>Capture a photo of your view. Sometimes a picture holds more emotion than words.</p>
                         </div>
                     </div>
                 </div>
             </div>
+
+            <div class="chat-bubble-container right-col"></div>
         </div>
 
         <div class="section" id="sec-3">
-            <div class="chat-bubble pos-right">You don't have to explain. I know the context.</div>
+             <div class="chat-bubble-container left-col"></div>
 
-            <div class="content-wrapper">
+             <div class="content-column">
+                <div class="mobile-bubble">You don't have to explain. I know.</div>
+
                 <div class="handwritten">human touch</div>
                 <h2 class="headline">Real Human Listeners</h2>
                 <div class="glass-panel">
                     <p class="subtext" style="margin-bottom: 2rem;">
-                        When AI isn't enough, our trained listeners are ready. They are briefed on your journey, so you never have to start from zero.
+                        When AI isn't enough, our trained listeners are ready. Briefed on your journey, so no starting from zero.
                     </p>
                     <div class="feature-grid">
                         <div class="feature-item">
                             <h3>📩 Text Support</h3>
-                            <p>Chat with a real human for deeper empathy and understanding.</p>
+                            <p>Chat with a real human for deeper empathy.</p>
                         </div>
                         <div class="feature-item">
                             <h3>📞 Audio Call</h3>
-                            <p>Need to hear a human voice? Hop on a private, non-judgmental call.</p>
+                            <p>Need to hear a voice? Hop on a private call.</p>
                         </div>
                     </div>
                 </div>
             </div>
+
+            <div class="chat-bubble-container right-col">
+                <div class="chat-bubble">You don't have to explain. I know.</div>
+            </div>
         </div>
 
         <div class="section" id="sec-4">
-            <div class="chat-bubble pos-center">Let's take a break.</div>
+             <div class="chat-bubble-container left-col">
+                 <div class="chat-bubble">Let's take a break.</div>
+             </div>
 
-            <div class="content-wrapper">
+            <div class="content-column">
+                <div class="mobile-bubble">Let's take a break.</div>
+
                 <div class="handwritten">breathe</div>
                 <h2 class="headline">Mood Enhancement</h2>
                 <div class="glass-panel" style="max-width: 600px;">
                     <p class="subtext" style="margin-bottom: 0;">
-                        Feeling overwhelmed? Shift your focus with our curated <strong>Mini Games</strong> designed specifically for anxiety relief, focus, and mood elevation.
-                        <br><br>
-                        Simple interactions to reset your mind.
+                        Shift your focus with our curated <strong>Mini Games</strong> designed specifically for anxiety relief and focus.
+                        <br><br>Simple interactions to reset your mind.
                     </p>
                 </div>
             </div>
+             <div class="chat-bubble-container right-col"></div>
         </div>
 
         <div class="section" id="sec-5">
-            <div class="content-wrapper">
+            <div class="content-column">
                 <div class="glass-panel" id="signup-form" style="max-width: 500px;">
                     <p class="handwritten" style="font-size: 2.5rem;">one last thing...</p>
-                    <p style="margin-bottom: 2rem; font-size: 1.2rem;">Share thoughts you carry alone...</p>
+                    <p style="margin-bottom: 2rem; font-size: 1.1rem;">If you had a friend who never judged, what’s the one thing you’d let go of today?</p>
                     
                     <input type="text" id="vibe-input" placeholder="I wish I could say that...">
                     <input type="email" id="email-input" placeholder="Your email">
-                    <button onclick="finish()">Enter Sanctuary</button>
+                    <button id="submit-btn" onclick="submitForm()">Enter Sanctuary</button>
+                    <p id="error-msg" style="color: #d9534f; margin-top: 10px; display: none; font-size: 0.9rem;">Something went wrong.</p>
                 </div>
                 
                 <div id="success-msg" style="display:none;">
-                    <div class="handwritten" style="font-size: 6rem; color: #888;">✧</div>
+                    <div class="handwritten" style="font-size: 5rem; color: #888;">✧</div>
                     <h2 class="headline">You are heard.</h2>
                     <p class="subtext">I'll check in on you tomorrow.</p>
                 </div>
@@ -372,7 +408,6 @@
         uniform float u_time;
         uniform float u_scroll;
 
-        // --- NOISE ---
         vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
         vec2 mod289(vec2 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
         vec3 permute(vec3 x) { return mod289(((x*34.0)+1.0)*x); }
@@ -405,23 +440,15 @@
             vec2 st = gl_FragCoord.xy / u_resolution.xy;
             st.x *= u_resolution.x / u_resolution.y;
 
-            // DIRECTIONAL FLOW (Linear diagonal)
-            // No more swirly noise. st.x + st.y creates a diagonal gradient.
-            // u_time adds movement.
             float drift = (st.x + st.y) * 0.5 - u_time * 0.05;
-
-            // Add very soft, large scale noise on top for "clouds"
             float n = fbm(st * 1.5 + drift);
 
-            // COLOR PALETTE (Bright but not overwhelming)
-            vec3 c_sky    = vec3(0.85, 0.93, 1.0); // Soft Blue
-            vec3 c_peach  = vec3(1.0, 0.90, 0.85); // Soft Peach
-            vec3 c_lav    = vec3(0.95, 0.90, 1.0); // Soft Lavender
-            vec3 c_mint   = vec3(0.90, 1.0, 0.95); // Soft Mint
+            vec3 c_sky    = vec3(0.85, 0.93, 1.0);
+            vec3 c_peach  = vec3(1.0, 0.90, 0.85);
+            vec3 c_lav    = vec3(0.95, 0.90, 1.0);
+            vec3 c_mint   = vec3(0.90, 1.0, 0.95);
 
-            // Mix based on scroll + noise
             float mixVal = u_scroll + n * 0.2;
-            
             vec3 color;
             if(mixVal < 0.33) {
                 color = mix(c_sky, c_mint, mixVal * 3.0);
@@ -431,15 +458,46 @@
                 color = mix(c_peach, c_lav, (mixVal - 0.66) * 3.0);
             }
 
-            // Ensure it's not too bright (burnout) or too dark
-            // Mix with a neutral grey-white to balance
             color = mix(color, vec3(0.97), 0.3);
-
             gl_FragColor = vec4(color, 1.0);
         }
     </script>
 
     <script>
+        // --- 1. SUPABASE ---
+        const SUPABASE_URL = 'https://uoosspumdmffccinszuj.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVvb3NzcHVtZG1mZmNjaW5zenVqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcxNzYyNTUsImV4cCI6MjA4Mjc1MjI1NX0.3NayM6uC5-yZv9im-8W7ko28rZFRTnDQbIagN6BArs0';
+        
+        let supabaseClient = null;
+        try {
+            if (window.supabase) supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        } catch (e) { console.log("Supabase awaiting setup."); }
+
+        // --- 2. FORM SUBMIT ---
+        async function submitForm() {
+            if (!supabaseClient) { alert("Please connect database keys in code first."); return; }
+            
+            const email = document.getElementById('email-input').value;
+            const vibe = document.getElementById('vibe-input').value;
+            const btn = document.getElementById('submit-btn');
+            
+            if (!email || !vibe) { alert("Please fill in both fields."); return; }
+
+            btn.disabled = true; btn.innerText = "Saving...";
+
+            const { error } = await supabaseClient.from('waitlist').insert([{ email, vibe }]);
+
+            if (error) {
+                console.error(error);
+                btn.innerText = "Try Again";
+                btn.disabled = false;
+            } else {
+                document.getElementById('signup-form').style.display = 'none';
+                document.getElementById('success-msg').style.display = 'block';
+            }
+        }
+
+        // --- 3. GRAPHICS ---
         const canvas = document.getElementById("glcanvas");
         const gl = canvas.getContext("webgl");
         const container = document.getElementById("scroll-container");
@@ -453,60 +511,54 @@
         resize();
 
         function createShader(gl, type, src) {
-            const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s); return s;
+            const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s);
+            if(!gl.getShaderParameter(s, gl.COMPILE_STATUS)) return null;
+            return s;
         }
+        
         const prog = gl.createProgram();
-        gl.attachShader(prog, createShader(gl, gl.VERTEX_SHADER, document.getElementById("vertex-shader").text));
-        gl.attachShader(prog, createShader(gl, gl.FRAGMENT_SHADER, document.getElementById("fragment-shader").text));
-        gl.linkProgram(prog); gl.useProgram(prog);
-
-        const posLoc = gl.getAttribLocation(prog, "position");
-        gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
-        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, -1,1, -1,1, 1,-1, 1,1]), gl.STATIC_DRAW);
-        gl.enableVertexAttribArray(posLoc);
-        gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, 0, 0);
-
-        const uRes = gl.getUniformLocation(prog, "u_resolution");
-        const uTime = gl.getUniformLocation(prog, "u_time");
-        const uScroll = gl.getUniformLocation(prog, "u_scroll");
-
-        function render(time) {
-            const max = container.scrollHeight - container.clientHeight;
-            const scroll = container.scrollTop / (max || 1);
+        const vs = createShader(gl, gl.VERTEX_SHADER, document.getElementById("vertex-shader").text);
+        const fs = createShader(gl, gl.FRAGMENT_SHADER, document.getElementById("fragment-shader").text);
+        
+        if (vs && fs) {
+            gl.attachShader(prog, vs);
+            gl.attachShader(prog, fs);
+            gl.linkProgram(prog);
+            gl.useProgram(prog);
             
-            gl.uniform2f(uRes, canvas.width, canvas.height);
-            gl.uniform1f(uTime, time * 0.001);
-            gl.uniform1f(uScroll, scroll);
-            gl.drawArrays(gl.TRIANGLES, 0, 6);
+            const posLoc = gl.getAttribLocation(prog, "position");
+            gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, -1,1, -1,1, 1,-1, 1,1]), gl.STATIC_DRAW);
+            gl.enableVertexAttribArray(posLoc);
+            gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, 0, 0);
 
-            const scrollPos = container.scrollTop;
-            const h = window.innerHeight;
-            
-            document.querySelectorAll('.section').forEach((sec, idx) => {
-                const offset = sec.offsetTop;
-                if (scrollPos >= offset - h/2 && scrollPos < offset + h/2) {
-                    sec.classList.add('active');
-                    updateDots(idx);
-                } else {
-                    sec.classList.remove('active');
-                }
-            });
+            const uRes = gl.getUniformLocation(prog, "u_resolution");
+            const uTime = gl.getUniformLocation(prog, "u_time");
+            const uScroll = gl.getUniformLocation(prog, "u_scroll");
+
+            function render(time) {
+                const max = container.scrollHeight - container.clientHeight;
+                const scroll = container.scrollTop / (max || 1);
+                
+                gl.uniform2f(uRes, canvas.width, canvas.height);
+                gl.uniform1f(uTime, time * 0.001);
+                gl.uniform1f(uScroll, scroll);
+                gl.drawArrays(gl.TRIANGLES, 0, 6);
+
+                const scrollPos = container.scrollTop;
+                const h = window.innerHeight;
+                
+                document.querySelectorAll('.section').forEach((sec) => {
+                    const offset = sec.offsetTop;
+                    if (scrollPos >= offset - h/2 && scrollPos < offset + h/2) {
+                        sec.classList.add('active');
+                    } else {
+                        sec.classList.remove('active');
+                    }
+                });
+                requestAnimationFrame(render);
+            }
             requestAnimationFrame(render);
-        }
-        requestAnimationFrame(render);
-
-        function updateDots(idx) {
-            document.querySelectorAll('.dot').forEach((d, i) => d.classList.toggle('active', i === idx));
-        }
-        function scrollToSec(idx) {
-            const h = window.innerHeight;
-            container.scrollTo({ top: idx * h, behavior: 'smooth' });
-        }
-        function finish() {
-            const v = document.getElementById('vibe-input').value;
-            if(!v) return alert("Please share a thought first.");
-            document.getElementById('signup-form').style.display = 'none';
-            document.getElementById('success-msg').style.display = 'block';
         }
     </script>
 </body>
