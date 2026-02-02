@@ -1,125 +1,224 @@
-:root {
-    --bg-base: #fdfbfb;
-    /* Pastel Palette */
-    --sky: #e0f2f1;
-    --water: #e3f2fd;
-    --fire: #fff1f0;
-    --air: #f5f5f5;
-    --earth: #f1f8e9;
-}
-
-* { margin: 0; padding: 0; box-sizing: border-box; }
+/* --- CORE RESET & FONTS --- */
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,400&family=Outfit:wght@100;200;300;400&family=Sacramento&display=swap');
 
 body, html {
-    width: 100%; height: 100%;
-    font-family: 'Inter', sans-serif;
-    background-color: var(--bg-base);
-}
-
-/* The Inversion Logic */
-.reveal-zone {
-    mix-blend-mode: difference; /* This creates the stunning "Invert" effect */
-    z-index: 10;
-    text-align: center;
-}
-
-/* Pastel Nebula Background */
-.nebula-canvas {
-    position: fixed;
-    inset: 0;
-    z-index: -1;
-    transition: background 2s cubic-bezier(0.23, 1, 0.32, 1);
-    background: radial-gradient(circle at 50% 50%, var(--sky), #ffffff);
-}
-
-.hero-screen {
-    height: 100vh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    position: sticky;
-    top: 0;
-}
-
-/* 1. Ink Bleed Animation */
-.welcome-bleed {
-    font-family: 'Dancing Script', cursive;
-    font-size: 3.5rem;
-    color: #fff; /* Appears inverted against pastel */
-    opacity: 0;
-    filter: blur(10px);
-    display: block;
-    margin-bottom: -10px;
-    animation: inkBleed 3s forwards 0.5s;
-}
-
-@keyframes inkBleed {
-    to { opacity: 1; filter: blur(0); letter-spacing: 2px; }
-}
-
-/* 2. Letter Bloom Animation */
-.brand-bloom {
-    display: flex;
-    justify-content: center;
-    color: #fff;
-    font-size: clamp(3rem, 15vw, 10rem);
-    letter-spacing: -5px; /* Tight spacing for prominence */
-}
-
-.brand-bloom span {
-    display: inline-block;
-    opacity: 0;
-    transform: scale(0) translateY(50px);
-    filter: blur(20px);
-}
-
-.brand-bloom.active span {
-    animation: bloomEffect 1.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-}
-
-/* Staggering the letters for the "Bloom" feel */
-.brand-bloom span:nth-child(1) { animation-delay: 2.0s; }
-.brand-bloom span:nth-child(2) { animation-delay: 2.1s; }
-.brand-bloom span:nth-child(3) { animation-delay: 2.2s; }
-.brand-bloom span:nth-child(4) { animation-delay: 2.3s; }
-.brand-bloom span:nth-child(5) { animation-delay: 2.4s; }
-.brand-bloom span:nth-child(6) { animation-delay: 2.5s; }
-.brand-bloom span:nth-child(7) { animation-delay: 2.6s; }
-.brand-bloom span:nth-child(8) { animation-delay: 2.7s; }
-
-@keyframes bloomEffect {
-    to { opacity: 1; transform: scale(1) translateY(0); filter: blur(0); }
-}
-
-.tagline {
-    color: #fff;
-    font-size: 1.2rem;
-    letter-spacing: 2px;
-    opacity: 0;
-    margin-top: 20px;
-    transition: opacity 2s ease 3.5s;
-}
-
-.tagline.visible { opacity: 0.6; }
-
-/* 3. Static Breath Footer */
-.static-breath {
-    position: absolute;
-    bottom: 50px;
+    margin: 0;
+    padding: 0;
     width: 100%;
+    height: 100%;
+    background-color: #F0F4F8;
+    overflow: hidden; /* Hides native scrollbar for custom snap experience */
+    font-family: 'Outfit', sans-serif;
+    color: #333;
 }
 
-.crafting-label {
+/* --- LAYOUT & SCROLL SNAP --- */
+#scroll-container {
+    height: 100vh;
+    overflow-y: scroll;
+    scroll-snap-type: y mandatory;
+    scroll-behavior: smooth;
+    position: relative;
+    z-index: 10;
+}
+
+/* --- BACKGROUND CANVAS --- */
+canvas {
+    display: block;
+    width: 100vw;
+    height: 100vh;
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 1; /* Lowest layer */
+}
+
+/* --- SECTIONS --- */
+.section {
+    height: 100vh;
+    width: 100%;
+    scroll-snap-align: start;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    position: relative;
+    padding: 2rem;
+    box-sizing: border-box;
+    overflow: hidden;
+}
+
+.content-wrapper {
+    opacity: 0;
+    transform: translateY(30px);
+    transition: all 1s ease-out;
+    max-width: 900px;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    z-index: 20; /* Content sits above background */
+}
+
+.section.active .content-wrapper {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* --- TYPOGRAPHY --- */
+.handwritten {
+    font-family: 'Sacramento', cursive;
+    font-size: 3.5rem;
+    color: #666;
+    margin-bottom: 0.5rem;
+    transform: rotate(-3deg);
+}
+
+.brand-name {
+    font-family: 'Outfit', sans-serif;
+    font-size: 11vw;
+    font-weight: 100; /* ULTRA THIN & ELEGANT */
+    letter-spacing: 0.2em;
+    line-height: 1;
+    margin: 0;
+    color: #111;
     text-transform: uppercase;
-    letter-spacing: 10px;
-    font-size: 0.7rem;
+}
+
+.headline {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 3.5rem;
+    font-weight: 300;
+    color: #111;
+    margin-bottom: 1rem;
+    line-height: 1.1;
+}
+
+.subtext {
+    font-size: 1.25rem;
+    line-height: 1.6;
+    max-width: 650px;
+    color: #444;
+    font-weight: 300;
+    margin-bottom: 2rem;
+}
+
+/* --- CHAT BUBBLES (Z-Index Fixed) --- */
+.chat-bubble {
+    position: absolute;
+    background: #fff;
+    padding: 1.5rem 2rem;
+    border-radius: 40px;
+    box-shadow: 0 15px 40px rgba(0,0,0,0.08);
+    font-family: 'Sacramento', cursive;
+    font-size: 1.8rem;
+    color: #555;
+    
+    /* CRITICAL: Higher than content-wrapper so it floats on top */
+    z-index: 50;
+    
+    opacity: 0;
+    transform: scale(0.5) translateY(50px);
+    transition: all 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    max-width: 280px;
+    text-align: left;
+}
+
+.section.active .chat-bubble {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+    transition-delay: 0.4s;
+}
+
+/* Bubble Positions */
+.pos-left { bottom: 15%; left: 5%; border-radius: 40px 40px 40px 0; }
+.pos-right { top: 15%; right: 5%; border-radius: 40px 40px 0 40px; }
+.pos-center { top: 12%; left: 50%; transform: translateX(-50%); border-radius: 40px; }
+
+/* --- GLASS PANELS --- */
+.glass-panel {
+    background: rgba(255, 255, 255, 0.45);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.8);
+    border-radius: 30px;
+    padding: 3rem;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.03);
+    width: 100%;
+    position: relative;
+    z-index: 10;
+}
+
+.feature-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    text-align: left;
+}
+
+.feature-item h3 { font-size: 1.5rem; font-weight: 400; margin-bottom: 0.5rem; color: #222; }
+.feature-item p { font-size: 1rem; color: #555; font-weight: 300; }
+
+/* --- NAVIGATION DOTS --- */
+.nav-dots {
+    position: fixed;
+    right: 25px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    z-index: 100;
+}
+
+.dot {
+    width: 8px; height: 8px;
+    background: rgba(0,0,0,0.2);
+    border-radius: 50%;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.dot.active { background: #222; transform: scale(1.4); }
+
+/* --- FORM ELEMENTS --- */
+input {
+    width: 100%;
+    padding: 1.5rem;
+    background: rgba(255,255,255,0.7);
+    border: 1px solid #ddd;
+    border-radius: 15px;
+    font-size: 1.2rem;
+    font-family: 'Outfit', sans-serif;
+    margin-bottom: 1rem;
+    box-sizing: border-box;
+    transition: 0.3s;
+}
+input:focus { background: white; outline: none; border-color: #999; }
+
+button {
+    width: 100%;
+    padding: 1.5rem;
+    background: #222;
     color: #fff;
-    animation: breathPulse 4s ease-in-out infinite;
+    font-size: 1.1rem;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    border-radius: 50px;
+    border: none;
+    cursor: pointer;
+    transition: 0.3s;
+    font-weight: 300;
 }
+button:hover { background: #000; letter-spacing: 0.25em; }
 
-@keyframes breathPulse {
-    0%, 100% { opacity: 0.2; }
-    50% { opacity: 0.6; }
+/* --- MOBILE RESPONSIVE --- */
+@media (max-width: 768px) {
+    .brand-name { font-size: 15vw; letter-spacing: 0.1em; }
+    .feature-grid { grid-template-columns: 1fr; }
+    .chat-bubble { display: none; } /* Hide bubbles on mobile for cleaner UI */
+    .section { padding: 1.5rem; }
+    .nav-dots { right: 10px; }
 }
-
-.scroll-spacer { height: 100vh; }
