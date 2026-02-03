@@ -22,10 +22,12 @@
             overflow: hidden;
             font-family: 'Outfit', sans-serif;
             color: #333;
+            /* Prevent bounce effect on iOS */
+            overscroll-behavior: none;
         }
 
         #scroll-container {
-            height: 100vh;
+            height: 100dvh; /* Dynamic Height for Mobile Browsers */
             overflow-y: scroll;
             scroll-snap-type: y mandatory;
             scroll-behavior: smooth;
@@ -43,15 +45,15 @@
             z-index: 1;
         }
 
-        /* --- 2. NAVIGATION OVERLAY (New!) --- */
+        /* --- 2. NAVIGATION OVERLAY --- */
         .nav-trigger {
             position: fixed;
-            top: 30px;
-            right: 30px;
+            top: 25px;
+            right: 25px;
             z-index: 200;
-            background: rgba(255, 255, 255, 0.8);
+            background: rgba(255, 255, 255, 0.9);
             backdrop-filter: blur(10px);
-            border: 1px solid rgba(0,0,0,0.1);
+            border: 1px solid rgba(0,0,0,0.05);
             width: 50px;
             height: 50px;
             border-radius: 50%;
@@ -60,14 +62,14 @@
             justify-content: center;
             cursor: pointer;
             transition: 0.3s;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
         }
-        .nav-trigger:hover { transform: scale(1.1); background: #fff; }
+        .nav-trigger:active { transform: scale(0.95); }
 
         .nav-overlay {
             position: fixed;
             top: 0; left: 0; width: 100%; height: 0;
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(20px);
+            background: rgba(255, 255, 255, 0.98);
             z-index: 190;
             overflow: hidden;
             transition: height 0.5s cubic-bezier(0.77, 0, 0.175, 1);
@@ -76,39 +78,38 @@
             align-items: center;
             justify-content: center;
         }
-
-        .nav-overlay.open { height: 100vh; }
+        .nav-overlay.open { height: 100dvh; }
 
         .nav-links a {
             display: block;
             font-family: 'Cormorant Garamond', serif;
-            font-size: 3rem;
+            font-size: 2.5rem;
             color: #222;
             text-decoration: none;
-            margin: 1rem 0;
+            margin: 1.5rem 0; /* More spacing for touch */
             opacity: 0;
             transform: translateY(20px);
             transition: 0.5s;
             cursor: pointer;
         }
-
         .nav-overlay.open .nav-links a { opacity: 1; transform: translateY(0); }
-        .nav-links a:hover { color: #888; letter-spacing: 0.1em; }
 
-        /* --- 3. SECTIONS (Grid Layout) --- */
+        /* --- 3. DESKTOP GRID LAYOUT (>1024px) --- */
         .section {
-            height: 100vh;
+            height: 100dvh;
             width: 100%;
             scroll-snap-align: start;
+            position: relative;
+            box-sizing: border-box;
+            overflow: hidden;
+            
+            /* Desktop Grid */
             display: grid;
-            grid-template-columns: 1fr minmax(300px, 900px) 1fr; /* Wider central column */
+            grid-template-columns: 1fr minmax(300px, 900px) 1fr;
             grid-template-rows: 1fr;
             align-items: center;
             justify-items: center;
-            position: relative;
             padding: 2rem;
-            box-sizing: border-box;
-            overflow: hidden;
         }
 
         .content-column {
@@ -122,12 +123,11 @@
             align-items: center;
             z-index: 20;
         }
-
         .section.active .content-column { opacity: 1; transform: translateY(0); }
 
-        /* --- 4. TYPOGRAPHY UPDATES --- */
+        /* --- 4. TYPOGRAPHY --- */
         .handwritten {
-            font-family: 'Caveat', cursive; /* More readable font */
+            font-family: 'Caveat', cursive;
             font-size: clamp(2rem, 3vw, 2.5rem);
             color: #666;
             margin-bottom: 0.5rem;
@@ -136,18 +136,19 @@
 
         .brand-name {
             font-family: 'Outfit', sans-serif;
-            font-size: clamp(3.5rem, 12vw, 10rem);
+            font-size: clamp(3rem, 12vw, 10rem);
             font-weight: 100;
             letter-spacing: 0.15em;
             line-height: 1.1;
             margin: 0;
             color: #111;
             text-transform: uppercase;
+            text-align: center;
         }
 
         .headline {
             font-family: 'Cormorant Garamond', serif;
-            font-size: clamp(2.2rem, 5vw, 3.5rem);
+            font-size: clamp(2rem, 5vw, 3.5rem);
             font-weight: 300;
             color: #111;
             margin-bottom: 1rem;
@@ -164,7 +165,7 @@
             max-width: 700px;
         }
 
-        /* --- 5. BUBBLES --- */
+        /* --- 5. BUBBLES (Desktop) --- */
         .chat-bubble-container {
             display: flex; justify-content: center; align-items: center;
             width: 100%; height: 100%; pointer-events: none;
@@ -176,7 +177,7 @@
             background: #fff;
             padding: 1.2rem 1.5rem;
             box-shadow: 0 15px 40px rgba(0,0,0,0.1);
-            font-family: 'Caveat', cursive; /* Readable */
+            font-family: 'Caveat', cursive;
             font-size: 1.6rem;
             color: #444;
             z-index: 100;
@@ -189,9 +190,9 @@
         }
         .section.active .chat-bubble { opacity: 1; transform: scale(1); transition-delay: 0.3s; }
 
-        /* --- 6. GLASS CARDS & ICONS --- */
+        /* --- 6. GLASS CARDS --- */
         .glass-panel {
-            background: rgba(255, 255, 255, 0.6);
+            background: rgba(255, 255, 255, 0.65); /* More opaque for readability */
             backdrop-filter: blur(25px);
             -webkit-backdrop-filter: blur(25px);
             border: 1px solid rgba(255, 255, 255, 0.9);
@@ -210,76 +211,94 @@
             text-align: left;
         }
         
-        .feature-item {
-            display: flex;
-            flex-direction: column;
-            align-items: flex-start;
-        }
+        .feature-item { display: flex; flex-direction: column; align-items: flex-start; }
+        .icon-box { width: 36px; height: 36px; margin-bottom: 0.8rem; color: #333; }
+        .feature-item h3 { font-size: 1.2rem; font-weight: 500; margin: 0 0 0.4rem 0; color: #111; font-family: 'Outfit', sans-serif;}
+        .feature-item p { font-size: 0.95rem; color: #555; font-weight: 300; margin: 0; line-height: 1.5; }
 
-        /* PROFESSIONAL SVG ICONS */
-        .icon-box {
-            width: 40px; height: 40px;
-            margin-bottom: 1rem;
-            color: #333;
-        }
-        
-        .feature-item h3 { font-size: 1.3rem; font-weight: 500; margin: 0 0 0.5rem 0; color: #111; font-family: 'Outfit', sans-serif;}
-        .feature-item p { font-size: 1rem; color: #555; font-weight: 300; margin: 0; line-height: 1.5; }
-
-        /* --- 7. SOCIAL BAR --- */
-        .social-bar {
-            margin-top: 3rem;
-            display: flex;
-            gap: 20px;
-            justify-content: center;
-        }
-        .social-icon {
-            width: 50px; height: 50px;
-            border-radius: 50%;
-            background: rgba(255,255,255,0.8);
-            display: flex; align-items: center; justify-content: center;
-            cursor: pointer;
-            transition: 0.3s;
-            color: #333;
-            text-decoration: none;
-        }
-        .social-icon:hover { transform: translateY(-5px); background: #fff; box-shadow: 0 10px 20px rgba(0,0,0,0.1); }
-
-        /* --- 8. FORM --- */
+        /* --- 7. FORM --- */
         input {
-            width: 100%; padding: 1.2rem; background: rgba(255,255,255,0.7);
-            border: 1px solid #ddd; border-radius: 12px; font-size: 1rem;
+            width: 100%; padding: 1rem; background: rgba(255,255,255,0.8);
+            border: 1px solid #ddd; border-radius: 12px; font-size: 16px; /* 16px prevents iOS zoom */
             font-family: 'Outfit', sans-serif; margin-bottom: 1rem; box-sizing: border-box;
         }
         input:focus { background: white; outline: none; border-color: #888; }
         
         button {
             width: 100%; padding: 1.2rem; background: #222; color: #fff;
-            font-size: 1rem; text-transform: uppercase; letter-spacing: 0.2em;
+            font-size: 1rem; text-transform: uppercase; letter-spacing: 0.15em;
             border-radius: 50px; border: none; cursor: pointer; transition: 0.3s;
         }
-        button:hover { background: #000; letter-spacing: 0.25em; }
+        button:hover { background: #000; letter-spacing: 0.2em; }
 
-        /* --- MOBILE RESPONSIVE --- */
+        /* --- 8. SOCIALS --- */
+        .social-bar {
+            margin-top: 2rem; display: flex; gap: 15px; justify-content: center;
+        }
+        .social-icon {
+            width: 45px; height: 45px; border-radius: 50%; background: rgba(255,255,255,0.9);
+            display: flex; align-items: center; justify-content: center; color: #333;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+        }
+
+        /* --- 9. MOBILE OVERRIDES (The Fix) --- */
         @media (max-width: 1024px) {
-            .section { display: flex; flex-direction: column; padding: 1.5rem; }
-            .content-column { order: 2; width: 100%; }
-            .chat-bubble-container { display: none; }
-            
-            .mobile-bubble {
-                display: block !important;
-                background: #fff; padding: 0.8rem 1.5rem;
-                border-radius: 30px; font-family: 'Caveat', cursive;
-                font-size: 1.4rem; color: #555; margin-bottom: 1.5rem;
-                max-width: 90%; box-shadow: 0 5px 20px rgba(0,0,0,0.05);
+            .section {
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                padding: 1rem;
+                height: 100dvh; /* Mobile browser friendly */
             }
 
-            .feature-grid { grid-template-columns: 1fr; gap: 2rem; }
-            .brand-name { font-size: 14vw; }
-            .nav-links a { font-size: 2rem; }
+            .content-column {
+                order: 2;
+                width: 100%;
+                max-width: 100%;
+            }
+
+            /* Hide Desktop Grid Columns */
+            .chat-bubble-container { display: none; }
+            
+            /* Mobile Bubble Logic */
+            .mobile-bubble {
+                display: block !important;
+                background: #fff;
+                padding: 0.8rem 1.2rem;
+                border-radius: 20px;
+                font-family: 'Caveat', cursive;
+                font-size: 1.3rem;
+                color: #555;
+                margin-bottom: 1rem;
+                box-shadow: 0 5px 20px rgba(0,0,0,0.05);
+                animation: floatIn 1s ease forwards;
+            }
+
+            /* Stack Features */
+            .feature-grid { grid-template-columns: 1fr; gap: 1.5rem; }
+            
+            /* Adjust Glass Panel */
+            .glass-panel {
+                padding: 1.5rem;
+                border-radius: 20px;
+                width: 90%; /* prevent touching edges */
+            }
+
+            /* Adjust Typography */
+            .brand-name { font-size: 14vw; letter-spacing: 0.1em; }
+            .headline { font-size: 2.2rem; }
+            .subtext { font-size: 1rem; padding: 0; }
+            
+            /* Nav Fix */
+            .nav-links a { font-size: 2rem; margin: 1rem 0; }
         }
         
         @media (min-width: 1025px) { .mobile-bubble { display: none !important; } }
+        
+        @keyframes floatIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
     </style>
 </head>
 <body>
@@ -300,27 +319,28 @@
             <a onclick="goTo(2)">Journaling</a>
             <a onclick="goTo(3)">Human Support</a>
             <a onclick="goTo(4)">Games</a>
-            <a onclick="goTo(5)">Profile</a> </div>
+            <a onclick="goTo(5)">Profile</a>
+        </div>
     </div>
 
     <div id="scroll-container">
         
         <div class="section active" id="sec-0">
             <div class="content-column">
-                <div class="handwritten">welcome to your safe space</div>
+                <div class="handwritten">your safe space</div>
                 <h1 class="brand-name">BLAKCIDE</h1>
-                <p class="subtext" style="font-size: 1.3rem; margin-top: 1.5rem; opacity: 1; font-weight: 400;">
+                <p class="subtext" style="opacity: 1;">
                     Your 24/7 mental health companion.<br>
                     <strong>Chat with AI</strong>, <strong>track your mood</strong>, or <strong>talk to a human listener</strong> when things get heavy.
                 </p>
-                <button onclick="goTo(1)" style="width: auto; padding: 1rem 3rem; margin-top: 1rem;">Start Journey</button>
+                <button onclick="goTo(1)" style="width: auto; padding: 1rem 2.5rem; margin-top: 1rem;">Start Journey</button>
             </div>
         </div>
 
         <div class="section" id="sec-1">
             <div class="chat-bubble-container left-col"></div>
             <div class="content-column">
-                <div class="mobile-bubble">I'm here. 3 AM or 3 PM. Just talk.</div>
+                <div class="mobile-bubble">I'm here. 3 AM or 3 PM.</div>
                 
                 <div class="handwritten">always listening</div>
                 <h2 class="headline">The AI Companion</h2>
@@ -340,7 +360,7 @@
                 </div>
             </div>
             <div class="chat-bubble-container right-col">
-                <div class="chat-bubble">I'm here. 3 AM or 3 PM. Just talk.</div>
+                <div class="chat-bubble">I'm here. 3 AM or 3 PM.</div>
             </div>
         </div>
 
@@ -407,7 +427,7 @@
 
                 <div class="handwritten">reset</div>
                 <h2 class="headline">Mood Enhancement</h2>
-                <div class="glass-panel" style="max-width: 600px;">
+                <div class="glass-panel">
                     <svg class="icon-box" style="margin: 0 auto 1rem auto; display:block;" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path><path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                     <p class="subtext" style="margin-bottom: 0;">
                         Shift your focus with our curated <strong>Mini Games</strong> designed for anxiety relief and focus. Simple interactions to reset your mind.
@@ -420,7 +440,7 @@
         <div class="section" id="sec-5">
             <div class="content-column">
                 <div class="glass-panel" id="signup-form" style="max-width: 500px;">
-                    <p class="handwritten" style="font-size: 2.5rem;">join us</p>
+                    <p class="handwritten" style="font-size: 2.2rem;">join us</p>
                     <p style="margin-bottom: 2rem; font-size: 1.1rem;">If you had a friend who never judged, what’s the one thing you’d let go of today?</p>
                     
                     <input type="text" id="vibe-input" placeholder="I wish I could say that...">
@@ -508,9 +528,8 @@
 
     <script>
         // --- 1. SUPABASE ---
-        // TODO: PASTE YOUR KEYS HERE
-        const SUPABASE_URL = 'YOUR_SUPABASE_URL_HERE';
-        const SUPABASE_KEY = 'YOUR_SUPABASE_ANON_KEY_HERE';
+        const SUPABASE_URL = 'https://uoosspumdmffccinszuj.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVvb3NzcHVtZG1mZmNjaW5zenVqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcxNzYyNTUsImV4cCI6MjA4Mjc1MjI1NX0.3NayM6uC5-yZv9im-8W7ko28rZFRTnDQbIagN6BArs0';
         
         let supabaseClient = null;
         try {
