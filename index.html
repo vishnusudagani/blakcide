@@ -2,613 +2,216 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="description" content="Blakcide: The friend in your phone. AI companion, smart journaling, and human support. Your private sanctuary.">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>BLAKCIDE | The Companion</title>
+    <title>BLAKCIDE | The Friend in Your Phone</title>
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;500;600&family=Cormorant+Garamond:ital,wght@0,300;0,400;1,400&family=Outfit:wght@100;200;300;400;500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;500;600&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,400&family=Outfit:wght@100;200;300;400;500&display=swap" rel="stylesheet">
     
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
-    <style>
-        /* --- 1. CORE LAYOUT --- */
-        body, html {
-            margin: 0;
-            padding: 0;
-            width: 100%;
-            height: 100%;
-            background: #F0F4F8;
-            overflow: hidden;
-            font-family: 'Outfit', sans-serif;
-            color: #333;
-            /* Prevent bounce effect on iOS */
-            overscroll-behavior: none;
-        }
-
-        #scroll-container {
-            height: 100dvh; /* Dynamic Height for Mobile Browsers */
-            overflow-y: scroll;
-            scroll-snap-type: y mandatory;
-            scroll-behavior: smooth;
-            position: relative;
-            z-index: 10;
-        }
-
-        canvas {
-            display: block;
-            width: 100vw;
-            height: 100vh;
-            position: fixed;
-            top: 0;
-            left: 0;
-            z-index: 1;
-        }
-
-        /* --- 2. NAVIGATION OVERLAY --- */
-        .nav-trigger {
-            position: fixed;
-            top: 25px;
-            right: 25px;
-            z-index: 200;
-            background: rgba(255, 255, 255, 0.9);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(0,0,0,0.05);
-            width: 50px;
-            height: 50px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: 0.3s;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
-        }
-        .nav-trigger:active { transform: scale(0.95); }
-
-        .nav-overlay {
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 0;
-            background: rgba(255, 255, 255, 0.98);
-            z-index: 190;
-            overflow: hidden;
-            transition: height 0.5s cubic-bezier(0.77, 0, 0.175, 1);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-        }
-        .nav-overlay.open { height: 100dvh; }
-
-        .nav-links a {
-            display: block;
-            font-family: 'Cormorant Garamond', serif;
-            font-size: 2.5rem;
-            color: #222;
-            text-decoration: none;
-            margin: 1.5rem 0; /* More spacing for touch */
-            opacity: 0;
-            transform: translateY(20px);
-            transition: 0.5s;
-            cursor: pointer;
-        }
-        .nav-overlay.open .nav-links a { opacity: 1; transform: translateY(0); }
-
-        /* --- 3. DESKTOP GRID LAYOUT (>1024px) --- */
-        .section {
-            height: 100dvh;
-            width: 100%;
-            scroll-snap-align: start;
-            position: relative;
-            box-sizing: border-box;
-            overflow: hidden;
-            
-            /* Desktop Grid */
-            display: grid;
-            grid-template-columns: 1fr minmax(300px, 900px) 1fr;
-            grid-template-rows: 1fr;
-            align-items: center;
-            justify-items: center;
-            padding: 2rem;
-        }
-
-        .content-column {
-            grid-column: 2;
-            opacity: 0;
-            transform: translateY(30px);
-            transition: all 1s ease-out;
-            width: 100%;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            z-index: 20;
-        }
-        .section.active .content-column { opacity: 1; transform: translateY(0); }
-
-        /* --- 4. TYPOGRAPHY --- */
-        .handwritten {
-            font-family: 'Caveat', cursive;
-            font-size: clamp(2rem, 3vw, 2.5rem);
-            color: #666;
-            margin-bottom: 0.5rem;
-            letter-spacing: 0.05em;
-        }
-
-        .brand-name {
-            font-family: 'Outfit', sans-serif;
-            font-size: clamp(3rem, 12vw, 10rem);
-            font-weight: 100;
-            letter-spacing: 0.15em;
-            line-height: 1.1;
-            margin: 0;
-            color: #111;
-            text-transform: uppercase;
-            text-align: center;
-        }
-
-        .headline {
-            font-family: 'Cormorant Garamond', serif;
-            font-size: clamp(2rem, 5vw, 3.5rem);
-            font-weight: 300;
-            color: #111;
-            margin-bottom: 1rem;
-            line-height: 1.1;
-        }
-
-        .subtext {
-            font-size: clamp(1rem, 1.2vw, 1.25rem);
-            line-height: 1.6;
-            color: #444;
-            font-weight: 300;
-            margin-bottom: 2rem;
-            padding: 0 1rem;
-            max-width: 700px;
-        }
-
-        /* --- 5. BUBBLES (Desktop) --- */
-        .chat-bubble-container {
-            display: flex; justify-content: center; align-items: center;
-            width: 100%; height: 100%; pointer-events: none;
-        }
-        .left-col { grid-column: 1; }
-        .right-col { grid-column: 3; }
-
-        .chat-bubble {
-            background: #fff;
-            padding: 1.2rem 1.5rem;
-            box-shadow: 0 15px 40px rgba(0,0,0,0.1);
-            font-family: 'Caveat', cursive;
-            font-size: 1.6rem;
-            color: #444;
-            z-index: 100;
-            max-width: 250px;
-            text-align: center;
-            border-radius: 30px;
-            opacity: 0;
-            transform: scale(0.5);
-            transition: all 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
-        }
-        .section.active .chat-bubble { opacity: 1; transform: scale(1); transition-delay: 0.3s; }
-
-        /* --- 6. GLASS CARDS --- */
-        .glass-panel {
-            background: rgba(255, 255, 255, 0.65); /* More opaque for readability */
-            backdrop-filter: blur(25px);
-            -webkit-backdrop-filter: blur(25px);
-            border: 1px solid rgba(255, 255, 255, 0.9);
-            border-radius: 30px;
-            padding: 2.5rem;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.04);
-            width: 100%;
-            position: relative;
-            z-index: 10;
-        }
-
-        .feature-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 2rem;
-            text-align: left;
-        }
-        
-        .feature-item { display: flex; flex-direction: column; align-items: flex-start; }
-        .icon-box { width: 36px; height: 36px; margin-bottom: 0.8rem; color: #333; }
-        .feature-item h3 { font-size: 1.2rem; font-weight: 500; margin: 0 0 0.4rem 0; color: #111; font-family: 'Outfit', sans-serif;}
-        .feature-item p { font-size: 0.95rem; color: #555; font-weight: 300; margin: 0; line-height: 1.5; }
-
-        /* --- 7. FORM --- */
-        input {
-            width: 100%; padding: 1rem; background: rgba(255,255,255,0.8);
-            border: 1px solid #ddd; border-radius: 12px; font-size: 16px; /* 16px prevents iOS zoom */
-            font-family: 'Outfit', sans-serif; margin-bottom: 1rem; box-sizing: border-box;
-        }
-        input:focus { background: white; outline: none; border-color: #888; }
-        
-        button {
-            width: 100%; padding: 1.2rem; background: #222; color: #fff;
-            font-size: 1rem; text-transform: uppercase; letter-spacing: 0.15em;
-            border-radius: 50px; border: none; cursor: pointer; transition: 0.3s;
-        }
-        button:hover { background: #000; letter-spacing: 0.2em; }
-
-        /* --- 8. SOCIALS --- */
-        .social-bar {
-            margin-top: 2rem; display: flex; gap: 15px; justify-content: center;
-        }
-        .social-icon {
-            width: 45px; height: 45px; border-radius: 50%; background: rgba(255,255,255,0.9);
-            display: flex; align-items: center; justify-content: center; color: #333;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
-        }
-
-        /* --- 9. MOBILE OVERRIDES (The Fix) --- */
-        @media (max-width: 1024px) {
-            .section {
-                display: flex;
-                flex-direction: column;
-                justify-content: center;
-                padding: 1rem;
-                height: 100dvh; /* Mobile browser friendly */
-            }
-
-            .content-column {
-                order: 2;
-                width: 100%;
-                max-width: 100%;
-            }
-
-            /* Hide Desktop Grid Columns */
-            .chat-bubble-container { display: none; }
-            
-            /* Mobile Bubble Logic */
-            .mobile-bubble {
-                display: block !important;
-                background: #fff;
-                padding: 0.8rem 1.2rem;
-                border-radius: 20px;
-                font-family: 'Caveat', cursive;
-                font-size: 1.3rem;
-                color: #555;
-                margin-bottom: 1rem;
-                box-shadow: 0 5px 20px rgba(0,0,0,0.05);
-                animation: floatIn 1s ease forwards;
-            }
-
-            /* Stack Features */
-            .feature-grid { grid-template-columns: 1fr; gap: 1.5rem; }
-            
-            /* Adjust Glass Panel */
-            .glass-panel {
-                padding: 1.5rem;
-                border-radius: 20px;
-                width: 90%; /* prevent touching edges */
-            }
-
-            /* Adjust Typography */
-            .brand-name { font-size: 14vw; letter-spacing: 0.1em; }
-            .headline { font-size: 2.2rem; }
-            .subtext { font-size: 1rem; padding: 0; }
-            
-            /* Nav Fix */
-            .nav-links a { font-size: 2rem; margin: 1rem 0; }
-        }
-        
-        @media (min-width: 1025px) { .mobile-bubble { display: none !important; } }
-        
-        @keyframes floatIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-    </style>
+    
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
     <canvas id="glcanvas"></canvas>
 
     <div class="nav-trigger" onclick="toggleNav()">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <line x1="3" y1="12" x2="21" y2="12"></line>
-            <line x1="3" y1="6" x2="21" y2="6"></line>
-            <line x1="3" y1="18" x2="21" y2="18"></line>
-        </svg>
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
     </div>
-    <div class="nav-overlay" id="navOverlay">
-        <div class="nav-links">
-            <a onclick="goTo(0)">Home</a>
-            <a onclick="goTo(1)">AI Companion</a>
-            <a onclick="goTo(2)">Journaling</a>
-            <a onclick="goTo(3)">Human Support</a>
-            <a onclick="goTo(4)">Games</a>
-            <a onclick="goTo(5)">Profile</a>
-        </div>
+
+    <div class="crystal-menu" id="crystalMenu">
+        <a onclick="goTo(0)" class="menu-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"></path></svg><span>Home</span></a>
+        <a onclick="goTo(1)" class="menu-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg><span>About Us</span></a>
+        <a onclick="goTo(2)" class="menu-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line></svg><span>Companion</span></a>
+        <a onclick="goTo(3)" class="menu-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg><span>Journal</span></a>
+        <a onclick="goTo(4)" class="menu-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path></svg><span>Human Touch</span></a>
+        <a onclick="goTo(5)" class="menu-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg><span>Games & Insights</span></a>
+        <a onclick="goTo(6)" class="menu-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg><span>Sanctuary</span></a>
     </div>
 
     <div id="scroll-container">
         
-        <div class="section active" id="sec-0">
-            <div class="content-column">
-                <div class="handwritten">your safe space</div>
+        <div class="section" id="sec-0">
+            <div class="content-wrapper">
+                <div class="handwritten">Welcome to your,</div>
                 <h1 class="brand-name">BLAKCIDE</h1>
-                <p class="subtext" style="opacity: 1;">
-                    Your 24/7 mental health companion.<br>
-                    <strong>Chat with AI</strong>, <strong>track your mood</strong>, or <strong>talk to a human listener</strong> when things get heavy.
+                <p style="color: #fff; font-size: 1.2rem; margin-top: 1rem; text-shadow: 0 2px 10px rgba(0,0,0,0.2);">
+                    Friend in your phone, Just for you.<br>
+                    Non-judgmental. Supportive. Always there.
                 </p>
-                <button onclick="goTo(1)" style="width: auto; padding: 1rem 2.5rem; margin-top: 1rem;">Start Journey</button>
+                
+                <div id="ai-container">
+                    <div class="ai-input-wrapper">
+                        <input type="text" id="agent-input" placeholder="Ask me: 'How does the Journal help anxiety?'" onkeypress="handleEnter(event)">
+                        <button id="agent-send" onclick="sendToOpenAI()">→</button>
+                    </div>
+                    <div id="ai-response"></div>
+                    <div id="key-status" style="margin-top:10px; font-size:0.8rem; color:rgba(255,255,255,0.7); cursor:pointer;" onclick="resetKey()">
+                        🔒 No API Key detected. (Click to add)
+                    </div>
+                </div>
             </div>
         </div>
 
         <div class="section" id="sec-1">
-            <div class="chat-bubble-container left-col"></div>
-            <div class="content-column">
-                <div class="mobile-bubble">I'm here. 3 AM or 3 PM.</div>
-                
-                <div class="handwritten">always listening</div>
-                <h2 class="headline">The AI Companion</h2>
-                <div class="glass-panel">
-                    <div class="feature-grid">
-                        <div class="feature-item">
-                            <svg class="icon-box" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>
-                            <h3>Smart Chat</h3>
-                            <p>An intelligent friend that remembers your context and checks in on you proactively.</p>
-                        </div>
-                        <div class="feature-item">
-                            <svg class="icon-box" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path></svg>
-                            <h3>Talk Mode</h3>
-                            <p>Voice-enabled conversations for when typing feels like too much work.</p>
-                        </div>
-                    </div>
+             <div class="content-wrapper">
+                <div class="glass-box">
+                    <div class="handwritten" style="color:#666">Our Promise</div>
+                    <h2 class="headline">Why We Exist</h2>
+                    <p class="intro-text">
+                        Blakcide exists for anyone who wants to express themselves and feel truly heard. We are the ear that is non-judgmental, advice-free, and empathetic. In a world where therapy feels like a stigma and friends are busy, we offer a private, loyal, deeper connection.
+                    </p>
                 </div>
-            </div>
-            <div class="chat-bubble-container right-col">
-                <div class="chat-bubble">I'm here. 3 AM or 3 PM.</div>
-            </div>
+             </div>
         </div>
 
         <div class="section" id="sec-2">
-            <div class="chat-bubble-container left-col">
-                <div class="chat-bubble">Let it out. It's safe here.</div>
-            </div>
-            <div class="content-column">
-                <div class="mobile-bubble">Let it out. It's safe here.</div>
-
-                <div class="handwritten">release it</div>
-                <h2 class="headline">Speak. Snap. Write.</h2>
-                <div class="glass-panel">
+            <div class="content-wrapper">
+                <div class="glass-box">
+                    <div class="handwritten" style="color:#666">Two-Way Friendship</div>
+                    <h2 class="headline">Your Digital Best Friend</h2>
+                    <p class="intro-text">
+                        Text or call just like you would with a best friend. And yes, we initiate texts to check on you too.
+                    </p>
                     <div class="feature-grid">
-                        <div class="feature-item">
-                            <svg class="icon-box" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"></path></svg>
-                            <h3>Voice Journal</h3>
-                            <p>We track emotional trends in your voice to understand your wellbeing.</p>
+                        <div class="feature-card">
+                            <span class="icon">❤️</span>
+                            <h3>Deep Connection Mode</h3>
+                            <p>High empathy. Understands criticality. Enables deep vulnerability.</p>
                         </div>
-                        <div class="feature-item">
-                            <svg class="icon-box" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path><path stroke-linecap="round" stroke-linejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
-                            <h3>Snap Journal</h3>
-                            <p>Capture a photo of your moment. A picture holds feelings words can't describe.</p>
+                        <div class="feature-card">
+                            <span class="icon">🤔</span>
+                            <h3>Reflection Mode</h3>
+                            <p>Asks deeper questions to help you derive clarity from your own thoughts.</p>
+                        </div>
+                        <div class="feature-card">
+                            <span class="icon">☕</span>
+                            <h3>Casual Mode</h3>
+                            <p>No pressure. Just chatting about your day, movies, or life.</p>
+                        </div>
+                        <div class="feature-card">
+                            <span class="icon">🤫</span>
+                            <h3>Silent Mode</h3>
+                            <p>Sometimes you just need a listener, not advice. We listen silently.</p>
                         </div>
                     </div>
                 </div>
             </div>
-            <div class="chat-bubble-container right-col"></div>
         </div>
 
         <div class="section" id="sec-3">
-            <div class="chat-bubble-container left-col"></div>
-            <div class="content-column">
-                <div class="mobile-bubble">I understand. Take your time.</div>
-
-                <div class="handwritten">human touch</div>
-                <h2 class="headline">Real Human Listeners</h2>
-                <div class="glass-panel">
+            <div class="content-wrapper">
+                <div class="glass-box">
+                    <div class="handwritten" style="color:#666">You are your own Follower</div>
+                    <h2 class="headline">New Age Journal</h2>
+                    <p class="intro-text">
+                        A modern feed where you are the only follower. Capture life as it happens.
+                    </p>
                     <div class="feature-grid">
-                        <div class="feature-item">
-                            <svg class="icon-box" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
-                            <h3>Chat Support</h3>
-                            <p>Text with a trained listener who knows your context.</p>
+                        <div class="feature-card">
+                            <span class="icon">⚡</span>
+                            <h3>Quick Entry</h3>
+                            <p>Answer simple questions with options. Effortless tracking.</p>
                         </div>
-                        <div class="feature-item">
-                            <svg class="icon-box" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path></svg>
-                            <h3>Audio Call</h3>
-                            <p>Hop on a private, non-judgmental call when you need to hear a voice.</p>
+                        <div class="feature-card">
+                            <span class="icon">🎵</span>
+                            <h3>Suggestion Based</h3>
+                            <p>Contextual prompts based on your music, health data, and location.</p>
+                        </div>
+                        <div class="feature-card">
+                            <span class="icon">📸</span>
+                            <h3>Insta-Journal</h3>
+                            <p>Snap a pic or write a one-liner. Instant, prompt-based logging.</p>
+                        </div>
+                        <div class="feature-card">
+                            <span class="icon">🎙️</span>
+                            <h3>Voice Notes</h3>
+                            <p>Record your thoughts. We analyze tone and offer voice-to-text.</p>
                         </div>
                     </div>
                 </div>
-            </div>
-            <div class="chat-bubble-container right-col">
-                <div class="chat-bubble">I understand. Take your time.</div>
             </div>
         </div>
 
         <div class="section" id="sec-4">
-            <div class="chat-bubble-container left-col">
-                 <div class="chat-bubble">Just breathe.</div>
-            </div>
-            <div class="content-column">
-                <div class="mobile-bubble">Just breathe.</div>
-
-                <div class="handwritten">reset</div>
-                <h2 class="headline">Mood Enhancement</h2>
-                <div class="glass-panel">
-                    <svg class="icon-box" style="margin: 0 auto 1rem auto; display:block;" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path><path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                    <p class="subtext" style="margin-bottom: 0;">
-                        Shift your focus with our curated <strong>Mini Games</strong> designed for anxiety relief and focus. Simple interactions to reset your mind.
+            <div class="content-wrapper">
+                <div class="glass-box">
+                    <div class="handwritten" style="color:#666">Real Empathy</div>
+                    <h2 class="headline">Human Support</h2>
+                    <p class="intro-text">
+                        When you need intense interaction, connect with real humans who care.
                     </p>
+                    <div class="feature-grid">
+                        <div class="feature-card">
+                            <span class="icon">🤝</span>
+                            <h3>One-on-One</h3>
+                            <p>Direct connection with a trained listener who knows your context.</p>
+                        </div>
+                        <div class="feature-card">
+                            <span class="icon">📞</span>
+                            <h3>Call or Chat</h3>
+                            <p>Choose your medium. Instant talking facility or scheduled sessions.</p>
+                        </div>
+                        <div class="feature-card">
+                            <span class="icon">🧠</span>
+                            <h3>Topic Experts</h3>
+                            <p>Specialists for heartbreak, anxiety, and stress management.</p>
+                        </div>
+                        <div class="feature-card">
+                            <span class="icon">🛡️</span>
+                            <h3>Total Privacy</h3>
+                            <p>Choose between Anonymous Mode or Identity Revealed.</p>
+                        </div>
+                    </div>
                 </div>
             </div>
-            <div class="chat-bubble-container right-col"></div>
         </div>
 
         <div class="section" id="sec-5">
-            <div class="content-column">
-                <div class="glass-panel" id="signup-form" style="max-width: 500px;">
-                    <p class="handwritten" style="font-size: 2.2rem;">join us</p>
-                    <p style="margin-bottom: 2rem; font-size: 1.1rem;">If you had a friend who never judged, what’s the one thing you’d let go of today?</p>
-                    
-                    <input type="text" id="vibe-input" placeholder="I wish I could say that...">
-                    <input type="email" id="email-input" placeholder="Your email">
-                    <button id="submit-btn" onclick="submitForm()">Enter Sanctuary</button>
-                    <p id="error-msg" style="color: #d9534f; margin-top: 10px; display: none; font-size: 0.9rem;">Something went wrong.</p>
+            <div class="content-wrapper">
+                <div class="glass-box">
+                    <div class="handwritten" style="color:#666">Reset & Refresh</div>
+                    <h2 class="headline">Games & Insights</h2>
+                    <div class="feature-grid">
+                        <div class="feature-card">
+                            <h3>Mood Games</h3>
+                            <p>Mind deviation games specifically designed for anxiety relief and focus reset.</p>
+                        </div>
+                        <div class="feature-card">
+                            <h3>AI Insight Engine</h3>
+                            <p>Monitors emotional patterns and thought repetition. Offers non-diagnostic insights on burnout or loneliness.</p>
+                        </div>
+                    </div>
                 </div>
-                
-                <div id="success-msg" style="display:none;">
-                    <div class="handwritten" style="font-size: 5rem; color: #888;">✧</div>
-                    <h2 class="headline">You are heard.</h2>
-                    <p class="subtext">We will be in touch.</p>
-                </div>
+            </div>
+        </div>
 
-                <div class="social-bar">
-                    <a href="https://instagram.com/blakcide_" target="_blank" class="social-icon">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line></svg>
-                    </a>
-                    <a href="https://wa.me/7702063434" target="_blank" class="social-icon">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
-                    </a>
-                    <a href="mailto:connect@blakcide.com" class="social-icon">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
-                    </a>
+        <div class="section" id="sec-6">
+            <div class="content-wrapper">
+                <div class="glass-box" style="max-width: 500px;">
+                    <div class="handwritten" style="color:#666">Join Sanctuary</div>
+                    <h2 class="headline">Your Friend Awaits</h2>
+                    
+                    <div id="signup-form">
+                        <input type="text" id="vibe-input" placeholder="One word to describe your day...">
+                        <input type="email" id="email-input" placeholder="Your email">
+                        <button onclick="submitForm()">Enter Sanctuary</button>
+                    </div>
+
+                    <div id="success-msg" style="display:none;">
+                        <h3>You are heard.</h3>
+                        <p id="status-text">We will be in touch.</p>
+                        <button disabled style="padding:1rem 2rem; background:#ddd; color:#888; border-radius:50px; border:none; margin-top:10px;">Craft Space (Coming Soon)</button>
+                    </div>
                 </div>
             </div>
         </div>
 
     </div>
 
-    <script id="vertex-shader" type="x-shader/x-vertex">
-        attribute vec2 position;
-        void main() { gl_Position = vec4(position, 0.0, 1.0); }
-    </script>
-
-    <script id="fragment-shader" type="x-shader/x-fragment">
-        precision highp float;
-        uniform vec2 u_resolution;
-        uniform float u_time;
-        uniform float u_scroll;
-        vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
-        vec2 mod289(vec2 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
-        vec3 permute(vec3 x) { return mod289(((x*34.0)+1.0)*x); }
-        float snoise(vec2 v) {
-            const vec4 C = vec4(0.211324865405187, 0.366025403784439, -0.577350269189626, 0.024390243902439);
-            vec2 i  = floor(v + dot(v, C.yy) );
-            vec2 x0 = v - i + dot(i, C.xx);
-            vec2 i1 = (x0.x > x0.y) ? vec2(1.0, 0.0) : vec2(0.0, 1.0);
-            vec4 x12 = x0.xyxy + C.xxzz; x12.xy -= i1;
-            i = mod289(i);
-            vec3 p = permute( permute( i.y + vec3(0.0, i1.y, 1.0 )) + i.x + vec3(0.0, i1.x, 1.0 ));
-            vec3 m = max(0.5 - vec3(dot(x0,x0), dot(x12.xy,x12.xy), dot(x12.zw,x12.zw)), 0.0);
-            m = m*m ;
-            vec3 x = 2.0 * fract(p * C.www) - 1.0;
-            vec3 h = abs(x) - 0.5;
-            vec3 ox = floor(x + 0.5);
-            vec3 a0 = x - ox;
-            m *= 1.79284291400159 - 0.85373472095314 * ( a0*a0 + h*h );
-            vec3 g; g.x  = a0.x  * x0.x  + h.x  * x0.y; g.yz = a0.yz * x12.xz + h.yz * x12.yw;
-            return 130.0 * dot(m, g);
-        }
-        float fbm(vec2 st) {
-            float v = 0.0; float a = 0.5;
-            for (int i = 0; i < 3; i++) { v += a * snoise(st); st *= 2.0; a *= 0.5; }
-            return v;
-        }
-        void main() {
-            vec2 st = gl_FragCoord.xy / u_resolution.xy;
-            st.x *= u_resolution.x / u_resolution.y;
-            float drift = (st.x + st.y) * 0.5 - u_time * 0.05;
-            float n = fbm(st * 1.5 + drift);
-            vec3 c_sky = vec3(0.85, 0.93, 1.0);
-            vec3 c_peach = vec3(1.0, 0.90, 0.85);
-            vec3 c_lav = vec3(0.95, 0.90, 1.0);
-            vec3 c_mint = vec3(0.90, 1.0, 0.95);
-            float mixVal = u_scroll + n * 0.2;
-            vec3 color;
-            if(mixVal < 0.33) { color = mix(c_sky, c_mint, mixVal * 3.0); }
-            else if(mixVal < 0.66) { color = mix(c_mint, c_peach, (mixVal - 0.33) * 3.0); }
-            else { color = mix(c_peach, c_lav, (mixVal - 0.66) * 3.0); }
-            color = mix(color, vec3(0.97), 0.3);
-            gl_FragColor = vec4(color, 1.0);
-        }
-    </script>
-
-    <script>
-        // --- 1. SUPABASE ---
-        const SUPABASE_URL = 'https://uoosspumdmffccinszuj.supabase.co';
-        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVvb3NzcHVtZG1mZmNjaW5zenVqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcxNzYyNTUsImV4cCI6MjA4Mjc1MjI1NX0.3NayM6uC5-yZv9im-8W7ko28rZFRTnDQbIagN6BArs0';
-        
-        let supabaseClient = null;
-        try {
-            if (window.supabase) supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-        } catch (e) { console.log("Supabase awaiting setup."); }
-
-        // --- 2. FORM SUBMIT ---
-        async function submitForm() {
-            if (!supabaseClient) { alert("Please connect database keys in code first."); return; }
-            const email = document.getElementById('email-input').value;
-            const vibe = document.getElementById('vibe-input').value;
-            const btn = document.getElementById('submit-btn');
-            if (!email || !vibe) { alert("Please fill in both fields."); return; }
-            btn.disabled = true; btn.innerText = "Saving...";
-            const { error } = await supabaseClient.from('waitlist').insert([{ email, vibe }]);
-            if (error) { console.error(error); btn.innerText = "Try Again"; btn.disabled = false; }
-            else { document.getElementById('signup-form').style.display = 'none'; document.getElementById('success-msg').style.display = 'block'; }
-        }
-
-        // --- 3. GRAPHICS ---
-        const canvas = document.getElementById("glcanvas");
-        const gl = canvas.getContext("webgl");
-        const container = document.getElementById("scroll-container");
-        const navOverlay = document.getElementById("navOverlay");
-
-        function resize() {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-            gl.viewport(0, 0, canvas.width, canvas.height);
-        }
-        window.addEventListener("resize", resize);
-        resize();
-
-        function createShader(gl, type, src) {
-            const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s);
-            if(!gl.getShaderParameter(s, gl.COMPILE_STATUS)) return null; return s;
-        }
-        
-        const prog = gl.createProgram();
-        const vs = createShader(gl, gl.VERTEX_SHADER, document.getElementById("vertex-shader").text);
-        const fs = createShader(gl, gl.FRAGMENT_SHADER, document.getElementById("fragment-shader").text);
-        
-        if (vs && fs) {
-            gl.attachShader(prog, vs); gl.attachShader(prog, fs); gl.linkProgram(prog); gl.useProgram(prog);
-            const posLoc = gl.getAttribLocation(prog, "position");
-            gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
-            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, -1,1, -1,1, 1,-1, 1,1]), gl.STATIC_DRAW);
-            gl.enableVertexAttribArray(posLoc); gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, 0, 0);
-            const uRes = gl.getUniformLocation(prog, "u_resolution");
-            const uTime = gl.getUniformLocation(prog, "u_time");
-            const uScroll = gl.getUniformLocation(prog, "u_scroll");
-
-            function render(time) {
-                const max = container.scrollHeight - container.clientHeight;
-                const scroll = container.scrollTop / (max || 1);
-                gl.uniform2f(uRes, canvas.width, canvas.height);
-                gl.uniform1f(uTime, time * 0.001);
-                gl.uniform1f(uScroll, scroll);
-                gl.drawArrays(gl.TRIANGLES, 0, 6);
-                const scrollPos = container.scrollTop;
-                const h = window.innerHeight;
-                document.querySelectorAll('.section').forEach((sec) => {
-                    const offset = sec.offsetTop;
-                    if (scrollPos >= offset - h/2 && scrollPos < offset + h/2) sec.classList.add('active');
-                    else sec.classList.remove('active');
-                });
-                requestAnimationFrame(render);
-            }
-            requestAnimationFrame(render);
-        }
-
-        function toggleNav() {
-            navOverlay.classList.toggle("open");
-        }
-        function goTo(idx) {
-            const h = window.innerHeight;
-            container.scrollTo({ top: idx * h, behavior: 'smooth' });
-            navOverlay.classList.remove("open");
-        }
-    </script>
+    <script src="script.js"></script>
 </body>
 </html>
