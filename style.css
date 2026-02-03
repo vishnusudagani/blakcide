@@ -1,20 +1,20 @@
-/* --- CORE RESET & FONTS --- */
-@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,400&family=Outfit:wght@100;200;300;400&family=Sacramento&display=swap');
-
+/* =========================================
+   1. CORE LAYOUT
+   ========================================= */
 body, html {
     margin: 0;
     padding: 0;
     width: 100%;
     height: 100%;
-    background-color: #F0F4F8;
-    overflow: hidden; /* Hides native scrollbar for custom snap experience */
+    background: #2a2a2a; /* Fallback color if WebGL fails */
+    overflow: hidden;
     font-family: 'Outfit', sans-serif;
-    color: #333;
+    color: #111;
+    overscroll-behavior: none;
 }
 
-/* --- LAYOUT & SCROLL SNAP --- */
 #scroll-container {
-    height: 100vh;
+    height: 100dvh;
     overflow-y: scroll;
     scroll-snap-type: y mandatory;
     scroll-behavior: smooth;
@@ -22,7 +22,6 @@ body, html {
     z-index: 10;
 }
 
-/* --- BACKGROUND CANVAS --- */
 canvas {
     display: block;
     width: 100vw;
@@ -30,195 +29,344 @@ canvas {
     position: fixed;
     top: 0;
     left: 0;
-    z-index: 1; /* Lowest layer */
+    z-index: 1;
 }
 
-/* --- SECTIONS --- */
+/* =========================================
+   2. CRYSTAL MENU
+   ========================================= */
+.nav-trigger {
+    position: fixed;
+    top: 25px;
+    right: 25px;
+    z-index: 10000;
+    background: rgba(255, 255, 255, 0.25);
+    backdrop-filter: blur(15px);
+    border: 1px solid rgba(255,255,255,0.4);
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: 0.3s;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+    color: #fff;
+}
+.nav-trigger:hover {
+    transform: scale(1.05);
+    background: rgba(255,255,255,0.4);
+}
+
+.crystal-menu {
+    position: fixed;
+    top: 85px;
+    right: 25px;
+    width: 280px;
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(30px);
+    border: 1px solid rgba(255, 255, 255, 0.9);
+    box-shadow: 0 20px 50px rgba(0,0,0,0.15);
+    border-radius: 25px;
+    padding: 1.5rem;
+    z-index: 9999;
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(-20px) scale(0.95);
+    transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.crystal-menu.open {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateY(0) scale(1);
+}
+
+.menu-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    border-radius: 12px;
+    color: #333;
+    text-decoration: none;
+    transition: 0.2s;
+    cursor: pointer;
+}
+.menu-item:hover {
+    background: rgba(0,0,0,0.05);
+    transform: translateX(5px);
+}
+.menu-item svg {
+    width: 18px;
+    height: 18px;
+    opacity: 0.7;
+}
+
+/* =========================================
+   3. SECTIONS
+   ========================================= */
 .section {
-    height: 100vh;
+    min-height: 100dvh;
     width: 100%;
     scroll-snap-align: start;
+    position: relative;
+    box-sizing: border-box;
+    overflow: hidden;
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    text-align: center;
-    position: relative;
-    padding: 2rem;
-    box-sizing: border-box;
-    overflow: hidden;
+    padding: 2rem 1rem;
 }
 
 .content-wrapper {
-    opacity: 0;
-    transform: translateY(30px);
-    transition: all 1s ease-out;
-    max-width: 900px;
+    max-width: 1000px;
     width: 100%;
     display: flex;
     flex-direction: column;
     align-items: center;
-    position: relative;
-    z-index: 20; /* Content sits above background */
+    opacity: 0;
+    transform: translateY(30px);
+    transition: all 1s ease-out;
+    z-index: 20;
 }
-
-.section.active .content-wrapper {
+.section.visible .content-wrapper {
+    opacity: 1;
+    transform: translateY(0);
+}
+#sec-0 .content-wrapper {
     opacity: 1;
     transform: translateY(0);
 }
 
-/* --- TYPOGRAPHY --- */
+/* =========================================
+   4. TYPOGRAPHY
+   ========================================= */
 .handwritten {
-    font-family: 'Sacramento', cursive;
-    font-size: 3.5rem;
-    color: #666;
+    font-family: 'Caveat', cursive;
+    font-size: clamp(1.8rem, 3vw, 2.2rem);
+    color: #fff;
+    text-shadow: 0 2px 10px rgba(0,0,0,0.1);
     margin-bottom: 0.5rem;
-    transform: rotate(-3deg);
+    letter-spacing: 0.05em;
+    text-align: center;
 }
-
 .brand-name {
     font-family: 'Outfit', sans-serif;
-    font-size: 11vw;
-    font-weight: 100; /* ULTRA THIN & ELEGANT */
-    letter-spacing: 0.2em;
-    line-height: 1;
+    font-size: clamp(3.5rem, 10vw, 8rem);
+    font-weight: 200;
+    letter-spacing: 0.1em;
+    line-height: 1.1;
     margin: 0;
-    color: #111;
-    text-transform: uppercase;
+    color: #fff;
+    text-align: center;
+    text-shadow: 0 5px 30px rgba(0,0,0,0.1);
 }
-
 .headline {
     font-family: 'Cormorant Garamond', serif;
-    font-size: 3.5rem;
+    font-size: clamp(2.2rem, 5vw, 3.5rem);
     font-weight: 300;
-    color: #111;
-    margin-bottom: 1rem;
+    color: #222;
+    margin-bottom: 1.5rem;
     line-height: 1.1;
+    text-align: center;
 }
 
-.subtext {
-    font-size: 1.25rem;
-    line-height: 1.6;
-    max-width: 650px;
-    color: #444;
-    font-weight: 300;
-    margin-bottom: 2rem;
-}
-
-/* --- CHAT BUBBLES (Z-Index Fixed) --- */
-.chat-bubble {
-    position: absolute;
-    background: #fff;
-    padding: 1.5rem 2rem;
-    border-radius: 40px;
-    box-shadow: 0 15px 40px rgba(0,0,0,0.08);
-    font-family: 'Sacramento', cursive;
-    font-size: 1.8rem;
-    color: #555;
-    
-    /* CRITICAL: Higher than content-wrapper so it floats on top */
-    z-index: 50;
-    
-    opacity: 0;
-    transform: scale(0.5) translateY(50px);
-    transition: all 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    max-width: 280px;
-    text-align: left;
-}
-
-.section.active .chat-bubble {
-    opacity: 1;
-    transform: scale(1) translateY(0);
-    transition-delay: 0.4s;
-}
-
-/* Bubble Positions */
-.pos-left { bottom: 15%; left: 5%; border-radius: 40px 40px 40px 0; }
-.pos-right { top: 15%; right: 5%; border-radius: 40px 40px 0 40px; }
-.pos-center { top: 12%; left: 50%; transform: translateX(-50%); border-radius: 40px; }
-
-/* --- GLASS PANELS --- */
-.glass-panel {
-    background: rgba(255, 255, 255, 0.45);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border: 1px solid rgba(255, 255, 255, 0.8);
+/* =========================================
+   5. GLASS PANELS (TEXT BOXES)
+   ========================================= */
+.glass-box {
+    background: rgba(255, 255, 255, 0.75);
+    backdrop-filter: blur(40px);
+    -webkit-backdrop-filter: blur(40px);
+    border: 1px solid rgba(255, 255, 255, 0.9);
     border-radius: 30px;
-    padding: 3rem;
-    box-shadow: 0 20px 60px rgba(0,0,0,0.03);
-    width: 100%;
-    position: relative;
-    z-index: 10;
+    padding: clamp(2rem, 4vw, 3rem);
+    box-shadow: 0 20px 60px rgba(0,0,0,0.05);
+    width: 90%;
+    max-width: 1100px;
+    text-align: center;
+    margin-top: 1rem;
 }
 
+.glass-box p.intro-text {
+    font-size: 1.1rem;
+    line-height: 1.6;
+    color: #444;
+    max-width: 800px;
+    margin: 0 auto 2.5rem auto;
+}
+
+/* =========================================
+   6. GRIDS
+   ========================================= */
 .feature-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 2rem;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem;
     text-align: left;
 }
 
-.feature-item h3 { font-size: 1.5rem; font-weight: 400; margin-bottom: 0.5rem; color: #222; }
-.feature-item p { font-size: 1rem; color: #555; font-weight: 300; }
+.feature-card {
+    background: rgba(255,255,255,0.5);
+    border-radius: 20px;
+    padding: 1.5rem;
+    transition: 0.3s;
+    border: 1px solid rgba(255,255,255,0.2);
+}
+.feature-card:hover {
+    background: rgba(255,255,255,0.8);
+    transform: translateY(-5px);
+}
 
-/* --- NAVIGATION DOTS --- */
-.nav-dots {
-    position: fixed;
-    right: 25px;
-    top: 50%;
-    transform: translateY(-50%);
+.feature-card h3 {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 500;
+    font-size: 1.2rem;
+    margin: 0 0 0.5rem 0;
+    color: #111;
+}
+.feature-card p {
+    font-size: 0.95rem;
+    line-height: 1.5;
+    color: #555;
+    margin: 0;
+}
+.icon {
+    font-size: 1.5rem;
+    margin-bottom: 10px;
+    display: block;
+}
+
+/* =========================================
+   7. AI BAR
+   ========================================= */
+#ai-container {
+    width: 100%;
+    max-width: 600px;
+    margin-top: 2rem;
     display: flex;
     flex-direction: column;
-    gap: 15px;
-    z-index: 100;
+    align-items: center;
+    z-index: 50;
 }
-
-.dot {
-    width: 8px; height: 8px;
-    background: rgba(0,0,0,0.2);
-    border-radius: 50%;
-    cursor: pointer;
+.ai-input-wrapper {
+    width: 100%;
+    position: relative;
+    background: rgba(255,255,255,0.85);
+    backdrop-filter: blur(20px);
+    border-radius: 50px;
+    border: 1px solid rgba(255,255,255,1);
+    box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+    display: flex;
+    align-items: center;
     transition: all 0.3s;
 }
-
-.dot.active { background: #222; transform: scale(1.4); }
-
-/* --- FORM ELEMENTS --- */
-input {
-    width: 100%;
-    padding: 1.5rem;
-    background: rgba(255,255,255,0.7);
-    border: 1px solid #ddd;
-    border-radius: 15px;
-    font-size: 1.2rem;
-    font-family: 'Outfit', sans-serif;
-    margin-bottom: 1rem;
-    box-sizing: border-box;
-    transition: 0.3s;
+.ai-input-wrapper:hover {
+    transform: scale(1.02);
+    box-shadow: 0 15px 50px rgba(0,0,0,0.15);
 }
-input:focus { background: white; outline: none; border-color: #999; }
 
-button {
-    width: 100%;
-    padding: 1.5rem;
-    background: #222;
-    color: #fff;
+#agent-input {
+    flex: 1;
+    border: none;
+    background: transparent;
+    padding: 1.2rem 2rem;
+    font-family: 'Outfit', sans-serif;
     font-size: 1.1rem;
-    text-transform: uppercase;
-    letter-spacing: 0.2em;
+    color: #333;
+    outline: none;
+    border-radius: 50px;
+}
+#agent-send {
+    border: none;
+    background: transparent;
+    padding: 0 1.5rem;
+    cursor: pointer;
+    color: #333;
+    font-size: 1.5rem;
+    transition: 0.2s;
+}
+
+#ai-response {
+    margin-top: 1rem;
+    background: #fff;
+    padding: 1.5rem;
+    border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.2rem;
+    line-height: 1.4;
+    color: #333;
+    width: 90%;
+    text-align: center;
+    opacity: 0;
+    transform: translateY(10px);
+    transition: all 0.5s;
+    display: none;
+}
+#ai-response.active {
+    opacity: 1;
+    transform: translateY(0);
+    display: block;
+}
+
+/* =========================================
+   8. FORM STYLES
+   ========================================= */
+#signup-form input {
+    width: 100%;
+    padding: 1rem;
+    border-radius: 15px;
+    border: 1px solid #ddd;
+    margin-bottom: 10px;
+    box-sizing: border-box;
+    font-family: 'Outfit', sans-serif;
+}
+#signup-form button {
+    width: 100%;
+    padding: 1rem;
+    background: #333;
+    color: #fff;
     border-radius: 50px;
     border: none;
     cursor: pointer;
-    transition: 0.3s;
-    font-weight: 300;
+    font-family: 'Outfit', sans-serif;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
 }
-button:hover { background: #000; letter-spacing: 0.25em; }
+#signup-form button:hover {
+    background: #000;
+}
 
-/* --- MOBILE RESPONSIVE --- */
-@media (max-width: 768px) {
-    .brand-name { font-size: 15vw; letter-spacing: 0.1em; }
-    .feature-grid { grid-template-columns: 1fr; }
-    .chat-bubble { display: none; } /* Hide bubbles on mobile for cleaner UI */
-    .section { padding: 1.5rem; }
-    .nav-dots { right: 10px; }
+/* =========================================
+   9. MOBILE OPTIMIZATION
+   ========================================= */
+@media (max-width: 1024px) {
+    .feature-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+    .glass-box {
+        width: 85%;
+        padding: 1.5rem;
+    }
+    .brand-name {
+        font-size: 15vw;
+    }
+    .headline {
+        font-size: 2rem;
+    }
+    .nav-trigger {
+        top: 20px;
+        right: 20px;
+    }
+    .crystal-menu {
+        right: 20px;
+        width: 240px;
+    }
 }
