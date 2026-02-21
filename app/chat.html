@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BLAKCIDE | App</title>
+    <link rel="stylesheet" href="app-style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@400;500;600&family=Inter:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,400;0,500;0,600&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
+    <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
+</head>
+<body>
+
+    <canvas id="pearl-canvas"></canvas>
+    <div id="toast-container" class="toast-container"></div>
+
+    <div id="sanctuary-app" class="app-layout active">
+        
+        <div id="mobile-overlay" class="mobile-overlay"></div>
+
+        <aside class="sidebar glass-panel" id="main-sidebar">
+            <div class="sidebar-header">
+                <button id="home-btn" class="brand-small-btn">BLAKCIDE</button>
+                <button id="toggle-sidebar-btn" class="action-btn collapse-btn"><ion-icon name="chevron-back"></ion-icon></button>
+            </div>
+            
+            <div class="sidebar-tools">
+                <button id="new-folder-btn" class="tool-btn" title="New Folder"><ion-icon name="folder-outline"></ion-icon></button>
+                <button id="new-chat-btn" class="tool-btn" title="New Chat"><ion-icon name="create-outline"></ion-icon></button>
+                <button id="vault-btn" class="tool-btn" title="Vault"><ion-icon name="lock-closed-outline"></ion-icon></button>
+                <button id="archive-view-btn" class="tool-btn" title="Archives"><ion-icon name="archive-outline"></ion-icon></button>
+            </div>
+            
+            <div class="sidebar-search">
+                <ion-icon name="search-outline"></ion-icon>
+                <input type="text" id="ripple-search" placeholder="Search chats..." autocomplete="off">
+            </div>
+            
+            <div id="view-title" class="view-title" style="display:none;">Vault</div>
+
+            <div class="history-list" id="history-list"></div>
+            
+            <div class="user-profile glass-panel-inner" id="open-profile-btn">
+                <img id="sidebar-avatar" class="avatar-circle" style="display:none;">
+                <div id="sidebar-avatar-placeholder" class="avatar-circle-placeholder"><ion-icon name="person"></ion-icon></div>
+                <div class="user-info">
+                    <span id="user-name-display" class="user-name">User</span>
+                    <span id="user-email-display" class="user-email">...</span>
+                </div>
+                <button id="logout-btn" class="logout-link"><ion-icon name="log-out-outline"></ion-icon></button>
+            </div>
+        </aside>
+
+        <section class="chat-main">
+            <div class="mobile-top-header">
+                <button id="mobile-menu-btn" class="mobile-menu-btn"><ion-icon name="menu-outline"></ion-icon></button>
+                <span class="mobile-chat-title" id="mobile-chat-title">New Chat</span>
+                <div style="width: 45px;"></div>
+            </div>
+
+            <div id="chat-feed" class="chat-feed"></div>
+            
+            <form id="chat-form" class="chat-input-wrapper">
+                <div class="input-glass-container">
+                    <button type="button" id="voice-btn" class="voice-btn-icon"><ion-icon name="mic-outline"></ion-icon></button>
+                    <input type="text" id="chat-input" placeholder="Type a message..." autocomplete="off">
+                    <button type="submit" class="send-btn-icon"><ion-icon name="arrow-up-outline"></ion-icon></button>
+                </div>
+            </form>
+        </section>
+
+        <div id="pin-modal" class="overlay-glass">
+            <div class="glass-pane center-pane pin-pane">
+                <h2 class="serif-header"><ion-icon name="lock-closed"></ion-icon> Vault</h2>
+                <p id="pin-msg" class="pin-msg">Enter 4-digit PIN</p>
+                <input type="password" id="pin-input" class="minimal-input pin-box text-center" maxlength="4" autocomplete="off" placeholder="••••">
+                <div class="modal-actions">
+                    <button id="pin-cancel" class="btn-glass">Cancel</button>
+                    <button id="pin-confirm" class="btn-solid">Unlock</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="change-pin-modal" class="overlay-glass">
+            <div class="glass-pane center-pane pin-pane">
+                <h2 class="serif-header"><ion-icon name="key"></ion-icon> Change PIN</h2>
+                <p class="pin-msg">Update your vault passcode</p>
+                <input type="password" id="old-pin-input" class="minimal-input pin-box text-center" maxlength="4" autocomplete="off" placeholder="Old PIN">
+                <input type="password" id="new-pin-input" class="minimal-input pin-box text-center" maxlength="4" autocomplete="off" placeholder="New PIN">
+                <div class="modal-actions">
+                    <button id="change-pin-cancel" class="btn-glass">Cancel</button>
+                    <button id="change-pin-confirm" class="btn-solid">Save PIN</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="context-menu" class="glass-context-menu">
+            <button id="cm-rename"><ion-icon name="pencil"></ion-icon> Rename</button>
+            <button id="cm-vault"><ion-icon name="lock-closed"></ion-icon> Send to Vault</button>
+            <button id="cm-archive"><ion-icon name="archive"></ion-icon> Archive</button>
+            <button id="cm-delete" class="danger-text"><ion-icon name="trash"></ion-icon> Delete</button>
+        </div>
+
+        <div id="profile-modal" class="overlay-glass">
+            <div class="glass-pane profile-pane-wide">
+                <button id="close-profile-btn" class="close-btn profile-close">✕</button>
+                
+                <div class="profile-split-layout">
+                    <div class="profile-left">
+                        <h2 class="serif-header left-align">Your Profile</h2>
+                        <p class="poetic-desc">Manage your account details and secure your vault.</p>
+                        
+                        <div class="profile-upload-wrapper glowing-avatar" onclick="document.getElementById('avatar-upload').click()">
+                            <img id="profile-preview" class="profile-preview-img" style="display:none;">
+                            <div id="profile-placeholder" class="profile-preview-placeholder"><ion-icon name="person"></ion-icon></div>
+                            <div class="upload-overlay"><ion-icon name="camera-outline"></ion-icon></div>
+                        </div>
+                        <input type="file" id="avatar-upload" hidden accept="image/*">
+                    </div>
+
+                    <div class="profile-right">
+                        <form id="profile-form" class="profile-form">
+                            <div class="input-group">
+                                <label class="elegant-label">Name</label>
+                                <input type="text" id="profile-name" placeholder="Your name..." class="minimal-input luxury-input">
+                            </div>
+                            <div class="input-group">
+                                <label class="elegant-label">Bio</label>
+                                <textarea id="profile-bio" placeholder="A short bio..." class="minimal-input luxury-input textarea-input"></textarea>
+                            </div>
+                            
+                            <div class="security-divider"></div>
+                            <label class="elegant-label">Security</label>
+                            <button type="button" id="open-change-pin-btn" class="btn-glass slim-btn">Change Vault Passcode</button>
+
+                            <button type="submit" class="btn-solid wide-btn luxury-btn">Save Profile</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div id="input-modal" class="overlay-glass">
+            <div class="glass-pane center-pane">
+                <h2 id="modal-title" class="serif-header">Input</h2>
+                <input type="text" id="modal-input" class="minimal-input" autocomplete="off">
+                <div class="modal-actions">
+                    <button id="modal-cancel" class="btn-glass">Cancel</button>
+                    <button id="modal-confirm" class="btn-solid">Confirm</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="ai-service.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
