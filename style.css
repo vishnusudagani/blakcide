@@ -270,12 +270,177 @@ body { font-family: 'Inter', sans-serif; color: var(--text-color); overflow-x: h
     to { opacity: 1; }
 }
 
-/* Mobile Adjustments */
+/* =========================================================
+   MOBILE RESET: COMPACT & FITTED SECTIONS
+   ========================================================= */
 @media (max-width: 768px) {
-    .handwriting-text { font-size: 2rem; }
-    .hero-brand { font-size: 3rem; letter-spacing: 8px; margin-left: 8px; }
-    .dynamic-tagline { font-size: 1.25rem; }
+    /* 1. Kill Horizontal Scrolling */
+    html, body { 
+        width: 100%; 
+        overflow-x: hidden !important; 
+        position: relative;
+    }
+    *, *::before, *::after { 
+        box-sizing: border-box !important; 
+    }
+
+    /* 2. Compact Hero Typography */
+    .hero-brand { 
+        font-size: 11vw; /* Slightly scaled down */
+        letter-spacing: 2vw; 
+        margin: 0 0 5px 2vw; 
+        text-align: center; 
+        width: 100%; 
+        display: block; 
+    }
+    .handwriting-text { 
+        font-size: 7vw; 
+    }
+    .dynamic-tagline { 
+        font-size: 5vw; 
+        flex-wrap: wrap; 
+        height: auto; 
+        text-align: center; 
+        justify-content: center; 
+        margin-bottom: 20px;
+    }
+    .hero-desc {
+        font-size: 0.95rem;
+        line-height: 1.5;
+        padding: 0 10px;
+    }
+
+    /* 3. Section Adjustments (Saved Vertical Space) */
+    .section { 
+        width: 100%; 
+        min-height: 100dvh !important; 
+        height: auto !important; 
+        padding: 80px 5% 40px 5% !important; /* Shrunk from 100/80 to give content more room */
+        display: flex; 
+        flex-direction: column; 
+        justify-content: center; 
+        position: relative;
+    }
+    .content-wrapper { 
+        width: 100%; 
+        padding: 0; 
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
+
+    /* 4. Compact Hero Buttons */
+    .hero-buttons { 
+        flex-direction: column; 
+        width: 100%; 
+        gap: 10px; 
+        margin-top: 15px;
+    }
+    .hero-buttons button { 
+        width: 100%; 
+        padding: 14px; 
+    }
+
+    /* 5. Features Box Fix (Perfect Mobile Puzzle Grid) */
+    .features-wrapper {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        height: 100%;
+        padding-top: 10px;
+    }
+    
+    .feature-main-title {
+        font-size: 1.6rem;
+        margin-bottom: 20px;
+        text-align: center;
+    }
+
+    .bento-grid { 
+        display: grid;
+        grid-template-columns: repeat(2, 1fr) !important; /* 2 Columns */
+        gap: 12px !important; 
+        width: 100%; 
+    }
+
+    .bento-card { 
+        width: 100%; 
+        margin: 0; 
+        min-height: 140px !important; /* Increased slightly so text breathes */
+        height: auto;
+        border-radius: 16px; 
+    }
+
+    /* Top card spans both columns */
+    .bento-card:nth-child(1) {
+        grid-column: span 2;
+        min-height: 140px !important; 
+    }
+
+    /* CRITICAL FIX: Force the 3D card backgrounds to stretch to full height */
+    .card-inner, .card-front, .card-back {
+        height: 100% !important;
+        width: 100% !important;
+    }
+
+    /* Pull the text back inside the white cards and center it */
+    .card-front, .card-back {
+        display: flex !important;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        padding: 15px 10px !important;
+    }
+
+    /* Typography scaled for the small boxes */
+    .bento-card h3 {
+        font-size: 1.1rem !important;
+        margin-bottom: 5px !important;
+        text-align: center;
+    }
+    
+    .bento-card .tagline, 
+    .bento-card .sub-desc, 
+    .bento-card .highlight-desc {
+        font-size: 0.8rem !important;
+        line-height: 1.3 !important;
+        text-align: center;
+        margin-bottom: 0 !important;
+    }
+
+    .card-icon {
+        font-size: 1.6rem !important;
+        margin-bottom: 8px !important;
+    }
+
+    /* Keep the plus icon locked to the corner so it doesn't overlap text */
+    .flip-hint {
+        position: absolute;
+        bottom: 10px !important;
+        right: 10px !important;
+        font-size: 1.2rem !important;
+        margin: 0 !important;
+    }
+
+    /* 6. Connect Section Fix (2x2 Grid) */
+    .social-connect-grid { 
+        grid-template-columns: 1fr 1fr; /* Places 2 buttons side-by-side to halve the height */
+        gap: 10px; 
+    }
+
+    /* 7. Modals & Panes */
+    .glass-pane { 
+        width: 100%; 
+        padding: 25px 15px; /* Shrunk padding inside the glass box so it doesn't take over the screen */
+        margin: 0 auto; 
+        border-radius: 20px;
+    }
+    .auth-card {
+        width: 90%;
+        padding: 25px 15px;
+    }
 }
+
 /* --- PROMISE TEXT JUSTIFICATION --- */
 #promise p { text-align: justify; text-justify: inter-word; hyphens: auto; }
 
