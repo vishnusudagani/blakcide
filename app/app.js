@@ -76,9 +76,28 @@ document.addEventListener('DOMContentLoaded', () => {
 
     click('home-btn', () => { window.location.href = '../index.html?noredirect=true'; });
     click('logout-btn', async (e) => { e.stopPropagation(); await supabase.auth.signOut(); window.location.href = '../index.html'; });
-    click('toggle-sidebar-btn', () => getEl('main-sidebar').classList.toggle('collapsed'));
+    // Smart Toggle: Collapses on Desktop, CLOSES on Mobile
+    click('toggle-sidebar-btn', () => {
+        if (window.innerWidth <= 768) {
+            getEl('main-sidebar').classList.remove('open');
+        } else {
+            getEl('main-sidebar').classList.toggle('collapsed');
+        }
+    });
+    
     click('mobile-menu-btn', () => getEl('main-sidebar').classList.add('open'));
-    click('mobile-overlay', () => getEl('main-sidebar').classList.remove('open'));
+
+    // Automatically close sidebar if you click outside of it on mobile
+    document.addEventListener('click', (e) => {
+        const sidebar = getEl('main-sidebar');
+        const menuBtn = getEl('mobile-menu-btn');
+        if (sidebar && menuBtn && window.innerWidth <= 768 && sidebar.classList.contains('open')) {
+            // If the click happened outside the sidebar AND outside the menu button
+            if (!sidebar.contains(e.target) && !menuBtn.contains(e.target)) {
+                sidebar.classList.remove('open');
+            }
+        }
+    });
 
     let contextTarget = null;
     const ctxMenu = getEl('context-menu');
@@ -505,14 +524,27 @@ document.addEventListener('DOMContentLoaded', () => {
     click('modal-confirm', ()=>{ if(mCb)mCb(mInp.value); modal.classList.remove('active'); });
     click('modal-cancel', ()=>{ modal.classList.remove('active'); });
 
-    click('new-folder-btn', ()=>openModal('New Folder', '', async(n)=>{
-        if(n){
-            const { data } = await supabase.from('folders').insert([{user_id:currentUser.id, name:n}]).select().single();
-            if(currentView === 'vault') { let v = getVaultData(); v.folders.push(data.id); setVaultData(v); }
-            if(currentView === 'archive') { let a = getArchiveData(); a.folders.push(data.id); setArchiveData(a); }
-            loadSidebar(); getEl('main-sidebar').classList.remove('open');
-        }
-    }));
+    click('new-folder-btn', () => {
+        getEl('main-sidebar').classList.remove('open'); // <--- ADD THIS LINE
+        openModal('New Folder', '', async (name) => {
+            if (name) {
+                const { data } = await supabase.from('folders').insert([{ user_id: currentUser.id, name: name }]).select().single();
+                
+                if (currentView === 'vault') { 
+                    let vaultInfo = getVaultData(); 
+                    vaultInfo.folders.push(data.id); 
+                    setVaultData(vaultInfo); 
+                }
+                if (currentView === 'archive') { 
+                    let archiveInfo = getArchiveData(); 
+                    archiveInfo.folders.push(data.id); 
+                    setArchiveData(archiveInfo); 
+                }
+                
+                loadSidebar(); 
+            }
+        });
+    });
     
     click('new-chat-btn', ()=>startNewChat(null, true));
     
