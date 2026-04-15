@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome to Blakcide</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
+    <style>
+        :root {
+            --bg-color: #121212;
+            --text-color: #ffffff;
+            --glass-bg: rgba(255, 255, 255, 0.05);
+            --glass-border: rgba(255, 255, 255, 0.1);
+        }
+        body {
+            background-color: var(--bg-color); color: var(--text-color);
+            font-family: 'Inter', sans-serif; display: flex; justify-content: center;
+            align-items: center; height: 100vh; margin: 0;
+        }
+        .glass-pane {
+            background: var(--glass-bg); border: 1px solid var(--glass-border);
+            backdrop-filter: blur(10px); padding: 40px; border-radius: 20px;
+            width: 90%; max-width: 400px; text-align: center;
+        }
+        .minimal-input, select {
+            width: 100%; padding: 12px; margin-bottom: 20px; border-radius: 10px;
+            border: 1px solid var(--glass-border); background: rgba(0,0,0,0.2);
+            color: white; font-size: 1rem; box-sizing: border-box;
+        }
+        .btn-solid {
+            width: 100%; padding: 12px; background: white; color: black;
+            border: none; border-radius: 10px; font-weight: bold; cursor: pointer;
+            font-size: 1rem; transition: 0.2s;
+        }
+        .btn-solid:hover { background: #e0e0e0; }
+    </style>
+</head>
+<body>
+
+    <div class="glass-pane">
+        <h2>Welcome to Blakcide</h2>
+        <p style="opacity: 0.7; margin-bottom: 30px; font-size: 0.9rem;">Let's personalize your sanctuary before you enter.</p>
+        
+        <input type="text" id="ob-name" class="minimal-input" placeholder="What should we call you? (Full Name)">
+        
+        <div style="text-align: left; opacity: 0.7; font-size: 0.8rem; margin-bottom: 5px; margin-left: 5px;">Date of Birth</div>
+        <input type="date" id="ob-dob" class="minimal-input">
+        
+        <select id="ob-gender" class="minimal-input">
+            <option value="" disabled selected>Select Gender</option>
+            <option value="Male">Male</option>
+            <option value="Female">Female</option>
+            <option value="Non-Binary">Non-Binary</option>
+            <option value="Prefer not to say">Prefer not to say</option>
+        </select>
+
+        <button onclick="saveProfile()" id="save-btn" class="btn-solid">Enter Blakcide <ion-icon name="arrow-forward"></ion-icon></button>
+    </div>
+
+    <script>
+        // 1. Initialize Supabase
+        const SUPABASE_URL = 'https://uoosspumdmffccinszuj.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVvb3NzcHVtZG1mZmNjaW5zenVqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcxNzYyNTUsImV4cCI6MjA4Mjc1MjI1NX0.3NayM6uC5-yZv9im-8W7ko28rZFRTnDQbIagN6BArs0';
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        async function saveProfile() {
+            const name = document.getElementById('ob-name').value.trim();
+            const dob = document.getElementById('ob-dob').value;
+            const gender = document.getElementById('ob-gender').value;
+
+            if (!name) return alert("Please tell us your name so we know what to call you.");
+
+            const btn = document.getElementById('save-btn');
+            btn.innerText = "Saving..."; btn.disabled = true;
+
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) {
+                alert("Session lost. Please log in again.");
+                return window.location.href = '../index.html';
+            }
+
+            // Save to the universal profile table
+            const { error } = await supabase.from('profiles').upsert({
+                id: session.user.id,
+                full_name: name,
+                dob: dob || null,
+                gender: gender || null
+            });
+
+            if (error) {
+                alert("Error saving profile: " + error.message);
+                btn.innerText = "Try Again"; btn.disabled = false;
+            } else {
+                // Success! Send them to the main app
+                window.location.href = 'dashboard.html'; // Change 'app.html' to whatever your main chat page is named!
+            }
+        }
+    </script>
+</body>
+</html>

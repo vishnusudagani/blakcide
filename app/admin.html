@@ -1,0 +1,958 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blakcide | Command Center</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
+    <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --bg: #080b0f;
+            --panel: rgba(14, 18, 26, 0.85);
+            --panel-solid: #0d1117;
+            --border: rgba(255,255,255,0.07);
+            --accent: #00e5b0;
+            --accent-dim: rgba(0, 229, 176, 0.12);
+            --accent-red: #ff4c6a;
+            --accent-blue: #3d9eff;
+            --accent-yellow: #f5c518;
+            --accent-purple: #a855f7;
+            --text: #e8eaf0;
+            --muted: #6b7280;
+            --hover: rgba(255,255,255,0.04);
+            --radius: 12px;
+            --font: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+        body {
+            font-family: var(--font);
+            background: var(--bg);
+            color: var(--text);
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* ── LOCK SCREEN ── */
+        #admin-lock {
+            position: fixed; inset: 0;
+            background: var(--bg);
+            z-index: 99999;
+            display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 16px;
+        }
+        .lock-logo { font-size: 3rem; color: var(--accent); }
+        .lock-title { font-size: 1.3rem; font-weight: 700; letter-spacing: 3px; text-transform: uppercase; }
+        .lock-sub { color: var(--muted); font-size: 0.9rem; }
+        .lock-bar {
+            width: 200px; height: 2px; background: rgba(255,255,255,0.08);
+            border-radius: 2px; overflow: hidden; margin-top: 8px;
+        }
+        .lock-bar-fill {
+            height: 100%; background: var(--accent);
+            animation: loadBar 1.8s ease-in-out forwards;
+        }
+        @keyframes loadBar { from { width: 0%; } to { width: 100%; } }
+
+        /* ── SIDEBAR ── */
+        .sidebar {
+            width: 240px; min-width: 240px;
+            background: var(--panel-solid);
+            border-right: 1px solid var(--border);
+            display: flex; flex-direction: column;
+            z-index: 50;
+            overflow: hidden;
+        }
+        .sidebar-brand {
+            padding: 24px 20px 16px;
+            border-bottom: 1px solid var(--border);
+        }
+        .brand-name {
+            font-size: 1.1rem; font-weight: 800; letter-spacing: 3px;
+            color: var(--accent);
+            text-shadow: 0 0 20px rgba(0,229,176,0.4);
+        }
+        .brand-sub { font-size: 0.7rem; color: var(--muted); letter-spacing: 1px; margin-top: 2px; }
+        .sidebar-section { padding: 12px 12px 4px; font-size: 0.65rem; color: var(--muted); letter-spacing: 2px; text-transform: uppercase; }
+        .nav-item {
+            display: flex; align-items: center; gap: 12px;
+            padding: 11px 16px; margin: 1px 8px;
+            border-radius: 8px; cursor: pointer;
+            color: var(--muted); font-size: 0.875rem;
+            transition: all 0.15s; user-select: none;
+        }
+        .nav-item:hover { background: var(--hover); color: var(--text); }
+        .nav-item.active { background: var(--accent-dim); color: var(--accent); }
+        .nav-item ion-icon { font-size: 1.1rem; flex-shrink: 0; }
+        .nav-badge {
+            margin-left: auto; background: var(--accent-red);
+            color: white; font-size: 0.65rem; font-weight: 700;
+            padding: 2px 6px; border-radius: 10px; min-width: 18px; text-align: center;
+        }
+        .nav-badge.green { background: var(--accent); color: #000; }
+        .sidebar-footer {
+            margin-top: auto;
+            padding: 12px;
+            border-top: 1px solid var(--border);
+        }
+        .admin-pill {
+            display: flex; align-items: center; gap: 10px;
+            padding: 10px 12px; border-radius: 8px;
+            background: var(--hover);
+        }
+        .admin-avatar {
+            width: 32px; height: 32px; border-radius: 50%;
+            background: var(--accent-dim); border: 1px solid var(--accent);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.8rem; color: var(--accent); font-weight: 700;
+            flex-shrink: 0;
+        }
+        .admin-info { flex: 1; min-width: 0; }
+        .admin-name { font-size: 0.8rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .admin-role { font-size: 0.65rem; color: var(--accent); letter-spacing: 1px; }
+        .logout-btn {
+            background: none; border: none; color: var(--muted); cursor: pointer;
+            font-size: 1.1rem; padding: 4px; border-radius: 4px; transition: color 0.15s;
+        }
+        .logout-btn:hover { color: var(--accent-red); }
+
+        /* ── MAIN CONTENT ── */
+        .main {
+            flex: 1; display: flex; flex-direction: column; overflow: hidden;
+        }
+        .topbar {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 16px 28px;
+            border-bottom: 1px solid var(--border);
+            background: var(--panel-solid);
+            flex-shrink: 0;
+        }
+        .topbar-left { display: flex; flex-direction: column; }
+        .topbar-title { font-size: 1.15rem; font-weight: 700; }
+        .topbar-sub { font-size: 0.78rem; color: var(--muted); margin-top: 2px; }
+        .topbar-right { display: flex; align-items: center; gap: 12px; }
+        .live-dot {
+            display: flex; align-items: center; gap: 6px;
+            font-size: 0.78rem; color: var(--accent);
+        }
+        .live-dot::before {
+            content: ''; width: 7px; height: 7px; border-radius: 50%;
+            background: var(--accent);
+            box-shadow: 0 0 6px var(--accent);
+            animation: blink 1.5s infinite;
+        }
+        @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+        .refresh-btn {
+            background: var(--hover); border: 1px solid var(--border);
+            color: var(--muted); padding: 7px 14px; border-radius: 7px;
+            font-size: 0.8rem; cursor: pointer; transition: all 0.15s;
+            display: flex; align-items: center; gap: 6px;
+        }
+        .refresh-btn:hover { color: var(--text); border-color: var(--accent); }
+        #last-updated { font-size: 0.72rem; color: var(--muted); }
+
+        .panels-area { flex: 1; overflow-y: auto; padding: 24px 28px; }
+        .panel { display: none; }
+        .panel.active { display: block; }
+
+        /* ── METRIC CARDS ── */
+        .metrics-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 16px; margin-bottom: 24px;
+        }
+        .metric-card {
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 20px;
+            position: relative; overflow: hidden;
+            transition: border-color 0.2s;
+        }
+        .metric-card:hover { border-color: rgba(255,255,255,0.15); }
+        .metric-card .accent-bar {
+            position: absolute; top: 0; left: 0; right: 0; height: 2px;
+        }
+        .metric-card .m-icon {
+            font-size: 1.6rem; margin-bottom: 12px; display: block;
+        }
+        .metric-card .m-label {
+            font-size: 0.72rem; color: var(--muted); text-transform: uppercase; letter-spacing: 1px;
+        }
+        .metric-card .m-value {
+            font-size: 2.2rem; font-weight: 800; line-height: 1; margin: 6px 0 8px;
+        }
+        .metric-card .m-delta {
+            font-size: 0.75rem; display: flex; align-items: center; gap: 4px;
+        }
+
+        /* ── CHARTS ROW ── */
+        .charts-row {
+            display: grid; grid-template-columns: 2fr 1fr;
+            gap: 16px; margin-bottom: 24px;
+        }
+        .chart-card {
+            background: var(--panel); border: 1px solid var(--border);
+            border-radius: var(--radius); padding: 20px;
+        }
+        .chart-card h3 { font-size: 0.9rem; font-weight: 600; margin-bottom: 16px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+        .chart-wrap { position: relative; }
+
+        /* ── DATA PANELS ── */
+        .data-card {
+            background: var(--panel); border: 1px solid var(--border);
+            border-radius: var(--radius); overflow: hidden; margin-bottom: 20px;
+        }
+        .data-card-header {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 16px 20px; border-bottom: 1px solid var(--border);
+        }
+        .data-card-header h3 { font-size: 0.95rem; font-weight: 600; }
+        .header-actions { display: flex; gap: 8px; align-items: center; }
+        .search-input {
+            background: var(--bg); border: 1px solid var(--border);
+            color: var(--text); padding: 7px 12px; border-radius: 7px;
+            font-size: 0.82rem; width: 220px; outline: none; transition: border-color 0.15s;
+        }
+        .search-input:focus { border-color: var(--accent); }
+        .filter-btn {
+            padding: 6px 12px; border-radius: 6px; font-size: 0.78rem;
+            border: 1px solid var(--border); background: transparent;
+            color: var(--muted); cursor: pointer; transition: all 0.15s;
+        }
+        .filter-btn.active, .filter-btn:hover { background: var(--accent-dim); color: var(--accent); border-color: var(--accent); }
+
+        /* ── TABLES ── */
+        .scroll-x { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.845rem; }
+        thead th {
+            padding: 11px 16px; text-align: left;
+            font-size: 0.7rem; font-weight: 600; text-transform: uppercase;
+            letter-spacing: 0.8px; color: var(--muted);
+            border-bottom: 1px solid var(--border);
+            white-space: nowrap;
+        }
+        tbody td { padding: 13px 16px; border-bottom: 1px solid rgba(255,255,255,0.04); vertical-align: middle; }
+        tbody tr:last-child td { border-bottom: none; }
+        tbody tr:hover td { background: var(--hover); }
+        tbody tr { cursor: pointer; transition: background 0.1s; }
+        .no-click { cursor: default; }
+
+        /* ── BADGES ── */
+        .badge {
+            display: inline-flex; align-items: center; gap: 4px;
+            padding: 3px 9px; border-radius: 20px; font-size: 0.72rem; font-weight: 600;
+        }
+        .badge-green { background: rgba(0,229,176,0.12); color: var(--accent); }
+        .badge-red { background: rgba(255,76,106,0.12); color: var(--accent-red); }
+        .badge-blue { background: rgba(61,158,255,0.12); color: var(--accent-blue); }
+        .badge-yellow { background: rgba(245,197,24,0.12); color: var(--accent-yellow); }
+        .badge-purple { background: rgba(168,85,247,0.12); color: var(--accent-purple); }
+        .badge-grey { background: rgba(255,255,255,0.06); color: var(--muted); }
+
+        /* ── AVATAR ── */
+        .user-cell { display: flex; align-items: center; gap: 10px; }
+        .u-avatar {
+            width: 32px; height: 32px; border-radius: 50%; object-fit: cover;
+            background: var(--hover); flex-shrink: 0;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.75rem; font-weight: 700; color: var(--accent);
+            border: 1px solid var(--border);
+        }
+        .u-name { font-weight: 500; }
+        .u-email { font-size: 0.75rem; color: var(--muted); }
+
+        /* ── ACTION BUTTONS ── */
+        .btn {
+            padding: 6px 12px; border-radius: 6px; font-size: 0.78rem; font-weight: 600;
+            border: none; cursor: pointer; transition: all 0.15s;
+            display: inline-flex; align-items: center; gap: 5px;
+        }
+        .btn-ghost { background: transparent; border: 1px solid var(--border); color: var(--muted); }
+        .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+        .btn-primary { background: var(--accent); color: #000; }
+        .btn-primary:hover { opacity: 0.85; }
+        .btn-danger { background: rgba(255,76,106,0.15); color: var(--accent-red); border: 1px solid rgba(255,76,106,0.3); }
+        .btn-danger:hover { background: rgba(255,76,106,0.25); }
+        .btn-warning { background: rgba(245,197,24,0.12); color: var(--accent-yellow); border: 1px solid rgba(245,197,24,0.25); }
+        .btn-warning:hover { background: rgba(245,197,24,0.22); }
+
+        /* ── SLIDE-OVER PANEL ── */
+        .overlay {
+            position: fixed; inset: 0;
+            background: rgba(0,0,0,0.6); backdrop-filter: blur(4px);
+            z-index: 1000; display: none; justify-content: flex-end;
+        }
+        .overlay.open { display: flex; }
+        .slide-panel {
+            width: 100%; max-width: 560px;
+            background: var(--panel-solid);
+            border-left: 1px solid var(--border);
+            height: 100vh; overflow-y: auto;
+            animation: slideIn 0.25s ease;
+        }
+        @keyframes slideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
+        .slide-header {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 20px 24px; border-bottom: 1px solid var(--border);
+            position: sticky; top: 0; background: var(--panel-solid); z-index: 10;
+        }
+        .slide-close {
+            background: none; border: none; color: var(--muted); font-size: 1.5rem;
+            cursor: pointer; padding: 4px; border-radius: 4px; transition: color 0.15s;
+        }
+        .slide-close:hover { color: var(--accent-red); }
+        .slide-body { padding: 24px; }
+        .profile-hero {
+            display: flex; gap: 16px; align-items: center;
+            margin-bottom: 24px;
+        }
+        .profile-hero img, .profile-hero .p-avatar {
+            width: 64px; height: 64px; border-radius: 50%; object-fit: cover;
+            border: 2px solid var(--accent); flex-shrink: 0;
+        }
+        .profile-hero .p-avatar {
+            background: var(--accent-dim);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.5rem; font-weight: 800; color: var(--accent);
+        }
+        .p-name { font-size: 1.1rem; font-weight: 700; }
+        .p-email { font-size: 0.82rem; color: var(--muted); margin-top: 3px; }
+        .stats-mini {
+            display: grid; grid-template-columns: repeat(3, 1fr);
+            gap: 12px; margin-bottom: 24px;
+        }
+        .stat-mini-box {
+            background: var(--hover); border: 1px solid var(--border);
+            border-radius: 10px; padding: 14px; text-align: center;
+        }
+        .stat-mini-val { font-size: 1.6rem; font-weight: 800; }
+        .stat-mini-label { font-size: 0.7rem; color: var(--muted); margin-top: 4px; }
+        .section-title {
+            font-size: 0.72rem; font-weight: 600; text-transform: uppercase;
+            letter-spacing: 1px; color: var(--muted); margin: 20px 0 10px;
+        }
+        .detail-row {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 0.85rem;
+        }
+        .detail-row:last-child { border-bottom: none; }
+        .detail-label { color: var(--muted); }
+        .transcript-msg {
+            padding: 10px 14px; border-radius: 8px; margin-bottom: 8px;
+            font-size: 0.85rem; max-width: 85%; line-height: 1.5;
+        }
+        .transcript-user { background: rgba(61,158,255,0.12); border: 1px solid rgba(61,158,255,0.2); margin-left: auto; text-align: right; }
+        .transcript-listener { background: var(--hover); border: 1px solid var(--border); }
+        .transcript-system { background: rgba(168,85,247,0.1); border: 1px solid rgba(168,85,247,0.2); font-style: italic; font-size: 0.78rem; color: var(--accent-purple); max-width: 100%; text-align: center; margin: 0 auto; }
+
+        /* ── LIVE FEED ── */
+        .live-feed {
+            background: var(--panel); border: 1px solid var(--border);
+            border-radius: var(--radius); height: calc(100vh - 200px);
+            overflow-y: auto; padding: 16px;
+        }
+        .feed-event {
+            display: flex; gap: 12px; padding: 12px 0;
+            border-bottom: 1px solid var(--border); animation: fadeSlide 0.4s ease;
+        }
+        .feed-event:last-child { border-bottom: none; }
+        @keyframes fadeSlide { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
+        .feed-icon {
+            width: 34px; height: 34px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.9rem; flex-shrink: 0;
+        }
+        .feed-text { flex: 1; font-size: 0.84rem; }
+        .feed-time { font-size: 0.72rem; color: var(--muted); margin-top: 2px; }
+
+        /* ── CONTROLS ── */
+        .control-row {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 18px 0; border-bottom: 1px solid var(--border);
+        }
+        .control-row:last-child { border-bottom: none; }
+        .control-info h4 { font-size: 0.92rem; font-weight: 600; }
+        .control-info p { font-size: 0.78rem; color: var(--muted); margin-top: 3px; }
+        .toggle-switch {
+            position: relative; width: 44px; height: 24px;
+        }
+        .toggle-switch input { opacity: 0; width: 0; height: 0; }
+        .toggle-slider {
+            position: absolute; cursor: pointer; inset: 0;
+            background: rgba(255,255,255,0.1); border-radius: 24px; transition: 0.3s;
+        }
+        .toggle-slider:before {
+            content: ''; position: absolute; height: 18px; width: 18px;
+            left: 3px; bottom: 3px; background: white; border-radius: 50%; transition: 0.3s;
+        }
+        .toggle-switch input:checked + .toggle-slider { background: var(--accent); }
+        .toggle-switch input:checked + .toggle-slider:before { transform: translateX(20px); }
+
+        /* ── TOAST ── */
+        #toast-container {
+            position: fixed; bottom: 24px; right: 24px;
+            display: flex; flex-direction: column; gap: 8px; z-index: 99998;
+        }
+        .toast {
+            background: #1a1f2e; border: 1px solid var(--border);
+            color: var(--text); padding: 12px 18px; border-radius: 8px;
+            font-size: 0.85rem; animation: toastIn 0.3s ease;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+        }
+        @keyframes toastIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* ── EMPTY STATE ── */
+        .empty-state {
+            text-align: center; padding: 48px 20px;
+            color: var(--muted); font-size: 0.88rem;
+        }
+        .empty-state ion-icon { font-size: 2.5rem; display: block; margin-bottom: 10px; opacity: 0.4; }
+
+        /* ── SCROLLBAR ── */
+        ::-webkit-scrollbar { width: 5px; height: 5px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
+
+        /* ── MISC ── */
+        .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+        .inline-edit { background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 6px 10px; border-radius: 6px; font-size: 0.85rem; width: 100%; outline: none; }
+        .inline-edit:focus { border-color: var(--accent); }
+        .text-accent { color: var(--accent); }
+        .text-red { color: var(--accent-red); }
+        .text-muted { color: var(--muted); }
+        .fw-bold { font-weight: 700; }
+        .mt-4 { margin-top: 16px; }
+        .flex-gap { display: flex; gap: 8px; flex-wrap: wrap; }
+
+        /* ── CONTENT PREVIEW ROWS (slide panel) ── */
+        .cp-row {
+            display: flex; align-items: flex-start; gap: 10px;
+            padding: 10px 12px; border-radius: 8px;
+            cursor: pointer; transition: background 0.12s;
+            border: 1px solid var(--border); margin-bottom: 6px;
+        }
+        .cp-row:hover { background: var(--hover); border-color: rgba(255,255,255,0.12); }
+        .cp-icon { font-size: 1rem; margin-top: 1px; flex-shrink: 0; width: 20px; text-align: center; }
+        .cp-body { flex: 1; min-width: 0; }
+        .cp-title { font-size: 0.85rem; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .cp-meta { font-size: 0.72rem; color: var(--muted); margin-top: 2px; }
+        .cp-preview { font-size: 0.76rem; color: var(--muted); margin-top: 4px; line-height: 1.4; opacity: 0.8; }
+
+        /* ── ACTIVITY PANEL ── */
+        .activity-select {
+            background: var(--bg); border: 1px solid var(--border); color: var(--text);
+            padding: 8px 12px; border-radius: 8px; font-size: 0.82rem;
+            outline: none; cursor: pointer; transition: border-color 0.15s; max-width: 360px; width: 100%;
+        }
+        .activity-select:focus { border-color: var(--accent); }
+        .activity-stats-row {
+            display: grid; grid-template-columns: repeat(4, 1fr);
+            gap: 12px; margin: 16px 0;
+        }
+        .activity-heatmap-wrap { overflow-x: auto; }
+    </style>
+</head>
+<body>
+
+<!-- LOCK SCREEN -->
+<div id="admin-lock">
+    <ion-icon class="lock-logo" name="shield-checkmark-outline"></ion-icon>
+    <div class="lock-title">Command Center</div>
+    <div class="lock-sub">Verifying admin credentials...</div>
+    <div class="lock-bar"><div class="lock-bar-fill"></div></div>
+</div>
+
+<!-- SIDEBAR -->
+<nav class="sidebar">
+    <div class="sidebar-brand">
+        <div class="brand-name">BLAKCIDE</div>
+        <div class="brand-sub">COMMAND CENTER</div>
+    </div>
+
+    <div class="sidebar-section">Main</div>
+    <div class="nav-item active" onclick="showPanel('overview')">
+        <ion-icon name="grid-outline"></ion-icon> Overview
+    </div>
+    <div class="nav-item" onclick="showPanel('live')">
+        <ion-icon name="pulse-outline"></ion-icon> Live Feed
+        <span class="nav-badge green" id="live-count">0</span>
+    </div>
+
+    <div class="sidebar-section">Data</div>
+    <div class="nav-item" onclick="showPanel('users')">
+        <ion-icon name="people-outline"></ion-icon> Users
+        <span class="nav-badge" id="users-count">--</span>
+    </div>
+    <div class="nav-item" onclick="showPanel('listeners')">
+        <ion-icon name="headset-outline"></ion-icon> Listeners
+    </div>
+    <div class="nav-item" onclick="showPanel('sessions')">
+        <ion-icon name="swap-horizontal-outline"></ion-icon> Sessions
+    </div>
+
+    <div class="sidebar-section">Insights</div>
+    <div class="nav-item" onclick="showPanel('ai')">
+        <ion-icon name="sparkles-outline"></ion-icon> AI & Journals
+    </div>
+    <div class="nav-item" onclick="showPanel('activity')">
+        <ion-icon name="calendar-outline"></ion-icon> Activity
+    </div>
+
+    <div class="sidebar-section">Admin</div>
+    <div class="nav-item" onclick="showPanel('controls')">
+        <ion-icon name="settings-outline"></ion-icon> Controls
+    </div>
+
+    <div class="sidebar-footer">
+        <div class="admin-pill">
+            <div class="admin-avatar" id="admin-avatar-initials">A</div>
+            <div class="admin-info">
+                <div class="admin-name" id="admin-display-name">Admin</div>
+                <div class="admin-role">SUPERADMIN</div>
+            </div>
+            <button class="logout-btn" onclick="adminLogout()" title="Logout">
+                <ion-icon name="log-out-outline"></ion-icon>
+            </button>
+        </div>
+    </div>
+</nav>
+
+<!-- MAIN CONTENT -->
+<div class="main">
+    <div class="topbar">
+        <div class="topbar-left">
+            <div class="topbar-title" id="panel-title">System Overview</div>
+            <div class="topbar-sub" id="panel-sub">Platform health and metrics</div>
+        </div>
+        <div class="topbar-right">
+            <span id="last-updated"></span>
+            <div class="live-dot">Realtime Active</div>
+            <button class="refresh-btn" onclick="refreshAll()">
+                <ion-icon name="refresh-outline"></ion-icon> Refresh
+            </button>
+        </div>
+    </div>
+
+    <div class="panels-area">
+
+        <!-- ══════════════════════════════
+             PANEL: OVERVIEW
+        ══════════════════════════════ -->
+        <div id="panel-overview" class="panel active">
+            <div class="metrics-row">
+                <div class="metric-card">
+                    <div class="accent-bar" style="background: linear-gradient(90deg, var(--accent), transparent);"></div>
+                    <ion-icon class="m-icon" name="people-outline" style="color: var(--accent);"></ion-icon>
+                    <div class="m-label">Total Users</div>
+                    <div class="m-value" id="m-users">--</div>
+                    <div class="m-delta text-accent"><ion-icon name="add-circle-outline"></ion-icon> <span id="m-users-week">--</span> this week</div>
+                </div>
+                <div class="metric-card">
+                    <div class="accent-bar" style="background: linear-gradient(90deg, var(--accent-blue), transparent);"></div>
+                    <ion-icon class="m-icon" name="headset-outline" style="color: var(--accent-blue);"></ion-icon>
+                    <div class="m-label">Listeners Online</div>
+                    <div class="m-value" id="m-listeners-online">--</div>
+                    <div class="m-delta text-muted">of <span id="m-listeners-total">--</span> total listeners</div>
+                </div>
+                <div class="metric-card">
+                    <div class="accent-bar" style="background: linear-gradient(90deg, #f5c518, transparent);"></div>
+                    <ion-icon class="m-icon" name="swap-horizontal-outline" style="color: var(--accent-yellow);"></ion-icon>
+                    <div class="m-label">Active Sessions</div>
+                    <div class="m-value" id="m-active-sessions">--</div>
+                    <div class="m-delta text-muted"><span id="m-completed-sessions">--</span> completed total</div>
+                </div>
+                <div class="metric-card">
+                    <div class="accent-bar" style="background: linear-gradient(90deg, var(--accent-purple), transparent);"></div>
+                    <ion-icon class="m-icon" name="chatbubbles-outline" style="color: var(--accent-purple);"></ion-icon>
+                    <div class="m-label">Platform Messages</div>
+                    <div class="m-value" id="m-messages">--</div>
+                    <div class="m-delta text-muted">Across all sessions</div>
+                </div>
+                <div class="metric-card">
+                    <div class="accent-bar" style="background: linear-gradient(90deg, var(--accent-red), transparent);"></div>
+                    <ion-icon class="m-icon" name="sparkles-outline" style="color: var(--accent-red);"></ion-icon>
+                    <div class="m-label">AI Chats</div>
+                    <div class="m-value" id="m-ai-chats">--</div>
+                    <div class="m-delta text-muted">Private AI conversations</div>
+                </div>
+                <div class="metric-card">
+                    <div class="accent-bar" style="background: linear-gradient(90deg, #34d399, transparent);"></div>
+                    <ion-icon class="m-icon" name="book-outline" style="color: #34d399;"></ion-icon>
+                    <div class="m-label">Journal Entries</div>
+                    <div class="m-value" id="m-journals">--</div>
+                    <div class="m-delta text-accent"><span id="m-journals-week">--</span> this week</div>
+                </div>
+            </div>
+
+            <div class="charts-row">
+                <div class="chart-card">
+                    <h3>Sessions — Last 30 Days</h3>
+                    <div class="chart-wrap" style="height: 200px;">
+                        <canvas id="chart-sessions"></canvas>
+                    </div>
+                </div>
+                <div class="chart-card">
+                    <h3>Session Type Split</h3>
+                    <div class="chart-wrap" style="height: 200px; display: flex; align-items: center; justify-content: center;">
+                        <canvas id="chart-types" style="max-height: 200px;"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="data-card">
+                <div class="data-card-header">
+                    <h3>Recent Sessions</h3>
+                    <button class="btn btn-ghost" onclick="showPanel('sessions')">View All</button>
+                </div>
+                <div class="scroll-x">
+                    <table>
+                        <thead><tr>
+                            <th>User</th>
+                            <th>Listener</th>
+                            <th>Type</th>
+                            <th>Status</th>
+                            <th>Messages</th>
+                            <th>Date</th>
+                            <th></th>
+                        </tr></thead>
+                        <tbody id="recent-sessions-body">
+                            <tr><td colspan="7" class="empty-state">Loading...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ══════════════════════════════
+             PANEL: LIVE FEED
+        ══════════════════════════════ -->
+        <div id="panel-live" class="panel">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">
+                <div class="live-dot" style="font-size: 0.9rem;">Streaming live events</div>
+                <button class="btn btn-ghost" onclick="document.getElementById('live-feed-list').innerHTML = ''">Clear</button>
+            </div>
+            <div class="live-feed" id="live-feed-list">
+                <div class="empty-state">
+                    <ion-icon name="pulse-outline"></ion-icon>
+                    Waiting for activity...
+                </div>
+            </div>
+        </div>
+
+        <!-- ══════════════════════════════
+             PANEL: USERS
+        ══════════════════════════════ -->
+        <div id="panel-users" class="panel">
+            <div class="data-card">
+                <div class="data-card-header">
+                    <h3>All Users <span class="text-muted" id="users-display-count" style="font-size: 0.8rem; font-weight: 400;"></span></h3>
+                    <div class="header-actions">
+                        <input class="search-input" type="text" placeholder="Search name or email…" id="user-search" oninput="filterUsers(this.value)">
+                    </div>
+                </div>
+                <div class="scroll-x">
+                    <table>
+                        <thead><tr>
+                            <th>User</th>
+                            <th>Joined</th>
+                            <th>Last Active</th>
+                            <th>Journals</th>
+                            <th>AI Chats</th>
+                            <th>Sessions</th>
+                            <th>Status</th>
+                            <th></th>
+                        </tr></thead>
+                        <tbody id="users-table-body">
+                            <tr><td colspan="8" class="empty-state">Loading users...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ══════════════════════════════
+             PANEL: LISTENERS
+        ══════════════════════════════ -->
+        <div id="panel-listeners" class="panel">
+            <div class="data-card">
+                <div class="data-card-header">
+                    <h3>Listener Roster</h3>
+                    <div class="header-actions">
+                        <button class="btn btn-primary" onclick="showAddListenerPanel()">
+                            <ion-icon name="add-outline"></ion-icon> Add Listener
+                        </button>
+                    </div>
+                </div>
+                <div class="scroll-x">
+                    <table>
+                        <thead><tr>
+                            <th>Listener</th>
+                            <th>Status</th>
+                            <th>Languages</th>
+                            <th>Rating</th>
+                            <th>Sessions</th>
+                            <th>Calls / Chats</th>
+                            <th>Chat ₹/min</th>
+                            <th>Call ₹/min</th>
+                            <th>Last Active</th>
+                            <th>Actions</th>
+                        </tr></thead>
+                        <tbody id="listeners-table-body">
+                            <tr><td colspan="10" class="empty-state">Loading listeners...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ══════════════════════════════
+             PANEL: SESSIONS
+        ══════════════════════════════ -->
+        <div id="panel-sessions" class="panel">
+            <div class="data-card">
+                <div class="data-card-header">
+                    <h3>All Sessions</h3>
+                    <div class="header-actions">
+                        <button class="filter-btn active" id="sf-all" onclick="filterSessions('all')">All</button>
+                        <button class="filter-btn" id="sf-active" onclick="filterSessions('active')">Active</button>
+                        <button class="filter-btn" id="sf-completed" onclick="filterSessions('completed')">Completed</button>
+                        <button class="filter-btn" id="sf-call" onclick="filterSessions('call')">Calls</button>
+                        <button class="filter-btn" id="sf-chat" onclick="filterSessions('chat')">Chats</button>
+                    </div>
+                </div>
+                <div class="scroll-x">
+                    <table>
+                        <thead><tr>
+                            <th>User</th>
+                            <th>Listener</th>
+                            <th>Type</th>
+                            <th>Status</th>
+                            <th>Messages</th>
+                            <th>Anonymous</th>
+                            <th>Date</th>
+                            <th>Actions</th>
+                        </tr></thead>
+                        <tbody id="sessions-table-body">
+                            <tr><td colspan="8" class="empty-state">Loading sessions...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ══════════════════════════════
+             PANEL: AI & JOURNALS
+        ══════════════════════════════ -->
+        <div id="panel-ai" class="panel">
+            <div class="metrics-row" style="grid-template-columns: repeat(4, 1fr);">
+                <div class="metric-card">
+                    <ion-icon class="m-icon" name="sparkles-outline" style="color: var(--accent-red);"></ion-icon>
+                    <div class="m-label">AI Chats</div>
+                    <div class="m-value" id="ai-m-chats">--</div>
+                </div>
+                <div class="metric-card">
+                    <ion-icon class="m-icon" name="chatbubble-outline" style="color: var(--accent-blue);"></ion-icon>
+                    <div class="m-label">AI Messages</div>
+                    <div class="m-value" id="ai-m-messages">--</div>
+                </div>
+                <div class="metric-card">
+                    <ion-icon class="m-icon" name="book-outline" style="color: #34d399;"></ion-icon>
+                    <div class="m-label">Journal Entries</div>
+                    <div class="m-value" id="ai-m-journals">--</div>
+                </div>
+                <div class="metric-card">
+                    <ion-icon class="m-icon" name="bar-chart-outline" style="color: var(--accent-yellow);"></ion-icon>
+                    <div class="m-label">Avg Msgs / Chat</div>
+                    <div class="m-value" id="ai-m-avg">--</div>
+                </div>
+            </div>
+
+            <div class="two-col">
+                <div class="data-card">
+                    <div class="data-card-header"><h3>Recent AI Chats</h3></div>
+                    <div class="scroll-x">
+                        <table>
+                            <thead><tr><th>User</th><th>Title</th><th>Messages</th><th>Created</th></tr></thead>
+                            <tbody id="ai-chats-body">
+                                <tr><td colspan="4" class="empty-state">Loading...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="data-card">
+                    <div class="data-card-header"><h3>Recent Journals</h3></div>
+                    <div class="scroll-x">
+                        <table>
+                            <thead><tr><th>User</th><th>Title</th><th>Media</th><th>Created</th></tr></thead>
+                            <tbody id="journals-body">
+                                <tr><td colspan="4" class="empty-state">Loading...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ══════════════════════════════
+             PANEL: ACTIVITY
+        ══════════════════════════════ -->
+        <div id="panel-activity" class="panel">
+            <div class="data-card" style="margin-bottom:20px;">
+                <div class="data-card-header">
+                    <h3>User Activity Tracker</h3>
+                    <div class="header-actions">
+                        <select class="activity-select" id="activity-user-picker">
+                            <option value="">All users (platform-wide)</option>
+                        </select>
+                    </div>
+                </div>
+                <div style="padding:0 20px 20px;">
+                    <div class="activity-stats-row" id="activity-stats-row">
+                        <div class="stat-mini-box"><div class="stat-mini-val">—</div><div class="stat-mini-label">📓 Journals</div></div>
+                        <div class="stat-mini-box"><div class="stat-mini-val">—</div><div class="stat-mini-label">✨ AI Chats</div></div>
+                        <div class="stat-mini-box"><div class="stat-mini-val">—</div><div class="stat-mini-label">🔗 Sessions</div></div>
+                        <div class="stat-mini-box"><div class="stat-mini-val">—</div><div class="stat-mini-label">Active Days</div></div>
+                    </div>
+
+                    <div class="section-title">Activity — Past 12 Months</div>
+                    <div class="activity-heatmap-wrap" id="activity-heatmap-wrap" style="margin-top:12px;">
+                        <div class="empty-state" style="padding:32px 0;">
+                            <ion-icon name="calendar-outline"></ion-icon>
+                            Select a panel to load activity
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="data-card">
+                <div class="data-card-header">
+                    <h3>Most Active Users</h3>
+                    <span class="text-muted" style="font-size:0.78rem;">Last 30 days · click a user to open their profile</span>
+                </div>
+                <div class="scroll-x">
+                    <table>
+                        <thead><tr>
+                            <th>User</th>
+                            <th>Journals</th>
+                            <th>AI Chats</th>
+                            <th>Sessions</th>
+                            <th>Total</th>
+                            <th></th>
+                        </tr></thead>
+                        <tbody id="activity-top-users-body">
+                            <tr><td colspan="6"><div class="empty-state">Loading…</div></td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ══════════════════════════════
+             PANEL: CONTROLS
+        ══════════════════════════════ -->
+        <div id="panel-controls" class="panel">
+            <div class="two-col">
+                <div class="data-card">
+                    <div class="data-card-header"><h3>Platform Toggles</h3></div>
+                    <div style="padding: 0 20px;">
+                        <div class="control-row">
+                            <div class="control-info">
+                                <h4>AI Engine</h4>
+                                <p>GPT-4o-mini via Netlify proxy — powers all AI chats</p>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" checked id="toggle-ai">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                        <div class="control-row">
+                            <div class="control-info">
+                                <h4>New User Signups</h4>
+                                <p>Allow new accounts to be created</p>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" checked id="toggle-signups">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                        <div class="control-row">
+                            <div class="control-info">
+                                <h4>Human Connect Marketplace</h4>
+                                <p>Let users browse and connect with listeners</p>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" checked id="toggle-connect">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <div class="data-card">
+                    <div class="data-card-header"><h3>Quick Actions</h3></div>
+                    <div style="padding: 16px 20px; display: flex; flex-direction: column; gap: 12px;">
+                        <button class="btn btn-warning" style="width:100%; justify-content:center; padding: 12px;" onclick="forceAllListenersOffline()">
+                            <ion-icon name="wifi-outline"></ion-icon> Force All Listeners Offline
+                        </button>
+                        <button class="btn btn-danger" style="width:100%; justify-content:center; padding: 12px;" onclick="cancelAllActiveSessions()">
+                            <ion-icon name="close-circle-outline"></ion-icon> Cancel All Active Sessions
+                        </button>
+                        <button class="btn btn-ghost" style="width:100%; justify-content:center; padding: 12px;" onclick="exportUserCSV()">
+                            <ion-icon name="download-outline"></ion-icon> Export User Data (CSV)
+                        </button>
+                        <button class="btn btn-ghost" style="width:100%; justify-content:center; padding: 12px;" onclick="exportSessionCSV()">
+                            <ion-icon name="download-outline"></ion-icon> Export Session Data (CSV)
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="data-card">
+                <div class="data-card-header"><h3>Platform Stats Summary</h3></div>
+                <div style="padding: 0 20px;" id="controls-stats">
+                    <div class="control-row no-click">
+                        <div class="detail-label">Database</div>
+                        <span class="badge badge-green">PostgreSQL / Supabase</span>
+                    </div>
+                    <div class="control-row no-click">
+                        <div class="detail-label">Hosting</div>
+                        <span class="badge badge-blue">Netlify</span>
+                    </div>
+                    <div class="control-row no-click">
+                        <div class="detail-label">AI Model</div>
+                        <span class="badge badge-purple">GPT-4o-mini</span>
+                    </div>
+                    <div class="control-row no-click">
+                        <div class="detail-label">Auth Provider</div>
+                        <span class="badge badge-yellow">Supabase Auth</span>
+                    </div>
+                    <div class="control-row no-click">
+                        <div class="detail-label">Realtime</div>
+                        <span class="badge badge-green">Supabase Realtime ✓</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div><!-- end panels-area -->
+</div><!-- end main -->
+
+<!-- SLIDE-OVER DETAIL PANEL -->
+<div class="overlay" id="detail-overlay" onclick="closeSlidePanel(event)">
+    <div class="slide-panel" id="slide-panel">
+        <div class="slide-header">
+            <h3 id="slide-title">Details</h3>
+            <button class="slide-close" onclick="closeSlidePanel(null)"><ion-icon name="close-outline"></ion-icon></button>
+        </div>
+        <div class="slide-body" id="slide-body"><!-- dynamic --></div>
+    </div>
+</div>
+
+<div id="toast-container"></div>
+
+<script src="admin.js"></script>
+</body>
+</html>

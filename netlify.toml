@@ -1,0 +1,34 @@
+[build]
+  functions = "netlify/functions"
+
+[functions]
+  directory = "netlify/functions"
+
+[dev]
+  functions = "netlify/functions"
+  targetPort = 8888
+
+[[redirects]]
+  from = "/api/chat"
+  to = "/.netlify/functions/app"
+  status = 200
+
+[[redirects]]
+  from = "/api/transcribe"
+  to = "/.netlify/functions/transcribe"
+  status = 200
+
+[[redirects]]
+  from = "/api/spotify-search"
+  to = "/.netlify/functions/spotify-search"
+  status = 200
+
+[[redirects]]
+  from = "/api/vision"
+  to = "/.netlify/functions/vision"
+  status = 200
+
+[[redirects]]
+  from = "/api/summarize"
+  to = "/.netlify/functions/summarize"
+  status = 200

@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx netlify:*)",
+      "mcp__42716fc9-af24-4e1a-a468-7ffef1b8bf78__execute_sql",
+      "Bash(npx netlify-cli:*)",
+      "Bash(grep -l \"nav\\\\|Nav\\\\|navigation\\\\|Navigation\" /Users/vsudagani/Desktop/#business/T2M/T2MSite/site/app/*.js)",
+      "Bash(grep -l \"shared\\\\|shared\\\\|common\" /Users/vsudagani/Desktop/#business/T2M/T2MSite/site/app/*.js)",
+      "mcp__42716fc9-af24-4e1a-a468-7ffef1b8bf78__list_tables",
+      "mcp__42716fc9-af24-4e1a-a468-7ffef1b8bf78__apply_migration",
+      "Bash(netlify deploy:*)",
+      "Bash(netlify env:list)",
+      "Bash(curl -s -X POST http://localhost:8888/api/chat -H 'Content-Type: application/json' -d '{\"messages\":[{\"role\":\"user\",\"content\":\"hi\"}]}' -w '\\\\nHTTP:%{http_code}')",
+      "Bash(pkill -f \"netlify dev\")"
+    ]
+  }
+}

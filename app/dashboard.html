@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Blakcide</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="app-style.css">
+    <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
+    <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        html, body {
+            height: 100dvh;
+            background: var(--bg);
+            overflow: hidden;
+        }
+
+        /* App shell */
+        .dashboard-layout {
+            display: flex;
+            width: 100vw;
+            height: 100dvh;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Scrollable main area */
+        .dashboard-main {
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
+            -webkit-overflow-scrolling: touch;
+            min-width: 0;
+        }
+
+        .home-wrap {
+            min-height: 100%;
+            display: flex;
+            flex-direction: column;
+            padding-top: env(safe-area-inset-top, 0px);
+            padding-bottom: 32px;
+        }
+
+        /* Mobile header */
+        .dash-mobile-header {
+            display: none;
+            height: var(--header-h);
+            padding: 0 16px;
+            background: var(--surface-1);
+            border-bottom: 1px solid var(--border);
+            align-items: center;
+            justify-content: space-between;
+            flex-shrink: 0;
+            z-index: 50;
+        }
+        @media (max-width: 768px) {
+            .dash-mobile-header { display: flex; }
+            .home-header { display: none; }
+        }
+
+        /* ── Header ── */
+        .home-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 18px 22px 10px;
+        }
+        .home-brand {
+            font-size: 0.72rem;
+            font-weight: 800;
+            letter-spacing: 5px;
+            color: var(--text);
+            opacity: 0.25;
+            text-transform: uppercase;
+        }
+        .header-icon-btn {
+            width: 36px; height: 36px;
+            display: flex; align-items: center; justify-content: center;
+            background: none; border: none;
+            color: var(--text-3); font-size: 1.2rem;
+            cursor: pointer; border-radius: 50%;
+            transition: color 0.2s, background 0.2s;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .header-icon-btn:hover { color: var(--text); background: var(--surface-2); }
+
+        /* ── Profile row ── */
+        .home-profile-row {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 6px 22px 26px;
+            cursor: pointer;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .home-avatar-wrap { position: relative; flex-shrink: 0; }
+        .home-avatar {
+            width: 48px; height: 48px;
+            border-radius: 50%; object-fit: cover;
+            border: 2px solid var(--border-md);
+            background: var(--surface-3);
+            display: block;
+        }
+        .home-avatar-placeholder {
+            width: 48px; height: 48px;
+            border-radius: 50%;
+            border: 2px solid var(--border-md);
+            background: var(--surface-3);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.2rem; color: var(--text-3);
+            flex-shrink: 0;
+        }
+        .home-greeting-text { flex: 1; }
+        .home-greeting { font-size: 0.72rem; color: var(--text-3); font-weight: 500; margin-bottom: 2px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .home-name {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--text);
+            line-height: 1.2;
+        }
+
+        /* ── Section label ── */
+        .section-label {
+            font-size: 0.65rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: var(--text-3);
+            padding: 0 22px;
+            margin-bottom: 12px;
+        }
+
+        /* ── Feature cards ── */
+        .feature-cards {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            padding: 0 16px;
+            margin-bottom: 8px;
+        }
+
+        .feature-card {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 20px 18px;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: transform 0.15s, opacity 0.15s;
+            text-decoration: none;
+            color: var(--text);
+            -webkit-tap-highlight-color: transparent;
+            position: relative;
+            overflow: hidden;
+            border: 1px solid var(--border);
+        }
+        .feature-card:active { transform: scale(0.975); opacity: 0.9; }
+
+        /* Card themes */
+        .card-ai {
+            background: linear-gradient(135deg, #0d1a2a 0%, #0a1520 50%, #061018 100%);
+            border-color: rgba(0,212,170,0.18);
+        }
+        .card-ai::before {
+            content: '';
+            position: absolute; top: -30px; right: -30px;
+            width: 120px; height: 120px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(0,212,170,0.12) 0%, transparent 70%);
+            pointer-events: none;
+        }
+
+        .card-journal {
+            background: linear-gradient(135deg, #160d26 0%, #110820 50%, #0c0618 100%);
+            border-color: rgba(160,103,255,0.2);
+        }
+        .card-journal::before {
+            content: '';
+            position: absolute; top: -30px; right: -30px;
+            width: 120px; height: 120px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(160,103,255,0.12) 0%, transparent 70%);
+            pointer-events: none;
+        }
+
+        .card-connect {
+            background: linear-gradient(135deg, #0a1a16 0%, #081410 50%, #060f0c 100%);
+            border-color: rgba(0,212,170,0.14);
+        }
+        .card-connect::before {
+            content: '';
+            position: absolute; top: -30px; right: -30px;
+            width: 120px; height: 120px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(0,212,170,0.08) 0%, transparent 70%);
+            pointer-events: none;
+        }
+
+        .fc-icon-wrap {
+            width: 50px; height: 50px;
+            border-radius: 16px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.65rem;
+            flex-shrink: 0;
+            position: relative; z-index: 1;
+        }
+        .card-ai     .fc-icon-wrap { background: rgba(0,212,170,0.12);  color: var(--accent); }
+        .card-journal .fc-icon-wrap { background: rgba(160,103,255,0.12); color: #a067ff; }
+        .card-connect .fc-icon-wrap { background: rgba(0,212,170,0.1);   color: var(--accent); }
+
+        .fc-text { flex: 1; min-width: 0; position: relative; z-index: 1; }
+        .fc-label { font-weight: 700; font-size: 1.02rem; }
+        .fc-desc  { font-size: 0.75rem; opacity: 0.45; margin-top: 3px; }
+
+        .fc-chips {
+            display: flex; gap: 5px; margin-top: 8px;
+        }
+        .fc-chip {
+            font-size: 0.65rem; font-weight: 600;
+            padding: 3px 9px;
+            border-radius: 20px;
+            letter-spacing: 0.2px;
+        }
+        .card-ai .fc-chip, .card-connect .fc-chip {
+            background: rgba(0,212,170,0.1);
+            border: 1px solid rgba(0,212,170,0.2);
+            color: rgba(0,212,170,0.7);
+        }
+        .card-journal .fc-chip {
+            background: rgba(160,103,255,0.1);
+            border: 1px solid rgba(160,103,255,0.2);
+            color: rgba(160,103,255,0.75);
+        }
+
+        .fc-arrow { font-size: 0.9rem; opacity: 0.3; flex-shrink: 0; position: relative; z-index: 1; }
+
+        /* ── Mood strip ── */
+        .mood-section {
+            padding: 18px 16px 0;
+        }
+        .mood-card {
+            background: var(--surface-1);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 16px 18px;
+        }
+        .mood-label {
+            font-size: 0.72rem; font-weight: 700;
+            text-transform: uppercase; letter-spacing: 1.5px;
+            color: var(--text-3); margin-bottom: 12px;
+        }
+        .mood-row {
+            display: flex; gap: 6px; justify-content: space-between;
+        }
+        .mood-btn {
+            flex: 1;
+            display: flex; flex-direction: column; align-items: center; gap: 5px;
+            padding: 10px 4px;
+            border-radius: 14px;
+            background: var(--surface-2);
+            border: 1.5px solid transparent;
+            cursor: pointer;
+            transition: background 0.2s, border-color 0.2s, transform 0.12s;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .mood-btn:active { transform: scale(0.92); }
+        .mood-btn.selected {
+            background: var(--accent-dim);
+            border-color: var(--accent-mid);
+        }
+        .mood-emoji { font-size: 1.4rem; line-height: 1; }
+        .mood-word  { font-size: 0.58rem; font-weight: 600; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.5px; }
+        .mood-btn.selected .mood-word { color: var(--accent); }
+    </style>
+</head>
+<body class="dark-mode" data-page="dashboard">
+
+<div class="dashboard-layout">
+
+<div id="mobile-overlay" class="mobile-overlay"></div>
+
+<!-- ── SIDEBAR ── -->
+<aside class="sidebar glass-panel" id="main-sidebar">
+    <div class="sidebar-header">
+        <span class="brand-small-btn" style="cursor:default;">BLAKCIDE</span>
+        <button id="toggle-sidebar-btn" class="collapse-btn">
+            <ion-icon name="chevron-back-outline"></ion-icon>
+        </button>
+    </div>
+
+    <!-- Navigation -->
+    <div class="sidebar-section-label">Menu</div>
+    <nav class="sidebar-nav-section">
+        <a class="snav-item active" href="dashboard.html">
+            <ion-icon name="home"></ion-icon><span>Home</span>
+        </a>
+        <a class="snav-item" href="chat.html">
+            <ion-icon name="sparkles-outline"></ion-icon><span>AI Chat</span>
+        </a>
+        <a class="snav-item" href="journal.html">
+            <ion-icon name="book-outline"></ion-icon><span>Journal</span>
+        </a>
+        <a class="snav-item" href="connect.html">
+            <ion-icon name="people-outline"></ion-icon><span>Connect</span>
+        </a>
+    </nav>
+
+    <div class="sidebar-divider"></div>
+
+    <!-- Quick actions -->
+    <div class="sidebar-section-label">Quick Actions</div>
+    <nav class="sidebar-nav-section">
+        <button class="snav-item" onclick="window.location.href='chat.html'">
+            <ion-icon name="chatbubble-outline"></ion-icon><span>New Chat</span>
+        </button>
+        <button class="snav-item" onclick="window.location.href='journal.html'">
+            <ion-icon name="create-outline"></ion-icon><span>New Entry</span>
+        </button>
+        <button class="snav-item" onclick="window.location.href='connect.html'">
+            <ion-icon name="person-add-outline"></ion-icon><span>Find Listener</span>
+        </button>
+    </nav>
+
+    <div class="sidebar-spacer"></div>
+    <div class="sidebar-divider"></div>
+
+    <!-- Theme toggle -->
+    <button class="theme-toggle-btn">
+        <ion-icon name="sunny-outline"></ion-icon><span>Light mode</span>
+    </button>
+
+    <!-- User profile footer -->
+    <div class="user-profile glass-panel-inner" id="open-profile-btn"
+         onclick="document.getElementById('global-profile-modal').style.display='flex'">
+        <img class="global-avatar avatar-circle" id="sidebar-avatar" style="display:none;">
+        <div id="sidebar-avatar-placeholder" class="avatar-circle-placeholder">
+            <ion-icon name="person"></ion-icon>
+        </div>
+        <div class="user-info">
+            <span class="global-name user-name" id="sidebar-name-display">Loading…</span>
+            <span class="user-email" id="sidebar-email-display">…</span>
+        </div>
+        <button class="logout-link" title="Logout" id="sidebar-logout-btn"
+                onclick="event.stopPropagation(); window.universalLogout && window.universalLogout()">
+            <ion-icon name="log-out-outline"></ion-icon>
+        </button>
+    </div>
+</aside>
+
+<!-- ── MAIN CONTENT ── -->
+<div class="dashboard-main">
+
+<!-- Mobile header -->
+<div class="dash-mobile-header">
+    <button class="mobile-menu-btn" id="mobile-menu-btn">
+        <ion-icon name="menu-outline"></ion-icon>
+    </button>
+    <span style="font-weight:700;font-size:0.88rem;letter-spacing:3px;opacity:0.4;text-transform:uppercase;">BLAKCIDE</span>
+    <button id="logout-btn" class="mobile-menu-btn" title="Logout" style="font-size:1.2rem;">
+        <ion-icon name="log-out-outline"></ion-icon>
+    </button>
+</div>
+
+<div class="home-wrap">
+
+    <!-- Header -->
+    <header class="home-header">
+        <span class="home-brand">Blakcide</span>
+        <div style="display:flex;align-items:center;gap:4px;">
+            <button id="logout-btn" class="header-icon-btn" title="Logout">
+                <ion-icon name="log-out-outline"></ion-icon>
+            </button>
+        </div>
+    </header>
+
+    <!-- Profile row -->
+    <div class="home-profile-row" onclick="document.getElementById('global-profile-modal').style.display='flex'">
+        <div class="home-avatar-wrap">
+            <img class="global-avatar home-avatar" src="" alt="Avatar">
+        </div>
+        <div class="home-greeting-text">
+            <div class="home-greeting" id="time-greeting">Good morning</div>
+            <div class="home-name global-name">Welcome back</div>
+        </div>
+        <ion-icon name="chevron-forward-outline" style="font-size:0.9rem;color:var(--text-3);opacity:0.5;"></ion-icon>
+    </div>
+
+    <!-- Section label -->
+    <p class="section-label">Your Sanctuary</p>
+
+    <!-- 3 Feature cards -->
+    <div class="feature-cards">
+
+        <div class="feature-card card-ai" onclick="window.location.href='chat.html'">
+            <div class="fc-icon-wrap">
+                <ion-icon name="sparkles"></ion-icon>
+            </div>
+            <div class="fc-text">
+                <div class="fc-label">AI Companion</div>
+                <div class="fc-desc">Your intelligent, always-on friend</div>
+                <div class="fc-chips">
+                    <span class="fc-chip">Chat</span>
+                    <span class="fc-chip">Voice Call</span>
+                </div>
+            </div>
+            <ion-icon name="chevron-forward-outline" class="fc-arrow"></ion-icon>
+        </div>
+
+        <div class="feature-card card-journal" onclick="window.location.href='journal.html'">
+            <div class="fc-icon-wrap">
+                <ion-icon name="book-outline"></ion-icon>
+            </div>
+            <div class="fc-text">
+                <div class="fc-label">Living Journal</div>
+                <div class="fc-desc">Capture thoughts, moods & moments</div>
+                <div class="fc-chips">
+                    <span class="fc-chip">Write</span>
+                    <span class="fc-chip">Reflect</span>
+                    <span class="fc-chip">Memories</span>
+                </div>
+            </div>
+            <ion-icon name="chevron-forward-outline" class="fc-arrow"></ion-icon>
+        </div>
+
+        <div class="feature-card card-connect" onclick="window.location.href='connect.html'">
+            <div class="fc-icon-wrap">
+                <ion-icon name="people-outline"></ion-icon>
+            </div>
+            <div class="fc-text">
+                <div class="fc-label">Human Connect</div>
+                <div class="fc-desc">Talk to a real, verified listener</div>
+                <div class="fc-chips">
+                    <span class="fc-chip">Chat</span>
+                    <span class="fc-chip">Voice Call</span>
+                </div>
+            </div>
+            <ion-icon name="chevron-forward-outline" class="fc-arrow"></ion-icon>
+        </div>
+
+    </div>
+
+    <!-- Mood check-in -->
+    <div class="mood-section">
+        <div class="mood-card">
+            <div class="mood-label">How are you feeling?</div>
+            <div class="mood-row">
+                <button class="mood-btn" data-mood="great" onclick="selectMood(this)">
+                    <span class="mood-emoji">😊</span>
+                    <span class="mood-word">Great</span>
+                </button>
+                <button class="mood-btn" data-mood="okay" onclick="selectMood(this)">
+                    <span class="mood-emoji">😐</span>
+                    <span class="mood-word">Okay</span>
+                </button>
+                <button class="mood-btn" data-mood="low" onclick="selectMood(this)">
+                    <span class="mood-emoji">😔</span>
+                    <span class="mood-word">Low</span>
+                </button>
+                <button class="mood-btn" data-mood="anxious" onclick="selectMood(this)">
+                    <span class="mood-emoji">😰</span>
+                    <span class="mood-word">Anxious</span>
+                </button>
+                <button class="mood-btn" data-mood="angry" onclick="selectMood(this)">
+                    <span class="mood-emoji">😤</span>
+                    <span class="mood-word">Tense</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+</div><!-- /.home-wrap -->
+</div><!-- /.dashboard-main -->
+</div><!-- /.dashboard-layout -->
+
+<div id="toast-container" class="toast-container"></div>
+
+<!-- Journal modal kept for dashboard.js compatibility -->
+<div class="overlay-glass" id="journal-modal" style="z-index:9999; display:none;">
+    <div class="glass-pane profile-pane-wide" style="display:flex;flex-direction:column;padding:0;background:var(--bg);">
+        <div class="mobile-top-header" style="display:flex;border-radius:var(--r-lg) var(--r-lg) 0 0;border-bottom:1px solid var(--border);height:54px;">
+            <button class="brand-small-btn" id="close-journal-btn"><ion-icon name="close-outline" style="font-size:1.4rem;"></ion-icon></button>
+            <span class="view-title" style="margin:0;font-style:normal;font-weight:600;">Living Journal</span>
+            <button class="brand-small-btn" id="write-new-journal-btn"><ion-icon name="create-outline" style="font-size:1.4rem;"></ion-icon></button>
+        </div>
+        <div id="journal-list-view" style="flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:8px;"></div>
+        <div id="journal-write-view" style="display:none;flex:1;flex-direction:column;padding:20px;gap:12px;">
+            <input type="text" id="journal-entry-title-modal" class="minimal-input" placeholder="Title…" style="font-size:1.1rem;font-weight:600;">
+            <textarea id="journal-entry-content-modal" class="minimal-input textarea-input" style="flex:1;min-height:180px;line-height:1.65;" placeholder="What is on your mind?"></textarea>
+            <button id="save-journal-entry-modal" class="btn-solid luxury-btn">Save to Journal</button>
+        </div>
+    </div>
+</div>
+
+<script src="sidebar-common.js"></script>
+<script src="dashboard.js"></script>
+<script src="spotify-auth.js"></script>
+<script src="profile-manager.js"></script>
+<script src="nav-bar.js"></script>
+<script>
+// Mobile sidebar wiring for dashboard
+(function() {
+    function wireDashSidebar() {
+        const menuBtn = document.getElementById('mobile-menu-btn');
+        const sidebar = document.getElementById('main-sidebar');
+        const overlay = document.getElementById('mobile-overlay');
+        const toggleBtn = document.getElementById('toggle-sidebar-btn');
+        if (menuBtn && sidebar) {
+            menuBtn.addEventListener('click', () => {
+                sidebar.classList.add('open');
+                if (overlay) overlay.classList.add('active');
+            });
+        }
+        if (overlay && sidebar) {
+            overlay.addEventListener('click', () => {
+                sidebar.classList.remove('open');
+                overlay.classList.remove('active');
+            });
+        }
+        if (toggleBtn && sidebar) {
+            toggleBtn.addEventListener('click', () => {
+                if (window.innerWidth <= 768) {
+                    sidebar.classList.remove('open');
+                    if (overlay) overlay.classList.remove('active');
+                } else {
+                    sidebar.classList.toggle('collapsed');
+                }
+            });
+        }
+    }
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', wireDashSidebar);
+    else wireDashSidebar();
+})();
+</script>
+<script>
+// Time-based greeting
+(function() {
+    const hour = new Date().getHours();
+    const el = document.getElementById('time-greeting');
+    if (!el) return;
+    if (hour < 12) el.textContent = 'Good morning';
+    else if (hour < 17) el.textContent = 'Good afternoon';
+    else el.textContent = 'Good evening';
+})();
+
+// Mood selector
+function selectMood(btn) {
+    document.querySelectorAll('.mood-btn').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    const mood = btn.dataset.mood;
+    const toasts = { great: '✨ Glad you\'re feeling great!', okay: '💙 That\'s okay. Take it easy.', low: '🌿 It\'s okay to feel this way.', anxious: '🫁 Take a slow, deep breath.', angry: '🌊 Let\'s find some calm together.' };
+    const t = document.createElement('div');
+    t.className = 'toast';
+    t.innerText = toasts[mood] || '✓';
+    document.getElementById('toast-container').appendChild(t);
+    setTimeout(() => t.remove(), 3500);
+}
+
+// Logout
+document.getElementById('logout-btn')?.addEventListener('click', () => {
+    if (window.universalLogout) window.universalLogout();
+});
+</script>
+</body>
+</html>
