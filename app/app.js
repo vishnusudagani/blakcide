@@ -182,8 +182,15 @@ document.addEventListener('DOMContentLoaded', () => {
     click('cm-rename', () => {
         openModal('Rename', '', async (newName) => {
             if(!newName) return;
-            const table = contextTarget.type === 'folder' ? 'folders' : 'chats';
-            await supabase.from(table).update({[contextTarget.type==='folder'?'name':'title']: newName}).eq('id', contextTarget.id);
+            if (contextTarget.type === 'folder') {
+                await supabase.from('folders').update({ name: newName }).eq('id', contextTarget.id);
+            } else {
+                // Mark as user-renamed so auto-title stops overwriting it
+                await supabase.from('chats').update({ title: newName, user_renamed: true }).eq('id', contextTarget.id);
+                if (contextTarget.id === currentChatId && getEl('mobile-chat-title')) {
+                    getEl('mobile-chat-title').innerText = newName;
+                }
+            }
             loadSidebar(); showToast("Renamed");
         });
     });
@@ -367,19 +374,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if(chats) chats.forEach(chat => {
                 const div = document.createElement('div');
-                div.className = `history-item ${chat.id === currentChatId ? 'active' : ''}`;
+                div.className = `history-item ${chat.id === currentChatId ? 'active' : ''} ${chat.is_ai_call ? 'call-thread' : ''}`;
                 div.setAttribute('draggable', 'true');
-                div.ondragstart = (e) => { 
+                div.ondragstart = (e) => {
                     document.body.classList.add('is-dragging');
-                    e.stopPropagation(); 
-                    e.dataTransfer.setData("itemData", JSON.stringify({id: chat.id, type: 'chat'})); 
-                    div.style.opacity = '0.5'; 
+                    e.stopPropagation();
+                    e.dataTransfer.setData("itemData", JSON.stringify({id: chat.id, type: 'chat'}));
+                    div.style.opacity = '0.5';
                 };
-                div.ondragend = () => { 
+                div.ondragend = () => {
                     document.body.classList.remove('is-dragging');
-                    div.style.opacity = '1'; 
+                    div.style.opacity = '1';
                 };
-                div.innerHTML = `<span>${chat.title}</span> <button class="item-options-btn"><ion-icon name="ellipsis-horizontal"></ion-icon></button>`;
+                const icon = chat.is_ai_call
+                    ? `<ion-icon name="call-outline" style="font-size:0.85rem;opacity:0.7;flex-shrink:0;"></ion-icon>`
+                    : `<ion-icon name="chatbubble-outline" style="font-size:0.85rem;opacity:0.45;flex-shrink:0;"></ion-icon>`;
+                div.innerHTML = `<span style="display:flex;align-items:center;gap:6px;overflow:hidden;">${icon}<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${chat.title}</span></span> <button class="item-options-btn"><ion-icon name="ellipsis-horizontal"></ion-icon></button>`;
                 div.onclick = (e) => {
                     if(e.target.closest('.item-options-btn')) { openContextMenu(e, chat.id, 'chat'); return; }
                     loadThread(chat.id, chat.title);
@@ -448,7 +458,7 @@ document.addEventListener('DOMContentLoaded', () => {
         getEl('main-sidebar')?.classList.remove('open');
     }
 
-    // ── Auto-save AI chat as journal entry ───────────────
+    // ── Auto-save AI chat as journal entry (one entry per day — updates throughout day) ──
     async function autoSaveChatAsJournal(chatId, userId) {
         if (!chatId || !userId) return;
         try {
@@ -457,9 +467,9 @@ document.addEventListener('DOMContentLoaded', () => {
             if (chat?.auto_journaled) return;
 
             const { data: msgs } = await supabase.from('messages').select('role, content').eq('chat_id', chatId).order('created_at');
-            if (!msgs || msgs.length < 2) return; // Need at least one exchange
+            if (!msgs || msgs.length < 2) return;
 
-            // Collect image descriptions from IMAGE:: messages
+            // Collect image descriptions
             const imageDescs = msgs
                 .filter(m => m.content?.startsWith('IMAGE::') && m.content.includes('||DESC::'))
                 .map(m => m.content.split('||DESC::')[1])
@@ -480,11 +490,29 @@ document.addEventListener('DOMContentLoaded', () => {
             const { title, content } = await res.json();
             if (!title || !content) return;
 
-            await supabase.from('journals').insert([{ user_id: userId, title, content, ai_source: 'ai_chat' }]);
+            // Check for an existing AI companion journal entry created today
+            const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
+            const { data: todayEntry } = await supabase
+                .from('journals')
+                .select('id, content')
+                .eq('user_id', userId)
+                .eq('ai_source', 'ai_chat')
+                .gte('created_at', todayStart.toISOString())
+                .order('created_at', { ascending: true })
+                .limit(1)
+                .maybeSingle();
+
+            if (todayEntry) {
+                // Append to today's existing AI companion entry
+                const combined = todayEntry.content + '\n\n---\n\n' + content;
+                await supabase.from('journals').update({ title, content: combined }).eq('id', todayEntry.id);
+            } else {
+                // Create fresh entry for today
+                await supabase.from('journals').insert([{ user_id: userId, title, content, ai_source: 'ai_chat' }]);
+            }
+
             await supabase.from('chats').update({ auto_journaled: true }).eq('id', chatId);
             showChatToast('💾 Chat saved to your journal');
-
-            // Update rolling user memory so AI has context in future sessions
             updateUserMemory(userId, content);
         } catch(e) { /* silent — non-blocking */ }
     }
@@ -540,6 +568,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         let contentHtml = text;
+        let showConnectCue = false;
 
         if (text.startsWith('AUDIO::')) {
             const url = text.split('AUDIO::')[1];
@@ -553,10 +582,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 ${desc ? `<div class="chat-img-desc">${desc}</div>` : ''}
             </div>`;
         } else {
-            contentHtml = contentHtml.replace(/\n/g, '<br>');
+            // Check for Human Connect escalation cue
+            if (text.includes('[SUGGEST_HUMAN_CONNECT]')) {
+                showConnectCue = true;
+                text = text.replace('[SUGGEST_HUMAN_CONNECT]', '').trim();
+            }
+            contentHtml = text.replace(/\n/g, '<br>');
         }
 
-        feed.innerHTML += `<div class="message ${role==='user'?'user-msg':'ai-msg'}"><div class="msg-content">${contentHtml}</div></div>`;
+        const connectHtml = showConnectCue
+            ? `<div class="connect-cue"><a href="connect.html" class="connect-cue-btn"><ion-icon name="people-outline"></ion-icon> Talk to a Real Person</a></div>`
+            : '';
+
+        feed.innerHTML += `<div class="message ${role==='user'?'user-msg':'ai-msg'}"><div class="msg-content">${contentHtml}</div>${connectHtml}</div>`;
         feed.scrollTop = feed.scrollHeight;
     }
 
@@ -646,6 +684,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 const aiResp = await window.BlakcideAI.getResponse(chatMessageHistory, onToken);
 
+                // Strip the Human Connect cue from the stored/displayed text
+                const aiRespClean = aiResp.replace('[SUGGEST_HUMAN_CONNECT]', '').trim();
+
                 // Finalise bubble — remove cursor
                 const loadingEl = document.getElementById(loadingId);
                 if (loadingEl) loadingEl.remove();
@@ -653,14 +694,15 @@ document.addEventListener('DOMContentLoaded', () => {
                     renderMessage(aiResp, 'ai');
                 }
 
-                // Push AI reply to in-memory history
-                chatMessageHistory.push({ role: 'assistant', content: aiResp });
+                // Push AI reply to in-memory history (without the cue marker)
+                chatMessageHistory.push({ role: 'assistant', content: aiRespClean });
 
-                // Save AI reply to DB (awaited so it definitely persists)
-                await supabase.from('messages').insert({chat_id: thisChatId, role:'ai', content: aiResp});
+                // Save AI reply to DB
+                await supabase.from('messages').insert({chat_id: thisChatId, role:'ai', content: aiRespClean});
 
-                // Auto-generate a meaningful title for new chats after the first exchange
-                if (isNewChat) generateAutoTitle(thisChatId, text);
+                // Auto-title: generate on first exchange, then refresh every 4 AI replies
+                const aiCount = chatMessageHistory.filter(m => m.role === 'assistant').length;
+                if (isNewChat || aiCount % 4 === 0) generateAutoTitle(thisChatId);
 
             } catch (error) {
                 console.error("Chat Error:", error);
@@ -672,21 +714,36 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Generates a 3-5 word AI title for a new chat and updates the DB + sidebar
-    async function generateAutoTitle(chatId, firstMessage) {
+    // Auto-title: summarises the conversation so far into 3-5 words.
+    // Runs on first exchange and every 4 AI replies — stops once user manually renames.
+    // Optional `messages` param lets call threads pass their own history instead of chatMessageHistory.
+    async function generateAutoTitle(chatId, messages) {
         try {
+            const { data: chat } = await supabase.from('chats').select('title, user_renamed').eq('id', chatId).maybeSingle();
+            if (chat?.user_renamed) return;
+
+            const src = messages || chatMessageHistory;
+            const snippet = src
+                .filter(m => typeof m.content === 'string')
+                .slice(-10)
+                .map(m => `${m.role === 'user' ? 'User' : 'AI'}: ${m.content.substring(0, 120)}`)
+                .join('\n');
+            if (!snippet.trim()) return;
+
             const titlePrompt = [
-                { role: 'system', content: 'You are a title generator. Reply with ONLY a 3-5 word title — no punctuation, no quotes, nothing else.' },
-                { role: 'user', content: `Title for a conversation starting with: "${firstMessage.substring(0, 200)}"` }
+                { role: 'system', content: 'You are a title generator. Reply with ONLY a 3-5 word title — no punctuation, no quotes, no emojis, nothing else. Capture the emotional core or main topic of the conversation.' },
+                { role: 'user', content: `Generate a title for this conversation:\n${snippet}` }
             ];
-            const aiTitle = await window.BlakcideAI.getResponse(titlePrompt, null); // no streaming for title
-            const cleanTitle = aiTitle.replace(/["']/g, '').replace(/^#+\s*/, '').trim();
+            const aiTitle = await window.BlakcideAI.getResponse(titlePrompt, null);
+            const cleanTitle = aiTitle.replace(/["'[\]]/g, '').replace(/^#+\s*/, '').replace('[SUGGEST_HUMAN_CONNECT]','').trim();
             if (cleanTitle && cleanTitle.length > 1 && cleanTitle.length < 60 && !cleanTitle.includes('{')) {
                 await supabase.from('chats').update({ title: cleanTitle }).eq('id', chatId);
-                if (currentChatId === chatId) getEl('mobile-chat-title').innerText = cleanTitle;
+                if (currentChatId === chatId && getEl('mobile-chat-title')) {
+                    getEl('mobile-chat-title').innerText = cleanTitle;
+                }
                 loadSidebar();
             }
-        } catch(e) { /* silently skip — truncated title still shows */ }
+        } catch(e) { /* silently skip */ }
     }
 
     // ==========================================
@@ -849,10 +906,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 };
 
                 const aiResp = await window.BlakcideAI.getResponse(chatMessageHistory, onToken2);
+                const aiRespClean2 = aiResp.replace('[SUGGEST_HUMAN_CONNECT]', '').trim();
                 document.getElementById(loadingId)?.remove();
                 if (currentChatId === thisChatId) renderMessage(aiResp, 'ai');
-                chatMessageHistory.push({ role: 'assistant', content: aiResp });
-                await supabase.from('messages').insert({ chat_id: thisChatId, role: 'ai', content: aiResp });
+                chatMessageHistory.push({ role: 'assistant', content: aiRespClean2 });
+                await supabase.from('messages').insert({ chat_id: thisChatId, role: 'ai', content: aiRespClean2 });
+                const aiCount2 = chatMessageHistory.filter(m => m.role === 'assistant').length;
+                if (aiCount2 % 4 === 0) generateAutoTitle(thisChatId);
 
             } catch (err) {
                 console.error('Image send error:', err);
@@ -1063,7 +1123,14 @@ document.addEventListener('DOMContentLoaded', () => {
     let _callSpeaker  = true;
     let _callTimerInt = null;
     let _callSecs     = 0;
-    let _callSpeechRec = null;
+    let _callMicStream      = null;   // MediaStream from getUserMedia
+    let _callMediaRecorder  = null;   // MediaRecorder instance
+    let _callAudioChunks    = [];     // recorded chunks
+    let _callVADAnalyser    = null;   // AnalyserNode for voice activity detection
+    let _callVADSource      = null;   // MediaStreamAudioSourceNode
+    let _callVADFrame       = null;   // requestAnimationFrame handle
+    let _callSpeechDetected = false;  // did we hear speech this recording window?
+    let _callSilenceFrames  = 0;      // consecutive silent frames
     let _callSynth    = window.speechSynthesis;
     let _callHistory  = [];
 
@@ -1095,10 +1162,13 @@ document.addEventListener('DOMContentLoaded', () => {
     // Recognition: always en-IN (captures Indian English + Romanized Telugu/Hindi)
     // Language: auto-detected from each transcript → AI replies in detected lang
     // ══════════════════════════════════════════════════════════════════════════
-    let _callDetectedLang = 'en';  // updated per turn from transcript
-    let _callState        = 'idle';
-    let _ttsWatchdog      = null;
-    let _speakSeq         = 0;
+    let _callDetectedLang  = 'en';  // updated per turn from transcript
+    let _callLanguageLocked = false; // once user speaks non-English, lock language
+    let _callState         = 'idle';
+    let _ttsWatchdog       = null;
+    let _speakSeq          = 0;
+    let _callAudioCtx      = null;  // Web AudioContext — unlocked once on user gesture, stays unlocked
+    let _callAudioSrc      = null;  // current AudioBufferSourceNode (for cancellation)
 
     function _callTransition(state) {
         _callState = state;
@@ -1108,66 +1178,138 @@ document.addEventListener('DOMContentLoaded', () => {
         if (av) av.classList.toggle('ai-speaking', state === 'speaking');
     }
 
-    // Pick the best available TTS voice for a given locale, with fallback chain
-    function _pickVoice(primaryLocale) {
-        if (!_callSynth) return null;
-        const voices = _callSynth.getVoices();
-        if (!voices.length) return null;
-        const base = primaryLocale.split('-')[0];
-        // Exact locale first, then same language family, then any voice
-        return voices.find(v => v.lang === primaryLocale)
-            || voices.find(v => v.lang.startsWith(base))
-            || voices[0];
+    // ── Stop any playing TTS audio ─────────────────────────────────────────────
+    function _stopTTSAudio() {
+        if (_callAudioSrc) {
+            try { _callAudioSrc.onended = null; _callAudioSrc.stop(); } catch(_) {}
+            _callAudioSrc = null;
+        }
+        if (_callSynth) _callSynth.cancel(); // also stop browser TTS fallback
     }
 
     function _stopRecognition() {
-        if (_callSpeechRec) {
-            try { _callSpeechRec.abort(); } catch(_) {}
-            _callSpeechRec = null;
+        // Cancel VAD loop
+        if (_callVADFrame) { cancelAnimationFrame(_callVADFrame); _callVADFrame = null; }
+        // Stop MediaRecorder
+        if (_callMediaRecorder && _callMediaRecorder.state !== 'inactive') {
+            try { _callMediaRecorder.stop(); } catch(_) {}
         }
+        _callMediaRecorder = null;
+        _callAudioChunks = [];
+        // Disconnect VAD nodes
+        if (_callVADSource) { try { _callVADSource.disconnect(); } catch(_) {} _callVADSource = null; }
+        if (_callVADAnalyser) { try { _callVADAnalyser.disconnect(); } catch(_) {} _callVADAnalyser = null; }
+        // Release mic stream
+        if (_callMicStream) {
+            _callMicStream.getTracks().forEach(t => t.stop());
+            _callMicStream = null;
+        }
+        _callSpeechDetected = false;
+        _callSilenceFrames  = 0;
     }
 
-    function _startRecognition() {
-        if (!_callActive || _callMuted || _callState !== 'listening') return;
-        const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-        if (!SR) { _setCallStatus('Voice not supported in this browser'); return; }
-        _stopRecognition();
+    async function _transcribeWhisper(blob, mimeType) {
         try {
-            const rec = new SR();
-            // en-IN is the best single locale for Indian speech:
-            // captures Indian-accented English, Romanized Telugu, and Romanized Hindi accurately.
-            rec.lang            = 'en-IN';
-            rec.continuous      = false;
-            rec.interimResults  = false;
-            rec.maxAlternatives = 1;
-
-            rec.onresult = (e) => {
-                const text = e.results?.[0]?.[0]?.transcript?.trim();
-                if (text) _processUserSpeech(text);
-            };
-            rec.onerror = (e) => {
-                if (!_callActive || e.error === 'aborted') return;
-                const delay = e.error === 'no-speech' ? 100 : 800;
-                setTimeout(() => {
-                    if (_callActive && !_callMuted && _callState === 'listening') _startRecognition();
-                }, delay);
-            };
-            rec.onend = () => {
-                if (_callActive && !_callMuted && _callState === 'listening') {
-                    setTimeout(() => {
-                        if (_callActive && !_callMuted && _callState === 'listening') _startRecognition();
-                    }, 150);
-                }
-            };
-            rec.start();
-            _callSpeechRec = rec;
-        } catch(err) {
-            console.error('SR start error:', err);
-            setTimeout(() => {
-                if (_callActive && !_callMuted && _callState === 'listening') _startRecognition();
-            }, 1000);
+            const arrayBuf = await blob.arrayBuffer();
+            const uint8    = new Uint8Array(arrayBuf);
+            let binary = '';
+            for (let i = 0; i < uint8.length; i++) binary += String.fromCharCode(uint8[i]);
+            const base64 = btoa(binary);
+            const res = await fetch('/api/transcribe', {
+                method:  'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body:    JSON.stringify({ audioBase64: base64, mimeType })
+            });
+            if (!res.ok) return null;
+            const data = await res.json();
+            if (data.language && data.language !== 'en') {
+                _callDetectedLang    = data.language;
+                _callLanguageLocked  = true;
+            } else if (!_callLanguageLocked) {
+                _callDetectedLang = 'en';
+            }
+            return (data.text || '').trim();
+        } catch(e) {
+            console.error('Whisper transcription error:', e);
+            return null;
         }
     }
+
+    async function _startRecognition() {
+        if (!_callActive || _callMuted || _callState !== 'listening') return;
+        _stopRecognition();
+
+        // ── Get mic stream ───────────────────────────────────────────────────
+        try {
+            _callMicStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+        } catch(e) {
+            _setCallStatus('Microphone access denied');
+            console.error('getUserMedia error:', e);
+            return;
+        }
+        if (!_callActive || _callState !== 'listening') { _stopRecognition(); return; }
+
+        // ── VAD setup via AudioContext ────────────────────────────────────────
+        const ctx = _callAudioCtx;
+        _callVADSource   = ctx.createMediaStreamSource(_callMicStream);
+        _callVADAnalyser = ctx.createAnalyser();
+        _callVADAnalyser.fftSize = 512;
+        _callVADSource.connect(_callVADAnalyser);
+        const vadBuf = new Uint8Array(_callVADAnalyser.frequencyBinCount);
+
+        // ── MediaRecorder ─────────────────────────────────────────────────────
+        const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+            ? 'audio/webm;codecs=opus'
+            : MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/mp4';
+        _callAudioChunks    = [];
+        _callSpeechDetected = false;
+        _callSilenceFrames  = 0;
+        const recorder = new MediaRecorder(_callMicStream, { mimeType });
+        _callMediaRecorder = recorder;
+
+        recorder.ondataavailable = e => { if (e.data && e.data.size > 0) _callAudioChunks.push(e.data); };
+        recorder.onstop = async () => {
+            if (!_callSpeechDetected || !_callActive) return;
+            const blob = new Blob(_callAudioChunks, { type: mimeType });
+            _callAudioChunks = [];
+            const text = await _transcribeWhisper(blob, mimeType);
+            if (text && _callActive) {
+                _processUserSpeech(text);
+            } else if (_callActive && _callState === 'listening') {
+                // No speech detected — restart listening
+                setTimeout(() => { if (_callActive && !_callMuted && _callState === 'listening') _startRecognition(); }, 100);
+            }
+        };
+        recorder.start();
+
+        // ── VAD rAF loop ──────────────────────────────────────────────────────
+        const SPEECH_THRESHOLD  = 20;   // energy level 0-255
+        const SILENCE_FRAMES_END = 40;  // ~1.3s of silence at 30fps ends the utterance
+
+        const vadLoop = () => {
+            if (!_callActive || _callState !== 'listening' || !_callMediaRecorder) return;
+            _callVADAnalyser.getByteFrequencyData(vadBuf);
+            const energy = vadBuf.reduce((s, v) => s + v, 0) / vadBuf.length;
+
+            if (energy > SPEECH_THRESHOLD) {
+                _callSpeechDetected = true;
+                _callSilenceFrames  = 0;
+            } else if (_callSpeechDetected) {
+                _callSilenceFrames++;
+                if (_callSilenceFrames >= SILENCE_FRAMES_END) {
+                    // Utterance complete — stop recorder, let onstop handle it
+                    _callVADFrame = null;
+                    if (_callMediaRecorder && _callMediaRecorder.state === 'recording') {
+                        _callMediaRecorder.stop();
+                    }
+                    return;
+                }
+            }
+            _callVADFrame = requestAnimationFrame(vadLoop);
+        };
+        _callVADFrame = requestAnimationFrame(vadLoop);
+    }
+
 
     async function _processUserSpeech(text) {
         if (!_callActive || _callState !== 'listening') return;
@@ -1175,139 +1317,185 @@ document.addEventListener('DOMContentLoaded', () => {
         _callTransition('thinking');
         _addCallMsg('user', text);
 
-        // Auto-detect language from the transcript
-        _callDetectedLang = window.BlakcideAI?.detectLang(text) || 'en';
+        // Language detection — Whisper already set _callDetectedLang in _transcribeWhisper.
+        // Fallback: use text-based detectLang if not yet locked.
+        if (!_callLanguageLocked) {
+            const detected = window.BlakcideAI?.detectLang(text) || 'en';
+            _callDetectedLang = detected;
+            if (detected !== 'en') _callLanguageLocked = true;
+        }
 
         _callHistory.push({ role: 'user', content: text });
-        if (_callHistory.length > 16) _callHistory = _callHistory.slice(-16);
+        if (_callHistory.length > 20) _callHistory = _callHistory.slice(-20);
 
-        // Call system prompt — locked to the detected language for this turn
-        const langName = { en: 'English', hi: 'Hindi', te: 'Telugu' }[_callDetectedLang] || 'English';
-        const callSys  = `You are Blakcide on a voice call with a friend.
-RULES (non-negotiable):
-1. Reply in ${langName} ONLY — every single word. Absolutely no mixing of other languages.
-2. Maximum 1–2 short sentences. This is spoken conversation, not a text chat.
-3. No markdown, no symbols, no lists. Plain natural spoken words only.
-4. Be warm, real, like a close friend.${_callDetectedLang === 'te' ? '\n5. Use Romanized Telugu matching exactly how the user typed/spoke.' : ''}${_callDetectedLang === 'hi' ? '\n5. Use Romanized Hindi matching exactly how the user typed/spoke.' : ''}`;
+        // ── Call system prompt — natural, warm, spoken-word style ────────────
+        const lang = _callDetectedLang;
+        const langName = { en: 'English', hi: 'Hindi', te: 'Telugu' }[lang] || 'English';
+        const userCtxNote = window.blakcideUserContext
+            ? `\nUser context (use naturally, never announce it): ${window.blakcideUserContext.substring(0, 180)}`
+            : '';
+
+        const teluguExtra = lang === 'te' ? `
+- You are speaking Romanized Telugu on a phone call. This is natural casual speech, not written text.
+- Lead with a short reaction first: "Aiyo ra", "Sare sare", "Nijamga?", "Arre!", "Avunu ra" — then your actual response.
+- SOV order: verb at end. "Nenu vinanu" not "Nenu have heard".
+- One thought per sentence. Keep it like a phone call — short, warm, real.
+- ZERO Hindi words. ZERO English fillers.` : '';
+
+        const hindiExtra = lang === 'hi' ? `
+- Romanized Hindi on a phone call. Short, like talking to a close friend.
+- React first: "Haan yaar", "Achi baat", "Sach mein?", "Woh toh hai" — then respond.
+- One sentence, max two. Phone call, not a lecture.` : '';
+
+        const callSys = `You are Blakcide — on a voice call. You are a close friend, not an assistant.
+
+RULES — no exceptions:
+1. ${langName} ONLY. Every word. Zero mixing.
+2. MAX 1 sentence. Seriously — one sentence. This is a phone call.
+3. No markdown, no lists, no symbols. Spoken words only.
+4. Always start with a short human reaction word/phrase before your actual response:
+   EN: "Oh—", "Wait—", "Yeah", "Hmm", "Aw man", "Really?", "That's rough"
+   TE: "Aiyo", "Arre", "Sare", "Nijamga?", "Paapam", "Avunu ra"
+   HI: "Haan", "Arre yaar", "Sach mein?", "Bilkul", "Woh toh hai"
+5. Never use: "I understand", "I see", "That's interesting", "As your friend", "Certainly".
+6. Never start with "I".${teluguExtra}${hindiExtra}${userCtxNote}`;
 
         try {
             const reply = await Promise.race([
                 window.BlakcideAI.getResponse(
                     [{ role: 'system', content: callSys }, ..._callHistory],
-                    null  // no simulate-stream on call — need full text for TTS immediately
+                    null
                 ),
                 new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 20000))
             ]);
             if (!_callActive) return;
-            _callHistory.push({ role: 'assistant', content: reply });
-            _callSpeak(reply);
+            const cleanReply = reply.replace('[SUGGEST_HUMAN_CONNECT]', '').trim();
+            _callHistory.push({ role: 'assistant', content: cleanReply });
+            _callSpeak(cleanReply);
         } catch(err) {
             console.warn('Call AI error:', err.message);
             if (!_callActive) return;
-            const fb = _callDetectedLang === 'hi' ? 'Dobara bolo yaar, kuch gadbad ho gayi.'
-                     : _callDetectedLang === 'te' ? 'Okasari repeat cheyyandi, chinna problem vachhindi.'
-                     : "Sorry, something slipped. Say that again?";
+            const fb = lang === 'hi' ? 'Ek baar phir se bolo, kuch gadbad ho gayi.'
+                     : lang === 'te' ? 'Okasari cheppav ra, chinna problem vachhindi.'
+                     : "Sorry, didn't catch that. Say it again?";
             _callHistory.push({ role: 'assistant', content: fb });
             _callSpeak(fb);
         }
     }
 
-    // ── TTS — sentence-chunked with watchdog (fixes Chrome onend stall bug) ───
-    function _callSpeak(text) {
+    // ── TTS via OpenAI neural API played through Web AudioContext ──────────────
+    // AudioContext is unlocked once on the user's call-start tap and stays
+    // unlocked for the whole session — this bypasses iOS/Chrome autoplay blocks
+    // on all subsequent async audio playbacks.
+    async function _callSpeak(text) {
         if (!_callActive) return;
         _callTransition('speaking');
         _addCallMsg('ai', text);
 
         _speakSeq++;
         const mySeq = _speakSeq;
+        _stopTTSAudio();
 
-        if (!_callSpeaker || !_callSynth) {
+        if (!_callSpeaker) {
             setTimeout(() => {
-                if (_callActive && mySeq === _speakSeq) {
-                    _callTransition('listening'); _startRecognition();
-                }
-            }, 500);
+                if (_callActive && mySeq === _speakSeq) { _callTransition('listening'); _startRecognition(); }
+            }, 400);
             return;
         }
 
-        clearTimeout(_ttsWatchdog);
-        _callSynth.cancel();
-
-        // Detect language of the AI reply to set the right TTS locale
-        const replyLang   = window.BlakcideAI?.detectLang(text) || 'en';
-        const ttsLocale   = replyLang === 'hi' ? 'hi-IN' : replyLang === 'te' ? 'te-IN' : 'en-IN';
-        const voice       = _pickVoice(ttsLocale);
-
-        // Split into sentence chunks for natural cadence
-        const rawChunks = text
-            .replace(/([.!?।]+)\s+/g, '$1\n')
-            .split('\n')
-            .map(s => s.trim())
-            .filter(s => s.length > 0);
-        const chunks = rawChunks.length ? rawChunks : [text];
-        let idx = 0;
-
-        const next = () => {
+        const onFinished = () => {
             if (!_callActive || mySeq !== _speakSeq) return;
-            clearTimeout(_ttsWatchdog);
-
-            if (idx >= chunks.length) {
-                _callTransition('listening');
-                setTimeout(() => {
-                    if (_callActive && !_callMuted && mySeq === _speakSeq) _startRecognition();
-                }, 280);
-                return;
-            }
-
-            const chunk = chunks[idx++];
-            const utt   = new SpeechSynthesisUtterance(chunk);
-            utt.lang    = ttsLocale;
-            utt.rate    = 0.92 + Math.random() * 0.05;
-            utt.pitch   = 1.0;
-            utt.volume  = 1.0;
-            if (voice) utt.voice = voice;
-
-            // Watchdog: force-advance if Chrome never fires onend
-            const ms = Math.max(chunk.length * 75, 2000) + 1500;
-            _ttsWatchdog = setTimeout(() => {
-                if (mySeq !== _speakSeq) return;
-                _callSynth.cancel();
-                setTimeout(next, 120);
-            }, ms);
-
-            utt.onend = () => {
-                if (mySeq !== _speakSeq) return;
-                clearTimeout(_ttsWatchdog);
-                setTimeout(next, /[.!?।]$/.test(chunk) ? 150 : 40);
-            };
-            utt.onerror = (ev) => {
-                if (mySeq !== _speakSeq) return;
-                clearTimeout(_ttsWatchdog);
-                if (ev.error === 'interrupted' || ev.error === 'cancelled') return;
-                setTimeout(next, 80);
-            };
-
-            _callSynth.speak(utt);
+            _callTransition('listening');
+            setTimeout(() => {
+                if (_callActive && !_callMuted && mySeq === _speakSeq) _startRecognition();
+            }, 300);
         };
 
-        setTimeout(next, 110); // brief gap after cancel() — Chrome needs this
+        try {
+            // Fetch OpenAI TTS audio
+            const res = await fetch('/api/tts', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text: text.substring(0, 500), voice: 'nova' })
+            });
+            if (!_callActive || mySeq !== _speakSeq) return;
+            if (!res.ok) throw new Error(`TTS ${res.status}`);
+
+            const arrayBuffer = await res.arrayBuffer();
+            if (!_callActive || mySeq !== _speakSeq) return;
+
+            // Decode + play via AudioContext (immune to autoplay restrictions)
+            const ctx = _callAudioCtx;
+            if (!ctx) throw new Error('No AudioContext');
+
+            await ctx.resume(); // ensure context is running (in case it was suspended)
+            if (!_callActive || mySeq !== _speakSeq) return;
+
+            const audioBuffer = await ctx.decodeAudioData(arrayBuffer.slice(0));
+            if (!_callActive || mySeq !== _speakSeq) return;
+
+            const src = ctx.createBufferSource();
+            src.buffer = audioBuffer;
+            src.connect(ctx.destination);
+            _callAudioSrc = src;
+
+            src.onended = () => {
+                if (_callAudioSrc === src) _callAudioSrc = null;
+                onFinished();
+            };
+            src.start(0);
+            return; // success — wait for onended
+
+        } catch(e) {
+            if (!_callActive || mySeq !== _speakSeq) return;
+            console.warn('OpenAI TTS failed, falling back to browser TTS:', e.message);
+        }
+
+        // ── Fallback: browser speechSynthesis (desktop only — robotic but functional)
+        _fallbackBrowserTTS(text, mySeq, onFinished);
+    }
+
+    function _fallbackBrowserTTS(text, mySeq, onFinished) {
+        if (!_callSynth || !_callActive || mySeq !== _speakSeq) { onFinished(); return; }
+        const voices = _callSynth.getVoices();
+        const voice  = voices.find(v => v.lang === 'en-IN' && v.name.toLowerCase().includes('google'))
+                    || voices.find(v => v.lang === 'en-IN')
+                    || voices.find(v => v.lang.startsWith('en'))
+                    || voices[0];
+        const utt    = new SpeechSynthesisUtterance(text);
+        utt.lang     = 'en-IN'; utt.rate = 0.94;
+        if (voice) utt.voice = voice;
+        const wd = setTimeout(() => { _callSynth.cancel(); onFinished(); }, Math.max(text.length * 80, 3500));
+        utt.onend   = () => { clearTimeout(wd); onFinished(); };
+        utt.onerror = (ev) => { clearTimeout(wd); if (ev.error !== 'interrupted' && ev.error !== 'cancelled') onFinished(); };
+        _callSynth.speak(utt);
     }
 
     window.startAICall = function () {
         if (_callActive) return;
-        _callActive     = true;
-        _callSecs       = 0;
-        _callHistory    = [];
-        _callActiveLang = 'en';
-        _callState      = 'idle';
-        _callMuted      = false;
-        _callSpeaker    = true;
-        _speakSeq       = 0;
+        _callActive          = true;
+        _callSecs            = 0;
+        _callHistory         = [];
+        _callDetectedLang    = 'en';
+        _callLanguageLocked  = false;
+        _callState           = 'idle';
+        _callMuted           = false;
+        _callSpeaker         = true;
+        _speakSeq            = 0;
         clearTimeout(_ttsWatchdog);
+        _stopTTSAudio();
 
-        // Highlight EN button by default
-        document.querySelectorAll('.call-lang-btn').forEach(b =>
-            b.classList.toggle('active', b.dataset.lang === 'en'));
+        // Create/resume AudioContext HERE — inside the user's tap handler.
+        // This is the ONLY moment browsers (especially iOS Safari) allow audio unlock.
+        // Once unlocked, all subsequent async audio playbacks work without restriction.
+        try {
+            if (!_callAudioCtx || _callAudioCtx.state === 'closed') {
+                _callAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            _callAudioCtx.resume();
+        } catch(e) {
+            console.warn('AudioContext init failed:', e);
+        }
 
         const ov = document.getElementById('ai-call-overlay');
         if (!ov) return;
@@ -1329,23 +1517,66 @@ RULES (non-negotiable):
             document.getElementById('ai-call-timer').innerText = `${m}:${String(s).padStart(2,'0')}`;
         }, 1000);
 
-        setTimeout(() => _callSpeak("Hey yaar, good to hear from you. What's going on?"), 700);
+        // Greeting — warm, neutral, no language mixing
+        const name = window.blakcideUserContext?.match(/User's name:\s*([^.]+)/)?.[1]?.trim();
+        const greeting = name
+            ? `Hey ${name}! Good to hear from you. What's going on?`
+            : "Hey! Good to hear from you. What's on your mind?";
+        setTimeout(() => _callSpeak(greeting), 700);
     };
 
     window.endAICall = function () {
         _callActive = false;
         _callTransition('idle');
+        _callLanguageLocked = false;
         clearInterval(_callTimerInt);
         clearTimeout(_ttsWatchdog);
-        if (_callSynth) _callSynth.cancel();
+        _stopTTSAudio();
         _stopRecognition();
+        // Release AudioContext
+        if (_callAudioCtx) {
+            try { _callAudioCtx.close(); } catch(_) {}
+            _callAudioCtx = null;
+        }
         const ov = document.getElementById('ai-call-overlay');
         if (ov) ov.style.display = 'none';
-        if (_callHistory && _callHistory.length >= 3 && currentUser) {
-            saveCallAsJournal([..._callHistory], currentUser.id);
+        if (_callHistory && _callHistory.length >= 2 && currentUser) {
+            const snapshot = [..._callHistory];
+            const userId = currentUser.id;
+            (async () => {
+                await saveCallAsThread(snapshot, userId);
+                await saveCallAsJournal(snapshot, userId);
+            })();
         }
         _callHistory = [];
     };
+
+    // Save AI call as a chat thread so it appears in sidebar + is continuable
+    async function saveCallAsThread(callHistory, userId) {
+        try {
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+            const { data: chatData } = await supabase
+                .from('chats')
+                .insert([{ user_id: userId, title: `AI Call · ${timeStr}`, is_ai_call: true }])
+                .select();
+            if (!chatData || !chatData[0]) return;
+            const chatId = chatData[0].id;
+
+            // Insert all call messages into the messages table
+            const msgRows = callHistory.map(m => ({
+                chat_id: chatId,
+                role: m.role === 'assistant' ? 'ai' : 'user',
+                content: m.content
+            }));
+            await supabase.from('messages').insert(msgRows);
+
+            // Generate title from the actual call history (not chatMessageHistory)
+            generateAutoTitle(chatId, callHistory);
+            // Refresh sidebar to show new call thread
+            loadSidebar();
+        } catch(e) { /* non-blocking */ }
+    }
 
     async function saveCallAsJournal(callHistory, userId) {
         try {
@@ -1357,8 +1588,29 @@ RULES (non-negotiable):
             if (!res.ok) return;
             const { title, content } = await res.json();
             if (!title || !content) return;
-            await supabase.from('journals').insert([{ user_id: userId, title, content, ai_source: 'ai_call' }]);
+
+            // One-per-day: update existing today's AI call journal if it exists
+            const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
+            const { data: todayEntry } = await supabase
+                .from('journals')
+                .select('id, content')
+                .eq('user_id', userId)
+                .eq('ai_source', 'ai_call')
+                .gte('created_at', todayStart.toISOString())
+                .order('created_at', { ascending: true })
+                .limit(1)
+                .maybeSingle();
+
+            if (todayEntry) {
+                await supabase.from('journals').update({
+                    title,
+                    content: todayEntry.content + '\n\n---\n\n' + content
+                }).eq('id', todayEntry.id);
+            } else {
+                await supabase.from('journals').insert([{ user_id: userId, title, content, ai_source: 'ai_call' }]);
+            }
             showChatToast('📞 Call saved to your journal');
+            updateUserMemory(userId, content);
         } catch(_) {}
     }
 
@@ -1387,7 +1639,7 @@ RULES (non-negotiable):
             btn.innerHTML = `<ion-icon name="${_callSpeaker ? 'volume-high-outline' : 'volume-mute-outline'}"></ion-icon>`;
             btn.classList.toggle('btn-muted', !_callSpeaker);
         }
-        if (!_callSpeaker && _callSynth) _callSynth.cancel();
+        if (!_callSpeaker) _stopTTSAudio();
     };
 
     // Auto-start call if URL has ?call=1

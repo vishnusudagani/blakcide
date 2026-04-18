@@ -724,9 +724,68 @@ document.addEventListener('DOMContentLoaded', () => {
 
     window.endUserSession = async function() {
         if (!activeSessionId) return;
-        await supabase.from('connect_sessions').update({ status: 'completed' }).eq('id', activeSessionId);
+        const sessId = activeSessionId;
+        await supabase.from('connect_sessions').update({ status: 'completed' }).eq('id', sessId);
+        // Auto-journal the session before reloading
+        await autoJournalConnectSession(sessId);
         handleSessionEnd();
     };
+
+    // ── Auto-journal a completed Human Connect session ─────────────────────────
+    async function autoJournalConnectSession(sessionId) {
+        try {
+            const { data: sess } = await supabase.from('connect_sessions')
+                .select('session_type, user_id').eq('id', sessionId).maybeSingle();
+            if (!sess || !currentUser) return;
+
+            const { data: msgs } = await supabase.from('messages')
+                .select('sender_id, content').eq('session_id', sessionId).order('created_at');
+            if (!msgs || msgs.length < 2) return;
+
+            // Build transcript (filter system messages)
+            const transcript = msgs
+                .filter(m => m.content && !m.content.startsWith('###'))
+                .map(m => ({
+                    role: m.sender_id === currentUser.id ? 'user' : 'assistant',
+                    content: m.content
+                }));
+            if (transcript.length < 2) return;
+
+            const res = await fetch('/api/summarize', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ messages: transcript, type: sess.session_type || 'chat', imageDescriptions: [] })
+            });
+            if (!res.ok) return;
+            const { title, content } = await res.json();
+            if (!title || !content) return;
+
+            const aiSource = sess.session_type === 'call' ? 'ai_call' : 'ai_chat';
+
+            // One-per-day: check for existing today's entry of same source
+            const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
+            const { data: todayEntry } = await supabase
+                .from('journals')
+                .select('id, content')
+                .eq('user_id', currentUser.id)
+                .eq('ai_source', aiSource)
+                .gte('created_at', todayStart.toISOString())
+                .order('created_at', { ascending: true })
+                .limit(1)
+                .maybeSingle();
+
+            if (todayEntry) {
+                await supabase.from('journals').update({
+                    title,
+                    content: todayEntry.content + '\n\n---\n\n' + content
+                }).eq('id', todayEntry.id);
+            } else {
+                await supabase.from('journals').insert([{
+                    user_id: currentUser.id, title, content, ai_source: aiSource
+                }]);
+            }
+        } catch(e) { /* non-blocking */ }
+    }
 
     window.viewPastSession = async function(sessionId, name) {
         const { data: msgs } = await supabase.from('messages').select('*').eq('session_id', sessionId).order('created_at', { ascending: true });

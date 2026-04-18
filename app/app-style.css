@@ -1185,6 +1185,14 @@ body.is-dragging * { cursor: grabbing !important; }
 .ai-call-msg-label { font-size: 0.65rem; color: var(--text-3); display: block; margin-bottom: 2px; }
 .ai-call-msg-text-user { color: var(--text-2); }
 .ai-call-msg-text-ai   { color: var(--text); }
+/* Call thread in sidebar */
+.history-item.call-thread {
+    border-left: 2px solid var(--accent);
+    padding-left: 10px;
+}
+/* Interim transcript (live speech preview) */
+.ai-call-interim { opacity: 0.6; }
+/* AI call interim indicator */
 .ai-call-controls { display: flex; gap: 18px; margin-top: 26px; z-index: 1; align-items: center; }
 .ai-call-btn {
     width: 56px; height: 56px; border-radius: 50%;
@@ -1425,6 +1433,26 @@ body.is-dragging * { cursor: grabbing !important; }
     line-height: 1.4;
     font-style: italic;
 }
+/* Human Connect escalation cue */
+.connect-cue {
+    margin-top: 10px;
+}
+.connect-cue-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    border-radius: 20px;
+    background: linear-gradient(135deg, var(--page-1, var(--accent)), var(--page-2, var(--purple)));
+    color: #fff;
+    font-size: 0.82rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: opacity 0.18s, transform 0.18s;
+}
+.connect-cue-btn:hover { opacity: 0.88; transform: translateY(-1px); }
+.connect-cue-btn ion-icon { font-size: 1rem; }
+
 /* Thinking dots for image-response loading */
 .thinking-dots {
     display: flex;

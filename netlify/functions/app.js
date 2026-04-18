@@ -8,7 +8,7 @@ exports.handler = async function(event, context) {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${process.env.OPENAI_API_KEY}` // Pulled securely from Netlify dashboard
+                'Authorization': `Bearer ${process.env.BLAKCIDE_OPENAI_KEY || process.env.OPENAI_API_KEY}` // Pulled securely from Netlify dashboard
             },
             body: JSON.stringify({
                 model: 'gpt-4o-mini',

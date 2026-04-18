@@ -15,15 +15,19 @@ export default async (req) => {
         });
     }
 
-    const apiKey = process.env.OPENAI_API_KEY;
+    // Prefer explicit key from .env; fall back to whatever Netlify injects (gateway JWT, etc.)
+    const apiKey = process.env.BLAKCIDE_OPENAI_KEY || process.env.OPENAI_API_KEY;
     if (!apiKey) {
         return new Response(JSON.stringify({ error: 'API key not configured' }), {
             status: 500, headers: { 'Content-Type': 'application/json' }
         });
     }
 
+    // Use explicit OpenAI endpoint; ignore Netlify AI gateway base URL
+    const baseUrl = 'https://api.openai.com';
+
     try {
-        const openaiRes = await fetch('https://api.openai.com/v1/chat/completions', {
+        const openaiRes = await fetch(`${baseUrl}/v1/chat/completions`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',

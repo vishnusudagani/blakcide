@@ -32,3 +32,8 @@
   from = "/api/summarize"
   to = "/.netlify/functions/summarize"
   status = 200
+
+[[redirects]]
+  from = "/api/tts"
+  to = "/.netlify/functions/tts"
+  status = 200
