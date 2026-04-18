@@ -1,9 +1,9 @@
 exports.handler = async function(event) {
     if (event.httpMethod !== 'POST') return { statusCode: 405, body: 'Method Not Allowed' };
 
-    let audioBase64, mimeType;
+    let audioBase64, mimeType, langHint;
     try {
-        ({ audioBase64, mimeType } = JSON.parse(event.body || '{}'));
+        ({ audioBase64, mimeType, langHint } = JSON.parse(event.body || '{}'));
     } catch {
         return { statusCode: 400, body: JSON.stringify({ error: 'Invalid JSON' }) };
     }
@@ -24,7 +24,12 @@ exports.handler = async function(event) {
         const form   = new FormData();
         form.append('file',  new Blob([buffer], { type: contentType }), filename);
         form.append('model', 'whisper-1');
-        // NO language hint — let Whisper auto-detect Telugu / Hindi / English
+        // If we already know the user's language (te/hi), pass it as a hint.
+        // This makes Whisper output NATIVE SCRIPT (తెలుగు / हिंदी) instead of Romanized Latin.
+        // Without a hint, Whisper often outputs "nenu bagunnanu" instead of "నేను బాగున్నాను".
+        if (langHint && langHint !== 'en') {
+            form.append('language', langHint);
+        }
         // verbose_json returns the detected language code alongside the transcript
         form.append('response_format', 'verbose_json');
 

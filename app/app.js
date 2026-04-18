@@ -1162,8 +1162,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Recognition: always en-IN (captures Indian English + Romanized Telugu/Hindi)
     // Language: auto-detected from each transcript → AI replies in detected lang
     // ══════════════════════════════════════════════════════════════════════════
-    let _callDetectedLang  = 'en';  // updated per turn from transcript
-    let _callLanguageLocked = false; // once user speaks non-English, lock language
+    let _callDetectedLang  = 'en';  // updated every turn from Whisper — no locking
     let _callState         = 'idle';
     let _ttsWatchdog       = null;
     let _speakSeq          = 0;
@@ -1215,19 +1214,23 @@ document.addEventListener('DOMContentLoaded', () => {
             let binary = '';
             for (let i = 0; i < uint8.length; i++) binary += String.fromCharCode(uint8[i]);
             const base64 = btoa(binary);
+
+            // Pass current detected language as a hint so Whisper outputs
+            // NATIVE SCRIPT (తెలుగు / हिंदी) not Romanized Latin
+            const body = { audioBase64: base64, mimeType };
+            if (_callDetectedLang && _callDetectedLang !== 'en') {
+                body.langHint = _callDetectedLang;
+            }
+
             const res = await fetch('/api/transcribe', {
                 method:  'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body:    JSON.stringify({ audioBase64: base64, mimeType })
+                body:    JSON.stringify(body)
             });
             if (!res.ok) return null;
             const data = await res.json();
-            if (data.language && data.language !== 'en') {
-                _callDetectedLang    = data.language;
-                _callLanguageLocked  = true;
-            } else if (!_callLanguageLocked) {
-                _callDetectedLang = 'en';
-            }
+            // Always update language — no locking — enables instant mid-call switching
+            if (data.language) _callDetectedLang = data.language;
             return (data.text || '').trim();
         } catch(e) {
             console.error('Whisper transcription error:', e);
@@ -1280,11 +1283,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 setTimeout(() => { if (_callActive && !_callMuted && _callState === 'listening') _startRecognition(); }, 100);
             }
         };
-        recorder.start();
+        recorder.start(200); // 200ms timeslices — data ready faster for lower latency
 
         // ── VAD rAF loop ──────────────────────────────────────────────────────
-        const SPEECH_THRESHOLD  = 20;   // energy level 0-255
-        const SILENCE_FRAMES_END = 40;  // ~1.3s of silence at 30fps ends the utterance
+        const SPEECH_THRESHOLD  = 18;   // energy level 0-255
+        const SILENCE_FRAMES_END = 22;  // ~0.7s of silence at 30fps — snappier response
 
         const vadLoop = () => {
             if (!_callActive || _callState !== 'listening' || !_callMediaRecorder) return;
@@ -1317,12 +1320,11 @@ document.addEventListener('DOMContentLoaded', () => {
         _callTransition('thinking');
         _addCallMsg('user', text);
 
-        // Language detection — Whisper already set _callDetectedLang in _transcribeWhisper.
-        // Fallback: use text-based detectLang if not yet locked.
-        if (!_callLanguageLocked) {
-            const detected = window.BlakcideAI?.detectLang(text) || 'en';
-            _callDetectedLang = detected;
-            if (detected !== 'en') _callLanguageLocked = true;
+        // _callDetectedLang is already set by Whisper in _transcribeWhisper.
+        // Fallback only if Whisper gave nothing useful:
+        if (_callDetectedLang === 'en' && window.BlakcideAI?.detectLang) {
+            const detected = window.BlakcideAI.detectLang(text);
+            if (detected && detected !== 'en') _callDetectedLang = detected;
         }
 
         _callHistory.push({ role: 'user', content: text });
@@ -1336,27 +1338,41 @@ document.addEventListener('DOMContentLoaded', () => {
             : '';
 
         const teluguExtra = lang === 'te' ? `
-- You are speaking Romanized Telugu on a phone call. This is natural casual speech, not written text.
-- Lead with a short reaction first: "Aiyo ra", "Sare sare", "Nijamga?", "Arre!", "Avunu ra" — then your actual response.
-- SOV order: verb at end. "Nenu vinanu" not "Nenu have heard".
-- One thought per sentence. Keep it like a phone call — short, warm, real.
-- ZERO Hindi words. ZERO English fillers.` : '';
+
+TELUGU RULES (CRITICAL):
+- Write ONLY in Telugu script (తెలుగు లిపి). NEVER use Roman/English letters for Telugu words.
+- You are a Hyderabadi/Andhra friend talking on the phone. Ultra casual.
+- Start with a native reaction: "అయ్యో రా", "సరే సరే", "నిజంగా?", "అరే!", "అవును రా", "పాపం", "ఏంటి రా"
+- SOV order. Keep it short — one casual sentence max.
+- ZERO Hindi words mixed in. Pure Telugu.
+- Examples of correct replies:
+  User says something sad → "అయ్యో రా, చాలా కష్టంగా ఉందా నీకు?"
+  User shares news → "నిజంగా? చెప్పు రా మరి."
+  User asks how you are → "బాగున్నాను రా, నువ్వు చెప్పు."` : '';
 
         const hindiExtra = lang === 'hi' ? `
-- Romanized Hindi on a phone call. Short, like talking to a close friend.
-- React first: "Haan yaar", "Achi baat", "Sach mein?", "Woh toh hai" — then respond.
-- One sentence, max two. Phone call, not a lecture.` : '';
 
-        const callSys = `You are Blakcide — on a voice call. You are a close friend, not an assistant.
+HINDI RULES (CRITICAL):
+- Write ONLY in Hindi/Devanagari script (हिंदी). NEVER use Roman/English letters for Hindi words.
+- You are a desi best friend talking casually on the phone.
+- Start with a native reaction: "हाँ यार", "अरे यार", "सच में?", "बिल्कुल", "वो तो है", "क्या बात है"
+- One sentence max. Close friend energy, not formal.
+- ZERO Telugu words mixed in. Pure Hindi.
+- Examples of correct replies:
+  User is sad → "अरे यार, ये सुनकर दिल भारी हो गया।"
+  User shares news → "सच में? फिर क्या हुआ यार?"
+  User casual → "हाँ यार, बता क्या चल रहा है।"` : '';
 
-RULES — no exceptions:
-1. ${langName} ONLY. Every word. Zero mixing.
-2. MAX 1 sentence. Seriously — one sentence. This is a phone call.
-3. No markdown, no lists, no symbols. Spoken words only.
-4. Always start with a short human reaction word/phrase before your actual response:
+        const callSys = `You are Blakcide — on a live voice call. You are a close friend, NOT an assistant.
+
+ABSOLUTE RULES:
+1. ${langName} ONLY. Write in ${lang === 'te' ? 'Telugu script (తెలుగు)' : lang === 'hi' ? 'Devanagari script (हिंदी)' : 'English'}.
+2. MAX 1 sentence. One. This is a phone call, not an essay.
+3. No markdown, asterisks, lists, brackets, or symbols. Pure spoken words.
+4. Always start with a human reaction before your response:
    EN: "Oh—", "Wait—", "Yeah", "Hmm", "Aw man", "Really?", "That's rough"
-   TE: "Aiyo", "Arre", "Sare", "Nijamga?", "Paapam", "Avunu ra"
-   HI: "Haan", "Arre yaar", "Sach mein?", "Bilkul", "Woh toh hai"
+   TE: "అయ్యో", "అరే", "సరే", "నిజంగా?", "పాపం", "అవును రా"
+   HI: "हाँ", "अरे यार", "सच में?", "बिल्कुल", "वो तो है"
 5. Never use: "I understand", "I see", "That's interesting", "As your friend", "Certainly".
 6. Never start with "I".${teluguExtra}${hindiExtra}${userCtxNote}`;
 
@@ -1375,8 +1391,8 @@ RULES — no exceptions:
         } catch(err) {
             console.warn('Call AI error:', err.message);
             if (!_callActive) return;
-            const fb = lang === 'hi' ? 'Ek baar phir se bolo, kuch gadbad ho gayi.'
-                     : lang === 'te' ? 'Okasari cheppav ra, chinna problem vachhindi.'
+            const fb = lang === 'hi' ? 'एक बार फिर से बोलो यार, कुछ गड़बड़ हो गई।'
+                     : lang === 'te' ? 'ఒక్కసారి మళ్ళీ చెప్పు రా, చిన్న సమస్య వచ్చింది.'
                      : "Sorry, didn't catch that. Say it again?";
             _callHistory.push({ role: 'assistant', content: fb });
             _callSpeak(fb);
@@ -1477,7 +1493,6 @@ RULES — no exceptions:
         _callSecs            = 0;
         _callHistory         = [];
         _callDetectedLang    = 'en';
-        _callLanguageLocked  = false;
         _callState           = 'idle';
         _callMuted           = false;
         _callSpeaker         = true;
@@ -1528,7 +1543,6 @@ RULES — no exceptions:
     window.endAICall = function () {
         _callActive = false;
         _callTransition('idle');
-        _callLanguageLocked = false;
         clearInterval(_callTimerInt);
         clearTimeout(_ttsWatchdog);
         _stopTTSAudio();
