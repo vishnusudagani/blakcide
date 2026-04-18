@@ -543,10 +543,57 @@ function fmtTime(iso) {
     return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
+// ── DB health check — surfaces "table not found" clearly ─────────────────────
+async function gcCheckDB() {
+    try {
+        const { error } = await sb.from('group_rooms').select('id').limit(1);
+        if (error && (error.code === '42P01' || error.message?.includes('does not exist'))) {
+            document.getElementById('gc-join').innerHTML = `
+                <div class="gc-join-card" style="gap:12px;">
+                    <div class="gc-join-title" style="color:#ff6b6b;">⚠️ Setup Required</div>
+                    <div style="font-size:0.85rem;color:var(--text-2);line-height:1.6;">
+                        The group chat database tables don't exist yet.<br><br>
+                        Run this SQL in your <strong>Supabase SQL Editor</strong>:
+                    </div>
+                    <pre style="background:var(--surface-2);padding:12px;border-radius:8px;font-size:0.7rem;overflow-x:auto;white-space:pre-wrap;color:var(--text);">CREATE TABLE IF NOT EXISTS group_rooms (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  created_at timestamptz NOT NULL DEFAULT now(),
+  room_code text NOT NULL UNIQUE,
+  created_by text NOT NULL,
+  user_a_id text NOT NULL,
+  user_a_name text NOT NULL,
+  user_b_id text,
+  user_b_name text,
+  participants integer NOT NULL DEFAULT 1
+);
+
+CREATE TABLE IF NOT EXISTS group_messages (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  created_at timestamptz NOT NULL DEFAULT now(),
+  room_id uuid NOT NULL REFERENCES group_rooms(id) ON DELETE CASCADE,
+  user_id text NOT NULL,
+  user_name text NOT NULL,
+  role text NOT NULL CHECK (role IN ('user','assistant')),
+  content text NOT NULL
+);
+
+ALTER TABLE group_rooms ENABLE ROW LEVEL SECURITY;
+ALTER TABLE group_messages ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "anon all rooms" ON group_rooms FOR ALL TO anon USING (true) WITH CHECK (true);
+CREATE POLICY "anon all messages" ON group_messages FOR ALL TO anon USING (true) WITH CHECK (true);</pre>
+                    <button class="gc-btn gc-btn-secondary" onclick="location.reload()">Retry after running SQL</button>
+                </div>`;
+            return false;
+        }
+        return true;
+    } catch (e) { return true; } // network error — let gcCreate handle it
+}
+
 // ── Room create / join ─────────────────────────────────────────────────────────
 async function gcCreate() {
     const name = document.getElementById('gc-name-input').value.trim();
     if (!name) { showError('Enter your name first'); return; }
+    if (!await gcCheckDB()) return;
 
     gc.myName   = name;
     gc.myUserId = genUserId();

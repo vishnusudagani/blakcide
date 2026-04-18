@@ -1155,10 +1155,14 @@ document.addEventListener('DOMContentLoaded', () => {
     // ─────────────────────────────────────────────────────────────────
     // State machine + remaining vars
     // ─────────────────────────────────────────────────────────────────
-    let _callDetectedLang  = 'en';   // updated every Whisper turn — no locking
-    // Streak tracking: only force Whisper language hint after 2+ consecutive
-    // turns in the same non-English language. Prevents false-locking when user
-    // switches language mid-call (e.g. Telugu → English → Whisper forced 'te').
+    // ── Language state ───────────────────────────────────────────────────────
+    // _callDetectedLang : authoritative language for THIS TURN, drives LLM enforcement
+    // _callWhisperLang  : raw Whisper result (after remap), stored separately so
+    //                     text-scoring can override it before committing
+    // _callLangStreak   : consecutive turns in same non-English language → triggers
+    //                     native-script hint to Whisper after 2 turns
+    let _callDetectedLang  = 'en';
+    let _callWhisperLang   = 'en';
     let _callLangStreak    = 0;
     let _callLangStreakVal  = 'en';
     let _callState         = 'idle'; // idle | listening | thinking | speaking
@@ -1367,20 +1371,30 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = await res.json();
             if (myGen !== _callRecGen || !_callActive) return null;
 
-            // ── Whisper language remapping ──────────────────────────────
-            // Whisper frequently misclassifies Telugu as Tamil ('ta') or
-            // Kannada ('kn') because the scripts are visually similar and
-            // the training data for South Indian languages is uneven.
-            // Map those to 'te' so language enforcement stays correct.
-            // Similarly map Urdu ('ur') → Hindi ('hi') — same spoken register.
+            // ── Whisper language remapping ─────────────────────────────────
+            // Whisper misclassifies Telugu as Tamil ('ta') / Kannada ('kn') /
+            // Malayalam ('ml') — South Indian scripts look similar to its model.
+            // Urdu ('ur') → Hindi ('hi'): same spoken register, different script.
             const LANG_REMAP = { ta: 'te', kn: 'te', ml: 'te', ur: 'hi' };
             let whisperLang = data.language || null;
             if (whisperLang && LANG_REMAP[whisperLang]) {
-                console.log(`[AI Call] Whisper lang remap: ${whisperLang} → ${LANG_REMAP[whisperLang]}`);
+                console.log(`[AI Call] Whisper remap: ${whisperLang} → ${LANG_REMAP[whisperLang]}`);
                 whisperLang = LANG_REMAP[whisperLang];
             }
-            if (whisperLang) _callDetectedLang = whisperLang;
-            console.log(`[AI Call] STT lang=${whisperLang} text="${(data.text||'').substring(0,60)}"`);
+
+            // Store Whisper's result for reference in _processUserSpeech.
+            // CRITICAL: Only write non-English results to _callDetectedLang here.
+            // If Whisper says 'en', DO NOT override — Whisper frequently returns
+            // 'en' for short/quiet Telugu/Hindi phrases (especially on first turns
+            // before langHint kicks in). Text-scoring in _processUserSpeech will
+            // be the tiebreaker. Applying 'en' from Whisper prematurely would make
+            // detectLangWithFallback() use 'en' as its fallback and confirm the
+            // wrong language.
+            _callWhisperLang = whisperLang || 'en';
+            if (whisperLang && whisperLang !== 'en') {
+                _callDetectedLang = whisperLang;  // positive non-English signal → apply immediately
+            }
+            console.log(`[AI Call] STT whisper=${_callWhisperLang} detected=${_callDetectedLang} text="${(data.text||'').substring(0,60)}"`);
             return (data.text || '').trim();
         } catch (e) {
             console.error('[AI Call] Transcribe error:', e);
@@ -1620,40 +1634,81 @@ document.addEventListener('DOMContentLoaded', () => {
     // A system message placed AFTER history but BEFORE the latest user message
     // carries high recency weight in GPT-4o's attention mechanism. This is far
     // more reliable than burying language rules in the base system prompt.
+    // ── Language enforcement — injected as system message BEFORE each user turn ──
+    // Placed at maximum recency (immediately before the last user message).
+    // Uses concrete BAD/GOOD examples because GPT-4o pattern-matches examples
+    // far more reliably than abstract rules.
     const _LANG_ENFORCE = {
-        te: `ACTIVE LANGUAGE = TELUGU.
-స్పందన తెలుగులో మాత్రమే ఇవ్వు (script or Romanized — match user's style exactly).
-ZERO Hindi. ZERO formal language. Casual spoken Telugu only.`,
-        hi: `ACTIVE LANGUAGE = HINDI.
-केवल हिंदी में जवाब दो (script या Romanized — user की style match करो).
-ZERO Telugu. ZERO formal language. Casual spoken Hindi only.`,
-        en: `ACTIVE LANGUAGE = ENGLISH. Respond in casual spoken English only.`,
+        te: `══ ACTIVE LANGUAGE: TELUGU ══
+RULE: Your ENTIRE reply must be in Telugu. No exceptions. No mixing.
+Match user's exact style — Romanized Telugu if they wrote Roman, Telugu script if they wrote script.
+
+FORBIDDEN WORDS (ZERO tolerance): yaar, bhai, kya, hai, hoon, accha, theek, arrey (Hindi words — NEVER)
+FORBIDDEN STYLE: formal/textbook Telugu
+
+BAD RESPONSE ✗ → "నేను మీకు సహాయం చేయగలను" (formal)
+BAD RESPONSE ✗ → "Haan yaar, cheppu" (Hindi mixing)
+GOOD RESPONSE ✓ → "Aiyo ra, em jarigindi? Cheppu, vinnanu."
+GOOD RESPONSE ✓ → "Arre sare, adhe anipistundi naaku kuda"
+
+కేవలం తెలుగులో మాత్రమే స్పందించు. ఇది తప్పనిసరి.`,
+
+        hi: `══ ACTIVE LANGUAGE: HINDI ══
+RULE: Your ENTIRE reply must be in Hindi. No exceptions. No mixing.
+Match user's exact style — Romanized Hindi or Devanagari, whichever they used.
+
+FORBIDDEN WORDS: aiyo, ayyo, ra, undi, cheppu, ela (Telugu words — NEVER)
+FORBIDDEN STYLE: formal/textbook Hindi
+
+BAD RESPONSE ✗ → "मैं आपकी सहायता कर सकता हूँ" (formal)
+BAD RESPONSE ✗ → "Aiyo yaar, undi kya?" (Telugu mixing)
+GOOD RESPONSE ✓ → "Arre yaar, kya hua? Bata na, sun raha hoon."
+GOOD RESPONSE ✓ → "Sach mein? Fir kya kiya tune?"
+
+केवल हिंदी में उत्तर दें। यह अनिवार्य है।`,
+
+        en: `══ ACTIVE LANGUAGE: ENGLISH ══
+RULE: Respond in casual spoken English only. No Hindi words. No Telugu words.
+
+FORBIDDEN: yaar, bhai, ra, undi, accha, na, toh (language contamination — NEVER)
+
+GOOD RESPONSE ✓ → "Oh wow, that's rough. What happened exactly?"
+GOOD RESPONSE ✓ → "Yeah I get that feeling — what do you think you'll do?"`,
     };
 
-    // ── Base system prompt (language-neutral, sent once per turn) ─────
+    // ── Base system prompt — language-neutral core rules ──────────────
     function _buildCallSys() {
         const userCtx = window.blakcideUserContext
-            ? `\nUser context: ${window.blakcideUserContext.substring(0, 180)}`
+            ? `\n\nABOUT THIS USER (weave in naturally, never announce): ${window.blakcideUserContext.substring(0, 200)}`
             : '';
-        return `You are Blakcide — live voice call. Close friend, NOT an assistant.
+        return `You are Blakcide. You are on a LIVE VOICE CALL. You are the user's close FRIEND — not an assistant, not a therapist.
 
-RULES (zero exceptions):
-1. MATCH THE LANGUAGE in the [ACTIVE LANGUAGE] enforcement message above. That message overrides everything.
-2. MAX 2 sentences per response. Phone call, not an essay.
-3. NO markdown, asterisks, lists, brackets, or symbols. Pure spoken words.
-4. ALWAYS start with a short human reaction:
-   EN : "Oh—" "Yeah" "Hmm" "Aw man" "Really?" "That's rough" "Wait—"
-   TE : "అయ్యో" "అరే" "సరే" "నిజంగా?" "అవును రా" — OR Romanized: "Aiyo" "Arre" "Sare"
-   HI : "हाँ" "अरे यार" "सच में?" "बिल्कुल" — OR Romanized: "Haan" "Arre yaar"
-5. NEVER: "I understand" "I see" "That's interesting" "Certainly" "As your friend".
-6. NEVER start with the word "I".
-7. Casual spoken style — NOT formal/textbook:
-   BAD  (formal TE): "నేను మీకు సహాయం చేయగలను"
-   GOOD (casual TE): "Nenu help chestha… sare?"
-   BAD  (formal HI): "मैं आपकी सहायता कर सकता हूँ"
-   GOOD (casual HI): "haan main help kar sakta hoon yaar"
-8. Mixed-language input (Tanglish/Hinglish) → respond naturally in the same mix.
-9. Context is maintained across all languages — do NOT reset or translate history.${userCtx}`;
+NON-NEGOTIABLE RULES:
+
+LANGUAGE: The "ACTIVE LANGUAGE" block that appears right before the user's message is your ONLY language instruction. Follow it exactly. It overrides everything else including this prompt.
+
+LENGTH: 1 sentence maximum. 2 sentences only when emotional depth requires it. Phone call = short. Long replies = broken experience.
+
+FORMAT: Zero markdown. Zero asterisks. Zero bullet points. Zero headers. Pure spoken words only.
+
+OPENER: Always start with a natural human reaction — NEVER "I understand" / "I see" / "Certainly" / "That's interesting":
+  English → "Oh—" / "Wait—" / "Yeah" / "Aw man" / "Really?" / "That's rough"
+  Telugu  → "Aiyo" / "Arre ra" / "Sare" / "Nijamga?" / "Oh nice ra" / "Ayyo paapam"
+  Hindi   → "Arre yaar" / "Sach mein?" / "Haan haan" / "Oye" / "Kya hua bata"
+
+NEVER: Start with "I". Say "As an AI". Sound like a customer service bot.
+
+MEMORY: Remember everything said in this conversation. Do NOT lose context when language switches.
+
+GOOD vs BAD:
+  BAD  "I understand that you are feeling stressed about your exam situation."
+  GOOD "Exam stress ra? Cheppu — em jarigindi exactly?"
+
+  BAD  "मैं आपकी भावनाओं को समझता हूँ और आपकी सहायता करना चाहता हूँ।"
+  GOOD "Arre yaar tough hai — kya hua bata?"
+
+  BAD  "That sounds like a challenging situation for you to navigate."
+  GOOD "That's rough. What happened?"${userCtx}`;
     }
 
     // ── Handle transcribed text → AI response (streaming pipeline) ───
@@ -1672,21 +1727,42 @@ RULES (zero exceptions):
 
         _addCallMsg('user', text);
 
-        // ── Language detection: score text, reconcile with Whisper result ─
-        // Rule: if text scoring returns non-English → use it (high confidence).
-        // If text says English but Whisper said non-English → keep Whisper's result.
-        // This handles: (a) Tanglish where Whisper detects 'te' correctly but text
-        // looks "English", and (b) code-switching within a single utterance.
-        // Layer 1: Whisper already updated _callDetectedLang in _transcribeWhisper
-        // Layer 2: Unicode + keyword scoring (handles Tanglish/Hinglish)
-        // Layer 3: Streak maintenance for native-script hint on next turn
-        const textLang = window.BlakcideAI?.detectLangWithFallback(text, _callDetectedLang) || 'en';
+        // ── STRICT PRIORITY LANGUAGE DETECTION (per-turn) ──────────────────
+        //
+        // Priority order (hard rules, no exceptions):
+        //   P1. Unicode script in text  → ABSOLUTE (Telugu ≠ Tamil, Hindi ≠ Urdu)
+        //   P2. Keyword match in text   → HIGH CONFIDENCE
+        //   P3. Whisper non-English     → MEDIUM (already remapped ta→te, ur→hi)
+        //   P4. Whisper English         → LOW (only trusted with 4+ English words)
+        //   P5. Previous language       → FALLBACK (never reset on ambiguous input)
+        //
+        // The fallback fix in detectLang ensures ambiguous short text returns
+        // the previous language rather than defaulting to 'en'.
 
-        // If text scoring returns non-English it has high confidence → trust it.
-        // If text scores English but Whisper said non-English, keep Whisper's result
-        // (handles Tanglish where text looks "English" but Whisper correctly detected Telugu).
+        const textLang  = window.BlakcideAI?.detectLangWithFallback(text, _callDetectedLang) || 'en';
+        const wordCount = text.trim().split(/\s+/).filter(Boolean).length;
+
         if (textLang !== 'en') {
+            // P1/P2: Unicode script or keyword match — ALWAYS trust this
             _callDetectedLang = textLang;
+            console.log(`[AI Call] Lang from text scoring: ${textLang}`);
+
+        } else if (_callWhisperLang !== 'en') {
+            // P3: Text has no keywords/script but Whisper says non-English
+            // (e.g. native-script input that keyword scoring didn't recognise)
+            _callDetectedLang = _callWhisperLang;
+            console.log(`[AI Call] Lang from Whisper (non-English): ${_callWhisperLang}`);
+
+        } else if (_callWhisperLang === 'en' && wordCount >= 4) {
+            // P4: Both text and Whisper say English AND text is long enough
+            // (4+ words) to be a genuine English switch, not just "ha okay"
+            _callDetectedLang = 'en';
+            console.log(`[AI Call] Lang switched to English (${wordCount} words, Whisper confirmed)`);
+
+        } else {
+            // P5: Ambiguous — keep previous language
+            // Covers: short phrases, "ha", "sare", "okay", single syllables
+            console.log(`[AI Call] Lang unchanged (ambiguous): keeping ${_callDetectedLang} (text="${text.substring(0,30)}")`);
         }
 
         // Track all languages used this call (for journal metadata)
@@ -1888,6 +1964,7 @@ RULES (zero exceptions):
         _callLangsUsed     = new Set(['en']);
         _callHistory       = [];
         _callDetectedLang  = 'en';
+        _callWhisperLang   = 'en';
         _callLangStreak    = 0;
         _callLangStreakVal  = 'en';
         _callState         = 'idle';

@@ -209,11 +209,16 @@ function detectLang(text, fallback) {
     if (teScore > 0 || hiScore > 0) {
         if (teScore > hiScore) return 'te';
         if (hiScore > teScore) return 'hi';
-        // Tie: use caller's fallback (typically last detected language)
+        // Tie → defer to caller's context (last confirmed language)
         return fallback || 'en';
     }
 
-    return 'en';
+    // ── 3. No keywords, no script — ambiguous text ─────────────────────────
+    // CRITICAL: use the fallback (previous language) instead of defaulting to
+    // English. This prevents short phrases like "ha", "sare", "okay", "sure"
+    // from resetting the active language. Only a strong positive signal
+    // (keyword match OR Unicode script) should change the detected language.
+    return fallback || 'en';
 }
 
 window.BlakcideAI = {
