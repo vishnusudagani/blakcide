@@ -1126,6 +1126,8 @@ document.addEventListener('DOMContentLoaded', () => {
     let _callSpeaker       = true;
     let _callTimerInt      = null;
     let _callSecs          = 0;
+    let _callStartTime     = null;   // Date when call started — for duration logging
+    let _callLangsUsed     = new Set(); // languages detected during the call
     let _callHistory       = [];
     let _callSynth         = window.speechSynthesis;
 
@@ -1292,7 +1294,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // ── Audio output ──────────────────────────────────────────────────
     function _stopTTSAudio() {
-        _ttsQueueReset();  // drain queue and invalidate in-flight fetches
+        // CRITICAL: increment _speakSeq here so any in-flight _callSpeakSimple
+        // fetch (greeting, error) sees mySeq !== _speakSeq and bails out.
+        // Without this, barge-in / watchdog interrupts leave a stale TTS fetch
+        // that resolves later and starts a second audio source simultaneously —
+        // the primary cause of audio cutting immediately.
+        _speakSeq++;
+        _ttsQueueReset();  // drain queue and invalidate in-flight queue fetches
         if (_callAudioSrc) {
             try { _callAudioSrc.onended = null; _callAudioSrc.stop(); } catch (_) {}
             _callAudioSrc = null;
@@ -1329,9 +1337,15 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const blob     = new Blob(chunks, { type: mimeType });
             const arrayBuf = await blob.arrayBuffer();
-            const uint8    = new Uint8Array(arrayBuf);
+            // Fast base64 encoding via chunk-splitting avoids O(n²) string concat.
+            // String.fromCharCode.apply works on ≤65535-byte chunks; larger blobs
+            // must be chunked to avoid "Maximum call stack size exceeded".
+            const uint8  = new Uint8Array(arrayBuf);
             let binary = '';
-            for (let i = 0; i < uint8.length; i++) binary += String.fromCharCode(uint8[i]);
+            const CHUNK = 8192;
+            for (let i = 0; i < uint8.length; i += CHUNK) {
+                binary += String.fromCharCode(...uint8.subarray(i, i + CHUNK));
+            }
             const base64 = btoa(binary);
 
             const body = { audioBase64: base64, mimeType };
@@ -1352,7 +1366,21 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!res.ok) return null;
             const data = await res.json();
             if (myGen !== _callRecGen || !_callActive) return null;
-            if (data.language) _callDetectedLang = data.language;
+
+            // ── Whisper language remapping ──────────────────────────────
+            // Whisper frequently misclassifies Telugu as Tamil ('ta') or
+            // Kannada ('kn') because the scripts are visually similar and
+            // the training data for South Indian languages is uneven.
+            // Map those to 'te' so language enforcement stays correct.
+            // Similarly map Urdu ('ur') → Hindi ('hi') — same spoken register.
+            const LANG_REMAP = { ta: 'te', kn: 'te', ml: 'te', ur: 'hi' };
+            let whisperLang = data.language || null;
+            if (whisperLang && LANG_REMAP[whisperLang]) {
+                console.log(`[AI Call] Whisper lang remap: ${whisperLang} → ${LANG_REMAP[whisperLang]}`);
+                whisperLang = LANG_REMAP[whisperLang];
+            }
+            if (whisperLang) _callDetectedLang = whisperLang;
+            console.log(`[AI Call] STT lang=${whisperLang} text="${(data.text||'').substring(0,60)}"`);
             return (data.text || '').trim();
         } catch (e) {
             console.error('[AI Call] Transcribe error:', e);
@@ -1448,7 +1476,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // ── VAD rAF loop ─────────────────────────────────────────────────
         const SPEECH_THRESHOLD = 15;  // 0–255 energy level
-        const SILENCE_FRAMES   = 25;  // ~0.83s at 30fps after speech ends
+        const SILENCE_FRAMES   = 18;  // ~0.60s at 30fps — was 25 (833ms), reduced for faster cutoff
         const MAX_RECORD_SEC   = 900; // 30s safety cap (frameCnt at ~30fps)
 
         const vadLoop = () => {
@@ -1553,10 +1581,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
         _ttsPlaying = true;
         const ctx = _callAudioCtx;
+
+        // Safety: resume context if browser suspended it (tab switch, etc.)
+        // Do NOT await here — we're in a sync drain function. Fire-and-forget
+        // resume is fine; AudioContext buffers internally.
+        if (ctx.state === 'suspended') ctx.resume().catch(() => {});
+
         const src = ctx.createBufferSource();
         src.buffer = slot.audioBuffer;
         src.connect(ctx.destination);
         _callAudioSrc = src;
+        console.log(`[AI Call] TTS playing sentence (${Math.round(slot.audioBuffer.duration*10)/10}s): "${slot.text.substring(0,40)}…"`);
 
         src.onended = () => {
             if (_callAudioSrc === src) _callAudioSrc = null;
@@ -1624,8 +1659,17 @@ RULES (zero exceptions):
     // ── Handle transcribed text → AI response (streaming pipeline) ───
     async function _processUserSpeech(text) {
         if (!_callActive) return;
+        // Hard guard: if we're already thinking or speaking, a second invocation
+        // means a stale onstop fired — discard it. Two parallel LLM streams
+        // would race and corrupt _callHistory.
+        if (_callState === 'thinking' || _callState === 'speaking') {
+            console.warn('[AI Call] _processUserSpeech called in wrong state:', _callState, '— discarding');
+            return;
+        }
         _stopRecorder();
         _callTransition('thinking');
+        console.log(`[AI Call] Processing speech: lang=${_callDetectedLang} text="${text.substring(0,80)}"`);
+
         _addCallMsg('user', text);
 
         // ── Language detection: score text, reconcile with Whisper result ─
@@ -1644,6 +1688,9 @@ RULES (zero exceptions):
         if (textLang !== 'en') {
             _callDetectedLang = textLang;
         }
+
+        // Track all languages used this call (for journal metadata)
+        _callLangsUsed.add(_callDetectedLang);
 
         // Update streak for native-script hint logic in _transcribeWhisper
         if (_callDetectedLang === _callLangStreakVal) {
@@ -1684,6 +1731,7 @@ RULES (zero exceptions):
 
             if (!firstSent) {
                 firstSent = true;
+                console.log(`[AI Call] LLM first sentence → TTS queue starts. lang=${_callDetectedLang}`);
                 _callTransition('speaking');
                 _addCallMsg('ai', ''); // placeholder, updated live below
             }
@@ -1759,10 +1807,10 @@ RULES (zero exceptions):
         _callTransition('speaking');
         _addCallMsg('ai', text);
 
-        _speakSeq++;
-        const mySeq = _speakSeq;
-        _stopTTSAudio();
-        _ttsQueueReset();
+        // _stopTTSAudio() increments _speakSeq internally (to invalidate any
+        // previous in-flight fetch), so capture mySeq AFTER calling it.
+        _stopTTSAudio();           // kills current audio + increments _speakSeq
+        const mySeq = _speakSeq;  // capture the NEW value as our ownership token
 
         if (!_callSpeaker) {
             setTimeout(() => {
@@ -1834,9 +1882,11 @@ RULES (zero exceptions):
     // ── Start call ────────────────────────────────────────────────────
     window.startAICall = function () {
         if (_callActive) return;
-        _callActive       = true;
-        _callSecs         = 0;
-        _callHistory      = [];
+        _callActive        = true;
+        _callSecs          = 0;
+        _callStartTime     = new Date();
+        _callLangsUsed     = new Set(['en']);
+        _callHistory       = [];
         _callDetectedLang  = 'en';
         _callLangStreak    = 0;
         _callLangStreakVal  = 'en';
@@ -1919,57 +1969,101 @@ RULES (zero exceptions):
         const ov = document.getElementById('ai-call-overlay');
         if (ov) ov.style.display = 'none';
         if (_callHistory && _callHistory.length >= 2 && currentUser) {
-            const snap   = [..._callHistory];
-            const userId = currentUser.id;
+            const snap        = [..._callHistory];
+            const userId      = currentUser.id;
+            const durationSec = _callSecs;
+            const langsUsed   = [..._callLangsUsed];
+            console.log(`[AI Call] Saving call: ${snap.length} messages, ${durationSec}s, langs=${langsUsed}`);
             (async () => {
-                await saveCallAsThread(snap, userId);
-                await saveCallAsJournal(snap, userId);
+                await saveCallAsThread(snap, userId, durationSec, langsUsed);
+                await saveCallAsJournal(snap, userId, durationSec, langsUsed);
             })();
         }
-        _callHistory = [];
+        _callHistory   = [];
+        _callLangsUsed = new Set();
     };
 
     // Save AI call as a chat thread so it appears in sidebar + is continuable
-    async function saveCallAsThread(callHistory, userId) {
+    async function saveCallAsThread(callHistory, userId, durationSec, langsUsed) {
         try {
             const now = new Date();
-            const timeStr = now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
-            const { data: chatData } = await supabase
-                .from('chats')
-                .insert([{ user_id: userId, title: `AI Call · ${timeStr}`, is_ai_call: true }])
-                .select();
-            if (!chatData || !chatData[0]) return;
-            const chatId = chatData[0].id;
+            const timeStr   = now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+            const durMin    = Math.floor(durationSec / 60);
+            const durSec    = durationSec % 60;
+            const durStr    = durMin > 0 ? `${durMin}m ${durSec}s` : `${durSec}s`;
+            const langLabel = langsUsed.filter(l => l !== 'en').join('/').toUpperCase();
+            const titleSuffix = langLabel ? ` · ${langLabel}` : '';
 
-            // Insert all call messages into the messages table
+            // Use upsert-safe insert — omit is_ai_call if column may not exist
+            const insertPayload = {
+                user_id: userId,
+                title:   `📞 AI Call · ${timeStr} (${durStr})${titleSuffix}`
+            };
+
+            // Try with is_ai_call first; if it fails (column missing), retry without
+            let chatId = null;
+            const tryInsert = async (payload) => {
+                const { data, error } = await supabase
+                    .from('chats')
+                    .insert([payload])
+                    .select();
+                if (error) throw error;
+                return data?.[0]?.id;
+            };
+
+            try {
+                chatId = await tryInsert({ ...insertPayload, is_ai_call: true });
+            } catch (e) {
+                console.warn('[AI Call] saveCallAsThread: is_ai_call insert failed, retrying without:', e.message);
+                chatId = await tryInsert(insertPayload);
+            }
+
+            if (!chatId) { console.error('[AI Call] saveCallAsThread: no chatId returned'); return; }
+
             const msgRows = callHistory.map(m => ({
                 chat_id: chatId,
-                role: m.role === 'assistant' ? 'ai' : 'user',
-                content: m.content
+                role:    m.role === 'assistant' ? 'ai' : 'user',
+                content: m.content,
             }));
-            await supabase.from('messages').insert(msgRows);
+            const { error: msgErr } = await supabase.from('messages').insert(msgRows);
+            if (msgErr) console.error('[AI Call] saveCallAsThread messages error:', msgErr.message);
 
-            // Generate title from the actual call history (not chatMessageHistory)
             generateAutoTitle(chatId, callHistory);
-            // Refresh sidebar to show new call thread
             loadSidebar();
-        } catch(e) { /* non-blocking */ }
+            console.log('[AI Call] Thread saved:', chatId);
+        } catch (e) {
+            console.error('[AI Call] saveCallAsThread failed:', e.message);
+        }
     }
 
-    async function saveCallAsJournal(callHistory, userId) {
+    async function saveCallAsJournal(callHistory, userId, durationSec, langsUsed) {
         try {
-            const res = await fetch('/api/summarize', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ messages: callHistory, type: 'call' })
-            });
-            if (!res.ok) return;
-            const { title, content } = await res.json();
-            if (!title || !content) return;
+            const durMin  = Math.floor(durationSec / 60);
+            const durSec  = durationSec % 60;
+            const durStr  = durMin > 0 ? `${durMin}m ${durSec}s` : `${durSec}s`;
+            const langCtx = langsUsed.length > 1
+                ? `\n\nLanguages used: ${langsUsed.map(l => ({ en:'English', hi:'Hindi', te:'Telugu' })[l] || l).join(', ')}`
+                : '';
 
-            // One-per-day: update existing today's AI call journal if it exists
+            const res = await fetch('/api/summarize', {
+                method:  'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body:    JSON.stringify({ messages: callHistory, type: 'call' })
+            });
+            if (!res.ok) {
+                console.error('[AI Call] saveCallAsJournal: summarize API error', res.status);
+                return;
+            }
+            const { title, content } = await res.json();
+            if (!title || !content) {
+                console.warn('[AI Call] saveCallAsJournal: empty summary returned');
+                return;
+            }
+
+            const journalContent = `${content}${langCtx}\n\n_Call duration: ${durStr}_`;
+
             const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
-            const { data: todayEntry } = await supabase
+            const { data: todayEntry, error: findErr } = await supabase
                 .from('journals')
                 .select('id, content')
                 .eq('user_id', userId)
@@ -1979,17 +2073,30 @@ RULES (zero exceptions):
                 .limit(1)
                 .maybeSingle();
 
+            if (findErr) console.warn('[AI Call] journal lookup error:', findErr.message);
+
             if (todayEntry) {
-                await supabase.from('journals').update({
+                const { error: upErr } = await supabase.from('journals').update({
                     title,
-                    content: todayEntry.content + '\n\n---\n\n' + content
+                    content: todayEntry.content + '\n\n---\n\n' + journalContent
                 }).eq('id', todayEntry.id);
+                if (upErr) console.error('[AI Call] journal update error:', upErr.message);
             } else {
-                await supabase.from('journals').insert([{ user_id: userId, title, content, ai_source: 'ai_call' }]);
+                const { error: insErr } = await supabase.from('journals').insert([{
+                    user_id:   userId,
+                    title,
+                    content:   journalContent,
+                    ai_source: 'ai_call'
+                }]);
+                if (insErr) console.error('[AI Call] journal insert error:', insErr.message);
             }
+
             showChatToast('📞 Call saved to your journal');
             updateUserMemory(userId, content);
-        } catch(_) {}
+            console.log('[AI Call] Journal entry saved');
+        } catch (e) {
+            console.error('[AI Call] saveCallAsJournal failed:', e.message);
+        }
     }
 
     window.toggleAICallMute = function () {
