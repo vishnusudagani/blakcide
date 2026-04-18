@@ -1,0 +1,903 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Group Chat – Blakcide</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+    <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
+    <link rel="stylesheet" href="app-style.css">
+    <style>
+        /* ── Layout ──────────────────────────────────────────────── */
+        html, body { height: 100dvh; background: var(--bg); overflow: hidden; margin: 0; }
+
+        .gc-layout {
+            display: flex;
+            flex-direction: column;
+            height: 100dvh;
+            max-width: 720px;
+            margin: 0 auto;
+            position: relative;
+        }
+
+        /* ── Room join screen ───────────────────────────────────── */
+        #gc-join {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            flex: 1;
+            gap: 20px;
+            padding: 32px 24px;
+        }
+
+        .gc-join-card {
+            background: var(--surface-1);
+            border: 1px solid var(--border);
+            border-radius: var(--r-lg);
+            padding: 32px 28px;
+            width: 100%;
+            max-width: 380px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .gc-join-title {
+            font-size: 1.35rem;
+            font-weight: 700;
+            color: var(--text);
+            margin: 0 0 4px;
+        }
+
+        .gc-join-sub {
+            font-size: 0.85rem;
+            color: var(--text-2);
+            margin: 0 0 8px;
+        }
+
+        .gc-input {
+            width: 100%;
+            padding: 11px 14px;
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            border-radius: var(--r-sm);
+            color: var(--text);
+            font-size: 0.95rem;
+            font-family: inherit;
+            box-sizing: border-box;
+            outline: none;
+            transition: border-color 0.18s;
+        }
+        .gc-input:focus { border-color: var(--accent); }
+        .gc-input::placeholder { color: var(--text-3); }
+
+        .gc-btn-row {
+            display: flex;
+            gap: 10px;
+        }
+
+        .gc-btn {
+            flex: 1;
+            padding: 11px 0;
+            border-radius: var(--r-sm);
+            border: none;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.18s;
+            font-family: inherit;
+        }
+
+        .gc-btn-primary {
+            background: var(--accent);
+            color: #0a0a14;
+        }
+        .gc-btn-primary:hover { background: var(--accent-hover, #00b893); }
+
+        .gc-btn-secondary {
+            background: var(--surface-3);
+            color: var(--text);
+            border: 1px solid var(--border);
+        }
+        .gc-btn-secondary:hover { background: var(--surface-4, var(--surface-3)); }
+
+        .gc-room-code-display {
+            font-size: 2.2rem;
+            font-weight: 800;
+            letter-spacing: 0.2em;
+            color: var(--accent);
+            text-align: center;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .gc-share-hint {
+            font-size: 0.8rem;
+            color: var(--text-2);
+            text-align: center;
+        }
+
+        .gc-copy-btn {
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            border-radius: var(--r-sm);
+            padding: 8px 16px;
+            font-size: 0.85rem;
+            color: var(--text);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-family: inherit;
+            transition: all 0.18s;
+            margin: 0 auto;
+        }
+        .gc-copy-btn:hover { background: var(--surface-3); }
+
+        /* ── Chat screen ────────────────────────────────────────── */
+        #gc-chat { display: none; flex-direction: column; height: 100dvh; }
+        #gc-chat.visible { display: flex; }
+
+        /* Header */
+        .gc-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 0 16px;
+            height: 56px;
+            background: var(--surface-1);
+            border-bottom: 1px solid var(--border);
+            flex-shrink: 0;
+            padding-top: env(safe-area-inset-top, 0px);
+        }
+
+        .gc-header-back {
+            background: none;
+            border: none;
+            color: var(--text-2);
+            cursor: pointer;
+            padding: 4px;
+            display: flex;
+            align-items: center;
+        }
+
+        .gc-header-info { flex: 1; }
+        .gc-header-title { font-size: 0.95rem; font-weight: 600; color: var(--text); }
+        .gc-header-sub   { font-size: 0.75rem; color: var(--text-2); display: flex; align-items: center; gap: 6px; }
+
+        .gc-participant-dots {
+            display: flex;
+            gap: 4px;
+        }
+        .gc-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--text-3);
+            transition: background 0.3s;
+        }
+        .gc-dot.active { background: var(--accent); }
+
+        .gc-room-code-badge {
+            font-size: 0.75rem;
+            font-weight: 700;
+            letter-spacing: 0.1em;
+            color: var(--accent);
+            background: var(--accent-dim, rgba(0,212,170,0.12));
+            padding: 3px 8px;
+            border-radius: 20px;
+            cursor: pointer;
+        }
+
+        /* Messages */
+        .gc-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .gc-msg {
+            display: flex;
+            flex-direction: column;
+            max-width: 78%;
+            gap: 3px;
+        }
+
+        .gc-msg.mine  { align-self: flex-end; align-items: flex-end; }
+        .gc-msg.other { align-self: flex-start; }
+        .gc-msg.ai    { align-self: center; max-width: 90%; align-items: center; }
+
+        .gc-msg-name {
+            font-size: 0.72rem;
+            font-weight: 600;
+            color: var(--text-2);
+            padding: 0 4px;
+        }
+
+        .gc-msg-bubble {
+            padding: 10px 14px;
+            border-radius: 18px;
+            font-size: 0.9rem;
+            line-height: 1.45;
+            color: var(--text);
+            word-break: break-word;
+        }
+
+        .gc-msg.mine  .gc-msg-bubble { background: var(--accent); color: #0a0a14; border-bottom-right-radius: 4px; }
+        .gc-msg.other .gc-msg-bubble { background: var(--surface-2); border-bottom-left-radius: 4px; }
+        .gc-msg.ai    .gc-msg-bubble {
+            background: linear-gradient(135deg, rgba(160,103,255,0.15), rgba(0,212,170,0.12));
+            border: 1px solid rgba(160,103,255,0.25);
+            border-radius: 16px;
+            text-align: center;
+            font-style: italic;
+            color: var(--text);
+            max-width: 100%;
+        }
+
+        .gc-msg-time {
+            font-size: 0.68rem;
+            color: var(--text-3);
+            padding: 0 4px;
+        }
+
+        /* AI typing indicator */
+        .gc-typing {
+            display: none;
+            align-self: center;
+            padding: 10px 18px;
+            background: linear-gradient(135deg, rgba(160,103,255,0.12), rgba(0,212,170,0.10));
+            border: 1px solid rgba(160,103,255,0.2);
+            border-radius: 16px;
+            gap: 5px;
+            align-items: center;
+        }
+        .gc-typing.visible { display: flex; }
+        .gc-typing-dot {
+            width: 7px; height: 7px; border-radius: 50%;
+            background: var(--purple, #a067ff);
+            animation: gc-bounce 1s infinite ease-in-out;
+        }
+        .gc-typing-dot:nth-child(2) { animation-delay: 0.2s; }
+        .gc-typing-dot:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes gc-bounce {
+            0%, 80%, 100% { transform: scale(0.8); opacity: 0.5; }
+            40% { transform: scale(1.15); opacity: 1; }
+        }
+
+        /* Date separator */
+        .gc-date-sep {
+            align-self: center;
+            font-size: 0.72rem;
+            color: var(--text-3);
+            background: var(--surface-2);
+            padding: 3px 12px;
+            border-radius: 20px;
+        }
+
+        /* Input bar */
+        .gc-input-bar {
+            display: flex;
+            align-items: flex-end;
+            gap: 8px;
+            padding: 10px 12px;
+            padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+            background: var(--surface-1);
+            border-top: 1px solid var(--border);
+            flex-shrink: 0;
+        }
+
+        .gc-msg-input {
+            flex: 1;
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            border-radius: 22px;
+            padding: 10px 16px;
+            color: var(--text);
+            font-size: 0.9rem;
+            font-family: inherit;
+            outline: none;
+            resize: none;
+            min-height: 40px;
+            max-height: 120px;
+            overflow-y: auto;
+            line-height: 1.4;
+            transition: border-color 0.18s;
+            box-sizing: border-box;
+        }
+        .gc-msg-input:focus { border-color: var(--accent); }
+        .gc-msg-input::placeholder { color: var(--text-3); }
+
+        .gc-send-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: none;
+            background: var(--accent);
+            color: #0a0a14;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            flex-shrink: 0;
+            transition: all 0.18s;
+            font-size: 1.1rem;
+        }
+        .gc-send-btn:hover { transform: scale(1.05); }
+        .gc-send-btn:disabled { background: var(--surface-3); color: var(--text-3); cursor: not-allowed; transform: none; }
+
+        /* Waiting overlay */
+        .gc-waiting {
+            display: none;
+            position: absolute;
+            inset: 0;
+            background: rgba(8,8,15,0.85);
+            z-index: 10;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            gap: 16px;
+            text-align: center;
+            padding: 32px;
+        }
+        .gc-waiting.visible { display: flex; }
+        .gc-waiting-code {
+            font-size: 2.8rem;
+            font-weight: 800;
+            letter-spacing: 0.2em;
+            color: var(--accent);
+        }
+        .gc-waiting-text {
+            font-size: 0.9rem;
+            color: var(--text-2);
+            max-width: 260px;
+            line-height: 1.5;
+        }
+        .gc-waiting-spinner {
+            width: 32px;
+            height: 32px;
+            border: 3px solid var(--border);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 0.9s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Error toast */
+        .gc-error {
+            position: fixed;
+            bottom: 100px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #ff4444;
+            color: #fff;
+            padding: 10px 20px;
+            border-radius: var(--r-sm);
+            font-size: 0.85rem;
+            z-index: 100;
+            display: none;
+            max-width: 90vw;
+            text-align: center;
+        }
+
+        @media (max-width: 480px) {
+            .gc-join-card { padding: 24px 20px; }
+        }
+    </style>
+</head>
+<body>
+<div class="gc-layout">
+
+    <!-- ── Join / Create Room screen ──────────────────────────────── -->
+    <div id="gc-join">
+        <div class="gc-join-card" id="gc-setup-card">
+            <div>
+                <div class="gc-join-title">Group Chat 💬</div>
+                <div class="gc-join-sub">Chat with a friend — AI joins as a mutual friend</div>
+            </div>
+
+            <input class="gc-input" id="gc-name-input" type="text" placeholder="Your name" maxlength="24" autocomplete="off">
+
+            <div class="gc-btn-row">
+                <button class="gc-btn gc-btn-primary" id="gc-create-btn" onclick="gcCreate()">Create Room</button>
+                <button class="gc-btn gc-btn-secondary" id="gc-join-btn" onclick="gcShowJoin()">Join Room</button>
+            </div>
+        </div>
+
+        <!-- Join with code card (hidden initially) -->
+        <div class="gc-join-card" id="gc-code-card" style="display:none;">
+            <div class="gc-join-title">Enter Room Code</div>
+            <input class="gc-input" id="gc-code-input" type="text" placeholder="6-digit code" maxlength="6"
+                   style="text-transform:uppercase;letter-spacing:0.15em;font-size:1.1rem;text-align:center;"
+                   oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9]/g,'')">
+            <div class="gc-btn-row">
+                <button class="gc-btn gc-btn-secondary" onclick="gcHideJoin()">Back</button>
+                <button class="gc-btn gc-btn-primary" onclick="gcJoin()">Join</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Chat screen ────────────────────────────────────────────── -->
+    <div id="gc-chat">
+        <div class="gc-header">
+            <button class="gc-header-back" onclick="gcLeave()">
+                <ion-icon name="arrow-back-outline" style="font-size:1.3rem;"></ion-icon>
+            </button>
+            <div class="gc-header-info">
+                <div class="gc-header-title">Group Chat</div>
+                <div class="gc-header-sub">
+                    <div class="gc-participant-dots">
+                        <div class="gc-dot active" id="gc-dot-me"></div>
+                        <div class="gc-dot" id="gc-dot-other"></div>
+                    </div>
+                    <span id="gc-header-names">Waiting for someone to join…</span>
+                </div>
+            </div>
+            <div class="gc-room-code-badge" id="gc-code-badge" title="Copy room code" onclick="gcCopyCode()">
+                <span id="gc-code-display">------</span>
+            </div>
+        </div>
+
+        <!-- Waiting overlay shown until second user joins -->
+        <div class="gc-waiting" id="gc-waiting">
+            <div class="gc-waiting-code" id="gc-waiting-code">------</div>
+            <div class="gc-waiting-text">Share this code with your friend so they can join the room</div>
+            <button class="gc-btn gc-btn-secondary" style="max-width:200px;" onclick="gcCopyCode()">
+                <ion-icon name="copy-outline"></ion-icon>&nbsp; Copy Code
+            </button>
+            <div class="gc-waiting-spinner"></div>
+        </div>
+
+        <div class="gc-messages" id="gc-messages">
+            <div class="gc-date-sep" id="gc-date-sep"></div>
+        </div>
+
+        <div class="gc-typing" id="gc-typing">
+            <div class="gc-typing-dot"></div>
+            <div class="gc-typing-dot"></div>
+            <div class="gc-typing-dot"></div>
+            <span style="font-size:0.78rem;color:var(--text-2);margin-left:6px;">AI thinking…</span>
+        </div>
+
+        <div class="gc-input-bar">
+            <textarea class="gc-msg-input" id="gc-msg-input" placeholder="Message…" rows="1"
+                      onkeydown="gcKeydown(event)" oninput="gcAutoResize(this)"></textarea>
+            <button class="gc-send-btn" id="gc-send-btn" onclick="gcSend()">
+                <ion-icon name="send-outline"></ion-icon>
+            </button>
+        </div>
+    </div>
+
+    <div class="gc-error" id="gc-error"></div>
+</div>
+
+<script>
+// ── Supabase ──────────────────────────────────────────────────────────────────
+const SUPABASE_URL = 'https://uoosspumdmffccinszuj.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVvb3NzcHVtZG1mZmNjaW5zenVqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcxNzYyNTUsImV4cCI6MjA4Mjc1MjI1NX0.3NayM6uC5-yZv9im-8W7ko28rZFRTnDQbIagN6BArs0';
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// ── State ─────────────────────────────────────────────────────────────────────
+let gc = {
+    roomId:       null,
+    roomCode:     null,
+    myUserId:     null,
+    myName:       null,
+    otherUserId:  null,
+    otherName:    null,
+    messages:     [],          // local cache {id, userId, userName, role, content, createdAt}
+    subscription: null,
+    aiTyping:     false,
+    ready:        false,       // true when second user has joined
+};
+
+// ── Language detection ─────────────────────────────────────────────────────────
+const TE_W = new Set(['nenu','nuvvu','meeru','ela','unnav','undi','ledu','avunu','kaadu',
+    'emi','endi','manchi','bagunnanu','sare','aiyo','ayyo','ra','ante','ga','kadha',
+    'chestunna','chala','enti','babu','ikkade','poyindi','chesanu','inkemi']);
+const HI_W = new Set(['kaise','kya','haan','nahi','accha','yaar','bhai','hai','hoon',
+    'mera','tumhara','aap','main','hum','kyun','kahan','kuch','bahut','theek',
+    'kal','aaj','abhi','phir','lekin','toh','tum','bilkul','arrey','oye','chal']);
+
+function detectLang(text) {
+    if (!text) return 'en';
+    const te = (text.match(/[\u0C00-\u0C7F]/g)||[]).length;
+    const hi = (text.match(/[\u0900-\u097F]/g)||[]).length;
+    const sig = text.replace(/[\s\d\W]/g,'').length || 1;
+    if (te/sig > 0.2) return 'te';
+    if (hi/sig > 0.2) return 'hi';
+    const words = text.toLowerCase().split(/[\s,!?.।]+/).filter(Boolean);
+    let ts=0, hs=0;
+    for (const w of words) {
+        if (TE_W.has(w)) ts+=2;
+        if (HI_W.has(w)) hs+=2;
+    }
+    if (ts>0||hs>0) return ts>=hs ? 'te' : 'hi';
+    return 'en';
+}
+
+// ── Utils ──────────────────────────────────────────────────────────────────────
+function genCode() {
+    return Math.random().toString(36).slice(2,8).toUpperCase();
+}
+
+function genUserId() {
+    return 'u_' + Math.random().toString(36).slice(2,11);
+}
+
+function showError(msg) {
+    const el = document.getElementById('gc-error');
+    el.textContent = msg;
+    el.style.display = 'block';
+    setTimeout(() => { el.style.display = 'none'; }, 3500);
+}
+
+function fmtTime(iso) {
+    return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+
+// ── Room create / join ─────────────────────────────────────────────────────────
+async function gcCreate() {
+    const name = document.getElementById('gc-name-input').value.trim();
+    if (!name) { showError('Enter your name first'); return; }
+
+    gc.myName   = name;
+    gc.myUserId = genUserId();
+
+    try {
+        const code = genCode();
+        const { data, error } = await sb.from('group_rooms').insert({
+            room_code:  code,
+            created_by: gc.myUserId,
+            user_a_id:  gc.myUserId,
+            user_a_name: name,
+            participants: 1,
+        }).select().single();
+
+        if (error) throw error;
+
+        gc.roomId   = data.id;
+        gc.roomCode = data.room_code;
+        gcEnterRoom();
+    } catch (e) {
+        console.error(e);
+        showError('Could not create room — check your connection');
+    }
+}
+
+function gcShowJoin() {
+    document.getElementById('gc-setup-card').style.display = 'none';
+    document.getElementById('gc-code-card').style.display  = 'flex';
+    document.getElementById('gc-code-input').focus();
+}
+
+function gcHideJoin() {
+    document.getElementById('gc-setup-card').style.display = 'flex';
+    document.getElementById('gc-code-card').style.display  = 'none';
+}
+
+async function gcJoin() {
+    const name = document.getElementById('gc-name-input').value.trim();
+    const code = document.getElementById('gc-code-input').value.trim().toUpperCase();
+    if (!name) { showError('Enter your name first'); return; }
+    if (code.length !== 6) { showError('Enter a valid 6-character code'); return; }
+
+    gc.myName   = name;
+    gc.myUserId = genUserId();
+
+    try {
+        const { data, error } = await sb
+            .from('group_rooms')
+            .select('*')
+            .eq('room_code', code)
+            .single();
+
+        if (error || !data) { showError('Room not found'); return; }
+
+        // Can't join your own room with a different name (edge case)
+        if (data.user_a_id === gc.myUserId) { showError('Cannot join your own room'); return; }
+
+        // Update room with second participant
+        await sb.from('group_rooms').update({
+            user_b_id:   gc.myUserId,
+            user_b_name: name,
+            participants: 2,
+        }).eq('id', data.id);
+
+        gc.roomId      = data.id;
+        gc.roomCode    = data.room_code;
+        gc.otherUserId = data.user_a_id;
+        gc.otherName   = data.user_a_name;
+
+        gcEnterRoom();
+    } catch (e) {
+        console.error(e);
+        showError('Could not join — check the code and try again');
+    }
+}
+
+// ── Enter room UI ──────────────────────────────────────────────────────────────
+function gcEnterRoom() {
+    document.getElementById('gc-join').style.display  = 'none';
+    const chat = document.getElementById('gc-chat');
+    chat.style.display = 'flex';
+    chat.classList.add('visible');
+
+    document.getElementById('gc-code-display').textContent  = gc.roomCode;
+    document.getElementById('gc-waiting-code').textContent  = gc.roomCode;
+    document.getElementById('gc-date-sep').textContent      = new Date().toLocaleDateString([], { weekday:'long', month:'short', day:'numeric' });
+
+    // Show waiting overlay if we created the room (no other user yet)
+    if (!gc.otherUserId) {
+        document.getElementById('gc-waiting').classList.add('visible');
+    } else {
+        gcMarkReady();
+    }
+
+    gcSubscribe();
+    gcLoadMessages();
+}
+
+function gcMarkReady() {
+    gc.ready = true;
+    document.getElementById('gc-waiting').classList.remove('visible');
+    document.getElementById('gc-dot-other').classList.add('active');
+    if (gc.otherName) {
+        document.getElementById('gc-header-names').textContent = `${gc.myName} & ${gc.otherName}`;
+    }
+    document.getElementById('gc-msg-input').focus();
+}
+
+// ── Supabase realtime subscription ────────────────────────────────────────────
+function gcSubscribe() {
+    if (gc.subscription) return;
+
+    gc.subscription = sb
+        .channel('group_chat_' + gc.roomId)
+        .on('postgres_changes', {
+            event:  'INSERT',
+            schema: 'public',
+            table:  'group_messages',
+            filter: `room_id=eq.${gc.roomId}`,
+        }, payload => {
+            const msg = payload.new;
+            // Avoid duplicates (we already append our own messages optimistically)
+            if (gc.messages.find(m => m.id === msg.id)) return;
+            gcAppendMessage(msg);
+            // If this is the other user's first message → mark room ready
+            if (!gc.ready && msg.user_id !== gc.myUserId) {
+                gc.otherUserId = msg.user_id;
+                gc.otherName   = msg.user_name;
+                gcMarkReady();
+            }
+        })
+        .on('postgres_changes', {
+            event:  'UPDATE',
+            schema: 'public',
+            table:  'group_rooms',
+            filter: `id=eq.${gc.roomId}`,
+        }, payload => {
+            const room = payload.new;
+            // Second user joined
+            if (!gc.ready && room.user_b_id && room.user_b_id !== gc.myUserId) {
+                gc.otherUserId = room.user_b_id;
+                gc.otherName   = room.user_b_name;
+                gcMarkReady();
+            }
+        })
+        .subscribe();
+}
+
+// ── Load existing messages ─────────────────────────────────────────────────────
+async function gcLoadMessages() {
+    try {
+        const { data } = await sb
+            .from('group_messages')
+            .select('*')
+            .eq('room_id', gc.roomId)
+            .order('created_at', { ascending: true })
+            .limit(100);
+
+        if (data && data.length > 0) {
+            gc.messages = data;
+            const el = document.getElementById('gc-messages');
+            // Keep the date separator, remove any existing bubbles
+            const sep = document.getElementById('gc-date-sep');
+            while (el.firstChild && el.firstChild !== sep) el.removeChild(el.firstChild);
+            while (sep.nextSibling) el.removeChild(sep.nextSibling);
+            data.forEach(m => gcRenderMessage(m, false));
+            gcScrollBottom();
+        }
+    } catch (e) { /* non-blocking */ }
+}
+
+// ── Send message ──────────────────────────────────────────────────────────────
+async function gcSend() {
+    const input = document.getElementById('gc-msg-input');
+    const text  = input.value.trim();
+    if (!text || gc.aiTyping) return;
+
+    input.value = '';
+    gcAutoResize(input);
+
+    // Optimistic local append
+    const tempMsg = {
+        id:         'temp_' + Date.now(),
+        room_id:    gc.roomId,
+        user_id:    gc.myUserId,
+        user_name:  gc.myName,
+        role:       'user',
+        content:    text,
+        created_at: new Date().toISOString(),
+    };
+    gc.messages.push(tempMsg);
+    gcAppendMessage(tempMsg);
+
+    // Save to Supabase
+    let savedId = null;
+    try {
+        const { data } = await sb.from('group_messages').insert({
+            room_id:    gc.roomId,
+            user_id:    gc.myUserId,
+            user_name:  gc.myName,
+            role:       'user',
+            content:    text,
+        }).select().single();
+        if (data) savedId = data.id;
+    } catch (e) { console.error('Save message error:', e); }
+
+    // Only trigger AI if room is ready (both users present)
+    if (gc.ready) {
+        gcGetAIReply(text);
+    }
+}
+
+function gcKeydown(e) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        gcSend();
+    }
+}
+
+function gcAutoResize(el) {
+    el.style.height = 'auto';
+    el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+}
+
+// ── AI mediator reply ─────────────────────────────────────────────────────────
+async function gcGetAIReply(latestText) {
+    gc.aiTyping = true;
+    const typingEl = document.getElementById('gc-typing');
+    typingEl.classList.add('visible');
+    gcScrollBottom();
+
+    try {
+        // Build message history for AI (exclude temp IDs)
+        const hist = gc.messages
+            .filter(m => m.role === 'user' || m.role === 'assistant')
+            .map(m => ({
+                userId:   m.user_id  || 'ai',
+                userName: m.user_name || 'AI',
+                role:     m.role,
+                content:  m.content,
+            }));
+
+        const lang = detectLang(latestText);
+
+        const res = await fetch('/api/group-chat', {
+            method:  'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body:    JSON.stringify({ messages: hist, language: lang }),
+        });
+
+        if (!res.ok) throw new Error(`AI error ${res.status}`);
+        const { reply } = await res.json();
+        if (!reply) return;
+
+        typingEl.classList.remove('visible');
+        gc.aiTyping = false;
+
+        // Save AI reply to Supabase
+        const { data } = await sb.from('group_messages').insert({
+            room_id:   gc.roomId,
+            user_id:   'ai',
+            user_name: 'AI',
+            role:      'assistant',
+            content:   reply,
+        }).select().single();
+
+        if (data) {
+            gc.messages.push(data);
+            gcAppendMessage(data);
+        }
+
+    } catch (e) {
+        console.error('AI reply error:', e);
+        typingEl.classList.remove('visible');
+        gc.aiTyping = false;
+    }
+}
+
+// ── Render messages ───────────────────────────────────────────────────────────
+function gcAppendMessage(msg) {
+    gc.messages = gc.messages.filter(m => m.id !== 'temp_' + (msg.id || ''));
+    gcRenderMessage(msg, true);
+    gcScrollBottom();
+}
+
+function gcRenderMessage(msg, animate) {
+    const el     = document.getElementById('gc-messages');
+    const isMe   = msg.user_id === gc.myUserId;
+    const isAI   = msg.role === 'assistant' || msg.user_id === 'ai';
+    const cls    = isAI ? 'ai' : isMe ? 'mine' : 'other';
+
+    const wrap   = document.createElement('div');
+    wrap.className = `gc-msg ${cls}`;
+    if (animate) wrap.style.animation = 'fadeIn 0.18s ease';
+
+    let nameHTML = '';
+    if (!isMe && !isAI) {
+        nameHTML = `<div class="gc-msg-name">${escHtml(msg.user_name || 'User')}</div>`;
+    }
+    if (isAI) {
+        nameHTML = `<div class="gc-msg-name" style="color:var(--purple,#a067ff);">✦ AI</div>`;
+    }
+
+    wrap.innerHTML = `
+        ${nameHTML}
+        <div class="gc-msg-bubble">${escHtml(msg.content)}</div>
+        <div class="gc-msg-time">${fmtTime(msg.created_at)}</div>
+    `;
+    el.appendChild(wrap);
+}
+
+function escHtml(str) {
+    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function gcScrollBottom() {
+    const el = document.getElementById('gc-messages');
+    setTimeout(() => { el.scrollTop = el.scrollHeight; }, 30);
+}
+
+// ── Misc ──────────────────────────────────────────────────────────────────────
+async function gcCopyCode() {
+    try {
+        await navigator.clipboard.writeText(gc.roomCode);
+        const el = document.getElementById('gc-code-display');
+        const old = el.textContent;
+        el.textContent = 'COPIED';
+        setTimeout(() => { el.textContent = old; }, 1200);
+    } catch (_) {}
+}
+
+function gcLeave() {
+    if (gc.subscription) { sb.removeChannel(gc.subscription); gc.subscription = null; }
+    gc = { roomId:null, roomCode:null, myUserId:null, myName:null, otherUserId:null,
+           otherName:null, messages:[], subscription:null, aiTyping:false, ready:false };
+    document.getElementById('gc-chat').style.display   = 'none';
+    document.getElementById('gc-chat').classList.remove('visible');
+    document.getElementById('gc-join').style.display   = 'flex';
+    document.getElementById('gc-messages').innerHTML   = '<div class="gc-date-sep" id="gc-date-sep"></div>';
+    gcHideJoin();
+}
+
+// Check URL for join code ?room=XXXXXX
+(function() {
+    const p = new URLSearchParams(window.location.search);
+    const code = p.get('room');
+    if (code) {
+        document.getElementById('gc-code-input').value = code.toUpperCase();
+        gcShowJoin();
+    }
+})();
+</script>
+</body>
+</html>

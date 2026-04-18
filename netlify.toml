@@ -37,3 +37,8 @@
   from = "/api/tts"
   to = "/.netlify/functions/tts"
   status = 200
+
+[[redirects]]
+  from = "/api/group-chat"
+  to = "/.netlify/functions/group-chat"
+  status = 200

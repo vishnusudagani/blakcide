@@ -1154,6 +1154,11 @@ document.addEventListener('DOMContentLoaded', () => {
     // State machine + remaining vars
     // ─────────────────────────────────────────────────────────────────
     let _callDetectedLang  = 'en';   // updated every Whisper turn — no locking
+    // Streak tracking: only force Whisper language hint after 2+ consecutive
+    // turns in the same non-English language. Prevents false-locking when user
+    // switches language mid-call (e.g. Telugu → English → Whisper forced 'te').
+    let _callLangStreak    = 0;
+    let _callLangStreakVal  = 'en';
     let _callState         = 'idle'; // idle | listening | thinking | speaking
     let _speakSeq          = 0;
     let _callAudioCtx      = null;   // Web AudioContext (unlocked once on user gesture)
@@ -1330,8 +1335,12 @@ document.addEventListener('DOMContentLoaded', () => {
             const base64 = btoa(binary);
 
             const body = { audioBase64: base64, mimeType };
-            // Pass detected language so Whisper outputs native script, not Romanized
-            if (_callDetectedLang && _callDetectedLang !== 'en') body.langHint = _callDetectedLang;
+            // Only hint Whisper's language after 2+ consecutive turns in the same
+            // non-English language. This gets native script (తెలుగు / हिंदी) while
+            // not permanently locking Whisper when the user switches to English.
+            if (_callLangStreak >= 2 && _callLangStreakVal !== 'en') {
+                body.langHint = _callLangStreakVal;
+            }
 
             const res = await fetch('/api/transcribe', {
                 method:  'POST',
@@ -1475,14 +1484,19 @@ document.addEventListener('DOMContentLoaded', () => {
     // Each entry: { audioBuffer: AudioBuffer | null, text: string }
     // The queue drains automatically; if next buffer arrives before current
     // finishes, there is zero gap between sentences.
-    let _ttsQueue      = [];
-    let _ttsQueueSeq   = 0;   // invalidates queue on interruption
-    let _ttsPlaying    = false;
+    let _ttsQueue       = [];
+    let _ttsQueueSeq    = 0;   // invalidates queue on interruption
+    let _ttsPlaying     = false;
+    // Set true the moment getResponseStreaming resolves — tells onended
+    // that no more sentences are coming so it can safely transition back
+    // to listening even if slot.isLast was never set (race condition fix).
+    let _callStreamDone = false;
 
     function _ttsQueueReset() {
         _ttsQueueSeq++;
-        _ttsQueue   = [];
-        _ttsPlaying = false;
+        _ttsQueue        = [];
+        _ttsPlaying      = false;
+        _callStreamDone  = false;
     }
 
     // Pre-fetch TTS audio for a sentence, language-aware (voice + speed).
@@ -1552,13 +1566,17 @@ document.addEventListener('DOMContentLoaded', () => {
             if (_ttsQueue.length > 0) {
                 // Natural inter-sentence pause: 120ms feels human, 0ms feels robotic
                 setTimeout(() => _ttsDrainQueue(myQueueSeq), 120);
-            } else if (slot.isLast) {
+            } else if (slot.isLast || _callStreamDone) {
+                // slot.isLast: set by _processUserSpeech after stream resolves
+                // _callStreamDone: catches the race where stream resolved while
+                //   this audio was still playing (slot was already shift()ed
+                //   before isLast could be written — the primary "one reply" bug)
                 _callTransition('listening');
                 setTimeout(() => {
                     if (_callActive && !_callMuted) _startListening();
                 }, 250);
             }
-            // else: more sentences still arriving from GPT stream — wait
+            // else: LLM stream still running, more sentences incoming — wait
         };
         src.start(0);
     }
@@ -1615,11 +1633,25 @@ RULES (zero exceptions):
         // If text says English but Whisper said non-English → keep Whisper's result.
         // This handles: (a) Tanglish where Whisper detects 'te' correctly but text
         // looks "English", and (b) code-switching within a single utterance.
+        // Layer 1: Whisper already updated _callDetectedLang in _transcribeWhisper
+        // Layer 2: Unicode + keyword scoring (handles Tanglish/Hinglish)
+        // Layer 3: Streak maintenance for native-script hint on next turn
         const textLang = window.BlakcideAI?.detectLangWithFallback(text, _callDetectedLang) || 'en';
+
+        // If text scoring returns non-English it has high confidence → trust it.
+        // If text scores English but Whisper said non-English, keep Whisper's result
+        // (handles Tanglish where text looks "English" but Whisper correctly detected Telugu).
         if (textLang !== 'en') {
-            _callDetectedLang = textLang;   // text clearly signals non-English
+            _callDetectedLang = textLang;
         }
-        // else: keep whatever Whisper set (_callDetectedLang already up to date)
+
+        // Update streak for native-script hint logic in _transcribeWhisper
+        if (_callDetectedLang === _callLangStreakVal) {
+            _callLangStreak++;
+        } else {
+            _callLangStreak    = 1;
+            _callLangStreakVal  = _callDetectedLang;
+        }
 
         _callHistory.push({ role: 'user', content: text });
         if (_callHistory.length > 20) _callHistory = _callHistory.slice(-20);
@@ -1640,7 +1672,7 @@ RULES (zero exceptions):
         ];
 
         // ── Streaming pipeline ─────────────────────────────────────────
-        _ttsQueueReset();
+        _ttsQueueReset();      // also resets _callStreamDone = false
         const myQueueSeq = _ttsQueueSeq;
         let   fullReply  = '';
         let   firstSent  = false;
@@ -1683,20 +1715,24 @@ RULES (zero exceptions):
             const clean = (reply || '').replace('[SUGGEST_HUMAN_CONNECT]', '').trim();
             _callHistory.push({ role: 'assistant', content: clean });
 
+            // Signal that the LLM stream is fully done — onended now knows it
+            // can transition to listening when the last audio finishes.
+            // Must be set BEFORE the queue-length check so onended sees it.
+            _callStreamDone = true;
+
             if (_ttsQueue.length > 0) {
-                _ttsQueue[_ttsQueue.length - 1].isLast = true; // mark terminal slot
+                // Audio for these slots hasn't played yet — mark last for transition
+                _ttsQueue[_ttsQueue.length - 1].isLast = true;
             } else if (_callSpeaker && !_ttsPlaying && _callState === 'speaking') {
-                // All TTS already played before full reply arrived (very fast path)
+                // All audio already finished before stream resolved (fastest path)
                 _callTransition('listening');
                 setTimeout(() => { if (_callActive && !_callMuted) _startListening(); }, 250);
-            }
-
-            if (!_callSpeaker) {
-                if (!firstSent) _addCallMsg('ai', clean);
+            } else if (!_callSpeaker) {
+                // Speaker off — never enters TTS path at all, go directly to listening
                 _callTransition('listening');
                 setTimeout(() => { if (_callActive && !_callMuted) _startListening(); }, 300);
-                return;
             }
+            // else: last audio still playing — onended will fire with _callStreamDone=true
 
             if (!firstSent) {
                 const fb = lang === 'hi' ? 'एक बार फिर से बोलो यार।'
@@ -1801,8 +1837,10 @@ RULES (zero exceptions):
         _callActive       = true;
         _callSecs         = 0;
         _callHistory      = [];
-        _callDetectedLang = 'en';
-        _callState        = 'idle';
+        _callDetectedLang  = 'en';
+        _callLangStreak    = 0;
+        _callLangStreakVal  = 'en';
+        _callState         = 'idle';
         _callMuted        = false;
         _callSpeaker      = true;
         _speakSeq         = 0;
