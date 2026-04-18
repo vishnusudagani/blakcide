@@ -1146,8 +1146,13 @@ document.addEventListener('DOMContentLoaded', () => {
     let _rtAudioPlaying  = false;    // true while any scheduled chunk is in flight
 
     // ── State machine ──────────────────────────────────────────────────────
-    let _rtState         = 'idle';   // idle | listening | thinking | speaking
-    let _rtDetectedLang  = 'en';
+    let _rtState             = 'idle';   // idle | listening | thinking | speaking
+    let _rtDetectedLang      = 'en';
+
+    // ── Ghost-input & language guards ──────────────────────────────────────
+    let _rtResponseId        = null;   // ID of current in-flight response
+    let _rtResponseInProgress = false; // true between response.created and response.done
+    let _rtSpeechStartMs     = 0;      // Date.now() when speech_started fired
 
     // ── Per-response transcript accumulation ───────────────────────────────
     let _rtCurAIText     = '';       // assembled AI reply text (for transcript + history)
@@ -1329,14 +1334,39 @@ NEVER: Start with "I". Sound like customer service. Say "As an AI".${userCtx}`;
                 input_audio_transcription: { model: 'whisper-1' },
                 turn_detection: {
                     type:                'server_vad',
-                    threshold:           0.45,
-                    prefix_padding_ms:   300,
-                    silence_duration_ms: 600,
+                    threshold:           0.7,    // raised from 0.45 — filter background noise
+                    prefix_padding_ms:   400,    // more context before speech
+                    silence_duration_ms: 1000,   // raised from 600ms — avoid premature cuts
                 },
                 temperature:              0.8,
                 max_response_output_tokens: 120,
             }
         }));
+    }
+
+    // ── Explicit language-switch command detector ─────────────────────
+    // Returns 'te' | 'hi' | 'en' | null.  Checks the user's transcript for
+    // phrases like "speak in telugu", "mujhe hindi mein baat karna hai", etc.
+    function _rtDetectLangCommand(text) {
+        const t = text.toLowerCase();
+        if (/\b(telugu|telugulo|telugu\s*lo|telugu\s*lo\s*maat|telugu\s*mein|speak.*telugu|talk.*telugu|switch.*telugu|తెలుగు)\b/.test(t)) return 'te';
+        if (/\b(hindi|hindi\s*mein|hindi\s*me\b|mujhe\s*hindi|main\s*hindi|hum\s*hindi|हिंदी|हिन्दी)\b/.test(t)) return 'hi';
+        if (/\b(english|in\s*english|speak.*english|switch.*english|english\s*mein|english\s*me\b)\b/.test(t)) return 'en';
+        return null;
+    }
+
+    // ── Ghost-input transcript validator ──────────────────────────────
+    // Returns true if the transcript looks like a genuine utterance.
+    // Rejects: empty, pure punctuation/noise, single filler syllables.
+    function _rtIsValidTranscript(text) {
+        if (!text || text.length < 2) return false;
+        // Pure whitespace / punctuation
+        if (/^[\s.!?,;:…\-–—*]+$/.test(text)) return false;
+        // Single filler: "uh", "um", "hmm", "mm", "ah", "eh" with optional trailing chars
+        if (/^(uh+|um+|hmm+|hm+|mm+|ah+|eh+|oh+|ew+)\s*[.!?]?\s*$/i.test(text)) return false;
+        // Must have at least one actual word character
+        if (!/[a-zA-Z\u0900-\u097F\u0C00-\u0C7F]/.test(text)) return false;
+        return true;
     }
 
     // ── WebSocket message router ──────────────────────────────────────
@@ -1353,35 +1383,89 @@ NEVER: Start with "I". Sound like customer service. Say "As an AI".${userCtx}`;
                 break;
 
             case 'input_audio_buffer.speech_started':
-                // Server VAD: user started speaking — stop AI audio immediately (barge-in)
-                console.log('[RT] Speech started (barge-in)');
+                // Server VAD: user started speaking — record time and stop AI audio (barge-in)
+                _rtSpeechStartMs = Date.now();
+                console.log('[RT] Speech started');
                 _rtStopAudio();
                 _rtTransition('listening');
                 break;
 
             case 'input_audio_buffer.speech_stopped':
-                // Server VAD: user stopped — AI will start responding
-                console.log('[RT] Speech stopped → thinking');
+                // Server VAD: user stopped — AI auto-response will follow
+                const speechMs = _rtSpeechStartMs ? Date.now() - _rtSpeechStartMs : 9999;
+                console.log(`[RT] Speech stopped (${speechMs}ms)`);
+                // If the utterance was extremely short (<150ms), it's likely a noise spike.
+                // We can't stop the auto-response here (it happens server-side), but we
+                // flag it; the transcript validator will cancel the response if needed.
+                if (speechMs < 150) {
+                    console.warn('[RT] Speech too short — likely noise spike, flagging');
+                }
                 _rtTransition('thinking');
                 break;
 
+            case 'response.created':
+                // Track the in-flight response ID so we can cancel ghost responses
+                _rtResponseId        = msg.response?.id || null;
+                _rtResponseInProgress = true;
+                console.log('[RT] Response created:', _rtResponseId);
+                break;
+
             case 'conversation.item.input_audio_transcription.completed': {
-                // Whisper transcript of what the user said
+                // Whisper transcript of what the user said.
+                // This fires AFTER response.created, so we can still cancel a ghost.
                 const userText = (msg.transcript || '').trim();
-                if (!userText) break;
-                console.log(`[RT] User: "${userText.substring(0, 80)}"`);
+                const speechDurMs = _rtSpeechStartMs ? Date.now() - _rtSpeechStartMs : 9999;
+
+                // ── Ghost-input validation ───────────────────────────────────
+                if (!_rtIsValidTranscript(userText)) {
+                    console.warn(`[RT] REJECTED ghost input: "${userText}" (speechDuration=${speechDurMs}ms) — cancelling response`);
+                    // Cancel the in-flight response
+                    if (_rtResponseInProgress && _rtWs?.readyState === WebSocket.OPEN) {
+                        _rtWs.send(JSON.stringify({ type: 'response.cancel' }));
+                    }
+                    _rtTransition('listening');
+                    break;
+                }
+
+                console.log(`[RT] User (${speechDurMs}ms): "${userText.substring(0, 80)}"`);
                 _rtAddMsg('user', userText);
                 _rtHistory.push({ role: 'user', content: userText });
                 if (_rtHistory.length > 30) _rtHistory = _rtHistory.slice(-30);
 
-                // Language detection — update session only when lang changes
-                const newLang = window.BlakcideAI?.detectLangWithFallback(userText, _rtDetectedLang)
-                              || _rtDetectedLang;
-                if (newLang !== _rtDetectedLang) {
+                // ── Language detection — three layers ─────────────────────
+                // P1: Explicit language command ("speak in telugu") — highest priority,
+                //     cancel the current wrong-language response and recreate correctly.
+                // P2: Script/keyword detection via detectLangWithFallback.
+                // P3: No change — keep previous language.
+                const cmdLang  = _rtDetectLangCommand(userText);
+                const textLang = window.BlakcideAI?.detectLangWithFallback(userText, _rtDetectedLang)
+                               || _rtDetectedLang;
+                const newLang  = cmdLang || textLang;
+
+                if (cmdLang) {
+                    // Explicit language switch — cancel current response and redo in right lang
+                    console.log(`[RT] Explicit language command: "${userText}" → ${cmdLang}`);
+                    _rtDetectedLang = cmdLang;
+                    _rtUpdateSession();
+                    if (_rtResponseInProgress && _rtWs?.readyState === WebSocket.OPEN) {
+                        _rtWs.send(JSON.stringify({ type: 'response.cancel' }));
+                        // Give session.update 80ms to propagate, then request fresh response
+                        setTimeout(() => {
+                            if (_rtActive && _rtWs?.readyState === WebSocket.OPEN) {
+                                _rtWs.send(JSON.stringify({ type: 'response.create' }));
+                            }
+                        }, 80);
+                    }
+                } else if (newLang !== _rtDetectedLang) {
+                    // Non-command language switch (user started speaking different language)
                     console.log(`[RT] Language: ${_rtDetectedLang} → ${newLang}`);
                     _rtDetectedLang = newLang;
+                    _rtUpdateSession(); // takes effect on next response
+                } else {
+                    // Same language — still refresh instructions to keep them high-recency
                     _rtUpdateSession();
                 }
+
                 _rtLangsUsed.add(_rtDetectedLang);
                 break;
             }
@@ -1425,6 +1509,8 @@ NEVER: Start with "I". Sound like customer service. Say "As an AI".${userCtx}`;
                 break;
 
             case 'response.done': {
+                _rtResponseInProgress = false;
+                _rtResponseId         = null;
                 // Save full AI reply to history
                 const items = msg.response?.output || [];
                 for (const item of items) {
@@ -1438,8 +1524,15 @@ NEVER: Start with "I". Sound like customer service. Say "As an AI".${userCtx}`;
                 break;
             }
 
+            case 'response.cancelled':
+                _rtResponseInProgress = false;
+                _rtResponseId         = null;
+                console.log('[RT] Response cancelled');
+                break;
+
             case 'error':
-                console.error('[RT] API error:', msg.error);
+                console.error('[RT] API error:', msg.error?.type, msg.error?.message);
+                _rtResponseInProgress = false;
                 _rtTransition('listening');
                 break;
         }
@@ -1457,9 +1550,12 @@ NEVER: Start with "I". Sound like customer service. Say "As an AI".${userCtx}`;
         _rtMuted        = false;
         _rtSpeaker      = true;
         _rtState        = 'idle';
-        _rtAudioPlaying = false;
-        _rtNextPlayTime = 0;
-        _rtCurAIText    = '';
+        _rtAudioPlaying       = false;
+        _rtNextPlayTime       = 0;
+        _rtCurAIText          = '';
+        _rtResponseId         = null;
+        _rtResponseInProgress = false;
+        _rtSpeechStartMs      = 0;
 
         // 1. AudioContext — must happen synchronously inside the user gesture
         try {

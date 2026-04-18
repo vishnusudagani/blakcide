@@ -543,16 +543,27 @@ function fmtTime(iso) {
     return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
-// ── DB health check — surfaces "table not found" clearly ─────────────────────
+// ── DB health check ────────────────────────────────────────────────────────────
+// Returns true = ok to proceed, false = blocked (migration shown to user).
+// Does NOT swallow network errors — those bubble to the caller.
 async function gcCheckDB() {
     try {
         const { error } = await sb.from('group_rooms').select('id').limit(1);
-        if (error && (error.code === '42P01' || error.message?.includes('does not exist'))) {
+        if (!error) return true;  // tables exist, all good
+
+        // Table missing — show migration UI
+        const isTableMissing = error.code === '42P01'
+            || error.message?.includes('does not exist')
+            || error.message?.includes('relation')
+            || error.code === 'PGRST204';
+
+        if (isTableMissing) {
+            console.warn('[GC] group_rooms table missing, showing migration UI');
             document.getElementById('gc-join').innerHTML = `
                 <div class="gc-join-card" style="gap:12px;">
                     <div class="gc-join-title" style="color:#ff6b6b;">⚠️ Setup Required</div>
                     <div style="font-size:0.85rem;color:var(--text-2);line-height:1.6;">
-                        The group chat database tables don't exist yet.<br><br>
+                        The group chat tables don't exist yet.<br><br>
                         Run this SQL in your <strong>Supabase SQL Editor</strong>:
                     </div>
                     <pre style="background:var(--surface-2);padding:12px;border-radius:8px;font-size:0.7rem;overflow-x:auto;white-space:pre-wrap;color:var(--text);">CREATE TABLE IF NOT EXISTS group_rooms (
@@ -585,38 +596,99 @@ CREATE POLICY "anon all messages" ON group_messages FOR ALL TO anon USING (true)
                 </div>`;
             return false;
         }
+
+        // Other DB error — log it but let the caller decide
+        console.warn('[GC] gcCheckDB DB error:', error.code, error.message);
         return true;
-    } catch (e) { return true; } // network error — let gcCreate handle it
+    }
+    // NOTE: do NOT catch network errors here — let them propagate so gcCreate
+    // can show a proper "network error" message instead of silently proceeding.
 }
 
 // ── Room create / join ─────────────────────────────────────────────────────────
 async function gcCreate() {
     const name = document.getElementById('gc-name-input').value.trim();
     if (!name) { showError('Enter your name first'); return; }
-    if (!await gcCheckDB()) return;
+
+    const btn = document.getElementById('gc-create-btn');
+    const setLoading = (on) => {
+        if (!btn) return;
+        btn.disabled    = on;
+        btn.textContent = on ? 'Creating…' : 'Create Room';
+    };
+    setLoading(true);
+
+    try {
+        if (!await gcCheckDB()) { setLoading(false); return; }
+    } catch (e) {
+        console.error('[GC] gcCheckDB network error:', e.message);
+        setLoading(false);
+        showError('Network error — check your connection and retry');
+        return;
+    }
 
     gc.myName   = name;
     gc.myUserId = genUserId();
 
-    try {
+    let lastErr = null;
+    for (let attempt = 1; attempt <= 3; attempt++) {
         const code = genCode();
-        const { data, error } = await sb.from('group_rooms').insert({
-            room_code:  code,
-            created_by: gc.myUserId,
-            user_a_id:  gc.myUserId,
-            user_a_name: name,
-            participants: 1,
-        }).select().single();
+        console.log(`[GC] gcCreate attempt ${attempt}/3, code=${code}, userId=${gc.myUserId}`);
+        try {
+            const { data, error } = await sb.from('group_rooms').insert({
+                room_code:    code,
+                created_by:   gc.myUserId,
+                user_a_id:    gc.myUserId,
+                user_a_name:  name,
+                participants: 1,
+            }).select().single();
 
-        if (error) throw error;
+            if (error) {
+                console.error(`[GC] Insert error (attempt ${attempt}):`, error.code, error.message);
 
-        gc.roomId   = data.id;
-        gc.roomCode = data.room_code;
-        gcEnterRoom();
-    } catch (e) {
-        console.error(e);
-        showError('Could not create room — check your connection');
+                if (error.code === '42P01') {
+                    // Table not found — show migration UI
+                    setLoading(false);
+                    await gcCheckDB();
+                    return;
+                }
+                if (error.code === '23505') {
+                    // Duplicate room_code — rare but retry with new code
+                    lastErr = error;
+                    continue;
+                }
+                if (error.code === 'PGRST301' || error.message?.includes('JWT')) {
+                    setLoading(false);
+                    showError('Auth error — please refresh the page');
+                    return;
+                }
+                // Other DB error — retry once then give up
+                lastErr = error;
+                if (attempt < 3) { await new Promise(r => setTimeout(r, 400 * attempt)); continue; }
+                throw error;
+            }
+
+            gc.roomId   = data.id;
+            gc.roomCode = data.room_code;
+            console.log('[GC] Room created:', gc.roomId, gc.roomCode);
+            setLoading(false);
+            gcEnterRoom();
+            return;
+
+        } catch (e) {
+            console.error(`[GC] gcCreate exception (attempt ${attempt}):`, e.message);
+            lastErr = e;
+            if (attempt < 3) await new Promise(r => setTimeout(r, 400 * attempt));
+        }
     }
+
+    setLoading(false);
+    const errMsg = lastErr?.message
+        ? (lastErr.message.toLowerCase().includes('fetch') || lastErr.message.toLowerCase().includes('network')
+            ? 'Network error — check your connection'
+            : `Error: ${lastErr.message.substring(0, 100)}`)
+        : 'Could not create room — please try again';
+    showError(errMsg);
 }
 
 function gcShowJoin() {
@@ -634,39 +706,71 @@ async function gcJoin() {
     const name = document.getElementById('gc-name-input').value.trim();
     const code = document.getElementById('gc-code-input').value.trim().toUpperCase();
     if (!name) { showError('Enter your name first'); return; }
-    if (code.length !== 6) { showError('Enter a valid 6-character code'); return; }
+    if (code.length !== 6) { showError('Enter a valid 6-character room code'); return; }
+
+    const joinBtn = document.querySelector('#gc-code-card .gc-btn-primary');
+    if (joinBtn) { joinBtn.disabled = true; joinBtn.textContent = 'Joining…'; }
+    const resetBtn = () => { if (joinBtn) { joinBtn.disabled = false; joinBtn.textContent = 'Join'; } };
 
     gc.myName   = name;
     gc.myUserId = genUserId();
 
+    console.log(`[GC] gcJoin code=${code}, userId=${gc.myUserId}`);
     try {
         const { data, error } = await sb
             .from('group_rooms')
             .select('*')
             .eq('room_code', code)
-            .single();
+            .maybeSingle();   // maybeSingle won't throw on 0 rows
 
-        if (error || !data) { showError('Room not found'); return; }
-
-        // Can't join your own room with a different name (edge case)
-        if (data.user_a_id === gc.myUserId) { showError('Cannot join your own room'); return; }
+        if (error) {
+            console.error('[GC] Join lookup error:', error.code, error.message);
+            resetBtn();
+            if (error.code === '42P01') {
+                showError('Database not set up — ask the room creator to set it up first');
+            } else {
+                showError(`DB error: ${error.message.substring(0, 80)}`);
+            }
+            return;
+        }
+        if (!data) {
+            resetBtn();
+            showError('Room not found — double-check the 6-character code');
+            return;
+        }
+        if (data.user_a_id === gc.myUserId) {
+            resetBtn();
+            showError('Cannot join your own room');
+            return;
+        }
 
         // Update room with second participant
-        await sb.from('group_rooms').update({
-            user_b_id:   gc.myUserId,
-            user_b_name: name,
+        const { error: updErr } = await sb.from('group_rooms').update({
+            user_b_id:    gc.myUserId,
+            user_b_name:  name,
             participants: 2,
         }).eq('id', data.id);
+
+        if (updErr) {
+            console.error('[GC] Join update error:', updErr.code, updErr.message);
+            resetBtn();
+            showError('Could not join room — please try again');
+            return;
+        }
 
         gc.roomId      = data.id;
         gc.roomCode    = data.room_code;
         gc.otherUserId = data.user_a_id;
         gc.otherName   = data.user_a_name;
-
+        console.log('[GC] Joined room:', gc.roomId);
+        resetBtn();
         gcEnterRoom();
+
     } catch (e) {
-        console.error(e);
-        showError('Could not join — check the code and try again');
+        console.error('[GC] gcJoin exception:', e.message);
+        resetBtn();
+        const isNet = e.message?.toLowerCase().includes('fetch') || e.message?.toLowerCase().includes('network');
+        showError(isNet ? 'Network error — check your connection' : `Error: ${e.message.substring(0, 80)}`);
     }
 }
 
