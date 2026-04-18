@@ -122,19 +122,96 @@ Hindi: "Jo tum share kar rahe ho, uske liye bahut himmat chahiye. Ye mujhse akel
 After suggesting, always add the direct link cue: [SUGGEST_HUMAN_CONNECT] — this triggers the UI to show a "Connect Now" button.
 Only add [SUGGEST_HUMAN_CONNECT] when you are genuinely recommending it — not as a casual mention.`;
 
-// ─── Language detection ───────────────────────────────────────────────────────
-function detectLang(text) {
-    if (!text) return 'en';
-    if (/[\u0900-\u097F]/.test(text)) return 'hi';  // Devanagari
-    if (/[\u0C00-\u0C7F]/.test(text)) return 'te';  // Telugu script
+// ─── Language detection — confidence-scored, Tanglish/Hinglish aware ─────────
+//
+// Returns: 'te' | 'hi' | 'en'
+//
+// Priority:
+//  1. Unicode script ratio  (highest confidence — native script input)
+//  2. Romanized keyword scoring with per-language weighted word lists
+//  3. Mixed-language: winner-takes-all unless tied → defer to caller's context
+//
+// Design note: scoring beats regex OR-matching because it correctly handles
+// Tanglish sentences like "bro kal meeting undi right?" — 'undi' scores te:1
+// which beats hi:0, so we return 'te'. Pure regex would return 'hi' for 'kal'.
 
-    const t = text.toLowerCase();
+const _TE_WORDS = new Set([
+    // Core pronouns / verbs
+    'nenu','nuvvu','meeru','mee','meku','naaku','mana','ela','unnav','unnaru',
+    'unnanu','bagunnanu','bagunnav','bagunna','baga','undi','undhi','untundi',
+    'untundhi','ledu','avunu','kaadu','cheppandi','cheppali','chepparu','cheppav',
+    'ikkade','akkade','manchi','emi','endi','enduku','evaru','evvaru','em',
+    'thaagala','thaagamu','thaagutav','thaagutundi','poyindi','vachhindi',
+    'chesanu','chesadu','chestunna','chestunnav','chestunnaru','anipistundi',
+    'marchipoma','marchipoku','matladali','matladandu','choodandi','chudu',
+    'inkemi','kastamga','kastam','nijamga','nijame','adhe','kadha','paapam',
+    'aiyo','ayyo','sare','adigo','ikkado','akkado','veldam','vellali',
+    'pettali','pettu','thinadaniki','nindu','sagam','padukuntunna','babu',
+    'enti','atu','itu','chala','chaala','okka','oka','anni','antha','ra',
+    'ante','kaabatti','choodhu','inkedo','ga','kadha','anipistundi','telusu',
+    'teliyadu','cheppav','cheppindi','vinnanu','vinanu','chestha','chestanu',
+    'chestav','chestunnaanu','chestunnanu','velutunnanu','vastunnanu','pothunna',
+    'pothunnanu','ichcha','icchindi','tiskelli','teesukelli','cheppu','chepparo',
+    // Interjections / fillers
+    'arre','arey','aiyo','ayyo','yem','enti','ento','okate','okkatey',
+    'sare','sari','avunu','avuna','kaadu','kadu','ledu','leledhu',
+]);
 
-    // Telugu Romanized — comprehensive word list
-    if (/\b(nenu|nuvvu|meeru|mee|meku|naaku|mana|ela|unnav|unnaru|unnanu|bagunnanu|bagunnav|bagunna|baga|cheppandi|cheppali|chepparu|cheppav|ikkade|akkade|manchi|ledu|avunu|kaadu|em|emi|endi|enduku|evaru|evvaru|thaagala|thaagamu|thaagutav|thaagutundi|poyindi|vachhindi|chesanu|chesadu|chestunna|chestunnav|chestunnaru|anipistundi|marchipoma|marchipoku|matladali|matladandu|choodandi|chudu|inkemi|kastamga|kastam|nijamga|nijame|adhe|kadha|paapam|aiyo|ayyo|sare|adigo|ikkado|akkado|veldam|vellali|bore|stress|chala|chaala|super|enti|atu|itu|pettali|pettu|thinadaniki|nindu|sagam|padukuntunna|ra\b|babu)\b/i.test(t)) return 'te';
+const _HI_WORDS = new Set([
+    // Core
+    'kaise','kya','haan','nahi','accha','yaar','bhai','karo','tha','thi',
+    'hai','hoon','mera','meri','tumhara','aap','main','hum','woh','kyun',
+    'kab','kahan','kuch','bahut','bohot','theek','sahi','kal','aaj','abhi',
+    'phir','lekin','toh','tum','apna','apni','dost','bilkul','matlab',
+    'samjha','samjhi','bolta','bolti','sunna','dekho','jaana','aana',
+    'rehna','pyaar','zindagi','dil','khush','dukhi','bura','acha','thoda',
+    'zyada','kafi','bohot','sach','galat','pata','nahi','hoga','hogi',
+    'karunga','karungi','bolunga','sunta','sunta','chahiye','chahte',
+    'raha','rahi','rahe','gaya','gayi','gaye','aaya','aayi','aaye',
+    'kar','karo','karna','karta','karti','karte','raho','jao','aao',
+    'dekho','suno','bolo','batao','samjho','socho','ek','do','teen',
+    'arrey','arre','oye','yaar','bhai','behen','boss','chal','chalo',
+]);
 
-    // Hindi Romanized
-    if (/\b(kaise|kya|haan|nahi|accha|yaar|bhai|karo|tha|thi|hai|hoon|mera|meri|tumhara|aap|main|hum|woh|kyun|kab|kahan|kuch|bahut|bohot|theek|sahi|kal|aaj|abhi|phir|lekin|toh|tum|apna|apni|dost|bilkul|matlab|samjha|samjhi|bolta|bolti|sunna|dekho|jaana|aana|rehna|pyaar|zindagi|dil|khush|dukhi)\b/i.test(t)) return 'hi';
+function detectLang(text, fallback) {
+    if (!text || text.trim().length < 2) return fallback || 'en';
+
+    // ── 1. Unicode script ratio (beats everything) ─────────────────────────
+    const teChars = (text.match(/[\u0C00-\u0C7F]/g) || []).length;
+    const hiChars = (text.match(/[\u0900-\u097F]/g) || []).length;
+    const sigChars = text.replace(/[\s\d\W]/g, '').length || 1;
+
+    const teRatio = teChars / sigChars;
+    const hiRatio = hiChars / sigChars;
+
+    if (teRatio > 0.20) return 'te';  // >20% Telugu script → clearly Telugu
+    if (hiRatio > 0.20) return 'hi';  // >20% Devanagari   → clearly Hindi
+
+    // ── 2. Romanized keyword scoring ──────────────────────────────────────
+    const words = text.toLowerCase().split(/[\s,!?.।]+/).filter(Boolean);
+
+    let teScore = 0;
+    let hiScore = 0;
+
+    for (const w of words) {
+        // Strip common English suffixes to handle "chestunnav" → "chestunna"
+        const stem = w.replace(/(ing|ed|ly|er|est|s|'s)$/, '');
+        if (_TE_WORDS.has(w) || _TE_WORDS.has(stem)) teScore += 2;
+        if (_HI_WORDS.has(w) || _HI_WORDS.has(stem)) hiScore += 2;
+        // Partial suffix match for agglutinative Telugu endings
+        if (w.endsWith('nu') || w.endsWith('ni') || w.endsWith('lo') ||
+            w.endsWith('ki') || w.endsWith('tho') || w.endsWith('ga') ||
+            w.endsWith('di') || w.endsWith('lu') || w.endsWith('vi')) {
+            if (w.length > 3 && !_HI_WORDS.has(w)) teScore += 1;
+        }
+    }
+
+    if (teScore > 0 || hiScore > 0) {
+        if (teScore > hiScore) return 'te';
+        if (hiScore > teScore) return 'hi';
+        // Tie: use caller's fallback (typically last detected language)
+        return fallback || 'en';
+    }
 
     return 'en';
 }
@@ -142,6 +219,8 @@ function detectLang(text) {
 window.BlakcideAI = {
 
     detectLang,
+    // Expose with fallback helper for call engine
+    detectLangWithFallback: (text, fallback) => detectLang(text, fallback),
 
     // ── Build messages array with system prompt injected ─────────────────────
     _withSystem(messages) {
