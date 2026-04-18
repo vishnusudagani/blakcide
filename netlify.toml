@@ -42,3 +42,8 @@
   from = "/api/group-chat"
   to = "/.netlify/functions/group-chat"
   status = 200
+
+[[redirects]]
+  from = "/api/realtime-session"
+  to = "/.netlify/functions/realtime-session"
+  status = 200

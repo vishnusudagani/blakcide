@@ -1116,66 +1116,49 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ==========================================
-    // 11. AI VOICE CALL ENGINE
-    // Robust design: single mic stream per call, per-utterance generation
-    // counter prevents stale onstop callbacks, watchdog auto-recovers
-    // stuck states, continuous language switching via Whisper.
+    // 11. AI VOICE CALL ENGINE (GPT-4o Realtime)
+    // Single WebSocket to OpenAI Realtime API — no Whisper, no TTS round-trips.
+    // Browser gets an ephemeral key from /api/realtime-session, then opens
+    // wss://api.openai.com/v1/realtime directly. Server-side VAD handles
+    // turn detection and barge-in. PCM16@24kHz in both directions.
     // ==========================================
-    let _callActive        = false;
-    let _callMuted         = false;
-    let _callSpeaker       = true;
-    let _callTimerInt      = null;
-    let _callSecs          = 0;
-    let _callStartTime     = null;   // Date when call started — for duration logging
-    let _callLangsUsed     = new Set(); // languages detected during the call
-    let _callHistory       = [];
-    let _callSynth         = window.speechSynthesis;
 
-    // Mic acquired ONCE per call — never re-requested mid-call
-    let _callMicStream     = null;
+    // ── Core state ─────────────────────────────────────────────────────────
+    let _rtActive        = false;
+    let _rtMuted         = false;
+    let _rtSpeaker       = true;
+    let _rtTimerInt      = null;
+    let _rtSecs          = 0;
+    let _rtStartTime     = null;
+    let _rtLangsUsed     = new Set();
+    let _rtHistory       = [];       // [{role,content}] for saving at call end
 
-    // Per-utterance recorder — recreated each turn
-    let _callRecGen        = 0;       // generation counter: stale onstop/transcribe closures self-cancel
-    let _callMediaRecorder = null;
+    // ── WebSocket & audio ──────────────────────────────────────────────────
+    let _rtWs            = null;     // WebSocket to OpenAI Realtime API
+    let _rtAudioCtx      = null;     // Web AudioContext
+    let _rtGain          = null;     // GainNode — mute instantly on barge-in
+    let _rtMicStream     = null;     // getUserMedia stream
+    let _rtMicSource     = null;     // MediaStreamSourceNode
+    let _rtProcessor     = null;     // ScriptProcessorNode for PCM16 capture
 
-    // VAD nodes (reuse AudioContext from output)
-    let _callVADSource     = null;
-    let _callVADAnalyser   = null;
-    let _callVADFrame      = null;
+    // ── Playback scheduling ────────────────────────────────────────────────
+    let _rtNextPlayTime  = 0;        // ctx.currentTime of next scheduled chunk end
+    let _rtAudioPlaying  = false;    // true while any scheduled chunk is in flight
 
-    // Watchdog — if stuck in thinking/speaking > 18s, auto-recover
-    let _callWatchdog      = null;
+    // ── State machine ──────────────────────────────────────────────────────
+    let _rtState         = 'idle';   // idle | listening | thinking | speaking
+    let _rtDetectedLang  = 'en';
 
-    // Barge-in — lightweight VAD that runs during AI speech
-    let _bargeInAnalyser   = null;
-    let _bargeInSource     = null;
-    let _bargeInFrame      = null;
-    let _bargeInCnt        = 0;    // consecutive energetic frames
+    // ── Per-response transcript accumulation ───────────────────────────────
+    let _rtCurAIText     = '';       // assembled AI reply text (for transcript + history)
 
-    // ─────────────────────────────────────────────────────────────────
-    // State machine + remaining vars
-    // ─────────────────────────────────────────────────────────────────
-    // ── Language state ───────────────────────────────────────────────────────
-    // _callDetectedLang : authoritative language for THIS TURN, drives LLM enforcement
-    // _callWhisperLang  : raw Whisper result (after remap), stored separately so
-    //                     text-scoring can override it before committing
-    // _callLangStreak   : consecutive turns in same non-English language → triggers
-    //                     native-script hint to Whisper after 2 turns
-    let _callDetectedLang  = 'en';
-    let _callWhisperLang   = 'en';
-    let _callLangStreak    = 0;
-    let _callLangStreakVal  = 'en';
-    let _callState         = 'idle'; // idle | listening | thinking | speaking
-    let _speakSeq          = 0;
-    let _callAudioCtx      = null;   // Web AudioContext (unlocked once on user gesture)
-    let _callAudioSrc      = null;   // current BufferSourceNode
-
-    function _setCallStatus(txt) {
+    // ── UI helpers ────────────────────────────────────────────────────
+    function _rtSetStatus(txt) {
         const el = document.getElementById('ai-call-status');
         if (el) el.innerText = txt;
     }
 
-    function _addCallMsg(speaker, text) {
+    function _rtAddMsg(speaker, text) {
         const el = document.getElementById('ai-call-transcript');
         if (!el) return;
         const wrap = document.createElement('div');
@@ -1185,879 +1168,439 @@ document.addEventListener('DOMContentLoaded', () => {
         el.scrollTop = el.scrollHeight;
         if (speaker === 'ai') {
             const av = document.getElementById('ai-call-avatar-el');
-            if (av) {
-                av.classList.add('ai-speaking');
-                setTimeout(() => av.classList.remove('ai-speaking'), Math.min(text.length * 55, 6000));
-            }
+            if (av) av.classList.add('ai-speaking');
         }
     }
 
-    // ── State transition + watchdog reset + barge-in lifecycle ──────
-    function _callTransition(state) {
-        const prev = _callState;
-        _callState = state;
+    function _rtTransition(state) {
+        _rtState = state;
         const labels = { idle: '', listening: 'Listening…', thinking: 'Thinking…', speaking: 'Speaking…' };
-        _setCallStatus(labels[state] || '');
+        _rtSetStatus(labels[state] || '');
         const av = document.getElementById('ai-call-avatar-el');
         if (av) av.classList.toggle('ai-speaking', state === 'speaking');
-
-        // Barge-in only active while AI is speaking
-        if (state === 'speaking' && prev !== 'speaking') {
-            _startBargeIn();
-        } else if (state !== 'speaking') {
-            _stopBargeIn();
-        }
-
-        _resetWatchdog();
     }
 
-    // ── Barge-in: lightweight VAD running during AI speech ────────────
-    // If the user starts speaking while AI is talking, interrupt immediately.
-    // Uses a separate AnalyserNode on the existing mic stream — does NOT
-    // start a new MediaRecorder (that happens after transition to listening).
-    // echoCancellation in getUserMedia suppresses speaker echo so the AI's
-    // own voice doesn't trigger a false positive.
-    //
-    // Thresholds tuned conservatively: requires 5 consecutive hot frames
-    // (~165ms at 30fps) and energy > 28 to avoid triggering on breaths/noise.
-    // We also skip the first 500ms of AI speech so the initial burst of audio
-    // routing doesn't create echo before WebRTC EC settles.
-
-    function _startBargeIn() {
-        if (!_callMicStream || !_callAudioCtx || _callAudioCtx.state === 'closed') return;
-        if (_bargeInAnalyser) return; // already running
-        try {
-            _bargeInSource   = _callAudioCtx.createMediaStreamSource(_callMicStream);
-            _bargeInAnalyser = _callAudioCtx.createAnalyser();
-            _bargeInAnalyser.fftSize = 256;
-            _bargeInSource.connect(_bargeInAnalyser);
-        } catch (e) { return; }
-
-        const buf = new Uint8Array(_bargeInAnalyser.frequencyBinCount);
-        _bargeInCnt = 0;
-
-        const ENERGY_THRESHOLD = 28;   // 0–255
-        const FRAMES_REQUIRED  = 5;    // ~165ms at 30fps
-        let   framesTotal      = 0;
-
-        const loop = () => {
-            if (!_callActive || _callState !== 'speaking') { _stopBargeIn(); return; }
-            framesTotal++;
-
-            // Skip first 15 frames (~500ms) — EC needs time to suppress echo
-            if (framesTotal < 15) { _bargeInFrame = requestAnimationFrame(loop); return; }
-
-            _bargeInAnalyser.getByteFrequencyData(buf);
-            const energy = buf.reduce((s, v) => s + v, 0) / buf.length;
-
-            if (energy > ENERGY_THRESHOLD) {
-                _bargeInCnt++;
-                if (_bargeInCnt >= FRAMES_REQUIRED) {
-                    _handleBargeIn(); // interrupt AI
-                    return;
-                }
-            } else {
-                _bargeInCnt = 0; // reset on silence
-            }
-            _bargeInFrame = requestAnimationFrame(loop);
-        };
-        _bargeInFrame = requestAnimationFrame(loop);
-    }
-
-    function _stopBargeIn() {
-        if (_bargeInFrame)    { cancelAnimationFrame(_bargeInFrame); _bargeInFrame = null; }
-        if (_bargeInSource)   { try { _bargeInSource.disconnect();   } catch (_) {} _bargeInSource   = null; }
-        if (_bargeInAnalyser) { try { _bargeInAnalyser.disconnect(); } catch (_) {} _bargeInAnalyser = null; }
-        _bargeInCnt = 0;
-    }
-
-    function _handleBargeIn() {
-        _stopBargeIn();
-        _stopTTSAudio();      // kills current audio + resets TTS queue
-        _stopRecorder();      // cleans up any stale recorder
-        _callTransition('listening');
-        // Small delay so the AudioContext settles before we attach new VAD nodes
-        setTimeout(() => {
-            if (_callActive && !_callMuted) _startListening();
-        }, 120);
-    }
-
-    // ── Watchdog: if stuck in thinking/speaking >18s, force-recover ──
-    function _resetWatchdog() {
-        clearTimeout(_callWatchdog);
-        if (!_callActive || _callState === 'idle' || _callState === 'listening') return;
-        _callWatchdog = setTimeout(() => {
-            if (!_callActive || _callState === 'idle' || _callState === 'listening') return;
-            console.warn('[AI Call] Watchdog fired — recovering to listening');
-            _stopTTSAudio();
-            _stopRecorder();
-            _callTransition('listening');
-            _startListening();
-        }, 18000);
-    }
-
-    // ── Audio output ──────────────────────────────────────────────────
-    function _stopTTSAudio() {
-        // CRITICAL: increment _speakSeq here so any in-flight _callSpeakSimple
-        // fetch (greeting, error) sees mySeq !== _speakSeq and bails out.
-        // Without this, barge-in / watchdog interrupts leave a stale TTS fetch
-        // that resolves later and starts a second audio source simultaneously —
-        // the primary cause of audio cutting immediately.
-        _speakSeq++;
-        _ttsQueueReset();  // drain queue and invalidate in-flight queue fetches
-        if (_callAudioSrc) {
-            try { _callAudioSrc.onended = null; _callAudioSrc.stop(); } catch (_) {}
-            _callAudioSrc = null;
-        }
-        if (_callSynth) _callSynth.cancel();
-    }
-
-    // ── Stop recorder only — mic stream stays alive ───────────────────
-    // CRITICAL: increment _callRecGen FIRST so any in-flight async
-    // callbacks (onstop, transcribe) see the new generation and bail out.
-    function _stopRecorder() {
-        _callRecGen++;  // invalidate all in-flight closures immediately
-        if (_callVADFrame) { cancelAnimationFrame(_callVADFrame); _callVADFrame = null; }
-        if (_callVADSource)   { try { _callVADSource.disconnect();   } catch (_) {} _callVADSource   = null; }
-        if (_callVADAnalyser) { try { _callVADAnalyser.disconnect(); } catch (_) {} _callVADAnalyser = null; }
-        if (_callMediaRecorder && _callMediaRecorder.state !== 'inactive') {
-            try { _callMediaRecorder.stop(); } catch (_) {}
-        }
-        _callMediaRecorder = null;
-    }
-
-    // ── Full teardown — releases mic at call end ──────────────────────
-    function _releaseMic() {
-        _stopBargeIn();
-        _stopRecorder();
-        if (_callMicStream) {
-            _callMicStream.getTracks().forEach(t => t.stop());
-            _callMicStream = null;
-        }
-    }
-
-    // ── Whisper transcription ─────────────────────────────────────────
-    async function _transcribeWhisper(chunks, mimeType, myGen) {
-        try {
-            const blob     = new Blob(chunks, { type: mimeType });
-            const arrayBuf = await blob.arrayBuffer();
-            // Fast base64 encoding via chunk-splitting avoids O(n²) string concat.
-            // String.fromCharCode.apply works on ≤65535-byte chunks; larger blobs
-            // must be chunked to avoid "Maximum call stack size exceeded".
-            const uint8  = new Uint8Array(arrayBuf);
-            let binary = '';
-            const CHUNK = 8192;
-            for (let i = 0; i < uint8.length; i += CHUNK) {
-                binary += String.fromCharCode(...uint8.subarray(i, i + CHUNK));
-            }
-            const base64 = btoa(binary);
-
-            const body = { audioBase64: base64, mimeType };
-            // Only hint Whisper's language after 2+ consecutive turns in the same
-            // non-English language. This gets native script (తెలుగు / हिंदी) while
-            // not permanently locking Whisper when the user switches to English.
-            if (_callLangStreak >= 2 && _callLangStreakVal !== 'en') {
-                body.langHint = _callLangStreakVal;
-            }
-
-            const res = await fetch('/api/transcribe', {
-                method:  'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body:    JSON.stringify(body)
-            });
-            // Check generation after each await — bail if stale
-            if (myGen !== _callRecGen || !_callActive) return null;
-            if (!res.ok) return null;
-            const data = await res.json();
-            if (myGen !== _callRecGen || !_callActive) return null;
-
-            // ── Whisper language remapping ─────────────────────────────────
-            // Whisper misclassifies Telugu as Tamil ('ta') / Kannada ('kn') /
-            // Malayalam ('ml') — South Indian scripts look similar to its model.
-            // Urdu ('ur') → Hindi ('hi'): same spoken register, different script.
-            const LANG_REMAP = { ta: 'te', kn: 'te', ml: 'te', ur: 'hi' };
-            let whisperLang = data.language || null;
-            if (whisperLang && LANG_REMAP[whisperLang]) {
-                console.log(`[AI Call] Whisper remap: ${whisperLang} → ${LANG_REMAP[whisperLang]}`);
-                whisperLang = LANG_REMAP[whisperLang];
-            }
-
-            // Store Whisper's result for reference in _processUserSpeech.
-            // CRITICAL: Only write non-English results to _callDetectedLang here.
-            // If Whisper says 'en', DO NOT override — Whisper frequently returns
-            // 'en' for short/quiet Telugu/Hindi phrases (especially on first turns
-            // before langHint kicks in). Text-scoring in _processUserSpeech will
-            // be the tiebreaker. Applying 'en' from Whisper prematurely would make
-            // detectLangWithFallback() use 'en' as its fallback and confirm the
-            // wrong language.
-            _callWhisperLang = whisperLang || 'en';
-            if (whisperLang && whisperLang !== 'en') {
-                _callDetectedLang = whisperLang;  // positive non-English signal → apply immediately
-            }
-            console.log(`[AI Call] STT whisper=${_callWhisperLang} detected=${_callDetectedLang} text="${(data.text||'').substring(0,60)}"`);
-            return (data.text || '').trim();
-        } catch (e) {
-            console.error('[AI Call] Transcribe error:', e);
-            return null;
-        }
-    }
-
-    // ── Start listening for user speech ───────────────────────────────
-    function _startListening() {
-        if (!_callActive || _callMuted || _callState !== 'listening') return;
-
-        // Mic not yet ready — retry shortly (mic request is async)
-        if (!_callMicStream) {
-            setTimeout(() => {
-                if (_callActive && !_callMuted && _callState === 'listening') _startListening();
-            }, 250);
-            return;
-        }
-
-        _stopRecorder();  // increments _callRecGen, kills any previous session
-
-        const ctx = _callAudioCtx;
-        if (!ctx || ctx.state === 'closed') return;
-
-        // ── VAD setup ───────────────────────────────────────────────────
-        try {
-            _callVADSource   = ctx.createMediaStreamSource(_callMicStream);
-            _callVADAnalyser = ctx.createAnalyser();
-            _callVADAnalyser.fftSize = 512;
-            _callVADSource.connect(_callVADAnalyser);
-        } catch (e) {
-            console.error('[AI Call] VAD setup error:', e);
-            setTimeout(() => { if (_callActive && !_callMuted && _callState === 'listening') _startListening(); }, 500);
-            return;
-        }
-        const vadBuf = new Uint8Array(_callVADAnalyser.frequencyBinCount);
-
-        // ── MediaRecorder ───────────────────────────────────────────────
-        const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
-            ? 'audio/webm;codecs=opus'
-            : MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/mp4';
-
-        // Capture generation and chunk array in closure — immune to _stopRecorder resets
-        const myGen    = _callRecGen;
-        const myChunks = [];
-        let   speechSeen = false;
-        let   silenceCnt = 0;
-        let   frameCnt   = 0;
-
-        let recorder;
-        try {
-            recorder = new MediaRecorder(_callMicStream, { mimeType });
-        } catch (e) {
-            console.error('[AI Call] MediaRecorder create error:', e);
-            setTimeout(() => { if (_callActive && !_callMuted && _callState === 'listening') _startListening(); }, 500);
-            return;
-        }
-        _callMediaRecorder = recorder;
-
-        recorder.ondataavailable = e => { if (e.data && e.data.size > 0) myChunks.push(e.data); };
-
-        recorder.onstop = async () => {
-            // Self-cancel if a newer session started or call ended
-            if (myGen !== _callRecGen || !_callActive) return;
-
-            if (!speechSeen || myChunks.length === 0) {
-                // Silence window with no speech — restart immediately, no dead time
-                if (_callActive && !_callMuted && _callState === 'listening') _startListening();
-                return;
-            }
-
-            // Send to Whisper
-            const text = await _transcribeWhisper(myChunks, mimeType, myGen);
-
-            // Check generation again after async Whisper call
-            if (myGen !== _callRecGen || !_callActive) return;
-
-            if (text) {
-                _processUserSpeech(text);
-            } else {
-                // Empty/failed transcription — restart without breaking the call
-                if (_callActive && !_callMuted && _callState === 'listening') _startListening();
-            }
-        };
-
-        try {
-            recorder.start(200); // 200ms timeslices for low-latency data delivery
-        } catch (e) {
-            console.error('[AI Call] recorder.start error:', e);
-            setTimeout(() => { if (_callActive && !_callMuted && _callState === 'listening') _startListening(); }, 500);
-            return;
-        }
-
-        // ── VAD rAF loop ─────────────────────────────────────────────────
-        const SPEECH_THRESHOLD = 15;  // 0–255 energy level
-        const SILENCE_FRAMES   = 18;  // ~0.60s at 30fps — was 25 (833ms), reduced for faster cutoff
-        const MAX_RECORD_SEC   = 900; // 30s safety cap (frameCnt at ~30fps)
-
-        const vadLoop = () => {
-            // Bail instantly if session is stale or state left 'listening'
-            if (myGen !== _callRecGen || !_callActive || _callState !== 'listening') return;
-
-            frameCnt++;
-            _callVADAnalyser.getByteFrequencyData(vadBuf);
-            const energy = vadBuf.reduce((s, v) => s + v, 0) / vadBuf.length;
-
-            if (energy > SPEECH_THRESHOLD) {
-                speechSeen = true;
-                silenceCnt = 0;
-            } else if (speechSeen) {
-                silenceCnt++;
-                if (silenceCnt >= SILENCE_FRAMES) {
-                    _callVADFrame = null;
-                    if (recorder.state === 'recording') recorder.stop();
-                    return; // onstop will handle restart
-                }
-            } else if (frameCnt >= MAX_RECORD_SEC) {
-                // Long silence with no speech — restart fresh
-                _callVADFrame = null;
-                if (recorder.state === 'recording') recorder.stop();
-                return;
-            }
-            _callVADFrame = requestAnimationFrame(vadLoop);
-        };
-        _callVADFrame = requestAnimationFrame(vadLoop);
-    }
-
-    // ── TTS audio queue — pre-fetches next sentence while current plays ──
-    // Each entry: { audioBuffer: AudioBuffer | null, text: string }
-    // The queue drains automatically; if next buffer arrives before current
-    // finishes, there is zero gap between sentences.
-    let _ttsQueue       = [];
-    let _ttsQueueSeq    = 0;   // invalidates queue on interruption
-    let _ttsPlaying     = false;
-    // Set true the moment getResponseStreaming resolves — tells onended
-    // that no more sentences are coming so it can safely transition back
-    // to listening even if slot.isLast was never set (race condition fix).
-    let _callStreamDone = false;
-
-    function _ttsQueueReset() {
-        _ttsQueueSeq++;
-        _ttsQueue        = [];
-        _ttsPlaying      = false;
-        _callStreamDone  = false;
-    }
-
-    // Pre-fetch TTS audio for a sentence, language-aware (voice + speed).
-    async function _ttsFetch(sentence, myQueueSeq) {
-        try {
-            const res = await fetch('/api/tts', {
-                method:  'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body:    JSON.stringify({
-                    text:     sentence.substring(0, 500),
-                    language: _callDetectedLang   // ← voice/speed selected per language
-                })
-            });
-            if (myQueueSeq !== _ttsQueueSeq || !_callActive) return;
-            if (!res.ok) throw new Error(`TTS ${res.status}`);
-            const arrayBuf = await res.arrayBuffer();
-            if (myQueueSeq !== _ttsQueueSeq || !_callActive) return;
-            const ctx = _callAudioCtx;
-            if (!ctx || ctx.state === 'closed') return;
-            await ctx.resume();
-            const audioBuffer = await ctx.decodeAudioData(arrayBuf.slice(0));
-            if (myQueueSeq !== _ttsQueueSeq || !_callActive) return;
-            // Find the slot in the queue for this sentence and fill it
-            const slot = _ttsQueue.find(s => s.text === sentence && s.audioBuffer === null);
-            if (slot) { slot.audioBuffer = audioBuffer; slot.ready = true; }
-            // Kick off playback if nothing is currently playing
-            _ttsDrainQueue(myQueueSeq);
-        } catch (e) {
-            if (myQueueSeq !== _ttsQueueSeq) return;
-            console.warn('[AI Call] TTS fetch error:', e.message);
-            // Mark slot as errored so we skip it and continue queue
-            const slot = _ttsQueue.find(s => s.text === sentence && s.audioBuffer === null);
-            if (slot) { slot.error = true; }
-            _ttsDrainQueue(myQueueSeq);
-        }
-    }
-
-    // Drain: play the next ready buffer in order. Called after each sentence
-    // finishes and when a new buffer arrives.
-    function _ttsDrainQueue(myQueueSeq) {
-        if (myQueueSeq !== _ttsQueueSeq || !_callActive || _ttsPlaying) return;
-        if (_ttsQueue.length === 0) return;
-
-        const slot = _ttsQueue[0];
-        if (!slot.ready && !slot.error) return; // still fetching
-
-        _ttsQueue.shift();
-
-        if (slot.error || !slot.audioBuffer) {
-            // Skip errored slot, try next
-            _ttsDrainQueue(myQueueSeq);
-            return;
-        }
-
-        _ttsPlaying = true;
-        const ctx = _callAudioCtx;
-
-        // Safety: resume context if browser suspended it (tab switch, etc.)
-        // Do NOT await here — we're in a sync drain function. Fire-and-forget
-        // resume is fine; AudioContext buffers internally.
-        if (ctx.state === 'suspended') ctx.resume().catch(() => {});
-
-        const src = ctx.createBufferSource();
-        src.buffer = slot.audioBuffer;
-        src.connect(ctx.destination);
-        _callAudioSrc = src;
-        console.log(`[AI Call] TTS playing sentence (${Math.round(slot.audioBuffer.duration*10)/10}s): "${slot.text.substring(0,40)}…"`);
-
-        src.onended = () => {
-            if (_callAudioSrc === src) _callAudioSrc = null;
-            _ttsPlaying = false;
-            if (myQueueSeq !== _ttsQueueSeq || !_callActive) return;
-
-            if (_ttsQueue.length > 0) {
-                // Natural inter-sentence pause: 120ms feels human, 0ms feels robotic
-                setTimeout(() => _ttsDrainQueue(myQueueSeq), 120);
-            } else if (slot.isLast || _callStreamDone) {
-                // slot.isLast: set by _processUserSpeech after stream resolves
-                // _callStreamDone: catches the race where stream resolved while
-                //   this audio was still playing (slot was already shift()ed
-                //   before isLast could be written — the primary "one reply" bug)
-                _callTransition('listening');
-                setTimeout(() => {
-                    if (_callActive && !_callMuted) _startListening();
-                }, 250);
-            }
-            // else: LLM stream still running, more sentences incoming — wait
-        };
-        src.start(0);
-    }
-
-    // ── Per-language enforcement injection — right before each user turn ─
-    // A system message placed AFTER history but BEFORE the latest user message
-    // carries high recency weight in GPT-4o's attention mechanism. This is far
-    // more reliable than burying language rules in the base system prompt.
-    // ── Language enforcement — injected as system message BEFORE each user turn ──
-    // Placed at maximum recency (immediately before the last user message).
-    // Uses concrete BAD/GOOD examples because GPT-4o pattern-matches examples
-    // far more reliably than abstract rules.
-    const _LANG_ENFORCE = {
-        te: `══ ACTIVE LANGUAGE: TELUGU ══
-RULE: Your ENTIRE reply must be in Telugu. No exceptions. No mixing.
-Match user's exact style — Romanized Telugu if they wrote Roman, Telugu script if they wrote script.
-
-FORBIDDEN WORDS (ZERO tolerance): yaar, bhai, kya, hai, hoon, accha, theek, arrey (Hindi words — NEVER)
-FORBIDDEN STYLE: formal/textbook Telugu
-
-BAD RESPONSE ✗ → "నేను మీకు సహాయం చేయగలను" (formal)
-BAD RESPONSE ✗ → "Haan yaar, cheppu" (Hindi mixing)
-GOOD RESPONSE ✓ → "Aiyo ra, em jarigindi? Cheppu, vinnanu."
-GOOD RESPONSE ✓ → "Arre sare, adhe anipistundi naaku kuda"
-
-కేవలం తెలుగులో మాత్రమే స్పందించు. ఇది తప్పనిసరి.`,
-
-        hi: `══ ACTIVE LANGUAGE: HINDI ══
-RULE: Your ENTIRE reply must be in Hindi. No exceptions. No mixing.
-Match user's exact style — Romanized Hindi or Devanagari, whichever they used.
-
-FORBIDDEN WORDS: aiyo, ayyo, ra, undi, cheppu, ela (Telugu words — NEVER)
-FORBIDDEN STYLE: formal/textbook Hindi
-
-BAD RESPONSE ✗ → "मैं आपकी सहायता कर सकता हूँ" (formal)
-BAD RESPONSE ✗ → "Aiyo yaar, undi kya?" (Telugu mixing)
-GOOD RESPONSE ✓ → "Arre yaar, kya hua? Bata na, sun raha hoon."
-GOOD RESPONSE ✓ → "Sach mein? Fir kya kiya tune?"
-
-केवल हिंदी में उत्तर दें। यह अनिवार्य है।`,
-
-        en: `══ ACTIVE LANGUAGE: ENGLISH ══
-RULE: Respond in casual spoken English only. No Hindi words. No Telugu words.
-
-FORBIDDEN: yaar, bhai, ra, undi, accha, na, toh (language contamination — NEVER)
-
-GOOD RESPONSE ✓ → "Oh wow, that's rough. What happened exactly?"
-GOOD RESPONSE ✓ → "Yeah I get that feeling — what do you think you'll do?"`,
-    };
-
-    // ── Base system prompt — language-neutral core rules ──────────────
-    function _buildCallSys() {
+    // ── System prompt — rebuilt each time language changes ────────────
+    function _rtBuildSystem(lang) {
         const userCtx = window.blakcideUserContext
             ? `\n\nABOUT THIS USER (weave in naturally, never announce): ${window.blakcideUserContext.substring(0, 200)}`
             : '';
-        return `You are Blakcide. You are on a LIVE VOICE CALL. You are the user's close FRIEND — not an assistant, not a therapist.
+        const langRule = {
+            te: `LANGUAGE: Respond ONLY in Telugu (casual spoken style, match user: Romanized or script).
+FORBIDDEN: yaar, bhai, kya, hai (Hindi words — NEVER). Formal Telugu is also FORBIDDEN.
+GOOD → "Aiyo ra, em jarigindi? Cheppu." / "Arre sare, adhe anipistundi naaku kuda"`,
+            hi: `LANGUAGE: Respond ONLY in Hindi (casual spoken style, match user: Romanized or Devanagari).
+FORBIDDEN: aiyo, ra, undi, cheppu (Telugu words — NEVER). Formal Hindi is also FORBIDDEN.
+GOOD → "Arre yaar, kya hua? Bata na." / "Sach mein? Fir kya kiya tune?"`,
+            en: `LANGUAGE: Respond in casual spoken English only. No Hindi. No Telugu.
+GOOD → "Oh wow, that's rough. What happened?" / "Yeah I get that feeling."`
+        }[lang] || `LANGUAGE: Casual English only.`;
 
-NON-NEGOTIABLE RULES:
+        return `You are Blakcide — on a LIVE VOICE CALL with the user's closest friend. NOT an assistant.
 
-LANGUAGE: The "ACTIVE LANGUAGE" block that appears right before the user's message is your ONLY language instruction. Follow it exactly. It overrides everything else including this prompt.
+${langRule}
 
-LENGTH: 1 sentence maximum. 2 sentences only when emotional depth requires it. Phone call = short. Long replies = broken experience.
-
-FORMAT: Zero markdown. Zero asterisks. Zero bullet points. Zero headers. Pure spoken words only.
-
-OPENER: Always start with a natural human reaction — NEVER "I understand" / "I see" / "Certainly" / "That's interesting":
-  English → "Oh—" / "Wait—" / "Yeah" / "Aw man" / "Really?" / "That's rough"
-  Telugu  → "Aiyo" / "Arre ra" / "Sare" / "Nijamga?" / "Oh nice ra" / "Ayyo paapam"
-  Hindi   → "Arre yaar" / "Sach mein?" / "Haan haan" / "Oye" / "Kya hua bata"
-
-NEVER: Start with "I". Say "As an AI". Sound like a customer service bot.
-
-MEMORY: Remember everything said in this conversation. Do NOT lose context when language switches.
-
-GOOD vs BAD:
-  BAD  "I understand that you are feeling stressed about your exam situation."
-  GOOD "Exam stress ra? Cheppu — em jarigindi exactly?"
-
-  BAD  "मैं आपकी भावनाओं को समझता हूँ और आपकी सहायता करना चाहता हूँ।"
-  GOOD "Arre yaar tough hai — kya hua bata?"
-
-  BAD  "That sounds like a challenging situation for you to navigate."
-  GOOD "That's rough. What happened?"${userCtx}`;
+LENGTH: 1 sentence max. 2 only for deep emotion. Phone call = short.
+FORMAT: Zero markdown, zero asterisks. Pure spoken words.
+OPENER: Natural human reaction — NEVER "I understand" / "Certainly" / "That's interesting":
+  English → "Oh—" / "Yeah" / "Aw man" / "Really?" / "That's rough"
+  Telugu  → "Aiyo" / "Arre ra" / "Sare" / "Nijamga?"
+  Hindi   → "Arre yaar" / "Sach mein?" / "Haan haan" / "Oye"
+NEVER: Start with "I". Sound like customer service. Say "As an AI".${userCtx}`;
     }
 
-    // ── Handle transcribed text → AI response (streaming pipeline) ───
-    async function _processUserSpeech(text) {
-        if (!_callActive) return;
-        // Hard guard: if we're already thinking or speaking, a second invocation
-        // means a stale onstop fired — discard it. Two parallel LLM streams
-        // would race and corrupt _callHistory.
-        if (_callState === 'thinking' || _callState === 'speaking') {
-            console.warn('[AI Call] _processUserSpeech called in wrong state:', _callState, '— discarding');
-            return;
+    // ── PCM16 audio playback — schedule each delta back-to-back ──────
+    // Uses a GainNode to allow instant mute on server-VAD barge-in.
+    // Each delta is a base64-encoded PCM16 chunk at 24 kHz mono.
+    function _rtEnqueueAudio(base64PCM) {
+        if (!_rtAudioCtx || !_rtActive || !_rtSpeaker) return;
+        const ctx = _rtAudioCtx;
+        if (ctx.state === 'suspended') ctx.resume().catch(() => {});
+
+        // Decode base64 → PCM16 Int16 → Float32
+        const binary = atob(base64PCM);
+        const bytes  = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+        const int16   = new Int16Array(bytes.buffer);
+        const float32 = new Float32Array(int16.length);
+        for (let i = 0; i < int16.length; i++) float32[i] = int16[i] / 32768;
+
+        // Create and schedule buffer
+        const buf = ctx.createBuffer(1, float32.length, 24000);
+        buf.copyToChannel(float32, 0);
+        const src = ctx.createBufferSource();
+        src.buffer = buf;
+        // Connect through GainNode so _rtStopAudio() can instantly silence it
+        src.connect(_rtGain || ctx.destination);
+
+        // Schedule contiguously; add 80ms lead-in for first chunk to absorb jitter
+        const now  = ctx.currentTime;
+        const when = Math.max(now + 0.08, _rtNextPlayTime);
+        src.start(when);
+        _rtNextPlayTime  = when + buf.duration;
+        _rtAudioPlaying  = true;
+
+        src.onended = () => {
+            // Audio done — if nothing more scheduled, mark idle
+            if (_rtNextPlayTime <= ctx.currentTime + 0.12) _rtAudioPlaying = false;
+        };
+    }
+
+    // Instantly silence all scheduled audio (server VAD fired or call ended)
+    function _rtStopAudio() {
+        if (!_rtAudioCtx) return;
+        _rtAudioPlaying = false;
+        _rtNextPlayTime = _rtAudioCtx.currentTime;
+        // Ramp gain to 0 over 30ms (click-free) then back to 1
+        if (_rtGain) {
+            const g = _rtGain.gain;
+            g.cancelScheduledValues(_rtAudioCtx.currentTime);
+            g.setValueAtTime(0, _rtAudioCtx.currentTime);
+            g.linearRampToValueAtTime(1, _rtAudioCtx.currentTime + 0.03);
         }
-        _stopRecorder();
-        _callTransition('thinking');
-        console.log(`[AI Call] Processing speech: lang=${_callDetectedLang} text="${text.substring(0,80)}"`);
+    }
 
-        _addCallMsg('user', text);
+    // ── Mic capture → PCM16@24kHz → WebSocket ────────────────────────
+    // ScriptProcessorNode (deprecated but universally supported).
+    // Downsamples from the AudioContext rate (44100/48000) to 24000 Hz
+    // and converts Float32 to Int16 before sending as base64.
+    function _rtStartMicCapture() {
+        if (!_rtMicStream || !_rtAudioCtx || !_rtWs) return;
+        const ctx        = _rtAudioCtx;
+        const sourceRate = ctx.sampleRate;
+        const TARGET     = 24000;
 
-        // ── STRICT PRIORITY LANGUAGE DETECTION (per-turn) ──────────────────
-        //
-        // Priority order (hard rules, no exceptions):
-        //   P1. Unicode script in text  → ABSOLUTE (Telugu ≠ Tamil, Hindi ≠ Urdu)
-        //   P2. Keyword match in text   → HIGH CONFIDENCE
-        //   P3. Whisper non-English     → MEDIUM (already remapped ta→te, ur→hi)
-        //   P4. Whisper English         → LOW (only trusted with 4+ English words)
-        //   P5. Previous language       → FALLBACK (never reset on ambiguous input)
-        //
-        // The fallback fix in detectLang ensures ambiguous short text returns
-        // the previous language rather than defaulting to 'en'.
+        _rtMicSource = ctx.createMediaStreamSource(_rtMicStream);
+        // Buffer size 2048 ≈ 46ms at 44.1 kHz — low enough latency
+        _rtProcessor = ctx.createScriptProcessor(2048, 1, 1);
 
-        const textLang  = window.BlakcideAI?.detectLangWithFallback(text, _callDetectedLang) || 'en';
-        const wordCount = text.trim().split(/\s+/).filter(Boolean).length;
+        _rtProcessor.onaudioprocess = (e) => {
+            if (!_rtActive || _rtMuted || !_rtWs || _rtWs.readyState !== WebSocket.OPEN) return;
 
-        if (textLang !== 'en') {
-            // P1/P2: Unicode script or keyword match — ALWAYS trust this
-            _callDetectedLang = textLang;
-            console.log(`[AI Call] Lang from text scoring: ${textLang}`);
+            const input = e.inputBuffer.getChannelData(0);
 
-        } else if (_callWhisperLang !== 'en') {
-            // P3: Text has no keywords/script but Whisper says non-English
-            // (e.g. native-script input that keyword scoring didn't recognise)
-            _callDetectedLang = _callWhisperLang;
-            console.log(`[AI Call] Lang from Whisper (non-English): ${_callWhisperLang}`);
+            // Linear downsample to 24 kHz
+            const ratio   = sourceRate / TARGET;
+            const outLen  = Math.floor(input.length / ratio);
+            const down    = new Float32Array(outLen);
+            for (let i = 0; i < outLen; i++) down[i] = input[Math.round(i * ratio)];
 
-        } else if (_callWhisperLang === 'en' && wordCount >= 4) {
-            // P4: Both text and Whisper say English AND text is long enough
-            // (4+ words) to be a genuine English switch, not just "ha okay"
-            _callDetectedLang = 'en';
-            console.log(`[AI Call] Lang switched to English (${wordCount} words, Whisper confirmed)`);
-
-        } else {
-            // P5: Ambiguous — keep previous language
-            // Covers: short phrases, "ha", "sare", "okay", single syllables
-            console.log(`[AI Call] Lang unchanged (ambiguous): keeping ${_callDetectedLang} (text="${text.substring(0,30)}")`);
-        }
-
-        // Track all languages used this call (for journal metadata)
-        _callLangsUsed.add(_callDetectedLang);
-
-        // Update streak for native-script hint logic in _transcribeWhisper
-        if (_callDetectedLang === _callLangStreakVal) {
-            _callLangStreak++;
-        } else {
-            _callLangStreak    = 1;
-            _callLangStreakVal  = _callDetectedLang;
-        }
-
-        _callHistory.push({ role: 'user', content: text });
-        if (_callHistory.length > 20) _callHistory = _callHistory.slice(-20);
-
-        const lang    = _callDetectedLang;
-        const callSys = _buildCallSys();
-        const enforce = _LANG_ENFORCE[lang] || _LANG_ENFORCE.en;
-
-        // ── Inject language enforcement as system message before user turn ─
-        // Layout: [callSys] + [prior history] + [enforcement] + [last user msg]
-        const lastMsg  = _callHistory[_callHistory.length - 1];
-        const priorHist = _callHistory.slice(0, -1);
-        const messages = [
-            { role: 'system', content: callSys },
-            ...priorHist,
-            { role: 'system', content: enforce }, // ← high-recency enforcement
-            lastMsg,
-        ];
-
-        // ── Streaming pipeline ─────────────────────────────────────────
-        _ttsQueueReset();      // also resets _callStreamDone = false
-        const myQueueSeq = _ttsQueueSeq;
-        let   fullReply  = '';
-        let   firstSent  = false;
-
-        const onSentence = (sentence, fullSoFar) => {
-            if (myQueueSeq !== _ttsQueueSeq || !_callActive) return;
-            const clean = sentence.replace('[SUGGEST_HUMAN_CONNECT]', '').trim();
-            if (!clean) return;
-
-            if (!firstSent) {
-                firstSent = true;
-                console.log(`[AI Call] LLM first sentence → TTS queue starts. lang=${_callDetectedLang}`);
-                _callTransition('speaking');
-                _addCallMsg('ai', ''); // placeholder, updated live below
-            }
-            fullReply = fullSoFar.replace('[SUGGEST_HUMAN_CONNECT]', '').trim();
-
-            // Live-update transcript text as sentences arrive
-            const tel = document.getElementById('ai-call-transcript');
-            if (tel) {
-                const last   = tel.querySelectorAll('.ai-call-msg');
-                const textEl = last[last.length - 1]?.querySelector('.ai-call-msg-text-ai');
-                if (textEl) textEl.textContent = fullReply;
+            // Float32 → Int16 PCM
+            const pcm16 = new Int16Array(outLen);
+            for (let i = 0; i < outLen; i++) {
+                pcm16[i] = Math.max(-32768, Math.min(32767, Math.round(down[i] * 32767)));
             }
 
-            if (_callSpeaker) {
-                const slot = { text: clean, audioBuffer: null, ready: false, error: false, isLast: false };
-                _ttsQueue.push(slot);
-                _ttsFetch(clean, myQueueSeq);  // pre-fetch audio immediately
+            // Base64 encode
+            const bytes = new Uint8Array(pcm16.buffer);
+            let   bin   = '';
+            const CHK   = 8192;
+            for (let i = 0; i < bytes.length; i += CHK) {
+                bin += String.fromCharCode(...bytes.subarray(i, i + CHK));
             }
+            _rtWs.send(JSON.stringify({ type: 'input_audio_buffer.append', audio: btoa(bin) }));
         };
 
-        try {
-            const reply = await Promise.race([
-                window.BlakcideAI.getResponseStreaming(messages, { onSentence }),
-                new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 20000))
-            ]);
+        // Must connect to destination even if output is silent
+        _rtMicSource.connect(_rtProcessor);
+        _rtProcessor.connect(ctx.destination);
+    }
 
-            if (!_callActive) return;
+    function _rtStopMicCapture() {
+        if (_rtProcessor) { try { _rtProcessor.disconnect(); } catch (_) {} _rtProcessor = null; }
+        if (_rtMicSource) { try { _rtMicSource.disconnect(); } catch (_) {} _rtMicSource  = null; }
+    }
 
-            const clean = (reply || '').replace('[SUGGEST_HUMAN_CONNECT]', '').trim();
-            _callHistory.push({ role: 'assistant', content: clean });
-
-            // Signal that the LLM stream is fully done — onended now knows it
-            // can transition to listening when the last audio finishes.
-            // Must be set BEFORE the queue-length check so onended sees it.
-            _callStreamDone = true;
-
-            if (_ttsQueue.length > 0) {
-                // Audio for these slots hasn't played yet — mark last for transition
-                _ttsQueue[_ttsQueue.length - 1].isLast = true;
-            } else if (_callSpeaker && !_ttsPlaying && _callState === 'speaking') {
-                // All audio already finished before stream resolved (fastest path)
-                _callTransition('listening');
-                setTimeout(() => { if (_callActive && !_callMuted) _startListening(); }, 250);
-            } else if (!_callSpeaker) {
-                // Speaker off — never enters TTS path at all, go directly to listening
-                _callTransition('listening');
-                setTimeout(() => { if (_callActive && !_callMuted) _startListening(); }, 300);
+    // ── Send session.update with current language instructions ────────
+    function _rtUpdateSession() {
+        if (!_rtWs || _rtWs.readyState !== WebSocket.OPEN) return;
+        // Pick voice by language — Shimmer for Telugu (closer to South Indian prosody)
+        const voice = _rtDetectedLang === 'te' ? 'shimmer'
+                    : _rtDetectedLang === 'hi' ? 'nova'
+                    : 'verse';
+        _rtWs.send(JSON.stringify({
+            type: 'session.update',
+            session: {
+                modalities:               ['text', 'audio'],
+                instructions:             _rtBuildSystem(_rtDetectedLang),
+                voice,
+                input_audio_format:       'pcm16',
+                output_audio_format:      'pcm16',
+                input_audio_transcription: { model: 'whisper-1' },
+                turn_detection: {
+                    type:                'server_vad',
+                    threshold:           0.45,
+                    prefix_padding_ms:   300,
+                    silence_duration_ms: 600,
+                },
+                temperature:              0.8,
+                max_response_output_tokens: 120,
             }
-            // else: last audio still playing — onended will fire with _callStreamDone=true
+        }));
+    }
 
-            if (!firstSent) {
-                const fb = lang === 'hi' ? 'एक बार फिर से बोलो यार।'
-                         : lang === 'te' ? 'ఒక్కసారి మళ్ళీ చెప్పు రా.'
-                         : "Say that again?";
-                _callHistory.push({ role: 'assistant', content: fb });
-                _callSpeakSimple(fb);
+    // ── WebSocket message router ──────────────────────────────────────
+    function _rtHandleMessage(event) {
+        let msg;
+        try { msg = JSON.parse(event.data); } catch { return; }
+
+        switch (msg.type) {
+
+            case 'session.created':
+                console.log('[RT] Session created, configuring…');
+                _rtUpdateSession();
+                _rtTransition('listening');
+                break;
+
+            case 'input_audio_buffer.speech_started':
+                // Server VAD: user started speaking — stop AI audio immediately (barge-in)
+                console.log('[RT] Speech started (barge-in)');
+                _rtStopAudio();
+                _rtTransition('listening');
+                break;
+
+            case 'input_audio_buffer.speech_stopped':
+                // Server VAD: user stopped — AI will start responding
+                console.log('[RT] Speech stopped → thinking');
+                _rtTransition('thinking');
+                break;
+
+            case 'conversation.item.input_audio_transcription.completed': {
+                // Whisper transcript of what the user said
+                const userText = (msg.transcript || '').trim();
+                if (!userText) break;
+                console.log(`[RT] User: "${userText.substring(0, 80)}"`);
+                _rtAddMsg('user', userText);
+                _rtHistory.push({ role: 'user', content: userText });
+                if (_rtHistory.length > 30) _rtHistory = _rtHistory.slice(-30);
+
+                // Language detection — update session only when lang changes
+                const newLang = window.BlakcideAI?.detectLangWithFallback(userText, _rtDetectedLang)
+                              || _rtDetectedLang;
+                if (newLang !== _rtDetectedLang) {
+                    console.log(`[RT] Language: ${_rtDetectedLang} → ${newLang}`);
+                    _rtDetectedLang = newLang;
+                    _rtUpdateSession();
+                }
+                _rtLangsUsed.add(_rtDetectedLang);
+                break;
             }
 
-        } catch (err) {
-            if (!_callActive) return;
-            console.warn('[AI Call] AI error:', err.message);
-            const fb = lang === 'hi' ? 'एक बार फिर से बोलो यार, कुछ गड़बड़ हो गई।'
-                     : lang === 'te' ? 'ఒక్కసారి మళ్ళీ చెప్పు రా, చిన్న సమస్య వచ్చింది.'
-                     : "Sorry, say that again?";
-            _callHistory.push({ role: 'assistant', content: fb });
-            _callSpeakSimple(fb);
+            case 'response.audio.delta':
+                // Stream PCM16 audio chunks — schedule for seamless playback
+                if (msg.delta && _rtSpeaker) {
+                    if (_rtState !== 'speaking') {
+                        _rtTransition('speaking');
+                        _rtCurAIText = '';
+                        _rtAddMsg('ai', '');
+                    }
+                    _rtEnqueueAudio(msg.delta);
+                }
+                break;
+
+            case 'response.audio_transcript.delta':
+                // Live transcript of AI speech — update last message bubble
+                if (msg.delta) {
+                    _rtCurAIText += msg.delta;
+                    const tel = document.getElementById('ai-call-transcript');
+                    if (tel) {
+                        const msgs   = tel.querySelectorAll('.ai-call-msg');
+                        const textEl = msgs[msgs.length - 1]?.querySelector('.ai-call-msg-text-ai');
+                        if (textEl) textEl.textContent = _rtCurAIText;
+                    }
+                }
+                break;
+
+            case 'response.audio.done':
+                // All audio deltas sent — transition back to listening once drain finishes
+                console.log('[RT] Audio done, waiting for playback to drain');
+                (function checkDrained() {
+                    if (!_rtActive) return;
+                    if (!_rtAudioPlaying || _rtNextPlayTime <= (_rtAudioCtx?.currentTime || 0) + 0.15) {
+                        _rtTransition('listening');
+                    } else {
+                        setTimeout(checkDrained, 100);
+                    }
+                })();
+                break;
+
+            case 'response.done': {
+                // Save full AI reply to history
+                const items = msg.response?.output || [];
+                for (const item of items) {
+                    const textContent = item.content?.find(c => c.type === 'audio')?.transcript
+                                     || item.content?.find(c => c.type === 'text')?.text || '';
+                    if (textContent) {
+                        _rtHistory.push({ role: 'assistant', content: textContent.trim() });
+                    }
+                }
+                if (_rtHistory.length > 30) _rtHistory = _rtHistory.slice(-30);
+                break;
+            }
+
+            case 'error':
+                console.error('[RT] API error:', msg.error);
+                _rtTransition('listening');
+                break;
         }
     }
 
-    // ── Simple single-shot TTS (for greetings and error messages) ────
-    async function _callSpeakSimple(text) {
-        if (!_callActive) return;
-        _callTransition('speaking');
-        _addCallMsg('ai', text);
+    // ── Start call ─────────────────────────────────────────────────────
+    window.startAICall = async function () {
+        if (_rtActive) return;
+        _rtActive       = true;
+        _rtSecs         = 0;
+        _rtStartTime    = new Date();
+        _rtLangsUsed    = new Set(['en']);
+        _rtHistory      = [];
+        _rtDetectedLang = 'en';
+        _rtMuted        = false;
+        _rtSpeaker      = true;
+        _rtState        = 'idle';
+        _rtAudioPlaying = false;
+        _rtNextPlayTime = 0;
+        _rtCurAIText    = '';
 
-        // _stopTTSAudio() increments _speakSeq internally (to invalidate any
-        // previous in-flight fetch), so capture mySeq AFTER calling it.
-        _stopTTSAudio();           // kills current audio + increments _speakSeq
-        const mySeq = _speakSeq;  // capture the NEW value as our ownership token
-
-        if (!_callSpeaker) {
-            setTimeout(() => {
-                if (_callActive && mySeq === _speakSeq) { _callTransition('listening'); _startListening(); }
-            }, 300);
-            return;
-        }
-
-        const onFinished = () => {
-            if (!_callActive || mySeq !== _speakSeq) return;
-            _callTransition('listening');
-            setTimeout(() => {
-                if (_callActive && !_callMuted && mySeq === _speakSeq) _startListening();
-            }, 250);
-        };
-
+        // 1. AudioContext — must happen synchronously inside the user gesture
         try {
-            const res = await fetch('/api/tts', {
-                method:  'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body:    JSON.stringify({ text: text.substring(0, 500), voice: 'nova' })
-            });
-            if (!_callActive || mySeq !== _speakSeq) return;
-            if (!res.ok) throw new Error(`TTS ${res.status}`);
-
-            const arrayBuffer = await res.arrayBuffer();
-            if (!_callActive || mySeq !== _speakSeq) return;
-
-            const ctx = _callAudioCtx;
-            if (!ctx || ctx.state === 'closed') throw new Error('No AudioContext');
-
-            await ctx.resume();
-            if (!_callActive || mySeq !== _speakSeq) return;
-
-            const audioBuffer = await ctx.decodeAudioData(arrayBuffer.slice(0));
-            if (!_callActive || mySeq !== _speakSeq) return;
-
-            const src = ctx.createBufferSource();
-            src.buffer = audioBuffer;
-            src.connect(ctx.destination);
-            _callAudioSrc = src;
-            src.onended = () => { if (_callAudioSrc === src) _callAudioSrc = null; onFinished(); };
-            src.start(0);
-            return;
-
-        } catch (e) {
-            if (!_callActive || mySeq !== _speakSeq) return;
-            console.warn('[AI Call] TTS failed, falling back:', e.message);
-        }
-        _fallbackBrowserTTS(text, mySeq, onFinished);
-    }
-
-    function _fallbackBrowserTTS(text, mySeq, onFinished) {
-        if (!_callSynth || !_callActive || mySeq !== _speakSeq) { onFinished(); return; }
-        const voices = _callSynth.getVoices();
-        const voice  = voices.find(v => v.lang === 'en-IN' && v.name.toLowerCase().includes('google'))
-                    || voices.find(v => v.lang === 'en-IN')
-                    || voices.find(v => v.lang.startsWith('en'))
-                    || voices[0];
-        const utt = new SpeechSynthesisUtterance(text);
-        utt.lang  = 'en-IN'; utt.rate = 0.94;
-        if (voice) utt.voice = voice;
-        const wd = setTimeout(() => { _callSynth.cancel(); onFinished(); }, Math.max(text.length * 80, 3500));
-        utt.onend   = () => { clearTimeout(wd); onFinished(); };
-        utt.onerror = ev => { clearTimeout(wd); if (ev.error !== 'interrupted' && ev.error !== 'cancelled') onFinished(); };
-        _callSynth.speak(utt);
-    }
-
-    // ── Start call ────────────────────────────────────────────────────
-    window.startAICall = function () {
-        if (_callActive) return;
-        _callActive        = true;
-        _callSecs          = 0;
-        _callStartTime     = new Date();
-        _callLangsUsed     = new Set(['en']);
-        _callHistory       = [];
-        _callDetectedLang  = 'en';
-        _callWhisperLang   = 'en';
-        _callLangStreak    = 0;
-        _callLangStreakVal  = 'en';
-        _callState         = 'idle';
-        _callMuted        = false;
-        _callSpeaker      = true;
-        _speakSeq         = 0;
-        _callRecGen       = 0;
-        _ttsQueue         = [];
-        _ttsQueueSeq      = 0;
-        _ttsPlaying       = false;
-        clearTimeout(_callWatchdog);
-        _stopTTSAudio();
-
-        // 1. Unlock AudioContext SYNCHRONOUSLY inside the gesture handler.
-        //    Must happen before any await — iOS/Chrome require user gesture.
-        try {
-            if (!_callAudioCtx || _callAudioCtx.state === 'closed') {
-                _callAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            if (!_rtAudioCtx || _rtAudioCtx.state === 'closed') {
+                _rtAudioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 48000 });
             }
-            _callAudioCtx.resume();
-        } catch (e) { console.warn('[AI Call] AudioContext init:', e); }
+            _rtAudioCtx.resume();
+            // GainNode for instant barge-in mute
+            _rtGain = _rtAudioCtx.createGain();
+            _rtGain.gain.value = 1;
+            _rtGain.connect(_rtAudioCtx.destination);
+        } catch (e) { console.warn('[RT] AudioContext init:', e); }
 
-        // 2. Request mic ALSO inside the gesture handler (no await before this).
-        //    Store the Promise — we handle its result asynchronously below.
+        // 2. Mic request — also inside the gesture, no await before this
         const micPromise = navigator.mediaDevices
-            .getUserMedia({
-                audio: { echoCancellation: true, noiseSuppression: true, sampleRate: 16000 },
-                video: false
-            })
-            .catch(e => { console.error('[AI Call] Mic denied:', e); return null; });
+            .getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true }, video: false })
+            .catch(e => { console.error('[RT] Mic denied:', e); return null; });
 
-        // 3. Setup UI
+        // 3. UI setup
         const ov = document.getElementById('ai-call-overlay');
-        if (!ov) { _callActive = false; return; }
+        if (!ov) { _rtActive = false; return; }
         ov.style.display = 'flex';
         const transcriptEl = document.getElementById('ai-call-transcript');
         if (transcriptEl) transcriptEl.innerHTML = '';
-        _setCallStatus('Connecting…');
+        _rtSetStatus('Connecting…');
         document.getElementById('ai-call-timer').innerText = '0:00';
-        document.getElementById('ai-call-mute-btn').innerHTML  = '<ion-icon name="mic-outline"></ion-icon>';
+        document.getElementById('ai-call-mute-btn').innerHTML = '<ion-icon name="mic-outline"></ion-icon>';
         document.getElementById('ai-call-mute-btn').classList.remove('btn-muted');
         document.getElementById('ai-call-speaker-btn').innerHTML = '<ion-icon name="volume-high-outline"></ion-icon>';
         document.getElementById('ai-call-speaker-btn').classList.remove('btn-muted');
 
-        _callTimerInt = setInterval(() => {
-            _callSecs++;
-            const m = Math.floor(_callSecs / 60), s = _callSecs % 60;
+        _rtTimerInt = setInterval(() => {
+            _rtSecs++;
+            const m = Math.floor(_rtSecs / 60), s = _rtSecs % 60;
             document.getElementById('ai-call-timer').innerText = `${m}:${String(s).padStart(2, '0')}`;
         }, 1000);
 
-        // 4. Store mic stream when ready (runs in parallel with greeting)
-        micPromise.then(stream => {
-            _callMicStream = stream;
-            if (!stream) console.warn('[AI Call] No mic stream — TTS-only mode');
-            // If greeting already finished and we're waiting for listening to start, kick it off now
-            if (_callActive && _callState === 'listening' && stream) _startListening();
-        });
+        // 4. Fetch ephemeral token then open Realtime WebSocket
+        try {
+            const tokenRes = await fetch('/api/realtime-session', { method: 'POST' });
+            if (!tokenRes.ok) throw new Error(`Token ${tokenRes.status}: ${await tokenRes.text()}`);
+            const tokenData  = await tokenRes.json();
+            const ephKey     = tokenData.client_secret?.value;
+            if (!ephKey) throw new Error('No ephemeral key returned');
 
-        // 5. Greeting — plays immediately; mic loads in parallel
-        const name = window.blakcideUserContext?.match(/User's name:\s*([^.]+)/)?.[1]?.trim();
-        const greeting = name
-            ? `Hey ${name}! Good to hear from you. What's going on?`
-            : "Hey! Good to hear from you. What's on your mind?";
-        setTimeout(() => _callSpeakSimple(greeting), 400);
+            if (!_rtActive) return; // call ended during token fetch
+
+            const model = 'gpt-4o-realtime-preview-2024-12-17';
+            _rtWs = new WebSocket(
+                `wss://api.openai.com/v1/realtime?model=${model}`,
+                ['realtime', `openai-insecure-api-key.${ephKey}`, 'openai-beta.realtime-v1']
+            );
+
+            let _micStarted = false;
+            const _maybeStartCapture = () => {
+                if (_micStarted || !_rtMicStream || !_rtWs || _rtWs.readyState !== WebSocket.OPEN) return;
+                _micStarted = true;
+                _rtStartMicCapture();
+            };
+
+            _rtWs.onopen = () => {
+                console.log('[RT] WebSocket open');
+                _rtSetStatus('Connected…');
+                _maybeStartCapture();
+            };
+            _rtWs.onmessage = _rtHandleMessage;
+            _rtWs.onerror   = (e) => { console.error('[RT] WebSocket error', e); };
+            _rtWs.onclose   = (e) => {
+                console.log('[RT] WebSocket closed:', e.code, e.reason);
+                if (_rtActive) { _rtSetStatus('Reconnecting…'); }
+            };
+
+            // 5. Wire mic once stream resolves
+            micPromise.then(stream => {
+                if (!_rtActive) return;
+                _rtMicStream = stream;
+                if (!stream) { console.warn('[RT] No mic stream'); return; }
+                _maybeStartCapture();
+            });
+
+        } catch (e) {
+            console.error('[RT] Failed to connect:', e);
+            if (_rtActive) {
+                _rtSetStatus(`Failed: ${e.message}`);
+                setTimeout(() => { if (_rtActive) window.endAICall(); }, 3000);
+            }
+        }
     };
 
     // ── End call ──────────────────────────────────────────────────────
     window.endAICall = function () {
-        _callActive = false;
-        clearTimeout(_callWatchdog);
-        _callTransition('idle');
-        clearInterval(_callTimerInt);
-        _stopTTSAudio();
-        _releaseMic();
-        if (_callAudioCtx) {
-            try { _callAudioCtx.close(); } catch (_) {}
-            _callAudioCtx = null;
-        }
+        _rtActive = false;
+        clearInterval(_rtTimerInt);
+        _rtTransition('idle');
+        _rtStopAudio();
+        _rtStopMicCapture();
+
+        if (_rtWs) { try { _rtWs.close(); } catch (_) {} _rtWs = null; }
+        if (_rtMicStream) { _rtMicStream.getTracks().forEach(t => t.stop()); _rtMicStream = null; }
+        if (_rtAudioCtx) { try { _rtAudioCtx.close(); } catch (_) {} _rtAudioCtx = null; }
+        _rtGain = null;
+
         const ov = document.getElementById('ai-call-overlay');
         if (ov) ov.style.display = 'none';
-        if (_callHistory && _callHistory.length >= 2 && currentUser) {
-            const snap        = [..._callHistory];
+
+        if (_rtHistory && _rtHistory.length >= 2 && currentUser) {
+            const snap        = [..._rtHistory];
             const userId      = currentUser.id;
-            const durationSec = _callSecs;
-            const langsUsed   = [..._callLangsUsed];
-            console.log(`[AI Call] Saving call: ${snap.length} messages, ${durationSec}s, langs=${langsUsed}`);
+            const durationSec = _rtSecs;
+            const langsUsed   = [..._rtLangsUsed];
+            console.log(`[RT] Saving call: ${snap.length} turns, ${durationSec}s, langs=${langsUsed}`);
             (async () => {
                 await saveCallAsThread(snap, userId, durationSec, langsUsed);
                 await saveCallAsJournal(snap, userId, durationSec, langsUsed);
             })();
         }
-        _callHistory   = [];
-        _callLangsUsed = new Set();
+        _rtHistory   = [];
+        _rtLangsUsed = new Set();
+    };
+
+    window.toggleAICallMute = function () {
+        _rtMuted = !_rtMuted;
+        const btn = document.getElementById('ai-call-mute-btn');
+        if (btn) {
+            btn.innerHTML = `<ion-icon name="${_rtMuted ? 'mic-off-outline' : 'mic-outline'}"></ion-icon>`;
+            btn.classList.toggle('btn-muted', _rtMuted);
+        }
+        // Tell OpenAI to discard any buffered audio when muting
+        if (_rtMuted && _rtWs && _rtWs.readyState === WebSocket.OPEN) {
+            _rtWs.send(JSON.stringify({ type: 'input_audio_buffer.clear' }));
+        }
+    };
+
+    window.toggleAICallSpeaker = function () {
+        _rtSpeaker = !_rtSpeaker;
+        const btn = document.getElementById('ai-call-speaker-btn');
+        if (btn) {
+            btn.innerHTML = `<ion-icon name="${_rtSpeaker ? 'volume-high-outline' : 'volume-mute-outline'}"></ion-icon>`;
+            btn.classList.toggle('btn-muted', !_rtSpeaker);
+        }
+        if (!_rtSpeaker) _rtStopAudio();
     };
 
     // Save AI call as a chat thread so it appears in sidebar + is continuable
@@ -2175,34 +1718,6 @@ GOOD vs BAD:
             console.error('[AI Call] saveCallAsJournal failed:', e.message);
         }
     }
-
-    window.toggleAICallMute = function () {
-        _callMuted = !_callMuted;
-        const btn = document.getElementById('ai-call-mute-btn');
-        if (btn) {
-            btn.innerHTML = `<ion-icon name="${_callMuted ? 'mic-off-outline' : 'mic-outline'}"></ion-icon>`;
-            btn.classList.toggle('btn-muted', _callMuted);
-        }
-        if (_callMuted) {
-            _stopRecorder();
-        } else {
-            // Resume listening only if we're not speaking or thinking
-            if (_callState !== 'thinking' && _callState !== 'speaking') {
-                _callTransition('listening');
-                _startListening();
-            }
-        }
-    };
-
-    window.toggleAICallSpeaker = function () {
-        _callSpeaker = !_callSpeaker;
-        const btn = document.getElementById('ai-call-speaker-btn');
-        if (btn) {
-            btn.innerHTML = `<ion-icon name="${_callSpeaker ? 'volume-high-outline' : 'volume-mute-outline'}"></ion-icon>`;
-            btn.classList.toggle('btn-muted', !_callSpeaker);
-        }
-        if (!_callSpeaker) _stopTTSAudio();
-    };
 
     // Auto-start call if URL has ?call=1
     (function () {
