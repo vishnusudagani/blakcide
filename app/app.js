@@ -1201,6 +1201,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // ── Audio output ──────────────────────────────────────────────────
     function _stopTTSAudio() {
+        _ttsQueueReset();  // drain queue and invalidate in-flight fetches
         if (_callAudioSrc) {
             try { _callAudioSrc.onended = null; _callAudioSrc.stop(); } catch (_) {}
             _callAudioSrc = null;
@@ -1383,14 +1384,104 @@ document.addEventListener('DOMContentLoaded', () => {
         _callVADFrame = requestAnimationFrame(vadLoop);
     }
 
-    // ── Handle transcribed text → AI response ────────────────────────
+    // ── TTS audio queue — pre-fetches next sentence while current plays ──
+    // Each entry: { audioBuffer: AudioBuffer | null, text: string }
+    // The queue drains automatically; if next buffer arrives before current
+    // finishes, there is zero gap between sentences.
+    let _ttsQueue      = [];
+    let _ttsQueueSeq   = 0;   // invalidates queue on interruption
+    let _ttsPlaying    = false;
+
+    function _ttsQueueReset() {
+        _ttsQueueSeq++;
+        _ttsQueue   = [];
+        _ttsPlaying = false;
+    }
+
+    // Pre-fetch TTS audio for a sentence and push into the queue.
+    // Audio starts fetching immediately — if the previous sentence is still
+    // playing when this resolves, the audio is ready to play with zero gap.
+    async function _ttsFetch(sentence, myQueueSeq) {
+        try {
+            const res = await fetch('/api/tts', {
+                method:  'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body:    JSON.stringify({ text: sentence.substring(0, 500), voice: 'nova' })
+            });
+            if (myQueueSeq !== _ttsQueueSeq || !_callActive) return;
+            if (!res.ok) throw new Error(`TTS ${res.status}`);
+            const arrayBuf = await res.arrayBuffer();
+            if (myQueueSeq !== _ttsQueueSeq || !_callActive) return;
+            const ctx = _callAudioCtx;
+            if (!ctx || ctx.state === 'closed') return;
+            await ctx.resume();
+            const audioBuffer = await ctx.decodeAudioData(arrayBuf.slice(0));
+            if (myQueueSeq !== _ttsQueueSeq || !_callActive) return;
+            // Find the slot in the queue for this sentence and fill it
+            const slot = _ttsQueue.find(s => s.text === sentence && s.audioBuffer === null);
+            if (slot) { slot.audioBuffer = audioBuffer; slot.ready = true; }
+            // Kick off playback if nothing is currently playing
+            _ttsDrainQueue(myQueueSeq);
+        } catch (e) {
+            if (myQueueSeq !== _ttsQueueSeq) return;
+            console.warn('[AI Call] TTS fetch error:', e.message);
+            // Mark slot as errored so we skip it and continue queue
+            const slot = _ttsQueue.find(s => s.text === sentence && s.audioBuffer === null);
+            if (slot) { slot.error = true; }
+            _ttsDrainQueue(myQueueSeq);
+        }
+    }
+
+    // Drain: play the next ready buffer in order. Called after each sentence
+    // finishes and when a new buffer arrives.
+    function _ttsDrainQueue(myQueueSeq) {
+        if (myQueueSeq !== _ttsQueueSeq || !_callActive || _ttsPlaying) return;
+        if (_ttsQueue.length === 0) return;
+
+        const slot = _ttsQueue[0];
+        if (!slot.ready && !slot.error) return; // still fetching
+
+        _ttsQueue.shift();
+
+        if (slot.error || !slot.audioBuffer) {
+            // Skip errored slot, try next
+            _ttsDrainQueue(myQueueSeq);
+            return;
+        }
+
+        _ttsPlaying = true;
+        const ctx = _callAudioCtx;
+        const src = ctx.createBufferSource();
+        src.buffer = slot.audioBuffer;
+        src.connect(ctx.destination);
+        _callAudioSrc = src;
+
+        src.onended = () => {
+            if (_callAudioSrc === src) _callAudioSrc = null;
+            _ttsPlaying = false;
+            if (myQueueSeq !== _ttsQueueSeq || !_callActive) return;
+            if (_ttsQueue.length > 0) {
+                _ttsDrainQueue(myQueueSeq); // play next sentence
+            } else if (slot.isLast) {
+                // All sentences done — return to listening
+                _callTransition('listening');
+                setTimeout(() => {
+                    if (_callActive && !_callMuted) _startListening();
+                }, 250);
+            }
+            // else: more sentences coming — wait for them
+        };
+        src.start(0);
+    }
+
+    // ── Handle transcribed text → AI response (streaming pipeline) ───
     async function _processUserSpeech(text) {
         if (!_callActive) return;
         _stopRecorder();
         _callTransition('thinking');
         _addCallMsg('user', text);
 
-        // Language fallback (Whisper already set _callDetectedLang, this is backup)
+        // Language fallback (Whisper already set _callDetectedLang)
         if (_callDetectedLang === 'en' && window.BlakcideAI?.detectLang) {
             const d = window.BlakcideAI.detectLang(text);
             if (d && d !== 'en') _callDetectedLang = d;
@@ -1399,7 +1490,7 @@ document.addEventListener('DOMContentLoaded', () => {
         _callHistory.push({ role: 'user', content: text });
         if (_callHistory.length > 20) _callHistory = _callHistory.slice(-20);
 
-        // ── Build system prompt ────────────────────────────────────────
+        // ── Build call system prompt ───────────────────────────────────
         const lang     = _callDetectedLang;
         const langName = { en: 'English', hi: 'Hindi', te: 'Telugu' }[lang] || 'English';
         const userCtx  = window.blakcideUserContext
@@ -1412,43 +1503,121 @@ TELUGU (CRITICAL):
 - ONLY Telugu script (తెలుగు లిపి). NEVER Roman/English letters for Telugu.
 - Hyderabadi/Andhra friend on a phone call. Ultra casual.
 - Lead with: "అయ్యో రా", "సరే సరే", "నిజంగా?", "అరే!", "అవును రా", "పాపం", "ఏంటి రా"
-- One casual sentence. SOV order. Zero Hindi words.
-- sad → "అయ్యో రా, చాలా కష్టంగా ఉందా నీకు?" | news → "నిజంగా? చెప్పు రా మరి." | casual → "బాగున్నాను రా, నువ్వు చెప్పు."` : '';
+- 1–2 casual sentences max. SOV order. Zero Hindi.
+- sad → "అయ్యో రా, చాలా కష్టంగా ఉందా నీకు?" | news → "నిజంగా? చెప్పు రా మరి."` : '';
 
         const hindiRules = lang === 'hi' ? `
 
 HINDI (CRITICAL):
 - ONLY Devanagari script (हिंदी). NEVER Roman/English letters for Hindi.
-- Desi best friend on the phone. Ultra casual.
-- Lead with: "हाँ यार", "अरे यार", "सच में?", "बिल्कुल", "वो तो है", "क्या बात है"
-- One sentence max. Zero Telugu words.
-- sad → "अरे यार, ये सुनकर दिल भारी हो गया।" | news → "सच में? फिर क्या हुआ यार?" | casual → "हाँ यार, बता क्या चल रहा है।"` : '';
+- Desi best friend on phone. Ultra casual. 1–2 sentences max.
+- Lead with: "हाँ यार", "अरे यार", "सच में?", "बिल्कुल", "वो तो है"
+- sad → "अरे यार, ये सुनकर दिल भारी हो गया।" | casual → "हाँ यार, बता क्या चल रहा है।"` : '';
 
         const callSys = `You are Blakcide — live voice call. Close friend, NOT an assistant.
 
-RULES (no exceptions):
+RULES:
 1. ${langName} ONLY. Write in ${lang === 'te' ? 'Telugu script (తెలుగు)' : lang === 'hi' ? 'Devanagari (हिंदी)' : 'English'}.
-2. MAX 1 sentence. Phone call — not an essay.
+2. MAX 2 sentences. Phone call, not an essay.
 3. No markdown, asterisks, lists, brackets, symbols. Spoken words only.
-4. Start with a human reaction first:
-   EN: "Oh—", "Wait—", "Yeah", "Hmm", "Aw man", "Really?", "That's rough"
-   TE: "అయ్యో", "అరే", "సరే", "నిజంగా?", "పాపం", "అవును రా"
-   HI: "हाँ", "अरे यार", "सच में?", "बिल्कुल", "वो तो है"
-5. Never: "I understand", "I see", "That's interesting", "As your friend", "Certainly".
+4. Always start with a short human reaction:
+   EN: "Oh—", "Yeah", "Hmm", "Aw man", "Really?", "That's rough"
+   TE: "అయ్యో", "అరే", "సరే", "నిజంగా?", "అవును రా"
+   HI: "हाँ", "अरे यार", "सच में?", "बिल्कुल"
+5. Never: "I understand", "I see", "That's interesting", "Certainly".
 6. Never start with "I".${teluguRules}${hindiRules}${userCtx}`;
 
+        // ── Streaming pipeline ─────────────────────────────────────────
+        // Sentences arrive from GPT one at a time via onSentence callback.
+        // Each sentence immediately gets a TTS fetch started in parallel.
+        // By the time the first sentence finishes playing, the second is
+        // usually already decoded and ready — zero gap between sentences.
+
+        _ttsQueueReset();
+        const myQueueSeq = _ttsQueueSeq;
+        let fullReply    = '';
+        let firstSent    = false;
+        let sentenceCount = 0;
+
+        const onSentence = (sentence, fullSoFar) => {
+            if (myQueueSeq !== _ttsQueueSeq || !_callActive) return;
+            const clean = sentence.replace('[SUGGEST_HUMAN_CONNECT]', '').trim();
+            if (!clean) return;
+
+            sentenceCount++;
+            // Transition to speaking on very first sentence
+            if (!firstSent) {
+                firstSent = true;
+                _callTransition('speaking');
+                _addCallMsg('ai', ''); // placeholder — updated incrementally below
+            }
+            fullReply = fullSoFar.replace('[SUGGEST_HUMAN_CONNECT]', '').trim();
+
+            // Update transcript display with full text so far
+            const transcriptEl = document.getElementById('ai-call-transcript');
+            if (transcriptEl) {
+                const msgs = transcriptEl.querySelectorAll('.ai-call-msg');
+                const last = msgs[msgs.length - 1];
+                if (last) {
+                    const textEl = last.querySelector('.ai-call-msg-text-ai');
+                    if (textEl) textEl.textContent = fullReply;
+                }
+            }
+
+            // Push slot into queue, start pre-fetching audio immediately
+            if (_callSpeaker) {
+                const slot = { text: clean, audioBuffer: null, ready: false, error: false, isLast: false };
+                _ttsQueue.push(slot);
+                _ttsFetch(clean, myQueueSeq);
+            }
+        };
+
         try {
+            const replyPromise = window.BlakcideAI.getResponseStreaming(
+                [{ role: 'system', content: callSys }, ..._callHistory],
+                { onSentence }
+            );
+
+            // Timeout wrapper
             const reply = await Promise.race([
-                window.BlakcideAI.getResponse(
-                    [{ role: 'system', content: callSys }, ..._callHistory],
-                    null
-                ),
-                new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 18000))
+                replyPromise,
+                new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 20000))
             ]);
+
             if (!_callActive) return;
-            const clean = reply.replace('[SUGGEST_HUMAN_CONNECT]', '').trim();
+
+            const clean = (reply || '').replace('[SUGGEST_HUMAN_CONNECT]', '').trim();
             _callHistory.push({ role: 'assistant', content: clean });
-            _callSpeak(clean);
+
+            // Mark last TTS slot so queue knows to return to listening after it
+            if (_ttsQueue.length > 0) {
+                _ttsQueue[_ttsQueue.length - 1].isLast = true;
+            } else if (_callSpeaker) {
+                // All TTS slots already drained — check if we need to return to listening
+                // (This path: very fast GPT + very fast TTS — rare but handle it)
+                if (!_ttsPlaying && _callState === 'speaking') {
+                    _callTransition('listening');
+                    setTimeout(() => { if (_callActive && !_callMuted) _startListening(); }, 250);
+                }
+            }
+
+            // Speaker-off mode: no TTS was queued — go straight to listening
+            if (!_callSpeaker) {
+                if (!firstSent) _addCallMsg('ai', clean);
+                _callTransition('listening');
+                setTimeout(() => { if (_callActive && !_callMuted) _startListening(); }, 300);
+                return;
+            }
+
+            // If onSentence was never called (empty reply) — fallback
+            if (!firstSent) {
+                const fb = lang === 'hi' ? 'एक बार फिर से बोलो यार।'
+                         : lang === 'te' ? 'ఒక్కసారి మళ్ళీ చెప్పు రా.'
+                         : "Say that again?";
+                _callHistory.push({ role: 'assistant', content: fb });
+                _callSpeakSimple(fb);
+            }
+
         } catch (err) {
             if (!_callActive) return;
             console.warn('[AI Call] AI error:', err.message);
@@ -1456,12 +1625,12 @@ RULES (no exceptions):
                      : lang === 'te' ? 'ఒక్కసారి మళ్ళీ చెప్పు రా, చిన్న సమస్య వచ్చింది.'
                      : "Sorry, say that again?";
             _callHistory.push({ role: 'assistant', content: fb });
-            _callSpeak(fb);
+            _callSpeakSimple(fb);
         }
     }
 
-    // ── TTS — OpenAI neural via AudioContext ──────────────────────────
-    async function _callSpeak(text) {
+    // ── Simple single-shot TTS (for greetings and error messages) ────
+    async function _callSpeakSimple(text) {
         if (!_callActive) return;
         _callTransition('speaking');
         _addCallMsg('ai', text);
@@ -1469,6 +1638,7 @@ RULES (no exceptions):
         _speakSeq++;
         const mySeq = _speakSeq;
         _stopTTSAudio();
+        _ttsQueueReset();
 
         if (!_callSpeaker) {
             setTimeout(() => {
@@ -1549,6 +1719,9 @@ RULES (no exceptions):
         _callSpeaker      = true;
         _speakSeq         = 0;
         _callRecGen       = 0;
+        _ttsQueue         = [];
+        _ttsQueueSeq      = 0;
+        _ttsPlaying       = false;
         clearTimeout(_callWatchdog);
         _stopTTSAudio();
 
@@ -1602,7 +1775,7 @@ RULES (no exceptions):
         const greeting = name
             ? `Hey ${name}! Good to hear from you. What's going on?`
             : "Hey! Good to hear from you. What's on your mind?";
-        setTimeout(() => _callSpeak(greeting), 400);
+        setTimeout(() => _callSpeakSimple(greeting), 400);
     };
 
     // ── End call ──────────────────────────────────────────────────────

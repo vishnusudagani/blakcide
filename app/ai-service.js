@@ -143,72 +143,180 @@ window.BlakcideAI = {
 
     detectLang,
 
-    async getResponse(messages, onToken = null) {
-        // Inject user context into base system prompt for regular chats
-        // (call mode / title generation supply their own system message — skip those)
-        const userCtx   = (typeof window !== 'undefined' && window.blakcideUserContext) || '';
+    // ── Build messages array with system prompt injected ─────────────────────
+    _withSystem(messages) {
+        const userCtx    = window.blakcideUserContext || '';
         const basePrompt = (userCtx && messages[0]?.role !== 'system')
-            ? SYSTEM_PROMPT + `\n\n━━━ ABOUT THIS USER (weave in naturally, never announce "I know that...") ━━━\n${userCtx}`
+            ? SYSTEM_PROMPT + `\n\n━━━ ABOUT THIS USER (weave in naturally, never announce) ━━━\n${userCtx}`
             : SYSTEM_PROMPT;
-
-        const withSystem = (messages[0]?.role === 'system')
+        return (messages[0]?.role === 'system')
             ? messages
             : [{ role: 'system', content: basePrompt }, ...messages];
+    },
 
-        // ── Server route (gpt-4o via Netlify) ────────────────────────────────
+    // ── Standard (buffered) response — used by chat, journal, etc. ───────────
+    async getResponse(messages, onToken = null) {
+        const withSystem = this._withSystem(messages);
+
+        // Try real SSE stream from server; collect full reply
         try {
-            const res = await fetch('/api/chat', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ messages: withSystem })
-            });
-            if (res.ok) {
-                const data  = await res.json();
-                const reply = data.reply || 'I am here for you.';
-                if (onToken) await this._simulateStream(reply, onToken);
-                return reply;
-            }
-            console.warn('BlakcideAI server:', res.status, await res.text().catch(() => ''));
-        } catch(err) {
-            console.warn('BlakcideAI fetch failed:', err.message);
+            const reply = await this._streamCollect(withSystem);
+            if (onToken) this._simulateStream(reply, onToken);
+            return reply;
+        } catch (err) {
+            console.warn('BlakcideAI server error:', err.message);
         }
 
-        // ── Dev fallback ──────────────────────────────────────────────────────
+        // Dev fallback — direct OpenAI call
+        return this._devFallback(withSystem, onToken);
+    },
+
+    // ── Streaming response for AI Call — fires onSentence as each sentence
+    //   completes, so TTS can start immediately without waiting for full reply.
+    //   Returns final full text via Promise.
+    //
+    //   onSentence(sentence: string, fullSoFar: string)  — called per sentence
+    //   onToken(token: string, fullSoFar: string)         — called per token (for UI)
+    async getResponseStreaming(messages, { onSentence, onToken } = {}) {
+        const withSystem = this._withSystem(messages);
+        try {
+            return await this._streamParsed(withSystem, onSentence, onToken);
+        } catch (err) {
+            console.warn('BlakcideAI streaming error, falling back:', err.message);
+            // Graceful fallback: buffered response, fire onSentence once at end
+            const reply = await this._devFallback(withSystem, onToken);
+            if (onSentence && reply) onSentence(reply, reply);
+            return reply;
+        }
+    },
+
+    // ── Internal: consume SSE stream, collect full reply ─────────────────────
+    async _streamCollect(messages) {
+        const res = await fetch('/api/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ messages, stream: true })
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return this._readSSE(res, null, null);
+    },
+
+    // ── Internal: SSE stream + sentence parsing ───────────────────────────────
+    // Sentence boundaries: . ? ! ।  followed by space or end-of-chunk
+    // Also splits on newlines (GPT sometimes uses them for list items)
+    async _streamParsed(messages, onSentence, onToken) {
+        const res = await fetch('/api/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ messages, stream: true })
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return this._readSSE(res, onSentence, onToken);
+    },
+
+    // ── Core SSE reader ───────────────────────────────────────────────────────
+    async _readSSE(res, onSentence, onToken) {
+        const reader  = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buf   = '';    // SSE line buffer
+        let text  = '';    // accumulated full response
+        let queue = '';    // pending text for sentence detection
+
+        // Sentence boundary: ends with . ? ! । or \n, optionally followed by space
+        const SENT_RE = /[.?!।\n]+(?=\s|$)/;
+
+        const flushSentence = (force = false) => {
+            if (!onSentence) return;
+            // Split on sentence boundaries
+            let last = 0;
+            let m;
+            const re = /[.?!।]+(?=[\s\n]|$)|\n/g;
+            while ((m = re.exec(queue)) !== null) {
+                const sentence = queue.slice(last, m.index + m[0].length).trim();
+                if (sentence) onSentence(sentence, text);
+                last = m.index + m[0].length;
+            }
+            queue = queue.slice(last);
+            // On force (stream done), flush remainder
+            if (force && queue.trim()) {
+                onSentence(queue.trim(), text);
+                queue = '';
+            }
+        };
+
+        try {
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                buf += decoder.decode(value, { stream: true });
+                const lines = buf.split('\n');
+                buf = lines.pop();
+                for (const line of lines) {
+                    const t = line.trim();
+                    if (!t.startsWith('data:')) continue;
+                    const payload = t.slice(5).trim();
+                    if (payload === '{"done":true}' || payload === '[DONE]') {
+                        flushSentence(true);
+                        continue;
+                    }
+                    try {
+                        const obj = JSON.parse(payload);
+                        if (obj.error) throw new Error(obj.error);
+                        const token = obj.delta;
+                        if (token) {
+                            text  += token;
+                            queue += token;
+                            if (onToken) onToken(token, text);
+                            flushSentence(false);
+                        }
+                        if (obj.done) flushSentence(true);
+                    } catch (_) {}
+                }
+            }
+        } finally {
+            reader.cancel().catch(() => {});
+        }
+
+        // Final flush in case stream ended without explicit done event
+        if (queue.trim() && onSentence) {
+            onSentence(queue.trim(), text);
+        }
+
+        return text || 'I am here for you.';
+    },
+
+    // ── Simulate streaming for buffered responses (chat UI typing effect) ─────
+    _simulateStream(text, onToken) {
+        const words = text.split(' ');
+        let full = '';
+        for (let i = 0; i < words.length; i++) {
+            full += (i === 0 ? '' : ' ') + words[i];
+            onToken(words[i], full);
+        }
+    },
+
+    // ── Dev fallback — direct OpenAI call when server unavailable ────────────
+    async _devFallback(messages, onToken) {
         let devKey = localStorage.getItem('BLAKCIDE_DEV_KEY');
         if (!devKey) {
             devKey = prompt('Dev Mode: Enter your OpenAI API Key (sk-...):');
             if (devKey) localStorage.setItem('BLAKCIDE_DEV_KEY', devKey);
             else throw new Error('No API key provided.');
         }
-        try {
-            const r = await fetch('https://api.openai.com/v1/chat/completions', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${devKey}` },
-                body: JSON.stringify({ model: 'gpt-4o', messages: withSystem, temperature: 0.75, max_tokens: 400 })
-            });
-            if (!r.ok) {
-                localStorage.removeItem('BLAKCIDE_DEV_KEY');
-                alert('API key failed. Please refresh and try again.');
-                throw new Error('Invalid dev key.');
-            }
-            const data  = await r.json();
-            const reply = data.choices?.[0]?.message?.content || 'I am here for you.';
-            if (onToken) await this._simulateStream(reply, onToken);
-            return reply;
-        } catch(err) {
-            console.error('BlakcideAI fallback failed:', err);
-            throw err;
+        const r = await fetch('https://api.openai.com/v1/chat/completions', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${devKey}` },
+            body: JSON.stringify({ model: 'gpt-4o', messages, temperature: 0.75, max_tokens: 500 })
+        });
+        if (!r.ok) {
+            localStorage.removeItem('BLAKCIDE_DEV_KEY');
+            alert('API key failed — please refresh.');
+            throw new Error('Invalid dev key.');
         }
-    },
-
-    async _simulateStream(text, onToken) {
-        const words = text.split(' ');
-        let full = '';
-        for (let i = 0; i < words.length; i++) {
-            full += (i === 0 ? '' : ' ') + words[i];
-            onToken(words[i], full);
-            if (i % 4 === 3) await new Promise(r => setTimeout(r, 15));
-        }
+        const data  = r.ok ? await r.json() : null;
+        const reply = data?.choices?.[0]?.message?.content || 'I am here for you.';
+        if (onToken) this._simulateStream(reply, onToken);
+        return reply;
     },
 
     async transcribeAudio(audioBlob) {
