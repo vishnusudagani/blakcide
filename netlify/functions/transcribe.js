@@ -1,14 +1,25 @@
+const CORS = {
+    'Access-Control-Allow-Origin':  '*',
+    'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+};
+
 exports.handler = async function(event) {
-    if (event.httpMethod !== 'POST') return { statusCode: 405, body: 'Method Not Allowed' };
+    if (event.httpMethod === 'OPTIONS') {
+        return { statusCode: 204, headers: CORS, body: '' };
+    }
+    if (event.httpMethod !== 'POST') {
+        return { statusCode: 405, headers: CORS, body: 'Method Not Allowed' };
+    }
 
     let audioBase64, mimeType, langHint;
     try {
         ({ audioBase64, mimeType, langHint } = JSON.parse(event.body || '{}'));
     } catch {
-        return { statusCode: 400, body: JSON.stringify({ error: 'Invalid JSON' }) };
+        return { statusCode: 400, headers: CORS, body: JSON.stringify({ error: 'Invalid JSON' }) };
     }
 
-    if (!audioBase64) return { statusCode: 400, body: JSON.stringify({ error: 'audioBase64 required' }) };
+    if (!audioBase64) return { statusCode: 400, headers: CORS, body: JSON.stringify({ error: 'audioBase64 required' }) };
 
     const ext = !mimeType              ? 'webm'
               : mimeType.includes('mp4')   ? 'm4a'
@@ -42,21 +53,20 @@ exports.handler = async function(event) {
         if (!response.ok) {
             const errText = await response.text().catch(() => '');
             console.error('Whisper API error:', response.status, errText);
-            return { statusCode: 200, body: JSON.stringify({ text: '', language: null }) };
+            return { statusCode: 200, headers: CORS, body: JSON.stringify({ text: '', language: null }) };
         }
 
         const data = await response.json();
-        // verbose_json returns { text, language, segments, ... }
-        // language is ISO-639-1 code: 'en', 'te', 'hi', etc.
         return {
             statusCode: 200,
+            headers: { ...CORS, 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 text:     data.text     || '',
-                language: data.language || null   // e.g. 'te', 'hi', 'en'
+                language: data.language || null,
             })
         };
     } catch (error) {
         console.error('Transcribe handler error:', error);
-        return { statusCode: 200, body: JSON.stringify({ text: '', language: null }) };
+        return { statusCode: 200, headers: CORS, body: JSON.stringify({ text: '', language: null }) };
     }
 };

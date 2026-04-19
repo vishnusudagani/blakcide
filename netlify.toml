@@ -42,8 +42,19 @@
   from = "/api/group-chat"
   to = "/.netlify/functions/group-chat"
   status = 200
+  force = true
 
 [[redirects]]
   from = "/api/realtime-session"
   to = "/.netlify/functions/realtime-session"
+  status = 200
+
+[[redirects]]
+  from = "/api/ice-servers"
+  to = "/.netlify/functions/ice-servers"
+  status = 200
+
+[[redirects]]
+  from = "/api/listener-copilot"
+  to = "/.netlify/functions/listener-copilot"
   status = 200
