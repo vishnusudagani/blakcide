@@ -772,12 +772,24 @@ document.addEventListener('DOMContentLoaded', () => {
         let iceBuffer = [];
 
         peerConnection.ontrack = (event) => {
+            console.log('[WebRTC] ontrack', event.track.kind, 'streams:', event.streams.length);
             const remoteAudio = document.getElementById('remote-audio');
-            if (remoteAudio && remoteAudio.srcObject !== event.streams[0]) {
+            if (!remoteAudio) return;
+            if (remoteAudio.srcObject !== event.streams[0]) {
                 remoteAudio.srcObject = event.streams[0];
-                // Needed on iOS Safari — autoplay won't work without a user gesture
-                remoteAudio.play().catch(() => {});
-                document.getElementById('call-status').innerText = "Connected • Secure Voice Channel";
+                remoteAudio.muted   = false;
+                remoteAudio.volume  = 1.0;
+                remoteAudio.play().then(() => {
+                    document.getElementById('call-status').innerText = "Connected • Secure Voice Channel";
+                }).catch(err => {
+                    // iOS Safari and Chrome autoplay policies can reject play()
+                    // even after getUserMedia. Surface a tap-to-enable button.
+                    console.warn('[WebRTC] remote audio autoplay blocked:', err.message);
+                    const statusEl = document.getElementById('call-status');
+                    if (statusEl) {
+                        statusEl.innerHTML = '<button onclick="document.getElementById(\'remote-audio\').play()" style="background:#4CAF50;color:#fff;border:none;padding:8px 16px;border-radius:20px;cursor:pointer;">🔊 Tap to enable audio</button>';
+                    }
+                });
             }
         };
 

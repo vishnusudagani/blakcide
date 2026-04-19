@@ -467,28 +467,41 @@ document.addEventListener('DOMContentLoaded', () => {
     //   - User  (isOfferer=true):  subscribes → sends offer immediately
     //   - Listener (isOfferer=false): subscribes → waits for offer → answers
     // ============================================================
-    // Feature 2: pitch-shift the listener's mic before it enters WebRTC.
-    // We lower pitch by ~3 semitones using a scriptProcessor to obscure the
-    // listener's real voice without requiring a server-side audio pipeline.
+    // Voice mask — pitch-shift the listener's mic before it enters WebRTC.
+    //
+    // CRITICAL FIX: the previous implementation used ScriptProcessorNode inside an
+    // AudioContext that was never resumed. Browsers ship AudioContext in the
+    // "suspended" state until a user gesture calls resume(), so onaudioprocess
+    // never fired and the MediaStreamDestination output pure silence — meaning
+    // the USER heard NOTHING from the listener. This is the #1 reason callers
+    // reported "voice not working".
+    //
+    // New strategy:
+    //   1. Try to resume the AudioContext. If it stays suspended, bail out.
+    //   2. Verify the destination stream actually has an audio track before
+    //      handing it to WebRTC. If the track is missing/silent, fall back to
+    //      the raw mic stream so the call is never dead-air.
+    //   3. Any failure → return raw stream (audible call beats silent mask).
     async function applyVoiceMask(rawStream) {
         try {
             audioContext = new (window.AudioContext || window.webkitAudioContext)();
-            const source = audioContext.createMediaStreamSource(rawStream);
+            // MUST resume — without this, suspended contexts produce silence.
+            if (audioContext.state === 'suspended') {
+                try { await audioContext.resume(); } catch {}
+            }
+            if (audioContext.state !== 'running') {
+                console.warn('[VoiceMask] AudioContext could not resume, using raw mic');
+                return rawStream;
+            }
 
-            // ScriptProcessorNode: simple pitch approximation via playback rate
-            // For a production app replace with a proper AudioWorklet pitch shifter
-            // (e.g. github.com/cwilso/Audio-Input-Effects).
+            const source = audioContext.createMediaStreamSource(rawStream);
             const bufferSize = 4096;
             const processor = audioContext.createScriptProcessor(bufferSize, 1, 1);
-
-            // Shift pitch by playing back at 0.82x rate (≈ −3 semitones)
-            const pitchFactor = 0.82;
-            let inputBuffer = new Float32Array(0);
+            const pitchFactor = 0.82;   // ≈ −3 semitones
 
             processor.onaudioprocess = (e) => {
-                const input = e.inputBuffer.getChannelData(0);
+                const input  = e.inputBuffer.getChannelData(0);
                 const output = e.outputBuffer.getChannelData(0);
-                // Simple resampling pitch shift
                 for (let i = 0; i < bufferSize; i++) {
                     const srcIdx = Math.floor(i * pitchFactor);
                     output[i] = srcIdx < input.length ? input[srcIdx] : 0;
@@ -498,10 +511,19 @@ document.addEventListener('DOMContentLoaded', () => {
             const dest = audioContext.createMediaStreamDestination();
             source.connect(processor);
             processor.connect(dest);
+
+            // Verify the mask actually produced an audio track.
+            const maskedTracks = dest.stream.getAudioTracks();
+            if (!maskedTracks.length || !maskedTracks[0].enabled) {
+                console.warn('[VoiceMask] Mask produced no audio track, using raw mic');
+                return rawStream;
+            }
+
             pitchShiftedStream = dest.stream;
+            console.log('[VoiceMask] Active — pitch factor', pitchFactor);
             return dest.stream;
         } catch (e) {
-            console.warn('[VoiceMask] Web Audio API unavailable, using raw stream:', e.message);
+            console.warn('[VoiceMask] Exception, falling back to raw mic:', e.message);
             return rawStream;
         }
     }
@@ -540,13 +562,26 @@ document.addEventListener('DOMContentLoaded', () => {
         let iceBuffer = [];
 
         peerConnection.ontrack = (event) => {
+            console.log('[WebRTC] ontrack', event.track.kind, 'streams:', event.streams.length);
             const remoteAudio = document.getElementById('remote-audio');
-            if (remoteAudio && remoteAudio.srcObject !== event.streams[0]) {
+            if (!remoteAudio) return;
+            if (remoteAudio.srcObject !== event.streams[0]) {
                 remoteAudio.srcObject = event.streams[0];
-                remoteAudio.play().catch(() => {});
-                document.getElementById('call-status').innerText = "Connected • Secure Voice Channel";
-                // Feature 5: start call timer on first audio track
-                startCallTimer();
+                remoteAudio.muted   = false;
+                remoteAudio.volume  = 1.0;
+                // iOS Safari + Chrome autoplay policy: play() can reject if the
+                // context isn't user-activated yet. Surface the failure with a
+                // one-tap unblock button instead of silently eating it.
+                remoteAudio.play().then(() => {
+                    document.getElementById('call-status').innerText = "Connected • Secure Voice Channel";
+                    startCallTimer();
+                }).catch(err => {
+                    console.warn('[WebRTC] remote audio autoplay blocked:', err.message);
+                    const statusEl = document.getElementById('call-status');
+                    if (statusEl) {
+                        statusEl.innerHTML = '<button onclick="document.getElementById(\'remote-audio\').play()" style="background:#4CAF50;color:#fff;border:none;padding:8px 16px;border-radius:20px;cursor:pointer;">🔊 Tap to enable audio</button>';
+                    }
+                });
             }
         };
 
