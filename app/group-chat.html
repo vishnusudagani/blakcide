@@ -11,420 +11,314 @@
     <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
     <link rel="stylesheet" href="app-style.css">
     <style>
-        /* ── Layout ──────────────────────────────────────────────── */
+        /* ── Base ─────────────────────────────────────────────────── */
         html, body { height: 100dvh; background: var(--bg); overflow: hidden; margin: 0; }
-
         .gc-layout {
-            display: flex;
-            flex-direction: column;
-            height: 100dvh;
-            max-width: 720px;
-            margin: 0 auto;
-            position: relative;
+            display: flex; flex-direction: column; height: 100dvh;
+            max-width: 720px; margin: 0 auto; position: relative;
         }
 
-        /* ── Room join screen ───────────────────────────────────── */
+        /* ── Lobby screen ─────────────────────────────────────────── */
         #gc-join {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            flex: 1;
-            gap: 20px;
-            padding: 32px 24px;
+            display: flex; flex-direction: column; align-items: center;
+            justify-content: center; flex: 1; gap: 20px; padding: 32px 24px;
         }
-
         .gc-join-card {
-            background: var(--surface-1);
-            border: 1px solid var(--border);
-            border-radius: var(--r-lg);
-            padding: 32px 28px;
-            width: 100%;
-            max-width: 380px;
-            display: flex;
-            flex-direction: column;
-            gap: 16px;
+            background: var(--surface-1); border: 1px solid var(--border);
+            border-radius: var(--r-lg); padding: 32px 28px; width: 100%;
+            max-width: 380px; display: flex; flex-direction: column; gap: 16px;
         }
-
-        .gc-join-title {
-            font-size: 1.35rem;
-            font-weight: 700;
-            color: var(--text);
-            margin: 0 0 4px;
-        }
-
-        .gc-join-sub {
-            font-size: 0.85rem;
-            color: var(--text-2);
-            margin: 0 0 8px;
-        }
+        .gc-join-title { font-size: 1.35rem; font-weight: 700; color: var(--text); margin: 0 0 4px; }
+        .gc-join-sub   { font-size: 0.85rem; color: var(--text-2); margin: 0 0 8px; }
 
         .gc-input {
-            width: 100%;
-            padding: 11px 14px;
-            background: var(--surface-2);
-            border: 1px solid var(--border);
-            border-radius: var(--r-sm);
-            color: var(--text);
-            font-size: 0.95rem;
-            font-family: inherit;
-            box-sizing: border-box;
-            outline: none;
-            transition: border-color 0.18s;
+            width: 100%; padding: 11px 14px; background: var(--surface-2);
+            border: 1px solid var(--border); border-radius: var(--r-sm);
+            color: var(--text); font-size: 0.95rem; font-family: inherit;
+            box-sizing: border-box; outline: none; transition: border-color 0.18s;
         }
         .gc-input:focus { border-color: var(--accent); }
         .gc-input::placeholder { color: var(--text-3); }
 
-        .gc-btn-row {
-            display: flex;
-            gap: 10px;
-        }
-
         .gc-btn {
-            flex: 1;
-            padding: 11px 0;
-            border-radius: var(--r-sm);
-            border: none;
-            font-size: 0.9rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.18s;
-            font-family: inherit;
+            flex: 1; padding: 11px 0; border-radius: var(--r-sm); border: none;
+            font-size: 0.9rem; font-weight: 600; cursor: pointer;
+            transition: all 0.18s; font-family: inherit;
         }
-
-        .gc-btn-primary {
-            background: var(--accent);
-            color: #0a0a14;
-        }
+        .gc-btn-primary { background: var(--accent); color: #0a0a14; }
         .gc-btn-primary:hover { background: var(--accent-hover, #00b893); }
-
-        .gc-btn-secondary {
-            background: var(--surface-3);
-            color: var(--text);
-            border: 1px solid var(--border);
-        }
+        .gc-btn-secondary { background: var(--surface-3); color: var(--text); border: 1px solid var(--border); }
         .gc-btn-secondary:hover { background: var(--surface-4, var(--surface-3)); }
+        .gc-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
-        .gc-room-code-display {
-            font-size: 2.2rem;
-            font-weight: 800;
-            letter-spacing: 0.2em;
-            color: var(--accent);
-            text-align: center;
-            font-variant-numeric: tabular-nums;
+        /* Choice cards */
+        .gc-choice-row { display: flex; gap: 10px; }
+        .gc-choice-btn {
+            flex: 1; padding: 14px 0; border-radius: var(--r-sm);
+            border: 1.5px solid var(--border); font-size: 0.88rem; font-weight: 600;
+            cursor: pointer; transition: all 0.18s; font-family: inherit;
+            display: flex; flex-direction: column; align-items: center; gap: 6px;
+            background: var(--surface-2); color: var(--text-2);
         }
+        .gc-choice-btn:hover { border-color: var(--accent); color: var(--text); background: var(--surface-3); }
+        .gc-choice-btn.selected { border-color: var(--accent); background: var(--accent-dim,rgba(0,212,170,0.1)); color: var(--accent); }
+        .gc-choice-icon  { font-size: 1.4rem; }
+        .gc-choice-label { font-size: 0.78rem; font-weight: 500; }
 
-        .gc-share-hint {
-            font-size: 0.8rem;
-            color: var(--text-2);
-            text-align: center;
+        .gc-sub-panel {
+            display: none; flex-direction: column; gap: 12px;
+            border-top: 1px solid var(--border); padding-top: 16px; margin-top: 4px;
         }
+        .gc-sub-panel.visible { display: flex; }
 
-        .gc-copy-btn {
-            background: var(--surface-2);
-            border: 1px solid var(--border);
-            border-radius: var(--r-sm);
-            padding: 8px 16px;
-            font-size: 0.85rem;
-            color: var(--text);
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            font-family: inherit;
-            transition: all 0.18s;
-            margin: 0 auto;
-        }
-        .gc-copy-btn:hover { background: var(--surface-3); }
-
-        /* ── Chat screen ────────────────────────────────────────── */
+        /* ── Chat screen ──────────────────────────────────────────── */
         #gc-chat { display: none; flex-direction: column; height: 100dvh; }
         #gc-chat.visible { display: flex; }
 
         /* Header */
         .gc-header {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            padding: 0 16px;
-            height: 56px;
-            background: var(--surface-1);
-            border-bottom: 1px solid var(--border);
-            flex-shrink: 0;
-            padding-top: env(safe-area-inset-top, 0px);
+            display: flex; align-items: center; gap: 12px; padding: 0 16px;
+            height: 56px; background: var(--surface-1); border-bottom: 1px solid var(--border);
+            flex-shrink: 0; padding-top: env(safe-area-inset-top, 0px);
         }
-
         .gc-header-back {
-            background: none;
-            border: none;
-            color: var(--text-2);
-            cursor: pointer;
-            padding: 4px;
-            display: flex;
-            align-items: center;
+            background: none; border: none; color: var(--text-2);
+            cursor: pointer; padding: 4px; display: flex; align-items: center;
         }
-
-        .gc-header-info { flex: 1; }
+        .gc-header-info { flex: 1; min-width: 0; }
         .gc-header-title { font-size: 0.95rem; font-weight: 600; color: var(--text); }
         .gc-header-sub   { font-size: 0.75rem; color: var(--text-2); display: flex; align-items: center; gap: 6px; }
-
-        .gc-participant-dots {
-            display: flex;
-            gap: 4px;
-        }
-        .gc-dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background: var(--text-3);
-            transition: background 0.3s;
-        }
+        .gc-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--text-3); transition: background 0.3s; }
         .gc-dot.active { background: var(--accent); }
+        .gc-participant-dots { display: flex; gap: 4px; }
 
         .gc-room-code-badge {
-            font-size: 0.75rem;
-            font-weight: 700;
-            letter-spacing: 0.1em;
-            color: var(--accent);
-            background: var(--accent-dim, rgba(0,212,170,0.12));
-            padding: 3px 8px;
-            border-radius: 20px;
-            cursor: pointer;
+            font-size: 0.72rem; font-weight: 700; letter-spacing: 0.1em;
+            color: var(--accent); background: var(--accent-dim,rgba(0,212,170,0.12));
+            padding: 3px 8px; border-radius: 20px; cursor: pointer;
+            white-space: nowrap; flex-shrink: 0; user-select: none;
         }
+        .gc-room-code-badge:hover { background: var(--accent-dim,rgba(0,212,170,0.2)); }
 
         /* Messages */
         .gc-messages {
-            flex: 1;
-            overflow-y: auto;
-            padding: 16px;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
+            flex: 1; overflow-y: auto; padding: 16px;
+            display: flex; flex-direction: column; gap: 10px;
             -webkit-overflow-scrolling: touch;
         }
 
-        .gc-msg {
-            display: flex;
-            flex-direction: column;
-            max-width: 78%;
-            gap: 3px;
+        /* Invite banner — shown in chat scroll instead of dark overlay */
+        .gc-invite-banner {
+            align-self: center; width: 100%; max-width: 320px;
+            background: var(--surface-2); border: 1px dashed var(--accent);
+            border-radius: var(--r-lg); padding: 20px; text-align: center;
+            display: flex; flex-direction: column; align-items: center; gap: 10px;
+            margin: 8px 0;
+        }
+        .gc-invite-code {
+            font-size: 2.4rem; font-weight: 800; letter-spacing: 0.22em;
+            color: var(--accent); font-variant-numeric: tabular-nums; line-height: 1;
+        }
+        .gc-invite-label { font-size: 0.8rem; color: var(--text-2); }
+        .gc-invite-copy {
+            display: flex; align-items: center; gap: 6px; padding: 7px 16px;
+            background: var(--surface-3); border: 1px solid var(--border);
+            border-radius: var(--r-sm); font-size: 0.82rem; font-weight: 600;
+            color: var(--text); cursor: pointer; font-family: inherit;
+            transition: all 0.18s;
+        }
+        .gc-invite-copy:hover { background: var(--accent); color: #0a0a14; border-color: var(--accent); }
+        .gc-invite-spinner {
+            width: 18px; height: 18px; border: 2px solid var(--border);
+            border-top-color: var(--accent); border-radius: 50%;
+            animation: gc-spin 0.8s linear infinite;
+        }
+        @keyframes gc-spin { to { transform: rotate(360deg); } }
+
+        /* System message */
+        .gc-system-msg {
+            align-self: center; font-size: 0.75rem; color: var(--text-3);
+            background: var(--surface-2); padding: 4px 12px; border-radius: 20px;
+            text-align: center;
         }
 
+        /* Date separator */
+        .gc-date-sep {
+            align-self: center; font-size: 0.72rem; color: var(--text-3);
+            background: var(--surface-2); padding: 3px 12px; border-radius: 20px;
+        }
+
+        /* Message bubbles */
+        .gc-msg { display: flex; flex-direction: column; max-width: 78%; gap: 3px; }
         .gc-msg.mine  { align-self: flex-end; align-items: flex-end; }
         .gc-msg.other { align-self: flex-start; }
         .gc-msg.ai    { align-self: center; max-width: 90%; align-items: center; }
-
-        .gc-msg-name {
-            font-size: 0.72rem;
-            font-weight: 600;
-            color: var(--text-2);
-            padding: 0 4px;
-        }
-
+        .gc-msg-name  { font-size: 0.72rem; font-weight: 600; color: var(--text-2); padding: 0 4px; }
         .gc-msg-bubble {
-            padding: 10px 14px;
-            border-radius: 18px;
-            font-size: 0.9rem;
-            line-height: 1.45;
-            color: var(--text);
-            word-break: break-word;
+            padding: 10px 14px; border-radius: 18px; font-size: 0.9rem;
+            line-height: 1.45; color: var(--text); word-break: break-word;
         }
-
         .gc-msg.mine  .gc-msg-bubble { background: var(--accent); color: #0a0a14; border-bottom-right-radius: 4px; }
         .gc-msg.other .gc-msg-bubble { background: var(--surface-2); border-bottom-left-radius: 4px; }
         .gc-msg.ai    .gc-msg-bubble {
-            background: linear-gradient(135deg, rgba(160,103,255,0.15), rgba(0,212,170,0.12));
-            border: 1px solid rgba(160,103,255,0.25);
-            border-radius: 16px;
-            text-align: center;
-            font-style: italic;
-            color: var(--text);
-            max-width: 100%;
+            background: linear-gradient(135deg,rgba(160,103,255,0.15),rgba(0,212,170,0.12));
+            border: 1px solid rgba(160,103,255,0.25); border-radius: 16px;
+            text-align: center; font-style: italic; color: var(--text); max-width: 100%;
         }
+        .gc-msg-time { font-size: 0.68rem; color: var(--text-3); padding: 0 4px; }
 
-        .gc-msg-time {
-            font-size: 0.68rem;
-            color: var(--text-3);
-            padding: 0 4px;
+        /* Media in bubbles */
+        .gc-msg-image {
+            max-width: 240px; max-height: 200px; border-radius: 12px;
+            object-fit: cover; cursor: pointer; display: block;
         }
+        .gc-msg-image:hover { opacity: 0.9; }
+        .gc-msg-audio { max-width: 220px; width: 100%; accent-color: var(--accent); }
+        .gc-media-caption { font-size: 0.82rem; margin-top: 5px; opacity: 0.85; }
 
-        /* AI typing indicator */
+        /* Upload progress overlay on bubble */
+        .gc-upload-bubble {
+            padding: 10px 14px; border-radius: 18px; border-bottom-right-radius: 4px;
+            background: var(--accent); color: #0a0a14; font-size: 0.82rem;
+            display: flex; align-items: center; gap: 8px; min-width: 140px;
+        }
+        .gc-upload-bar-wrap { flex: 1; height: 4px; background: rgba(0,0,0,0.15); border-radius: 2px; }
+        .gc-upload-bar { height: 100%; background: #0a0a14; border-radius: 2px; transition: width 0.2s; width: 0%; }
+
+        /* AI typing */
         .gc-typing {
-            display: none;
-            align-self: center;
-            padding: 10px 18px;
-            background: linear-gradient(135deg, rgba(160,103,255,0.12), rgba(0,212,170,0.10));
-            border: 1px solid rgba(160,103,255,0.2);
-            border-radius: 16px;
-            gap: 5px;
-            align-items: center;
+            display: none; align-self: center; padding: 10px 18px;
+            background: linear-gradient(135deg,rgba(160,103,255,0.12),rgba(0,212,170,0.10));
+            border: 1px solid rgba(160,103,255,0.2); border-radius: 16px;
+            gap: 5px; align-items: center;
         }
         .gc-typing.visible { display: flex; }
         .gc-typing-dot {
-            width: 7px; height: 7px; border-radius: 50%;
-            background: var(--purple, #a067ff);
+            width: 7px; height: 7px; border-radius: 50%; background: var(--purple,#a067ff);
             animation: gc-bounce 1s infinite ease-in-out;
         }
         .gc-typing-dot:nth-child(2) { animation-delay: 0.2s; }
         .gc-typing-dot:nth-child(3) { animation-delay: 0.4s; }
         @keyframes gc-bounce {
-            0%, 80%, 100% { transform: scale(0.8); opacity: 0.5; }
-            40% { transform: scale(1.15); opacity: 1; }
-        }
-
-        /* Date separator */
-        .gc-date-sep {
-            align-self: center;
-            font-size: 0.72rem;
-            color: var(--text-3);
-            background: var(--surface-2);
-            padding: 3px 12px;
-            border-radius: 20px;
+            0%,80%,100% { transform: scale(0.8); opacity: 0.5; }
+            40%          { transform: scale(1.15); opacity: 1; }
         }
 
         /* Input bar */
         .gc-input-bar {
-            display: flex;
-            align-items: flex-end;
-            gap: 8px;
-            padding: 10px 12px;
+            display: flex; align-items: flex-end; gap: 8px; padding: 10px 12px;
             padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px));
-            background: var(--surface-1);
-            border-top: 1px solid var(--border);
-            flex-shrink: 0;
+            background: var(--surface-1); border-top: 1px solid var(--border); flex-shrink: 0;
         }
-
         .gc-msg-input {
-            flex: 1;
-            background: var(--surface-2);
-            border: 1px solid var(--border);
-            border-radius: 22px;
-            padding: 10px 16px;
-            color: var(--text);
-            font-size: 0.9rem;
-            font-family: inherit;
-            outline: none;
-            resize: none;
-            min-height: 40px;
-            max-height: 120px;
-            overflow-y: auto;
-            line-height: 1.4;
-            transition: border-color 0.18s;
-            box-sizing: border-box;
+            flex: 1; background: var(--surface-2); border: 1px solid var(--border);
+            border-radius: 22px; padding: 10px 16px; color: var(--text);
+            font-size: 0.9rem; font-family: inherit; outline: none; resize: none;
+            min-height: 40px; max-height: 120px; overflow-y: auto; line-height: 1.4;
+            transition: border-color 0.18s; box-sizing: border-box;
         }
         .gc-msg-input:focus { border-color: var(--accent); }
         .gc-msg-input::placeholder { color: var(--text-3); }
 
-        .gc-send-btn {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            border: none;
-            background: var(--accent);
-            color: #0a0a14;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            flex-shrink: 0;
-            transition: all 0.18s;
-            font-size: 1.1rem;
+        .gc-icon-btn {
+            width: 40px; height: 40px; border-radius: 50%; border: none;
+            background: var(--surface-3); color: var(--text-2);
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; flex-shrink: 0; transition: all 0.18s; font-size: 1.1rem;
         }
-        .gc-send-btn:hover { transform: scale(1.05); }
+        .gc-icon-btn:hover { background: var(--surface-4,var(--surface-3)); color: var(--text); }
+
+        .gc-send-btn {
+            width: 40px; height: 40px; border-radius: 50%; border: none;
+            background: var(--accent); color: #0a0a14;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; flex-shrink: 0; transition: all 0.18s; font-size: 1.1rem;
+        }
+        .gc-send-btn:hover  { transform: scale(1.05); }
         .gc-send-btn:disabled { background: var(--surface-3); color: var(--text-3); cursor: not-allowed; transform: none; }
 
-        /* Waiting overlay */
-        .gc-waiting {
-            display: none;
-            position: absolute;
-            inset: 0;
-            background: rgba(8,8,15,0.85);
-            z-index: 10;
-            align-items: center;
-            justify-content: center;
-            flex-direction: column;
-            gap: 16px;
-            text-align: center;
-            padding: 32px;
+        /* Media attach menu */
+        .gc-attach-menu {
+            position: absolute; bottom: 70px; left: 12px;
+            background: var(--surface-1); border: 1px solid var(--border);
+            border-radius: var(--r-lg); padding: 8px; display: none;
+            flex-direction: column; gap: 2px; z-index: 20; min-width: 160px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.3);
         }
-        .gc-waiting.visible { display: flex; }
-        .gc-waiting-code {
-            font-size: 2.8rem;
-            font-weight: 800;
-            letter-spacing: 0.2em;
-            color: var(--accent);
+        .gc-attach-menu.open { display: flex; }
+        .gc-attach-item {
+            display: flex; align-items: center; gap: 10px; padding: 9px 12px;
+            border-radius: var(--r-sm); border: none; background: none; color: var(--text);
+            font-size: 0.88rem; font-family: inherit; cursor: pointer; text-align: left;
+            transition: background 0.15s;
         }
-        .gc-waiting-text {
-            font-size: 0.9rem;
-            color: var(--text-2);
-            max-width: 260px;
-            line-height: 1.5;
-        }
-        .gc-waiting-spinner {
-            width: 32px;
-            height: 32px;
-            border: 3px solid var(--border);
-            border-top-color: var(--accent);
-            border-radius: 50%;
-            animation: spin 0.9s linear infinite;
-        }
-        @keyframes spin { to { transform: rotate(360deg); } }
+        .gc-attach-item:hover { background: var(--surface-2); }
+        .gc-attach-item-icon { font-size: 1.2rem; width: 24px; text-align: center; }
 
         /* Error toast */
         .gc-error {
-            position: fixed;
-            bottom: 100px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: #ff4444;
-            color: #fff;
-            padding: 10px 20px;
-            border-radius: var(--r-sm);
-            font-size: 0.85rem;
-            z-index: 100;
-            display: none;
-            max-width: 90vw;
-            text-align: center;
+            position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%);
+            background: #ff4444; color: #fff; padding: 10px 20px;
+            border-radius: var(--r-sm); font-size: 0.85rem; z-index: 100;
+            display: none; max-width: 90vw; text-align: center;
         }
 
-        @media (max-width: 480px) {
-            .gc-join-card { padding: 24px 20px; }
+        /* Image lightbox */
+        .gc-lightbox {
+            display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.92);
+            z-index: 200; align-items: center; justify-content: center; cursor: zoom-out;
         }
+        .gc-lightbox.open { display: flex; }
+        .gc-lightbox img { max-width: 96vw; max-height: 92dvh; border-radius: 8px; object-fit: contain; }
+
+        @media (max-width: 480px) { .gc-join-card { padding: 24px 20px; } }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
     </style>
 </head>
 <body>
 <div class="gc-layout">
 
-    <!-- ── Join / Create Room screen ──────────────────────────────── -->
+    <!-- ── Lobby ──────────────────────────────────────────────────── -->
     <div id="gc-join">
         <div class="gc-join-card" id="gc-setup-card">
             <div>
                 <div class="gc-join-title">Group Chat 💬</div>
-                <div class="gc-join-sub">Chat with a friend — AI joins as a mutual friend</div>
+                <div class="gc-join-sub">Chat with friends — AI joins as a mutual friend</div>
             </div>
 
-            <input class="gc-input" id="gc-name-input" type="text" placeholder="Your name" maxlength="24" autocomplete="off">
+            <input class="gc-input" id="gc-name-input" type="text"
+                   placeholder="Your name" maxlength="24" autocomplete="off"
+                   onkeydown="if(event.key==='Enter') document.getElementById('gc-name-input').blur()">
 
-            <div class="gc-btn-row">
-                <button class="gc-btn gc-btn-primary" id="gc-create-btn" onclick="gcCreate()">Create Room</button>
-                <button class="gc-btn gc-btn-secondary" id="gc-join-btn" onclick="gcShowJoin()">Join Room</button>
+            <div class="gc-choice-row">
+                <button class="gc-choice-btn" id="gc-choice-create" onclick="gcSelectChoice('create')">
+                    <span class="gc-choice-icon">✨</span>
+                    <span>Create Room</span>
+                    <span class="gc-choice-label">Get a shareable code</span>
+                </button>
+                <button class="gc-choice-btn" id="gc-choice-join" onclick="gcSelectChoice('join')">
+                    <span class="gc-choice-icon">🔗</span>
+                    <span>Join Room</span>
+                    <span class="gc-choice-label">Enter a room code</span>
+                </button>
             </div>
-        </div>
 
-        <!-- Join with code card (hidden initially) -->
-        <div class="gc-join-card" id="gc-code-card" style="display:none;">
-            <div class="gc-join-title">Enter Room Code</div>
-            <input class="gc-input" id="gc-code-input" type="text" placeholder="6-digit code" maxlength="6"
-                   style="text-transform:uppercase;letter-spacing:0.15em;font-size:1.1rem;text-align:center;"
-                   oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9]/g,'')">
-            <div class="gc-btn-row">
-                <button class="gc-btn gc-btn-secondary" onclick="gcHideJoin()">Back</button>
-                <button class="gc-btn gc-btn-primary" onclick="gcJoin()">Join</button>
+            <div class="gc-sub-panel" id="gc-create-panel">
+                <button class="gc-btn gc-btn-primary" id="gc-create-btn" onclick="gcCreate()">Create &amp; Enter Room</button>
+            </div>
+
+            <div class="gc-sub-panel" id="gc-join-panel">
+                <input class="gc-input" id="gc-code-input" type="text"
+                       placeholder="Enter 6-character code" maxlength="6"
+                       style="text-transform:uppercase;letter-spacing:0.15em;font-size:1.1rem;text-align:center;"
+                       oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9]/g,'')"
+                       onkeydown="if(event.key==='Enter') gcJoin()">
+                <button class="gc-btn gc-btn-primary" id="gc-join-btn" onclick="gcJoin()">Join Room</button>
             </div>
         </div>
     </div>
 
-    <!-- ── Chat screen ────────────────────────────────────────────── -->
+    <!-- ── Chat screen ─────────────────────────────────────────────── -->
     <div id="gc-chat">
         <div class="gc-header">
             <button class="gc-header-back" onclick="gcLeave()">
@@ -440,19 +334,10 @@
                     <span id="gc-header-names">Waiting for someone to join…</span>
                 </div>
             </div>
-            <div class="gc-room-code-badge" id="gc-code-badge" title="Copy room code" onclick="gcCopyCode()">
+            <div class="gc-room-code-badge" id="gc-code-badge"
+                 title="Tap to copy invite link" onclick="gcCopyCode()">
                 <span id="gc-code-display">------</span>
             </div>
-        </div>
-
-        <!-- Waiting overlay shown until second user joins -->
-        <div class="gc-waiting" id="gc-waiting">
-            <div class="gc-waiting-code" id="gc-waiting-code">------</div>
-            <div class="gc-waiting-text">Share this code with your friend so they can join the room</div>
-            <button class="gc-btn gc-btn-secondary" style="max-width:200px;" onclick="gcCopyCode()">
-                <ion-icon name="copy-outline"></ion-icon>&nbsp; Copy Code
-            </button>
-            <div class="gc-waiting-spinner"></div>
         </div>
 
         <div class="gc-messages" id="gc-messages">
@@ -466,36 +351,99 @@
             <span style="font-size:0.78rem;color:var(--text-2);margin-left:6px;">AI thinking…</span>
         </div>
 
+        <!-- Attach menu (above input bar) -->
+        <div class="gc-attach-menu" id="gc-attach-menu">
+            <button class="gc-attach-item" onclick="gcPickFile('image')">
+                <span class="gc-attach-item-icon">🖼️</span> Photo / Image
+            </button>
+            <button class="gc-attach-item" onclick="gcStartRecording()">
+                <span class="gc-attach-item-icon" id="gc-rec-icon">🎤</span>
+                <span id="gc-rec-label">Voice Note</span>
+            </button>
+        </div>
+
         <div class="gc-input-bar">
+            <button class="gc-icon-btn" id="gc-attach-btn" onclick="gcToggleAttach()" title="Attach media">
+                <ion-icon name="attach-outline"></ion-icon>
+            </button>
             <textarea class="gc-msg-input" id="gc-msg-input" placeholder="Message…" rows="1"
                       onkeydown="gcKeydown(event)" oninput="gcAutoResize(this)"></textarea>
             <button class="gc-send-btn" id="gc-send-btn" onclick="gcSend()">
                 <ion-icon name="send-outline"></ion-icon>
             </button>
         </div>
+
+        <!-- Hidden file inputs -->
+        <input type="file" id="gc-file-image" accept="image/*" style="display:none" onchange="gcUploadFile(this,'image')">
     </div>
 
     <div class="gc-error" id="gc-error"></div>
 </div>
 
+<!-- Image lightbox -->
+<div class="gc-lightbox" id="gc-lightbox" onclick="this.classList.remove('open')">
+    <img id="gc-lightbox-img" src="" alt="">
+</div>
+
 <script>
-// ── Supabase ──────────────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════════
+// BLAKCIDE — Group Chat  (Supabase Realtime + OpenAI GPT-4o vision)
+// ═══════════════════════════════════════════════════════════════════════════════
+
 const SUPABASE_URL = 'https://uoosspumdmffccinszuj.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVvb3NzcHVtZG1mZmNjaW5zenVqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcxNzYyNTUsImV4cCI6MjA4Mjc1MjI1NX0.3NayM6uC5-yZv9im-8W7ko28rZFRTnDQbIagN6BArs0';
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+// ── Persistent session (survives page refresh so users can rejoin) ─────────────
+const SESSION_KEY      = 'blakcide_gc_session';
+const SESSION_ROOM_KEY = 'blakcide_gc_room';   // persists active room across reloads
+
+function gcGetSession() {
+    try { return JSON.parse(localStorage.getItem(SESSION_KEY) || 'null'); } catch { return null; }
+}
+function gcSaveSession(userId, name) {
+    localStorage.setItem(SESSION_KEY, JSON.stringify({ userId, name }));
+}
+function gcClearSession() {
+    localStorage.removeItem(SESSION_KEY);
+}
+
+// Save / restore / clear the active room so a page reload auto-rejoins
+function gcSaveRoom(roomId, roomCode) {
+    try { sessionStorage.setItem(SESSION_ROOM_KEY, JSON.stringify({ roomId, roomCode })); } catch {}
+}
+function gcGetSavedRoom() {
+    try { return JSON.parse(sessionStorage.getItem(SESSION_ROOM_KEY) || 'null'); } catch { return null; }
+}
+function gcClearRoom() {
+    try { sessionStorage.removeItem(SESSION_ROOM_KEY); } catch {}
+}
+
 // ── State ─────────────────────────────────────────────────────────────────────
 let gc = {
-    roomId:       null,
-    roomCode:     null,
-    myUserId:     null,
-    myName:       null,
-    otherUserId:  null,
-    otherName:    null,
-    messages:     [],          // local cache {id, userId, userName, role, content, createdAt}
-    subscription: null,
-    aiTyping:     false,
-    ready:        false,       // true when second user has joined
+    roomId:        null,
+    roomCode:      null,
+    myUserId:      null,
+    myName:        null,
+    otherUserId:   null,
+    otherName:     null,
+    messages:      [],
+    subscription:  null,
+    aiTyping:      false,
+    ready:         false,
+    mediaRecorder: null,
+    audioChunks:   [],
+    recording:     false,
+    // Silence-timer debounce: fires AI 1.5 s after the last message in the room
+    aiDebounceTimer:   null,
+    // Token used to cancel a stale AI reply that arrived after a new message
+    aiRequestToken:    0,
+    // Polling fallback: host polls DB every 3 s until User B appears
+    presencePollTimer: null,
+    // Broadcast readiness: true only after channel reaches SUBSCRIBED state.
+    // Sends queued while the WebSocket handshake was still in progress.
+    subscriptionReady: false,
+    broadcastQueue:    [],
 };
 
 // ── Language detection ─────────────────────────────────────────────────────────
@@ -515,125 +463,65 @@ function detectLang(text) {
     if (hi/sig > 0.2) return 'hi';
     const words = text.toLowerCase().split(/[\s,!?.।]+/).filter(Boolean);
     let ts=0, hs=0;
-    for (const w of words) {
-        if (TE_W.has(w)) ts+=2;
-        if (HI_W.has(w)) hs+=2;
-    }
+    for (const w of words) { if (TE_W.has(w)) ts+=2; if (HI_W.has(w)) hs+=2; }
     if (ts>0||hs>0) return ts>=hs ? 'te' : 'hi';
     return 'en';
 }
 
-// ── Utils ──────────────────────────────────────────────────────────────────────
-function genCode() {
-    return Math.random().toString(36).slice(2,8).toUpperCase();
+// ── Broadcast helper — queues if the channel isn't SUBSCRIBED yet ──────────────
+// Supabase silently drops channel.send() calls made before the WebSocket
+// handshake completes. This wrapper holds messages in broadcastQueue and
+// flushes them the moment the channel reaches SUBSCRIBED state.
+function gcBroadcast(msgData) {
+    const payload = { type: 'broadcast', event: 'gc_message', payload: msgData };
+    if (gc.subscriptionReady && gc.subscription) {
+        gc.subscription.send(payload);
+    } else {
+        gc.broadcastQueue.push(payload);
+    }
 }
 
-function genUserId() {
-    return 'u_' + Math.random().toString(36).slice(2,11);
-}
+// ── Utils ──────────────────────────────────────────────────────────────────────
+function genCode()   { return Math.random().toString(36).slice(2,8).toUpperCase(); }
+function genUserId() { return 'u_' + Math.random().toString(36).slice(2,11); }
+function escHtml(s)  { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function fmtTime(iso){ return new Date(iso).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}); }
 
 function showError(msg) {
     const el = document.getElementById('gc-error');
-    el.textContent = msg;
-    el.style.display = 'block';
+    el.textContent = msg; el.style.display = 'block';
     setTimeout(() => { el.style.display = 'none'; }, 3500);
 }
 
-function fmtTime(iso) {
-    return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+// ── Lobby choice ───────────────────────────────────────────────────────────────
+let gcCurrentChoice = null;
+function gcSelectChoice(choice) {
+    gcCurrentChoice = choice;
+    document.getElementById('gc-choice-create').classList.toggle('selected', choice === 'create');
+    document.getElementById('gc-choice-join').classList.toggle('selected', choice === 'join');
+    document.getElementById('gc-create-panel').classList.toggle('visible', choice === 'create');
+    document.getElementById('gc-join-panel').classList.toggle('visible', choice === 'join');
+    if (choice === 'join') setTimeout(() => document.getElementById('gc-code-input').focus(), 50);
 }
 
-// ── DB health check ────────────────────────────────────────────────────────────
-// Returns true = ok to proceed, false = blocked (migration shown to user).
-// Does NOT swallow network errors — those bubble to the caller.
-async function gcCheckDB() {
-    try {
-        const { error } = await sb.from('group_rooms').select('id').limit(1);
-        if (!error) return true;  // tables exist, all good
-
-        // Table missing — show migration UI
-        const isTableMissing = error.code === '42P01'
-            || error.message?.includes('does not exist')
-            || error.message?.includes('relation')
-            || error.code === 'PGRST204';
-
-        if (isTableMissing) {
-            console.warn('[GC] group_rooms table missing, showing migration UI');
-            document.getElementById('gc-join').innerHTML = `
-                <div class="gc-join-card" style="gap:12px;">
-                    <div class="gc-join-title" style="color:#ff6b6b;">⚠️ Setup Required</div>
-                    <div style="font-size:0.85rem;color:var(--text-2);line-height:1.6;">
-                        The group chat tables don't exist yet.<br><br>
-                        Run this SQL in your <strong>Supabase SQL Editor</strong>:
-                    </div>
-                    <pre style="background:var(--surface-2);padding:12px;border-radius:8px;font-size:0.7rem;overflow-x:auto;white-space:pre-wrap;color:var(--text);">CREATE TABLE IF NOT EXISTS group_rooms (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  created_at timestamptz NOT NULL DEFAULT now(),
-  room_code text NOT NULL UNIQUE,
-  created_by text NOT NULL,
-  user_a_id text NOT NULL,
-  user_a_name text NOT NULL,
-  user_b_id text,
-  user_b_name text,
-  participants integer NOT NULL DEFAULT 1
-);
-
-CREATE TABLE IF NOT EXISTS group_messages (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  created_at timestamptz NOT NULL DEFAULT now(),
-  room_id uuid NOT NULL REFERENCES group_rooms(id) ON DELETE CASCADE,
-  user_id text NOT NULL,
-  user_name text NOT NULL,
-  role text NOT NULL CHECK (role IN ('user','assistant')),
-  content text NOT NULL
-);
-
-ALTER TABLE group_rooms ENABLE ROW LEVEL SECURITY;
-ALTER TABLE group_messages ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "anon all rooms" ON group_rooms FOR ALL TO anon USING (true) WITH CHECK (true);
-CREATE POLICY "anon all messages" ON group_messages FOR ALL TO anon USING (true) WITH CHECK (true);</pre>
-                    <button class="gc-btn gc-btn-secondary" onclick="location.reload()">Retry after running SQL</button>
-                </div>`;
-            return false;
-        }
-
-        // Other DB error — log it but let the caller decide
-        console.warn('[GC] gcCheckDB DB error:', error.code, error.message);
-        return true;
-    }
-    // NOTE: do NOT catch network errors here — let them propagate so gcCreate
-    // can show a proper "network error" message instead of silently proceeding.
-}
-
-// ── Room create / join ─────────────────────────────────────────────────────────
+// ── Create room ────────────────────────────────────────────────────────────────
 async function gcCreate() {
     const name = document.getElementById('gc-name-input').value.trim();
     if (!name) { showError('Enter your name first'); return; }
 
     const btn = document.getElementById('gc-create-btn');
-    const setLoading = (on) => {
-        if (!btn) return;
-        btn.disabled    = on;
-        btn.textContent = on ? 'Creating…' : 'Create Room';
-    };
-    setLoading(true);
+    btn.disabled = true; btn.textContent = 'Creating…';
+    const reset = () => { btn.disabled = false; btn.textContent = 'Create & Enter Room'; };
 
-    try {
-        if (!await gcCheckDB()) { setLoading(false); return; }
-    } catch (e) {
-        console.error('[GC] gcCheckDB network error:', e.message);
-        setLoading(false);
-        showError('Network error — check your connection and retry');
-        return;
-    }
-
+    // Restore or create a stable userId
+    const session = gcGetSession();
     gc.myName   = name;
-    gc.myUserId = genUserId();
+    gc.myUserId = session?.userId || genUserId();
+    gcSaveSession(gc.myUserId, name);
 
     let lastErr = null;
     for (let attempt = 1; attempt <= 3; attempt++) {
         const code = genCode();
-        console.log(`[GC] gcCreate attempt ${attempt}/3, code=${code}, userId=${gc.myUserId}`);
         try {
             const { data, error } = await sb.from('group_rooms').insert({
                 room_code:    code,
@@ -644,318 +532,755 @@ async function gcCreate() {
             }).select().single();
 
             if (error) {
-                console.error(`[GC] Insert error (attempt ${attempt}):`, error.code, error.message);
-
-                if (error.code === '42P01') {
-                    // Table not found — show migration UI
-                    setLoading(false);
-                    await gcCheckDB();
-                    return;
-                }
-                if (error.code === '23505') {
-                    // Duplicate room_code — rare but retry with new code
-                    lastErr = error;
-                    continue;
-                }
-                if (error.code === 'PGRST301' || error.message?.includes('JWT')) {
-                    setLoading(false);
-                    showError('Auth error — please refresh the page');
-                    return;
-                }
-                // Other DB error — retry once then give up
-                lastErr = error;
-                if (attempt < 3) { await new Promise(r => setTimeout(r, 400 * attempt)); continue; }
+                if (error.code === '23505') { lastErr = error; continue; }  // code collision → retry
                 throw error;
             }
-
             gc.roomId   = data.id;
             gc.roomCode = data.room_code;
-            console.log('[GC] Room created:', gc.roomId, gc.roomCode);
-            setLoading(false);
-            gcEnterRoom();
+            reset();
+            gcEnterRoom(true);   // isCreator = true
             return;
-
         } catch (e) {
-            console.error(`[GC] gcCreate exception (attempt ${attempt}):`, e.message);
             lastErr = e;
-            if (attempt < 3) await new Promise(r => setTimeout(r, 400 * attempt));
+            if (attempt < 3) await new Promise(r => setTimeout(r, 300 * attempt));
         }
     }
-
-    setLoading(false);
-    const errMsg = lastErr?.message
-        ? (lastErr.message.toLowerCase().includes('fetch') || lastErr.message.toLowerCase().includes('network')
-            ? 'Network error — check your connection'
-            : `Error: ${lastErr.message.substring(0, 100)}`)
-        : 'Could not create room — please try again';
-    showError(errMsg);
+    reset();
+    showError(lastErr?.message || 'Could not create room — please try again');
 }
 
-function gcShowJoin() {
-    document.getElementById('gc-setup-card').style.display = 'none';
-    document.getElementById('gc-code-card').style.display  = 'flex';
-    document.getElementById('gc-code-input').focus();
-}
-
-function gcHideJoin() {
-    document.getElementById('gc-setup-card').style.display = 'flex';
-    document.getElementById('gc-code-card').style.display  = 'none';
-}
-
+// ── Join room ──────────────────────────────────────────────────────────────────
 async function gcJoin() {
     const name = document.getElementById('gc-name-input').value.trim();
     const code = document.getElementById('gc-code-input').value.trim().toUpperCase();
     if (!name) { showError('Enter your name first'); return; }
-    if (code.length !== 6) { showError('Enter a valid 6-character room code'); return; }
+    if (code.length !== 6) { showError('Enter a valid 6-character code'); return; }
 
-    const joinBtn = document.querySelector('#gc-code-card .gc-btn-primary');
-    if (joinBtn) { joinBtn.disabled = true; joinBtn.textContent = 'Joining…'; }
-    const resetBtn = () => { if (joinBtn) { joinBtn.disabled = false; joinBtn.textContent = 'Join'; } };
+    const btn = document.getElementById('gc-join-btn');
+    btn.disabled = true; btn.textContent = 'Joining…';
+    const reset = () => { btn.disabled = false; btn.textContent = 'Join Room'; };
 
+    // Restore persistent userId so a reconnecting user gets the same ID
+    const session = gcGetSession();
     gc.myName   = name;
-    gc.myUserId = genUserId();
+    gc.myUserId = session?.userId || genUserId();
+    gcSaveSession(gc.myUserId, name);
 
-    console.log(`[GC] gcJoin code=${code}, userId=${gc.myUserId}`);
     try {
         const { data, error } = await sb
-            .from('group_rooms')
-            .select('*')
-            .eq('room_code', code)
-            .maybeSingle();   // maybeSingle won't throw on 0 rows
+            .from('group_rooms').select('*').eq('room_code', code).maybeSingle();
 
-        if (error) {
-            console.error('[GC] Join lookup error:', error.code, error.message);
-            resetBtn();
-            if (error.code === '42P01') {
-                showError('Database not set up — ask the room creator to set it up first');
-            } else {
-                showError(`DB error: ${error.message.substring(0, 80)}`);
-            }
-            return;
-        }
-        if (!data) {
-            resetBtn();
-            showError('Room not found — double-check the 6-character code');
-            return;
-        }
-        if (data.user_a_id === gc.myUserId) {
-            resetBtn();
-            showError('Cannot join your own room');
+        if (error) { reset(); showError(`Error: ${error.message.slice(0,80)}`); return; }
+        if (!data)  { reset(); showError('Room not found — check the code'); return; }
+
+        // ── Presence logic ─────────────────────────────────────────────────────
+        const iAmUserA   = data.user_a_id === gc.myUserId;
+        const iAmUserB   = data.user_b_id === gc.myUserId;
+        const roomFull   = data.participants >= 2 && data.user_b_id;
+
+        if (iAmUserA) {
+            // Creator is rejoining their own room — let them back in without touching DB
+            gc.roomId      = data.id;
+            gc.roomCode    = data.room_code;
+            gc.otherUserId = data.user_b_id  || null;
+            gc.otherName   = data.user_b_name || null;
+            reset();
+            gcEnterRoom(true);
             return;
         }
 
-        // Update room with second participant
+        if (iAmUserB) {
+            // User B is rejoining — allow without DB update (same session)
+            gc.roomId      = data.id;
+            gc.roomCode    = data.room_code;
+            gc.otherUserId = data.user_a_id;
+            gc.otherName   = data.user_a_name;
+            reset();
+            gcEnterRoom(false);
+            return;
+        }
+
+        if (roomFull) {
+            reset();
+            showError('Room is full — only 2 people allowed');
+            return;
+        }
+
+        // Fresh join as user B
         const { error: updErr } = await sb.from('group_rooms').update({
             user_b_id:    gc.myUserId,
             user_b_name:  name,
             participants: 2,
         }).eq('id', data.id);
 
-        if (updErr) {
-            console.error('[GC] Join update error:', updErr.code, updErr.message);
-            resetBtn();
-            showError('Could not join room — please try again');
-            return;
-        }
+        if (updErr) { reset(); showError('Could not join — please try again'); return; }
 
         gc.roomId      = data.id;
         gc.roomCode    = data.room_code;
         gc.otherUserId = data.user_a_id;
         gc.otherName   = data.user_a_name;
-        console.log('[GC] Joined room:', gc.roomId);
-        resetBtn();
-        gcEnterRoom();
+        reset();
+        gcEnterRoom(false);
 
     } catch (e) {
-        console.error('[GC] gcJoin exception:', e.message);
-        resetBtn();
-        const isNet = e.message?.toLowerCase().includes('fetch') || e.message?.toLowerCase().includes('network');
-        showError(isNet ? 'Network error — check your connection' : `Error: ${e.message.substring(0, 80)}`);
+        reset();
+        showError(e.message?.includes('fetch') ? 'Network error' : `Error: ${e.message?.slice(0,80)}`);
     }
 }
 
-// ── Enter room UI ──────────────────────────────────────────────────────────────
-function gcEnterRoom() {
-    document.getElementById('gc-join').style.display  = 'none';
+// ── Enter chat room ────────────────────────────────────────────────────────────
+async function gcEnterRoom(isCreator) {
+    document.getElementById('gc-join').style.display = 'none';
     const chat = document.getElementById('gc-chat');
     chat.style.display = 'flex';
     chat.classList.add('visible');
 
-    document.getElementById('gc-code-display').textContent  = gc.roomCode;
-    document.getElementById('gc-waiting-code').textContent  = gc.roomCode;
-    document.getElementById('gc-date-sep').textContent      = new Date().toLocaleDateString([], { weekday:'long', month:'short', day:'numeric' });
+    document.getElementById('gc-code-display').textContent = gc.roomCode;
+    document.getElementById('gc-date-sep').textContent = new Date().toLocaleDateString([],{
+        weekday:'long', month:'short', day:'numeric'
+    });
 
-    // Show waiting overlay if we created the room (no other user yet)
-    if (!gc.otherUserId) {
-        document.getElementById('gc-waiting').classList.add('visible');
-    } else {
-        gcMarkReady();
-    }
-
+    // Subscribe first so we don't miss events during history load
     gcSubscribe();
-    gcLoadMessages();
-}
 
-function gcMarkReady() {
-    gc.ready = true;
-    document.getElementById('gc-waiting').classList.remove('visible');
-    document.getElementById('gc-dot-other').classList.add('active');
-    if (gc.otherName) {
-        document.getElementById('gc-header-names').textContent = `${gc.myName} & ${gc.otherName}`;
+    // Load history FIRST so messages appear in the right order
+    await gcLoadMessages();
+
+    // Invitee: they just joined an existing room — host is already there.
+    // Call gcMarkReady() immediately, no Realtime event required.
+    // Creator: show the invite banner and start a DB poll as a guaranteed
+    // fallback in case Supabase Realtime UPDATE / Presence events are slow
+    // or the group_rooms table isn't in the Realtime publication.
+    if (!isCreator) {
+        gcMarkReady();
+    } else if (gc.otherUserId) {
+        // Creator rejoining a room where User B is already present
+        gcMarkReady();
+    } else {
+        gcInjectInviteBanner();
+        gcStartPresencePoll();
     }
+
     document.getElementById('gc-msg-input').focus();
 }
 
-// ── Supabase realtime subscription ────────────────────────────────────────────
+function gcInjectInviteBanner() {
+    const el = document.getElementById('gc-messages');
+    const existing = document.getElementById('gc-invite-banner');
+    if (existing) existing.remove();
+
+    const banner = document.createElement('div');
+    banner.id = 'gc-invite-banner';
+    banner.className = 'gc-invite-banner';
+    banner.innerHTML = `
+        <div class="gc-invite-label">Share this code with your friend</div>
+        <div class="gc-invite-code" id="gc-invite-code-text">${escHtml(gc.roomCode)}</div>
+        <button class="gc-invite-copy" onclick="gcCopyCode()">
+            <ion-icon name="copy-outline"></ion-icon> Copy invite link
+        </button>
+        <div style="display:flex;align-items:center;gap:8px;margin-top:4px;">
+            <div class="gc-invite-spinner"></div>
+            <span style="font-size:0.78rem;color:var(--text-3);">Waiting for them to join…</span>
+        </div>
+    `;
+    el.appendChild(banner);
+    gcScrollBottom();
+}
+
+function gcMarkReady() {
+    if (gc.ready) return;   // guard — both INSERT and UPDATE events can fire; only run once
+    gc.ready = true;
+    // Dismiss invite banner if present
+    const banner = document.getElementById('gc-invite-banner');
+    if (banner) {
+        banner.style.transition = 'opacity 0.3s';
+        banner.style.opacity = '0';
+        setTimeout(() => banner.remove(), 300);
+    }
+    document.getElementById('gc-dot-other').classList.add('active');
+    document.getElementById('gc-header-names').textContent =
+        gc.otherName ? `${gc.myName} & ${gc.otherName}` : gc.myName;
+    gcInjectSystem(`${gc.otherName || 'Your friend'} joined the room ✓`);
+}
+
+// ── Host presence poll ─────────────────────────────────────────────────────────
+// Polls group_rooms every 3 s so the host transitions to active chat the moment
+// User B joins, even if Supabase Realtime UPDATE / Presence events don't fire
+// (e.g. group_rooms not in the Realtime publication, or cold-start latency).
+function gcStartPresencePoll() {
+    if (gc.presencePollTimer) return;
+    gc.presencePollTimer = setInterval(async () => {
+        if (gc.ready) {
+            clearInterval(gc.presencePollTimer);
+            gc.presencePollTimer = null;
+            return;
+        }
+        try {
+            const { data } = await sb
+                .from('group_rooms')
+                .select('user_b_id, user_b_name')
+                .eq('id', gc.roomId)
+                .single();
+            if (data?.user_b_id) {
+                gc.otherUserId = data.user_b_id;
+                gc.otherName   = data.user_b_name || 'Friend';
+                clearInterval(gc.presencePollTimer);
+                gc.presencePollTimer = null;
+                gcMarkReady();
+            }
+        } catch { /* network blip — retry next tick */ }
+    }, 3000);
+}
+
+function gcInjectSystem(text) {
+    const el = document.getElementById('gc-messages');
+    const div = document.createElement('div');
+    div.className = 'gc-system-msg';
+    div.textContent = text;
+    div.style.animation = 'fadeIn 0.3s ease';
+    el.appendChild(div);
+    gcScrollBottom();
+}
+
+// ── Realtime subscription ──────────────────────────────────────────────────────
 function gcSubscribe() {
     if (gc.subscription) return;
 
     gc.subscription = sb
-        .channel('group_chat_' + gc.roomId)
-        .on('postgres_changes', {
-            event:  'INSERT',
-            schema: 'public',
-            table:  'group_messages',
-            filter: `room_id=eq.${gc.roomId}`,
-        }, payload => {
-            const msg = payload.new;
-            // Avoid duplicates (we already append our own messages optimistically)
-            if (gc.messages.find(m => m.id === msg.id)) return;
+        // self: true means the sender also receives its own broadcast events.
+        // This makes ALL clients (including sender) render through ONE code path —
+        // eliminating the local-render vs. realtime-render split that caused blank screens.
+        .channel('gc_room_' + gc.roomId, {
+            config: { broadcast: { self: true } }
+        })
+
+        // ── Presence: instant host notification when invitee joins ─────────────
+        // Each client tracks itself in Supabase Presence. The host receives the
+        // join event immediately without polling or waiting for a DB UPDATE.
+        .on('presence', { event: 'join' }, ({ newPresences }) => {
+            for (const p of newPresences) {
+                if (p.userId && p.userId !== gc.myUserId && !gc.ready) {
+                    gc.otherUserId = p.userId;
+                    gc.otherName   = p.userName || gc.otherName || 'Friend';
+                    gcMarkReady();
+                }
+            }
+        })
+
+        // ── Broadcast relay: single source of truth for ALL clients ─────────────
+        // With self:true, the sender also fires this handler for its own messages.
+        // Every message — own, other, or AI — is rendered HERE and nowhere else.
+        .on('broadcast', { event: 'gc_message' }, ({ payload }) => {
+            const msg = payload;
+            if (!msg?.id) return;
+            if (gc.messages.find(m => m.id === msg.id)) return;  // dedup (also fires via postgres_changes)
+
+            if (msg.role === 'assistant') {
+                const alreadyHaveAI = gc.messages.some(
+                    m => m.role === 'assistant' &&
+                         Math.abs(new Date(m.created_at) - new Date(msg.created_at)) < 3000
+                );
+                if (alreadyHaveAI) return;
+            }
+
             gcAppendMessage(msg);
-            // If this is the other user's first message → mark room ready
-            if (!gc.ready && msg.user_id !== gc.myUserId) {
+
+            // Presence fallback: learn the other user's identity from their first message
+            if (!gc.ready && msg.user_id !== gc.myUserId && msg.user_id !== 'ai') {
                 gc.otherUserId = msg.user_id;
                 gc.otherName   = msg.user_name;
                 gcMarkReady();
             }
+
+            // Schedule AI after ANY user message — the coordinator in gcScheduleAI
+            // decides which client fires the actual API call (last-sender wins).
+            if (msg.role === 'user') {
+                gcScheduleAI();
+            }
         })
+
+        // ── New message from any participant ────────────────────────────────────
+        // No server-side filter: Supabase Realtime's UUID filter matching can
+        // silently fail to deliver events. We receive all group_messages INSERTs
+        // and discard rows that belong to other rooms client-side.
         .on('postgres_changes', {
-            event:  'UPDATE',
-            schema: 'public',
-            table:  'group_rooms',
+            event: 'INSERT', schema: 'public', table: 'group_messages',
+        }, payload => {
+            const msg = payload.new;
+            if (msg.room_id !== gc.roomId) return;              // client-side room filter
+            if (gc.messages.find(m => m.id === msg.id)) return; // dedup: broadcast already rendered it
+
+            // Dedupe AI messages: if we already have an AI msg from the last 3 s, skip
+            if (msg.user_id === 'ai' || msg.role === 'assistant') {
+                const recent = Date.now() - new Date(msg.created_at).getTime() < 3000;
+                const alreadyHaveAI = gc.messages.some(
+                    m => (m.user_id === 'ai' || m.role === 'assistant') &&
+                         Math.abs(new Date(m.created_at) - new Date(msg.created_at)) < 3000
+                );
+                if (recent && alreadyHaveAI) return;
+            }
+
+            gcAppendMessage(msg);
+
+            // Presence fallback: if other user's first message arrives before presence event
+            if (!gc.ready && msg.user_id !== gc.myUserId && msg.user_id !== 'ai') {
+                gc.otherUserId = msg.user_id;
+                gc.otherName   = msg.user_name;
+                gcMarkReady();
+            }
+
+            // Match broadcast handler: schedule AI for any user message
+            if (msg.role === 'user') {
+                gcScheduleAI();
+            }
+        })
+
+        // ── Room UPDATE fallback (belt-and-suspenders for presence) ─────────────
+        .on('postgres_changes', {
+            event: 'UPDATE', schema: 'public', table: 'group_rooms',
             filter: `id=eq.${gc.roomId}`,
         }, payload => {
             const room = payload.new;
-            // Second user joined
             if (!gc.ready && room.user_b_id && room.user_b_id !== gc.myUserId) {
                 gc.otherUserId = room.user_b_id;
                 gc.otherName   = room.user_b_name;
                 gcMarkReady();
             }
         })
-        .subscribe();
+
+        .subscribe(async (status) => {
+            console.log('[GC] channel status →', status, '| room:', gc.roomId);
+
+            if (status === 'SUBSCRIBED') {
+                gc.subscriptionReady = true;
+
+                // Flush any broadcasts that were queued while the WebSocket
+                // handshake was still in progress (race-condition fix).
+                const pending = gc.broadcastQueue.splice(0);
+                for (const p of pending) {
+                    gc.subscription.send(p);
+                }
+                console.log(`[GC] flushed ${pending.length} queued broadcast(s)`);
+
+                // Catch-up: pull any messages that were inserted between the
+                // history load and the moment the subscription became active.
+                await gcCatchUpMessages();
+
+                // Announce this client into the Presence channel
+                await gc.subscription.track({
+                    userId:    gc.myUserId,
+                    userName:  gc.myName,
+                    online_at: new Date().toISOString(),
+                });
+
+            } else if (status === 'CHANNEL_ERROR') {
+                gc.subscriptionReady = false;
+                console.error('[GC] channel error — realtime unavailable, messages delivery may degrade');
+
+            } else if (status === 'TIMED_OUT') {
+                gc.subscriptionReady = false;
+                console.warn('[GC] channel timed out — Supabase will auto-retry');
+
+            } else if (status === 'CLOSED') {
+                gc.subscriptionReady = false;
+            }
+        });
 }
 
-// ── Load existing messages ─────────────────────────────────────────────────────
-async function gcLoadMessages() {
+// ── Catch-up poll — runs once when subscription becomes SUBSCRIBED ─────────────
+// Covers the race window between gcLoadMessages() completing (REST) and the
+// WebSocket subscription reaching SUBSCRIBED state. Any message inserted during
+// that window is fetched here so neither client ever misses a message.
+async function gcCatchUpMessages() {
     try {
+        const confirmed = gc.messages.filter(m => !String(m.id).startsWith('temp_'));
+        // Sort ascending and take the newest timestamp as our lower bound.
+        // Fall back to 30 s ago if there are no confirmed messages yet.
+        const lastTs = confirmed.length
+            ? confirmed.slice().sort((a, b) => new Date(a.created_at) - new Date(b.created_at)).at(-1).created_at
+            : new Date(Date.now() - 30_000).toISOString();
+
         const { data } = await sb
             .from('group_messages')
             .select('*')
             .eq('room_id', gc.roomId)
-            .order('created_at', { ascending: true })
-            .limit(100);
+            .gt('created_at', lastTs)
+            .order('created_at', { ascending: true });
 
-        if (data && data.length > 0) {
-            gc.messages = data;
-            const el = document.getElementById('gc-messages');
-            // Keep the date separator, remove any existing bubbles
-            const sep = document.getElementById('gc-date-sep');
-            while (el.firstChild && el.firstChild !== sep) el.removeChild(el.firstChild);
-            while (sep.nextSibling) el.removeChild(sep.nextSibling);
-            data.forEach(m => gcRenderMessage(m, false));
-            gcScrollBottom();
+        if (!data?.length) return;
+        console.log(`[GC] catch-up: ${data.length} missed message(s)`);
+        for (const msg of data) {
+            if (!gc.messages.find(m => m.id === msg.id)) {
+                gcAppendMessage(msg);
+                if (msg.role === 'user') gcScheduleAI();
+            }
         }
-    } catch (e) { /* non-blocking */ }
+    } catch (e) {
+        console.warn('[GC] catch-up error', e);
+    }
 }
 
-// ── Send message ──────────────────────────────────────────────────────────────
+// ── Load history ───────────────────────────────────────────────────────────────
+async function gcLoadMessages() {
+    try {
+        const { data } = await sb.from('group_messages')
+            .select('*').eq('room_id', gc.roomId)
+            .order('created_at', { ascending: true }).limit(150);
+        if (!data || !data.length) return;
+
+        const el  = document.getElementById('gc-messages');
+        const sep = document.getElementById('gc-date-sep');
+
+        // Remove only message bubbles — keep date-sep in place.
+        // The invite banner doesn't exist yet at this point (gcEnterRoom awaits us
+        // before injecting it), so there's nothing to preserve.
+        Array.from(el.children).forEach(child => {
+            if (child !== sep) el.removeChild(child);
+        });
+
+        gc.messages = data;
+        data.forEach(m => gcRenderMessage(m, false));
+
+        // Sync gc.ready in case User B was already in the room when we load history
+        if (!gc.ready && data.some(m => m.user_id !== gc.myUserId && m.user_id !== 'ai')) {
+            // Find the other user's identity from history
+            const otherMsg = data.find(m => m.user_id !== gc.myUserId && m.user_id !== 'ai');
+            if (otherMsg && !gc.otherUserId) {
+                gc.otherUserId = otherMsg.user_id;
+                gc.otherName   = otherMsg.user_name;
+            }
+        }
+
+        gcScrollBottom();
+    } catch (e) { console.warn('[GC] loadMessages error', e); }
+}
+
+// ── Send text message ──────────────────────────────────────────────────────────
+// NO optimistic rendering. Message appears only after the DB row is confirmed
+// and broadcast back via the channel (self:true). This guarantees both clients
+// always see the exact same timeline with no temp-ID or dedup complexity.
 async function gcSend() {
     const input = document.getElementById('gc-msg-input');
     const text  = input.value.trim();
     if (!text || gc.aiTyping) return;
-
     input.value = '';
     gcAutoResize(input);
 
-    // Optimistic local append
-    const tempMsg = {
-        id:         'temp_' + Date.now(),
-        room_id:    gc.roomId,
-        user_id:    gc.myUserId,
-        user_name:  gc.myName,
-        role:       'user',
-        content:    text,
-        created_at: new Date().toISOString(),
-    };
-    gc.messages.push(tempMsg);
-    gcAppendMessage(tempMsg);
-
-    // Save to Supabase
-    let savedId = null;
     try {
-        const { data } = await sb.from('group_messages').insert({
-            room_id:    gc.roomId,
-            user_id:    gc.myUserId,
-            user_name:  gc.myName,
-            role:       'user',
-            content:    text,
+        const { data, error } = await sb.from('group_messages').insert({
+            room_id:   gc.roomId,
+            user_id:   gc.myUserId,
+            user_name: gc.myName,
+            role:      'user',
+            content:   text,
         }).select().single();
-        if (data) savedId = data.id;
-    } catch (e) { console.error('Save message error:', e); }
 
-    // Only trigger AI if room is ready (both users present)
-    if (gc.ready) {
-        gcGetAIReply(text);
+        if (error) throw error;
+        if (data) {
+            // Broadcast to all clients including self — rendering happens in the
+            // broadcast handler so sender and receiver use identical code paths.
+            gcBroadcast(data);
+        }
+    } catch (e) {
+        input.value = text;  // restore text so user can retry
+        showError('Could not send — please try again');
+        console.error('[GC] save message error', e);
     }
 }
 
 function gcKeydown(e) {
-    if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        gcSend();
-    }
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); gcSend(); }
 }
-
 function gcAutoResize(el) {
     el.style.height = 'auto';
     el.style.height = Math.min(el.scrollHeight, 120) + 'px';
 }
 
-// ── AI mediator reply ─────────────────────────────────────────────────────────
-async function gcGetAIReply(latestText) {
+// ── Media attach ───────────────────────────────────────────────────────────────
+function gcToggleAttach() {
+    document.getElementById('gc-attach-menu').classList.toggle('open');
+}
+document.addEventListener('click', e => {
+    const menu = document.getElementById('gc-attach-menu');
+    const btn  = document.getElementById('gc-attach-btn');
+    if (menu && !menu.contains(e.target) && e.target !== btn && !btn.contains(e.target)) {
+        menu.classList.remove('open');
+    }
+});
+
+function gcPickFile(type) {
+    document.getElementById('gc-attach-menu').classList.remove('open');
+    document.getElementById('gc-file-image').click();
+}
+
+async function gcUploadFile(input, mediaType) {
+    const file = input.files[0];
+    if (!file) return;
+    input.value = '';
+
+    // Show upload progress bubble
+    const tempId = 'temp_upload_' + Date.now();
+    const progWrap = document.createElement('div');
+    progWrap.id = tempId;
+    progWrap.className = 'gc-msg mine';
+    progWrap.innerHTML = `
+        <div class="gc-upload-bubble">
+            <ion-icon name="${mediaType === 'audio' ? 'mic-outline' : 'image-outline'}"></ion-icon>
+            <span style="flex:1;font-size:0.78rem;">${mediaType === 'audio' ? 'Transcribing…' : 'Uploading…'}</span>
+            <div class="gc-upload-bar-wrap"><div class="gc-upload-bar" id="${tempId}-bar"></div></div>
+        </div>`;
+    document.getElementById('gc-messages').appendChild(progWrap);
+    gcScrollBottom();
+
+    try {
+        // ── Step 1: Transcribe audio via Whisper BEFORE storage upload ─────────
+        // Stores the spoken words as message content so the AI mediator can
+        // read what was actually said, not just "voice_1234.webm".
+        let messageContent = file.name;
+        if (mediaType === 'audio') {
+            try {
+                const base64 = await new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload  = () => resolve(reader.result.split(',')[1]);
+                    reader.onerror = reject;
+                    reader.readAsDataURL(file);
+                });
+                // Infer the current language from recent chat history so Whisper
+                // outputs the correct script (Telugu / Hindi / Latin)
+                const recentText = gc.messages
+                    .filter(m => m.role === 'user').slice(-4)
+                    .map(m => m.content).join(' ');
+                const langHint = detectLang(recentText);
+
+                const transcribeUrl = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+                    ? 'http://localhost:8888/.netlify/functions/transcribe'
+                    : '/api/transcribe';
+
+                const tRes = await fetch(transcribeUrl, {
+                    method:  'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body:    JSON.stringify({ audioBase64: base64, mimeType: file.type, langHint }),
+                });
+                if (tRes.ok) {
+                    const tJson = await tRes.json();
+                    if (tJson.text) messageContent = tJson.text;
+                }
+            } catch (tErr) {
+                console.warn('[GC] transcription failed, falling back to filename', tErr);
+            }
+
+            // Update bubble label now that transcription is done
+            const labelEl = progWrap.querySelector('span');
+            if (labelEl) labelEl.textContent = 'Uploading…';
+        }
+
+        // ── Step 2: Upload the raw file to Supabase Storage ───────────────────
+        const ext  = file.name.split('.').pop();
+        const path = `${gc.roomId}/${Date.now()}.${ext}`;
+        const { error: upErr } = await sb.storage.from('group-media').upload(path, file, {
+            cacheControl: '3600', upsert: false,
+        });
+        if (upErr) throw upErr;
+
+        const { data: urlData } = sb.storage.from('group-media').getPublicUrl(path);
+        const publicUrl = urlData.publicUrl;
+
+        progWrap.remove();
+
+        // ── Step 3: Save to DB ─────────────────────────────────────────────────
+        // content = transcript (audio) or filename (image).
+        // media_url = Supabase Storage URL for playback/display.
+        const { data: msgData } = await sb.from('group_messages').insert({
+            room_id:    gc.roomId,
+            user_id:    gc.myUserId,
+            user_name:  gc.myName,
+            role:       'user',
+            content:    messageContent,
+            media_url:  publicUrl,
+            media_type: mediaType,
+        }).select().single();
+
+        if (msgData) {
+            // Broadcast to all clients including self — same single-path as text messages.
+            // Rendering and AI scheduling happen in the broadcast handler.
+            gcBroadcast(msgData);
+        }
+    } catch (e) {
+        progWrap.remove();
+        showError('Upload failed — ' + (e.message || 'try again'));
+        console.error('[GC] upload error', e);
+    }
+}
+
+// ── Voice recording ────────────────────────────────────────────────────────────
+async function gcStartRecording() {
+    document.getElementById('gc-attach-menu').classList.remove('open');
+    if (gc.recording) { gcStopRecording(); return; }
+
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        gc.audioChunks  = [];
+        gc.mediaRecorder = new MediaRecorder(stream);
+        gc.mediaRecorder.ondataavailable = e => { if (e.data.size) gc.audioChunks.push(e.data); };
+        gc.mediaRecorder.onstop = gcFinishRecording;
+        gc.mediaRecorder.start();
+        gc.recording = true;
+
+        document.getElementById('gc-rec-icon').textContent  = '⏹️';
+        document.getElementById('gc-rec-label').textContent = 'Stop Recording';
+        document.getElementById('gc-attach-btn').style.background = 'rgba(255,68,68,0.15)';
+    } catch (e) {
+        showError('Microphone access denied');
+    }
+}
+
+function gcStopRecording() {
+    if (gc.mediaRecorder && gc.recording) {
+        gc.mediaRecorder.stop();
+        gc.mediaRecorder.stream.getTracks().forEach(t => t.stop());
+        gc.recording = false;
+        document.getElementById('gc-rec-icon').textContent  = '🎤';
+        document.getElementById('gc-rec-label').textContent = 'Voice Note';
+        document.getElementById('gc-attach-btn').style.background = '';
+    }
+}
+
+async function gcFinishRecording() {
+    const mimeType = gc.mediaRecorder?.mimeType || 'audio/webm';
+    const blob = new Blob(gc.audioChunks, { type: mimeType });
+    const ext  = mimeType.includes('ogg') ? 'ogg' : mimeType.includes('mp4') ? 'mp4' : 'webm';
+    const file = new File([blob], `voice_${Date.now()}.${ext}`, { type: mimeType });
+
+    // Reuse gcUploadFile logic via a fake input wrapper
+    const fakeInput = { files: [file], value: '' };
+    await gcUploadFile(fakeInput, 'audio');
+}
+
+// ── AI silence-timer scheduler ─────────────────────────────────────────────────
+// Called after ANY message lands (local send OR remote realtime INSERT).
+// Waits 1.5 s of silence, then applies a last-sender coordinator check:
+// only the client whose userId matches the LAST confirmed user message in the
+// shared transcript calls gcGetAIReply. This guarantees exactly one AI insert
+// per exchange regardless of how many browser tabs are open in the room.
+function gcScheduleAI() {
+    if (gc.aiDebounceTimer) clearTimeout(gc.aiDebounceTimer);
+    gc.aiDebounceTimer = setTimeout(() => {
+        gc.aiDebounceTimer = null;
+
+        // Last-sender coordinator: find the most recent confirmed user message
+        // (skip temp IDs which only exist in the local client's memory).
+        const lastUserMsg = [...gc.messages]
+            .reverse()
+            .find(m => m.role === 'user' && !String(m.id).startsWith('temp_'));
+
+        // Only proceed if I sent that message. If the other user sent it,
+        // their client will handle the AI call.
+        if (!lastUserMsg || lastUserMsg.user_id !== gc.myUserId) return;
+
+        gcGetAIReply();
+    }, 1500);
+}
+
+// ── AI reply ───────────────────────────────────────────────────────────────────
+async function gcGetAIReply() {
+    if (gc.aiTyping) return;
+
+    // ── Turn-counting guard ───────────────────────────────────────────────────
+    // Only fire if there is at least 1 real user message in the transcript.
+    // When both users are present, require at least 1 message from each before
+    // the AI steps in — so it never hijacks the very first exchange.
+    const userMsgs = gc.messages.filter(
+        m => (m.role === 'user') && !String(m.id).startsWith('temp_')
+    );
+    if (!userMsgs.length) return;
+
+    const speakers = new Set(userMsgs.map(m => m.user_id));
+    const bothPresent = gc.otherUserId !== null;
+    // If both users are in the room but only one has spoken, let the AI invite
+    // the other in (this is intentional behaviour — do not block it).
+    // If no one has spoken yet, bail.
+    if (bothPresent && speakers.size === 0) return;
+
+    // ── Sender-side request token ─────────────────────────────────────────────
+    // If a new message arrives while the fetch is in flight, the token changes
+    // and the stale reply is discarded rather than inserted into the DB.
+    const myToken = ++gc.aiRequestToken;
+
     gc.aiTyping = true;
     const typingEl = document.getElementById('gc-typing');
     typingEl.classList.add('visible');
     gcScrollBottom();
 
+    const doneTyping = () => {
+        gc.aiTyping = false;
+        typingEl.classList.remove('visible');
+    };
+
     try {
-        // Build message history for AI (exclude temp IDs)
+        // Build history — last 20 messages, include media URLs for images
         const hist = gc.messages
             .filter(m => m.role === 'user' || m.role === 'assistant')
-            .map(m => ({
-                userId:   m.user_id  || 'ai',
-                userName: m.user_name || 'AI',
-                role:     m.role,
-                content:  m.content,
-            }));
+            .filter(m => !String(m.id).startsWith('temp_'))
+            .slice(-20)
+            .map(m => {
+                const base = {
+                    userId:   m.user_id   || 'ai',
+                    userName: m.user_name  || 'AI',
+                    role:     m.role,
+                    content:  m.content   || '',
+                };
+                if (m.media_url && m.media_type === 'image') base.imageUrl  = m.media_url;
+                if (m.media_url && m.media_type === 'audio') base.audioNote = true;
+                return base;
+            });
 
-        const lang = detectLang(latestText);
+        if (!hist.length) { doneTyping(); return; }
 
-        const res = await fetch('/api/group-chat', {
+        const lastText = [...hist].reverse().find(m => m.role === 'user')?.content || '';
+        const lang     = detectLang(lastText);
+
+        // Use the canonical function URL so this works regardless of how the
+        // page is served (netlify dev, netlify deploy, or preview branches).
+        // A plain /api/group-chat redirect requires netlify dev / production;
+        // the /.netlify/functions/ path is always authoritative.
+        const apiUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+            ? 'http://localhost:8888/.netlify/functions/group-chat'
+            : '/api/group-chat';
+
+        const res = await fetch(apiUrl, {
             method:  'POST',
             headers: { 'Content-Type': 'application/json' },
             body:    JSON.stringify({ messages: hist, language: lang }),
         });
 
-        if (!res.ok) throw new Error(`AI error ${res.status}`);
-        const { reply } = await res.json();
-        if (!reply) return;
+        // Token check: if a new message arrived while we were waiting, discard
+        if (gc.aiRequestToken !== myToken) { doneTyping(); return; }
 
-        typingEl.classList.remove('visible');
-        gc.aiTyping = false;
+        if (!res.ok) {
+            const errBody = await res.text().catch(() => '');
+            console.error('[GC] AI HTTP error', res.status, errBody);
+            doneTyping();
+            if (res.status === 405) {
+                showError('AI unavailable — open this page via `netlify dev` on port 8888');
+            } else {
+                showError(`AI error ${res.status} — ${
+                    res.status === 500 ? 'API key missing on server' :
+                    res.status === 502 ? 'OpenAI unreachable' : 'try again'}`);
+            }
+            return;
+        }
 
-        // Save AI reply to Supabase
+        const json  = await res.json();
+        const reply = json.reply;
+        if (!reply) { doneTyping(); return; }
+
+        // Final token check before inserting into DB
+        if (gc.aiRequestToken !== myToken) { doneTyping(); return; }
+
+        doneTyping();
+
+        // Save AI reply to DB; Realtime will echo it — the dedup in gcAppendMessage
+        // (added in the subscription callback) prevents a double-render
         const { data } = await sb.from('group_messages').insert({
             room_id:   gc.roomId,
             user_id:   'ai',
@@ -965,52 +1290,127 @@ async function gcGetAIReply(latestText) {
         }).select().single();
 
         if (data) {
-            gc.messages.push(data);
-            gcAppendMessage(data);
+            // Broadcast AI reply to all clients including self — both clients
+            // render the AI message through the same broadcast handler.
+            gcBroadcast(data);
         }
-
     } catch (e) {
-        console.error('AI reply error:', e);
-        typingEl.classList.remove('visible');
-        gc.aiTyping = false;
+        console.error('[GC] AI error', e);
+        doneTyping();
+        showError('AI unavailable right now');
     }
 }
 
-// ── Render messages ───────────────────────────────────────────────────────────
+// ── Render messages ────────────────────────────────────────────────────────────
 function gcAppendMessage(msg) {
-    gc.messages = gc.messages.filter(m => m.id !== 'temp_' + (msg.id || ''));
+    // Remove optimistic temp bubble if the real one arrived
+    const tempEl = document.getElementById('temp_' + msg.id);
+    if (tempEl) tempEl.remove();
+    // Remove from local array too if it's a resolved temp
+    gc.messages = gc.messages.filter(m => m.id !== 'temp_' + msg.id);
+    // Track every confirmed message in gc.messages so AI context includes all participants
+    if (!gc.messages.find(m => m.id === msg.id)) gc.messages.push(msg);
     gcRenderMessage(msg, true);
     gcScrollBottom();
 }
 
 function gcRenderMessage(msg, animate) {
-    const el     = document.getElementById('gc-messages');
-    const isMe   = msg.user_id === gc.myUserId;
-    const isAI   = msg.role === 'assistant' || msg.user_id === 'ai';
-    const cls    = isAI ? 'ai' : isMe ? 'mine' : 'other';
+    const el   = document.getElementById('gc-messages');
+    const isMe = msg.user_id === gc.myUserId;
+    const isAI = msg.role === 'assistant' || msg.user_id === 'ai';
+    const cls  = isAI ? 'ai' : isMe ? 'mine' : 'other';
 
-    const wrap   = document.createElement('div');
+    const wrap = document.createElement('div');
     wrap.className = `gc-msg ${cls}`;
+    if (msg.id) wrap.id = 'msg_' + msg.id;
     if (animate) wrap.style.animation = 'fadeIn 0.18s ease';
 
     let nameHTML = '';
-    if (!isMe && !isAI) {
-        nameHTML = `<div class="gc-msg-name">${escHtml(msg.user_name || 'User')}</div>`;
-    }
-    if (isAI) {
-        nameHTML = `<div class="gc-msg-name" style="color:var(--purple,#a067ff);">✦ AI</div>`;
+    if (!isMe && !isAI) nameHTML = `<div class="gc-msg-name">${escHtml(msg.user_name||'User')}</div>`;
+    if (isAI)           nameHTML = `<div class="gc-msg-name" style="color:var(--purple,#a067ff);">✦ AI</div>`;
+
+    let contentHTML = '';
+    if (msg.media_type === 'image' && msg.media_url) {
+        contentHTML = `
+            <div class="gc-msg-bubble" style="padding:6px;background:transparent;">
+                <img class="gc-msg-image" src="${escHtml(msg.media_url)}"
+                     alt="Shared image" loading="lazy"
+                     onclick="gcOpenLightbox('${escHtml(msg.media_url)}')">
+                ${msg.content && msg.content !== msg.media_url
+                    ? `<div class="gc-media-caption">${escHtml(msg.content)}</div>` : ''}
+            </div>`;
+    } else if (msg.media_type === 'audio' && msg.media_url) {
+        // Show transcript under the audio player if transcription succeeded.
+        // A successful transcript is any content that isn't a raw audio filename.
+        const isFilename = /\.(webm|mp4|ogg|mp3|wav|m4a)$/i.test(msg.content || '');
+        const transcript = (msg.content && !isFilename)
+            ? `<div class="gc-media-caption" style="font-style:italic;opacity:0.75;margin-top:6px;">"${escHtml(msg.content)}"</div>`
+            : '';
+        contentHTML = `
+            <div class="gc-msg-bubble">
+                🎤 Voice note
+                <audio class="gc-msg-audio" controls preload="none"
+                       src="${escHtml(msg.media_url)}"></audio>
+                ${transcript}
+            </div>`;
+    } else {
+        contentHTML = `<div class="gc-msg-bubble">${escHtml(msg.content||'')}</div>`;
     }
 
     wrap.innerHTML = `
         ${nameHTML}
-        <div class="gc-msg-bubble">${escHtml(msg.content)}</div>
+        ${contentHTML}
         <div class="gc-msg-time">${fmtTime(msg.created_at)}</div>
     `;
     el.appendChild(wrap);
 }
 
-function escHtml(str) {
-    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+// ── Lightbox ───────────────────────────────────────────────────────────────────
+function gcOpenLightbox(url) {
+    document.getElementById('gc-lightbox-img').src = url;
+    document.getElementById('gc-lightbox').classList.add('open');
+}
+
+// ── Copy code / invite link ────────────────────────────────────────────────────
+async function gcCopyCode() {
+    const url = `${location.origin}${location.pathname}?room=${gc.roomCode}`;
+    try { await navigator.clipboard.writeText(url); } catch (_) {}
+
+    // Flash all code displays
+    ['gc-code-display', 'gc-invite-code-text'].forEach(id => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        const old = el.textContent;
+        el.textContent = 'COPIED!';
+        setTimeout(() => { el.textContent = old; }, 1500);
+    });
+}
+
+// ── Leave / reset ──────────────────────────────────────────────────────────────
+function gcLeave() {
+    // Only callable when actually in the chat — prevents accidental back-button triggers
+    if (!gc.roomId) return;
+
+    gcStopRecording();
+    if (gc.presencePollTimer) { clearInterval(gc.presencePollTimer); gc.presencePollTimer = null; }
+    if (gc.aiDebounceTimer)   { clearTimeout(gc.aiDebounceTimer);    gc.aiDebounceTimer   = null; }
+    if (gc.subscription) { sb.removeChannel(gc.subscription); gc.subscription = null; }
+    // Clear persisted room so next load shows the lobby
+    gcClearRoom();
+    // Don't clear the user session — name/userId should survive
+    gc = { roomId:null, roomCode:null, myUserId: gc.myUserId, myName: gc.myName,
+           otherUserId:null, otherName:null, messages:[], subscription:null,
+           aiTyping:false, ready:false, mediaRecorder:null, audioChunks:[], recording:false,
+           aiDebounceTimer:null, aiRequestToken:0, presencePollTimer:null,
+           subscriptionReady:false, broadcastQueue:[] };
+    document.getElementById('gc-chat').style.display = 'none';
+    document.getElementById('gc-chat').classList.remove('visible');
+    document.getElementById('gc-join').style.display = 'flex';
+    document.getElementById('gc-messages').innerHTML = '<div class="gc-date-sep" id="gc-date-sep"></div>';
+    gcSelectChoice(null);
+    document.getElementById('gc-choice-create').classList.remove('selected');
+    document.getElementById('gc-choice-join').classList.remove('selected');
+    gcCurrentChoice = null;
 }
 
 function gcScrollBottom() {
@@ -1018,35 +1418,43 @@ function gcScrollBottom() {
     setTimeout(() => { el.scrollTop = el.scrollHeight; }, 30);
 }
 
-// ── Misc ──────────────────────────────────────────────────────────────────────
-async function gcCopyCode() {
-    try {
-        await navigator.clipboard.writeText(gc.roomCode);
-        const el = document.getElementById('gc-code-display');
-        const old = el.textContent;
-        el.textContent = 'COPIED';
-        setTimeout(() => { el.textContent = old; }, 1200);
-    } catch (_) {}
-}
+// ── Restore saved name & URL auto-join ────────────────────────────────────────
+(async function init() {
+    const session = gcGetSession();
+    if (session?.name) document.getElementById('gc-name-input').value = session.name;
 
-function gcLeave() {
-    if (gc.subscription) { sb.removeChannel(gc.subscription); gc.subscription = null; }
-    gc = { roomId:null, roomCode:null, myUserId:null, myName:null, otherUserId:null,
-           otherName:null, messages:[], subscription:null, aiTyping:false, ready:false };
-    document.getElementById('gc-chat').style.display   = 'none';
-    document.getElementById('gc-chat').classList.remove('visible');
-    document.getElementById('gc-join').style.display   = 'flex';
-    document.getElementById('gc-messages').innerHTML   = '<div class="gc-date-sep" id="gc-date-sep"></div>';
-    gcHideJoin();
-}
+    // Auto-rejoin an active room (survives page reload / accidental back-navigation)
+    const savedRoom = gcGetSavedRoom();
+    if (savedRoom?.roomCode && session?.userId) {
+        try {
+            const { data } = await sb.from('group_rooms')
+                .select('*').eq('room_code', savedRoom.roomCode).maybeSingle();
+            if (data) {
+                gc.myUserId    = session.userId;
+                gc.myName      = session.name || 'You';
+                gc.roomId      = data.id;
+                gc.roomCode    = data.room_code;
+                gc.otherUserId = data.user_a_id === session.userId ? (data.user_b_id  || null) : data.user_a_id;
+                gc.otherName   = data.user_a_id === session.userId ? (data.user_b_name || null) : data.user_a_name;
+                const isCreator = data.user_a_id === session.userId;
+                gcEnterRoom(isCreator);
+                return;
+            }
+        } catch (e) {
+            // Room fetch failed — fall through to normal lobby
+        }
+        gcClearRoom(); // stale room, clear it
+    }
 
-// Check URL for join code ?room=XXXXXX
-(function() {
-    const p = new URLSearchParams(window.location.search);
+    // URL invite-link: pre-fill the join form
+    const p    = new URLSearchParams(window.location.search);
     const code = p.get('room');
-    if (code) {
+    if (code && /^[A-Z0-9]{6}$/i.test(code)) {
+        gcSelectChoice('join');
         document.getElementById('gc-code-input').value = code.toUpperCase();
-        gcShowJoin();
+        history.replaceState(null, '', location.pathname);
+        // If user already has a session, auto-join immediately
+        if (session?.name) gcJoin();
     }
 })();
 </script>
