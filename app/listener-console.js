@@ -25,6 +25,14 @@ document.addEventListener('DOMContentLoaded', () => {
     let peerConnection = null;
     let localStream = null;
 
+    // Feature 5: call-duration tracking
+    let callStartTime = null;
+    let callTimerInterval = null;
+
+    // Feature 2: voice-masking audio context
+    let audioContext = null;
+    let pitchShiftedStream = null;
+
     const statusToggleBtn = document.getElementById('status-toggle-btn');
     const statusBtnText = document.getElementById('status-btn-text');
     const statusText = document.getElementById('status-indicator-text');
@@ -53,6 +61,7 @@ document.addEventListener('DOMContentLoaded', () => {
             updateStatusUI(); 
             setupSessionWatcher(existingSession.id);
             existingSession.session_type === 'call' ? startVoiceCallInterface() : startLiveChatInterface();
+            window.showCopilot();
         } else {
             if (!currentListenerProfile.display_name || currentListenerProfile.display_name.trim() === '') {
                 await supabase.from('listeners').update({ is_online: false }).eq('id', currentListenerProfile.id);
@@ -289,6 +298,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         type === 'call' ? startVoiceCallInterface() : startLiveChatInterface();
         setupSessionWatcher(sessionId);
+        window.showCopilot(); // Feature 4: show AI copilot FAB once session is live
     };
 
     window.acceptMidChatCall = async function() {
@@ -339,13 +349,20 @@ document.addEventListener('DOMContentLoaded', () => {
             }).subscribe();
             
         if (messagePollInterval) clearInterval(messagePollInterval);
-        messagePollInterval = setInterval(syncMessages, 2500);
+        // Match the user side (1.5s) so listener doesn't lag on inbound messages.
+        messagePollInterval = setInterval(syncMessages, 1500);
     }
 
+    let lastSyncedAt = null;
     async function syncMessages() {
-        if (!activeSessionId || currentUIState !== 'chat') return;
-        const { data: msgs } = await supabase.from('messages').select('*').eq('session_id', activeSessionId).order('created_at', { ascending: true });
-        if (msgs) msgs.forEach(msg => renderChatMessage(msg));
+        if (!activeSessionId) return;   // poll even in call view so chat stays fresh
+        let q = supabase.from('messages').select('*').eq('session_id', activeSessionId).order('created_at', { ascending: true });
+        if (lastSyncedAt) q = q.gt('created_at', lastSyncedAt);
+        const { data: msgs } = await q;
+        if (msgs && msgs.length) {
+            msgs.forEach(msg => renderChatMessage(msg));
+            lastSyncedAt = msgs[msgs.length - 1].created_at;
+        }
     }
 
     window.sendReply = async function() {
@@ -353,8 +370,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const input = document.getElementById('chat-reply-input');
         const text = input.value.trim();
         if (!text) return;
-        input.value = ''; 
-        
+        input.value = '';
+        // Optimistic echo so listener sees own message immediately (dedup handles the DB echo)
+        const tempId = 'temp-' + Date.now();
+        renderChatMessage({ id: tempId, sender_id: currentUser.id, content: text, created_at: new Date().toISOString() });
         await supabase.from('messages').insert([{ session_id: activeSessionId, sender_id: currentUser.id, content: text }]);
     };
 
@@ -375,10 +394,34 @@ document.addEventListener('DOMContentLoaded', () => {
                 html = `<div id="msg-${msg.id}" style="text-align:center; margin: 15px 0; width: 100%; opacity: 0.6; font-size: 0.85rem;">Ringing... Waiting for user to accept.</div>`;
             }
         } else {
+            // Render media or plain text
+            let innerHtml = '';
+            if (msg.content && msg.content.startsWith('IMAGE::')) {
+                const parts = msg.content.replace('IMAGE::', '').split('||DESC::');
+                const imgUrl = parts[0];
+                const desc   = parts[1] || '';
+                innerHtml = `<div style="max-width:220px;">
+                    <img src="${imgUrl}" style="width:100%;border-radius:10px;cursor:pointer;display:block;"
+                         onclick="window.open('${imgUrl}','_blank')" title="${desc}">
+                    ${desc ? `<div style="font-size:0.72rem;opacity:0.65;margin-top:5px;line-height:1.35;">${desc}</div>` : ''}
+                </div>`;
+            } else if (msg.content && msg.content.startsWith('AUDIO::')) {
+                const audioUrl = msg.content.replace('AUDIO::', '');
+                innerHtml = `<div style="min-width:200px;">
+                    <div style="font-size:0.72rem;opacity:0.55;margin-bottom:6px;display:flex;align-items:center;gap:4px;">
+                        <ion-icon name="mic-outline" style="font-size:0.85rem;"></ion-icon> Voice note
+                    </div>
+                    <audio src="${audioUrl}" controls preload="metadata"
+                        style="width:100%;height:32px;outline:none;border-radius:8px;"></audio>
+                </div>`;
+            } else {
+                innerHtml = msg.content || '';
+            }
+
             html = `
-                <div id="msg-${msg.id}" style="display: flex; justify-content: ${isMe ? 'flex-end' : 'flex-start'}; width: 100%; margin-bottom: 10px;">
-                    <div style="background: ${isMe ? 'var(--accent-red)' : 'var(--glass-inner)'}; color: ${isMe ? 'white' : 'var(--text-color)'}; padding: 10px 15px; border-radius: 12px; max-width: 70%; word-wrap: break-word;">
-                        ${msg.content}
+                <div id="msg-${msg.id}" style="display:flex;justify-content:${isMe ? 'flex-end' : 'flex-start'};width:100%;margin-bottom:10px;">
+                    <div style="background:${isMe ? 'var(--accent-red)' : 'var(--glass-inner)'};color:${isMe ? 'white' : 'var(--text-color)'};padding:10px 15px;border-radius:12px;max-width:75%;word-wrap:break-word;">
+                        ${innerHtml}
                     </div>
                 </div>
             `;
@@ -424,6 +467,45 @@ document.addEventListener('DOMContentLoaded', () => {
     //   - User  (isOfferer=true):  subscribes → sends offer immediately
     //   - Listener (isOfferer=false): subscribes → waits for offer → answers
     // ============================================================
+    // Feature 2: pitch-shift the listener's mic before it enters WebRTC.
+    // We lower pitch by ~3 semitones using a scriptProcessor to obscure the
+    // listener's real voice without requiring a server-side audio pipeline.
+    async function applyVoiceMask(rawStream) {
+        try {
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const source = audioContext.createMediaStreamSource(rawStream);
+
+            // ScriptProcessorNode: simple pitch approximation via playback rate
+            // For a production app replace with a proper AudioWorklet pitch shifter
+            // (e.g. github.com/cwilso/Audio-Input-Effects).
+            const bufferSize = 4096;
+            const processor = audioContext.createScriptProcessor(bufferSize, 1, 1);
+
+            // Shift pitch by playing back at 0.82x rate (≈ −3 semitones)
+            const pitchFactor = 0.82;
+            let inputBuffer = new Float32Array(0);
+
+            processor.onaudioprocess = (e) => {
+                const input = e.inputBuffer.getChannelData(0);
+                const output = e.outputBuffer.getChannelData(0);
+                // Simple resampling pitch shift
+                for (let i = 0; i < bufferSize; i++) {
+                    const srcIdx = Math.floor(i * pitchFactor);
+                    output[i] = srcIdx < input.length ? input[srcIdx] : 0;
+                }
+            };
+
+            const dest = audioContext.createMediaStreamDestination();
+            source.connect(processor);
+            processor.connect(dest);
+            pitchShiftedStream = dest.stream;
+            return dest.stream;
+        } catch (e) {
+            console.warn('[VoiceMask] Web Audio API unavailable, using raw stream:', e.message);
+            return rawStream;
+        }
+    }
+
     async function initWebRTC(isOfferer) {
         try {
             localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -433,17 +515,27 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        const servers = {
-            iceServers: [
-                { urls: 'stun:stun.l.google.com:19302' },
-                { urls: 'stun:stun1.l.google.com:19302' },
-                { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
-                { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
-                { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' }
-            ]
-        };
+        // Feature 2: apply voice mask before tracks enter the peer connection
+        const streamToSend = await applyVoiceMask(localStream);
+
+        // Feature 1: fetch TURN credentials from backend (avoids rate-limited hardcoded keys)
+        let iceServers = [
+            { urls: 'stun:stun.l.google.com:19302' },
+            { urls: 'stun:stun1.l.google.com:19302' },
+        ];
+        try {
+            const iceRes = await fetch('/api/ice-servers');
+            if (iceRes.ok) {
+                const iceData = await iceRes.json();
+                if (Array.isArray(iceData.iceServers)) iceServers = iceData.iceServers;
+            }
+        } catch (e) {
+            console.warn('[WebRTC] Could not fetch ICE servers, using defaults:', e.message);
+        }
+
+        const servers = { iceServers };
         peerConnection = new RTCPeerConnection(servers);
-        localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+        streamToSend.getTracks().forEach(track => peerConnection.addTrack(track, streamToSend));
 
         let iceBuffer = [];
 
@@ -453,6 +545,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 remoteAudio.srcObject = event.streams[0];
                 remoteAudio.play().catch(() => {});
                 document.getElementById('call-status').innerText = "Connected • Secure Voice Channel";
+                // Feature 5: start call timer on first audio track
+                startCallTimer();
             }
         };
 
@@ -460,8 +554,9 @@ document.addEventListener('DOMContentLoaded', () => {
             const state = peerConnection.connectionState;
             const statusEl = document.getElementById('call-status');
             if (!statusEl) return;
-            if (state === 'connected') statusEl.innerText = "Connected • Secure Voice Channel";
-            if (state === 'disconnected' || state === 'failed') statusEl.innerText = "Connection lost.";
+            if (state === 'connected') { statusEl.innerText = "Connected • Secure Voice Channel"; startCallTimer(); }
+            if (state === 'disconnected') statusEl.innerText = "Reconnecting…";
+            if (state === 'failed') statusEl.innerText = "Reconnecting…"; // answerer waits for user's ICE-restart offer
         };
 
         if (rtcChannel) supabase.removeChannel(rtcChannel);
@@ -506,14 +601,44 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function stopWebRTC() {
-        if(localStream) localStream.getTracks().forEach(t => t.stop());
-        if(peerConnection) peerConnection.close();
-        if(rtcChannel) supabase.removeChannel(rtcChannel); 
+        if (localStream) localStream.getTracks().forEach(t => t.stop());
+        if (pitchShiftedStream) pitchShiftedStream.getTracks().forEach(t => t.stop());
+        if (audioContext) { audioContext.close().catch(() => {}); audioContext = null; }
+        if (peerConnection) peerConnection.close();
+        if (rtcChannel) supabase.removeChannel(rtcChannel);
+    }
+
+    // Feature 5: call timer
+    function startCallTimer() {
+        if (callStartTime) return; // already running
+        callStartTime = Date.now();
+        const statusEl = document.getElementById('call-status');
+        callTimerInterval = setInterval(() => {
+            const secs = Math.floor((Date.now() - callStartTime) / 1000);
+            const m = String(Math.floor(secs / 60)).padStart(2, '0');
+            const s = String(secs % 60).padStart(2, '0');
+            if (statusEl) statusEl.innerText = `Connected • ${m}:${s}`;
+        }, 1000);
+    }
+
+    async function stopCallTimerAndSave() {
+        if (!callStartTime) return;
+        clearInterval(callTimerInterval);
+        const minutesSpoken = (Date.now() - callStartTime) / 60000;
+        callStartTime = null;
+        callTimerInterval = null;
+        if (!currentListenerProfile) return;
+        // Increment total_minutes_spoken on the listener row
+        const current = Number(currentListenerProfile.total_minutes_spoken) || 0;
+        const updated = Math.round((current + minutesSpoken) * 100) / 100;
+        await supabase.from('listeners').update({ total_minutes_spoken: updated }).eq('id', currentListenerProfile.id);
+        currentListenerProfile.total_minutes_spoken = updated;
     }
 
     window.handleSessionEnd = function() {
-        if (isEnding) return; 
+        if (isEnding) return;
         isEnding = true;
+        window.hideCopilot();
         stopWebRTC();
         document.body.innerHTML = `
             <div style="display:flex; justify-content:center; align-items:center; height:100vh; flex-direction:column; background: var(--bg-color); color: var(--text-color);">
@@ -526,10 +651,58 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     window.endSession = async function(sessionId) {
-        if(!sessionId) return;
+        if (!sessionId) return;
         await supabase.from('connect_sessions').update({ status: 'completed' }).eq('id', sessionId);
+        // Feature 5: save accumulated minutes before unloading
+        await stopCallTimerAndSave();
+        // Feature 3: auto-journal session (mirrors logic in connect-user.js)
+        await autoJournalSession(sessionId);
         handleSessionEnd();
     };
+
+    // Feature 3: one-per-day journal upsert from the listener's side
+    async function autoJournalSession(sessionId) {
+        try {
+            const { data: sess } = await supabase.from('connect_sessions')
+                .select('session_type, user_id').eq('id', sessionId).maybeSingle();
+            if (!sess) return;
+            const userId = sess.user_id;
+            if (!userId) return;
+
+            const { data: msgs } = await supabase.from('messages')
+                .select('sender_id, content').eq('session_id', sessionId).order('created_at');
+            if (!msgs || msgs.length < 2) return;
+
+            const transcript = msgs
+                .filter(m => m.content && !m.content.startsWith('###'))
+                .map(m => ({ role: m.sender_id === userId ? 'user' : 'assistant', content: m.content }));
+            if (transcript.length < 2) return;
+
+            const res = await fetch('/api/summarize', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ messages: transcript, type: sess.session_type || 'chat', imageDescriptions: [] })
+            });
+            if (!res.ok) return;
+            const { title, content } = await res.json();
+            if (!title || !content) return;
+
+            const aiSource = sess.session_type === 'call' ? 'ai_call' : 'ai_chat';
+            const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
+            const { data: existing } = await supabase.from('journals')
+                .select('id, content').eq('user_id', userId).eq('ai_source', aiSource)
+                .gte('created_at', todayStart.toISOString())
+                .order('created_at', { ascending: true }).limit(1).maybeSingle();
+
+            if (existing) {
+                await supabase.from('journals').update({
+                    title, content: existing.content + '\n\n---\n\n' + content
+                }).eq('id', existing.id);
+            } else {
+                await supabase.from('journals').insert([{ user_id: userId, title, content, ai_source: aiSource }]);
+            }
+        } catch (e) { /* non-blocking */ }
+    }
 
     window.rejectRequest = async function(sessionId) {
         await supabase.from('connect_sessions').update({ status: 'rejected' }).eq('id', sessionId);
@@ -572,6 +745,143 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
         `;
         document.body.insertAdjacentHTML('beforeend', modalHTML);
+    };
+
+    // ── Feature 4: AI Copilot ─────────────────────────────────────────────────
+    // Inject copilot panel into the DOM and wire up streaming responses.
+    function injectCopilotPanel() {
+        if (document.getElementById('copilot-panel')) return;
+        const panel = document.createElement('div');
+        panel.id = 'copilot-panel';
+        panel.style.cssText = `
+            position:fixed; bottom:80px; right:18px; width:320px; max-height:480px;
+            background:var(--surface-1); border:1px solid var(--border);
+            border-radius:20px; display:none; flex-direction:column;
+            box-shadow:0 8px 40px rgba(0,0,0,0.4); z-index:600; overflow:hidden;
+        `;
+        panel.innerHTML = `
+            <div style="padding:14px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:var(--surface-2);">
+                <span style="font-size:0.78rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-2);">
+                    <ion-icon name="sparkles-outline" style="vertical-align:-2px;margin-right:5px;color:var(--accent);"></ion-icon>AI Copilot
+                </span>
+                <button onclick="document.getElementById('copilot-panel').style.display='none'"
+                    style="background:none;border:none;color:var(--text-3);font-size:1.2rem;cursor:pointer;padding:0 2px;line-height:1;">&times;</button>
+            </div>
+            <div id="copilot-messages" style="flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px;min-height:160px;"></div>
+            <div style="padding:10px 12px;border-top:1px solid var(--border);display:flex;gap:8px;align-items:flex-end;">
+                <textarea id="copilot-input" placeholder="Ask for a suggestion…"
+                    style="flex:1;background:var(--surface-2);border:1px solid var(--border);border-radius:12px;padding:10px 12px;color:var(--text);font-size:0.83rem;font-family:inherit;resize:none;outline:none;line-height:1.5;max-height:80px;"
+                    rows="1" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();window.sendCopilotMessage();}"></textarea>
+                <button onclick="window.sendCopilotMessage()"
+                    style="width:38px;height:38px;border-radius:50%;background:var(--accent);border:none;color:white;font-size:1rem;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;">
+                    <ion-icon name="arrow-up-outline"></ion-icon>
+                </button>
+            </div>
+        `;
+        document.body.appendChild(panel);
+
+        // FAB to toggle the panel (shown only during active session)
+        const fab = document.createElement('button');
+        fab.id = 'copilot-fab';
+        fab.title = 'AI Copilot';
+        fab.style.cssText = `
+            position:fixed; bottom:18px; right:18px; width:52px; height:52px;
+            border-radius:50%; background:var(--accent); border:none; color:white;
+            font-size:1.4rem; display:none; align-items:center; justify-content:center;
+            cursor:pointer; box-shadow:0 4px 20px rgba(0,212,170,0.35); z-index:601;
+        `;
+        fab.innerHTML = '<ion-icon name="sparkles-outline"></ion-icon>';
+        fab.onclick = () => {
+            const p = document.getElementById('copilot-panel');
+            p.style.display = p.style.display === 'flex' ? 'none' : 'flex';
+        };
+        document.body.appendChild(fab);
+    }
+
+    window.showCopilot = function() {
+        injectCopilotPanel();
+        const fab = document.getElementById('copilot-fab');
+        if (fab) fab.style.display = 'flex';
+    };
+
+    window.hideCopilot = function() {
+        const fab = document.getElementById('copilot-fab');
+        const panel = document.getElementById('copilot-panel');
+        if (fab) fab.style.display = 'none';
+        if (panel) panel.style.display = 'none';
+    };
+
+    window.sendCopilotMessage = async function() {
+        const input = document.getElementById('copilot-input');
+        const question = input ? input.value.trim() : '';
+        if (!question) return;
+        input.value = '';
+        input.style.height = 'auto';
+
+        const feed = document.getElementById('copilot-messages');
+        if (!feed) return;
+
+        // User bubble
+        feed.insertAdjacentHTML('beforeend', `
+            <div style="align-self:flex-end;background:var(--surface-2);border:1px solid var(--border);border-radius:12px 12px 4px 12px;padding:8px 12px;font-size:0.82rem;max-width:90%;word-wrap:break-word;">
+                ${question.replace(/</g,'&lt;')}
+            </div>
+        `);
+        feed.scrollTop = feed.scrollHeight;
+
+        // AI response bubble (streaming)
+        const replyId = 'cop-reply-' + Date.now();
+        feed.insertAdjacentHTML('beforeend', `
+            <div id="${replyId}" style="align-self:flex-start;background:rgba(0,212,170,0.07);border:1px solid rgba(0,212,170,0.2);border-radius:12px 12px 12px 4px;padding:8px 12px;font-size:0.82rem;max-width:90%;word-wrap:break-word;white-space:pre-wrap;color:var(--text);">
+                <span style="opacity:0.4;">Thinking…</span>
+            </div>
+        `);
+        feed.scrollTop = feed.scrollHeight;
+
+        const replyEl = document.getElementById(replyId);
+
+        // Gather connected-user profile context
+        let userProfile = {};
+        let recentMessages = [];
+        try {
+            if (activeSessionId) {
+                const { data: sess } = await supabase.from('connect_sessions')
+                    .select('user_id').eq('id', activeSessionId).maybeSingle();
+                if (sess && sess.user_id) {
+                    const { data: prof } = await supabase.from('profiles')
+                        .select('full_name, bio, user_memory').eq('id', sess.user_id).maybeSingle();
+                    if (prof) userProfile = prof;
+
+                    const { data: journals } = await supabase.from('journals')
+                        .select('title, content').eq('user_id', sess.user_id)
+                        .order('created_at', { ascending: false }).limit(3);
+                    if (journals) userProfile.recent_journals = journals;
+
+                    const { data: msgs } = await supabase.from('messages')
+                        .select('sender_id, content').eq('session_id', activeSessionId)
+                        .order('created_at', { ascending: false }).limit(20);
+                    if (msgs) recentMessages = msgs.reverse().map(m => ({
+                        role: m.sender_id === sess.user_id ? 'user' : 'assistant',
+                        content: m.content
+                    }));
+                }
+            }
+
+            const res = await fetch('/api/listener-copilot', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ listenerQuestion: question, userProfile, recentMessages })
+            });
+            const data = await res.json();
+            if (!res.ok || data.error) {
+                if (replyEl) replyEl.textContent = 'Error: ' + (data.error || res.status);
+                return;
+            }
+            if (replyEl) replyEl.textContent = data.reply || '(no reply)';
+        } catch (e) {
+            if (replyEl) replyEl.textContent = 'Error: ' + e.message;
+        }
+        feed.scrollTop = feed.scrollHeight;
     };
 
     init();

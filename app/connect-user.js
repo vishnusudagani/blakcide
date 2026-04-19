@@ -9,6 +9,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let currentUser = null;
     window.selectedListenerId = null;
+    let activeListenerId = null; // Feature 6: persisted for post-session review
     let activeSessionId = null;
     let isEnding = false;
     let currentUIState = 'dashboard';
@@ -39,6 +40,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (existingSession) {
             activeSessionId = existingSession.id;
+            activeListenerId = existingSession.listener_id;
             setupSessionWatcher(existingSession.id);
             if (existingSession.status === 'active') {
                 existingSession.session_type === 'call' ? startVoiceCallInterface() : startLiveChatInterface();
@@ -254,6 +256,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         activeSessionId = data.id;
+        activeListenerId = window.selectedListenerId;
         setupSessionWatcher(data.id);
     };
 
@@ -315,11 +318,21 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
             </div>
 
-            <!-- Input row -->
-            <div style="display:flex;align-items:center;gap:8px;padding:10px 12px;padding-bottom:calc(10px + env(safe-area-inset-bottom,0px));background:var(--surface-1);border-top:1px solid var(--border);flex-shrink:0;">
-                <button id="connect-attach-btn" title="Attach image"
-                    style="width:40px;height:40px;border-radius:50%;background:var(--surface-2);border:1px solid var(--border);color:var(--text-3);font-size:1.1rem;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;">
-                    <ion-icon name="image-outline"></ion-icon>
+            <!-- Input row (position:relative so the attach menu can anchor to it) -->
+            <div style="position:relative;display:flex;align-items:center;gap:8px;padding:10px 12px;padding-bottom:calc(10px + env(safe-area-inset-bottom,0px));background:var(--surface-1);border-top:1px solid var(--border);flex-shrink:0;">
+
+                <!-- Attach popup menu — inside position:relative parent so bottom/left work correctly -->
+                <div id="connect-attach-menu" style="display:none;position:absolute;bottom:calc(100% + 8px);left:0;background:var(--surface-1);border:1px solid var(--border);border-radius:16px;padding:8px;box-shadow:0 8px 32px rgba(0,0,0,0.4);z-index:200;flex-direction:column;gap:2px;min-width:170px;">
+                    <button id="connect-menu-image" style="display:flex;align-items:center;gap:10px;padding:10px 14px;border:none;background:none;color:var(--text);font-size:0.88rem;font-family:inherit;cursor:pointer;border-radius:10px;width:100%;text-align:left;">
+                        <ion-icon name="image-outline" style="font-size:1.2rem;color:var(--accent);flex-shrink:0;"></ion-icon> Photo / Image
+                    </button>
+                    <button id="connect-menu-voice" style="display:flex;align-items:center;gap:10px;padding:10px 14px;border:none;background:none;color:var(--text);font-size:0.88rem;font-family:inherit;cursor:pointer;border-radius:10px;width:100%;text-align:left;">
+                        <ion-icon name="mic-outline" style="font-size:1.2rem;color:var(--accent);flex-shrink:0;"></ion-icon> <span id="connect-voice-label">Voice Note</span>
+                    </button>
+                </div>
+                <button id="connect-attach-btn" title="Attach"
+                    style="width:40px;height:40px;border-radius:50%;background:var(--surface-2);border:1px solid var(--border);color:var(--text-3);font-size:1.1rem;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;transition:all 0.15s;">
+                    <ion-icon name="add-outline"></ion-icon>
                 </button>
                 <input type="file" id="connect-image-input" accept="image/*" hidden>
                 <input type="text" id="user-chat-input"
@@ -334,14 +347,49 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
         `;
 
-        // Wire up image attachment
+        // Wire up attach menu, image upload, and voice recording
         setTimeout(() => {
             const attachBtn  = document.getElementById('connect-attach-btn');
+            const attachMenu = document.getElementById('connect-attach-menu');
             const imageInput = document.getElementById('connect-image-input');
-            if (attachBtn && imageInput) {
-                attachBtn.addEventListener('click', () => imageInput.click());
-                imageInput.addEventListener('change', (e) => handleConnectImageUpload(e));
-            }
+            const menuImage  = document.getElementById('connect-menu-image');
+            const menuVoice  = document.getElementById('connect-menu-voice');
+
+            // Toggle attach menu
+            const closeMenu = () => {
+                attachMenu.style.display = 'none';
+                attachBtn.style.background = 'var(--surface-2)';
+                attachBtn.style.color      = 'var(--text-3)';
+            };
+            attachBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const isOpen = attachMenu.style.display === 'flex';
+                if (isOpen) { closeMenu(); return; }
+                attachMenu.style.display = 'flex';
+                attachBtn.style.background = 'var(--accent-dim)';
+                attachBtn.style.color      = 'var(--accent)';
+            });
+            // Close when clicking anywhere outside the menu or button
+            document.addEventListener('click', (e) => {
+                if (!attachMenu.contains(e.target) && e.target !== attachBtn && !attachBtn.contains(e.target)) {
+                    closeMenu();
+                }
+            });
+
+            // Image
+            menuImage.addEventListener('click', (e) => {
+                e.stopPropagation();
+                closeMenu();
+                imageInput.click();
+            });
+            imageInput.addEventListener('change', (e) => handleConnectImageUpload(e));
+
+            // Voice note
+            menuVoice.addEventListener('click', (e) => {
+                e.stopPropagation();
+                closeMenu();
+                toggleConnectVoiceRecording();
+            });
         }, 100);
 
         // Load existing messages instantly
@@ -360,10 +408,16 @@ document.addEventListener('DOMContentLoaded', () => {
         messagePollInterval = setInterval(syncMessages, 1500);
     }
 
+    let lastSyncedAt = null;
     async function syncMessages() {
-        if (!activeSessionId || currentUIState !== 'chat') return;
-        const { data: msgs } = await supabase.from('messages').select('*').eq('session_id', activeSessionId).order('created_at', { ascending: true });
-        if (msgs) msgs.forEach(msg => renderUserMessage(msg));
+        if (!activeSessionId) return;   // keep polling even if UI state differs — dedup Set guards render
+        let q = supabase.from('messages').select('*').eq('session_id', activeSessionId).order('created_at', { ascending: true });
+        if (lastSyncedAt) q = q.gt('created_at', lastSyncedAt);
+        const { data: msgs } = await q;
+        if (msgs && msgs.length) {
+            msgs.forEach(msg => renderUserMessage(msg));
+            lastSyncedAt = msgs[msgs.length - 1].created_at;
+        }
     }
 
     window.sendUserMessage = async function() {
@@ -395,6 +449,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 <img src="${imgUrl}" style="width:100%;border-radius:10px;cursor:pointer;display:block;"
                      onclick="window.open('${imgUrl}','_blank')" title="${desc}">
                 ${desc ? `<div style="font-size:0.72rem;opacity:0.65;margin-top:5px;line-height:1.35;">${desc}</div>` : ''}
+            </div>`;
+        } else if (content && content.startsWith('AUDIO::')) {
+            const audioUrl = content.replace('AUDIO::', '');
+            innerHtml = `<div style="min-width:200px;">
+                <div style="font-size:0.72rem;opacity:0.55;margin-bottom:6px;display:flex;align-items:center;gap:4px;">
+                    <ion-icon name="mic-outline" style="font-size:0.85rem;"></ion-icon> Voice note
+                </div>
+                <audio src="${audioUrl}" controls preload="metadata"
+                    style="width:100%;height:32px;outline:none;border-radius:8px;"></audio>
             </div>`;
         }
 
@@ -446,7 +509,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const msgContent = `IMAGE::${publicUrl}${imageDesc ? '||DESC::' + imageDesc : ''}`;
             // Optimistic render
             if (feed) {
-                feed.insertAdjacentHTML('beforeend', buildMessageBubble('opt-' + Date.now(), msgContent, true));
+                feed.insertAdjacentHTML('beforeend', buildMessageBubble('temp-' + Date.now(), msgContent, true));
                 feed.scrollTop = feed.scrollHeight;
             }
 
@@ -461,6 +524,110 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch(err) {
             document.getElementById(tempId)?.remove();
             console.error('Connect image upload error:', err);
+        }
+    }
+
+    // ── Voice note recording ──────────────────────────────────────────────────
+    let _voiceRecorder   = null;
+    let _voiceChunks     = [];
+    let _voiceRecording  = false;
+    let _voiceTimerInt   = null;
+    let _voiceSeconds    = 0;
+
+    async function toggleConnectVoiceRecording() {
+        if (_voiceRecording) {
+            // Stop and send
+            _voiceRecorder.stop();
+            return;
+        }
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            _voiceChunks    = [];
+            _voiceRecording = true;
+            _voiceSeconds   = 0;
+
+            // Update voice button label to show recording state
+            const lbl = document.getElementById('connect-voice-label');
+            if (lbl) lbl.textContent = 'Stop Recording';
+            const menuVoice = document.getElementById('connect-menu-voice');
+            if (menuVoice) menuVoice.style.color = 'var(--red)';
+
+            // Live timer in attach button
+            const attachBtn = document.getElementById('connect-attach-btn');
+            if (attachBtn) {
+                attachBtn.style.background = 'rgba(255,77,106,0.12)';
+                attachBtn.style.color      = 'var(--red)';
+                attachBtn.style.borderColor= 'rgba(255,77,106,0.3)';
+                attachBtn.innerHTML        = '<ion-icon name="radio-button-on-outline"></ion-icon>';
+            }
+            _voiceTimerInt = setInterval(() => {
+                _voiceSeconds++;
+                const m = String(Math.floor(_voiceSeconds / 60)).padStart(2,'0');
+                const s = String(_voiceSeconds % 60).padStart(2,'0');
+                if (attachBtn) attachBtn.title = `Recording ${m}:${s} — tap menu to stop`;
+            }, 1000);
+
+            _voiceRecorder = new MediaRecorder(stream);
+            _voiceRecorder.ondataavailable = e => { if (e.data.size) _voiceChunks.push(e.data); };
+            _voiceRecorder.onstop = async () => {
+                clearInterval(_voiceTimerInt);
+                stream.getTracks().forEach(t => t.stop());
+                _voiceRecording = false;
+                // Reset button
+                const ab = document.getElementById('connect-attach-btn');
+                if (ab) { ab.style.cssText = 'width:40px;height:40px;border-radius:50%;background:var(--surface-2);border:1px solid var(--border);color:var(--text-3);font-size:1.1rem;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;transition:all 0.15s;'; ab.innerHTML = '<ion-icon name="add-outline"></ion-icon>'; ab.title = 'Attach'; }
+                const vl = document.getElementById('connect-voice-label');
+                if (vl) vl.textContent = 'Voice Note';
+                const mv = document.getElementById('connect-menu-voice');
+                if (mv) mv.style.color = '';
+
+                if (!_voiceChunks.length || !activeSessionId || !currentUser) return;
+                await uploadConnectVoiceNote();
+            };
+            _voiceRecorder.start();
+        } catch(e) {
+            _voiceRecording = false;
+            clearInterval(_voiceTimerInt);
+            alert('Microphone access denied');
+        }
+    }
+
+    async function uploadConnectVoiceNote() {
+        const mimeType = _voiceRecorder?.mimeType || 'audio/webm';
+        const ext      = mimeType.includes('ogg') ? 'ogg' : mimeType.includes('mp4') ? 'mp4' : 'webm';
+        const blob     = new Blob(_voiceChunks, { type: mimeType });
+
+        const feed   = document.getElementById('user-chat-feed');
+        const tempId = 'voice-' + Date.now();
+        if (feed) {
+            feed.insertAdjacentHTML('beforeend', `<div id="${tempId}" style="display:flex;justify-content:flex-end;width:100%;opacity:0.5;font-size:0.82rem;padding:4px 0;">🎤 Uploading…</div>`);
+            feed.scrollTop = feed.scrollHeight;
+        }
+
+        try {
+            const path = `connect-voice/${currentUser.id}/${Date.now()}.${ext}`;
+            const { error: upErr } = await supabase.storage.from('voice_notes').upload(path, blob, { contentType: mimeType });
+            if (upErr) { document.getElementById(tempId)?.remove(); alert('Voice upload failed'); return; }
+
+            const { data: urlData } = supabase.storage.from('voice_notes').getPublicUrl(path);
+            const publicUrl = urlData.publicUrl;
+
+            document.getElementById(tempId)?.remove();
+            const msgContent = `AUDIO::${publicUrl}`;
+            if (feed) {
+                feed.insertAdjacentHTML('beforeend', buildMessageBubble('temp-' + Date.now(), msgContent, true));
+                feed.scrollTop = feed.scrollHeight;
+            }
+            await supabase.from('messages').insert([{
+                session_id: activeSessionId,
+                sender_id:  currentUser.id,
+                content:    msgContent,
+                media_url:  publicUrl,
+                media_type: 'audio',
+            }]);
+        } catch(err) {
+            document.getElementById(tempId)?.remove();
+            console.error('Connect voice upload error:', err);
         }
     }
 
@@ -480,7 +647,8 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             html = buildMessageBubble(msg.id, msg.content, isMe);
         }
-        // Remove optimistic temp bubble if present (prevent duplicate for sent messages)
+        // Remove optimistic temp bubbles (dedupe against the confirmed DB message)
+        if (isMe) feed.querySelectorAll('[id^="msg-temp-"]').forEach(el => el.remove());
         feed.insertAdjacentHTML('beforeend', html);
         feed.scrollTop = feed.scrollHeight;
     }
@@ -582,15 +750,22 @@ document.addEventListener('DOMContentLoaded', () => {
             return window.revertToChat();
         }
 
-        const servers = {
-            iceServers: [
-                { urls: 'stun:stun.l.google.com:19302' },
-                { urls: 'stun:stun1.l.google.com:19302' },
-                { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
-                { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
-                { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' }
-            ]
-        };
+        // Feature 1: fetch fresh TURN credentials from backend for reliable NAT traversal
+        let iceServers = [
+            { urls: 'stun:stun.l.google.com:19302' },
+            { urls: 'stun:stun1.l.google.com:19302' },
+        ];
+        try {
+            const iceRes = await fetch('/api/ice-servers');
+            if (iceRes.ok) {
+                const iceData = await iceRes.json();
+                if (Array.isArray(iceData.iceServers)) iceServers = iceData.iceServers;
+            }
+        } catch (e) {
+            console.warn('[WebRTC] Could not fetch ICE servers, using defaults:', e.message);
+        }
+
+        const servers = { iceServers };
         peerConnection = new RTCPeerConnection(servers);
         localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
 
@@ -606,12 +781,21 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         };
 
-        peerConnection.onconnectionstatechange = () => {
+        peerConnection.onconnectionstatechange = async () => {
             const state = peerConnection.connectionState;
             const statusEl = document.getElementById('call-status');
             if (!statusEl) return;
             if (state === 'connected') statusEl.innerText = "Connected • Secure Voice Channel";
-            if (state === 'disconnected' || state === 'failed') statusEl.innerText = "Connection lost. Try ending and restarting.";
+            if (state === 'disconnected') statusEl.innerText = "Reconnecting…";
+            // Auto ICE-restart on failure (offerer side only — answerer follows)
+            if (state === 'failed' && isOfferer) {
+                statusEl.innerText = "Reconnecting…";
+                try {
+                    const offer = await peerConnection.createOffer({ iceRestart: true });
+                    await peerConnection.setLocalDescription(offer);
+                    rtcChannel?.send({ type: 'broadcast', event: 'offer', payload: { offer } });
+                } catch (e) { statusEl.innerText = "Connection lost. End and restart."; }
+            }
         };
 
         if (rtcChannel) supabase.removeChannel(rtcChannel);
@@ -725,11 +909,73 @@ document.addEventListener('DOMContentLoaded', () => {
     window.endUserSession = async function() {
         if (!activeSessionId) return;
         const sessId = activeSessionId;
+        const listenerId = activeListenerId; // captured below
         await supabase.from('connect_sessions').update({ status: 'completed' }).eq('id', sessId);
-        // Auto-journal the session before reloading
         await autoJournalConnectSession(sessId);
-        handleSessionEnd();
+        // Feature 6: show rating modal before final reload
+        showRatingModal(sessId, listenerId);
     };
+
+    // Feature 6: rating modal
+    function showRatingModal(sessionId, listenerId) {
+        let selectedStars = 0;
+        const overlay = document.createElement('div');
+        overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:9000;display:flex;align-items:center;justify-content:center;padding:20px;';
+        overlay.innerHTML = `
+            <div style="background:var(--surface-1);border:1px solid var(--border);border-radius:24px;padding:28px 24px;max-width:340px;width:100%;text-align:center;">
+                <div style="font-size:2rem;margin-bottom:8px;">✨</div>
+                <h3 style="margin:0 0 6px;font-size:1.05rem;">How was your session?</h3>
+                <p style="font-size:0.82rem;color:var(--text-3);margin:0 0 18px;">Your feedback helps listeners improve.</p>
+                <div id="star-row" style="display:flex;justify-content:center;gap:10px;margin-bottom:16px;font-size:2rem;cursor:pointer;">
+                    ${[1,2,3,4,5].map(n => `<span data-star="${n}" style="opacity:0.3;transition:opacity 0.15s;">★</span>`).join('')}
+                </div>
+                <textarea id="review-text" placeholder="Optional — share your thoughts…"
+                    style="width:100%;box-sizing:border-box;background:var(--surface-2);border:1px solid var(--border);border-radius:12px;padding:10px 12px;color:var(--text);font-size:0.83rem;font-family:inherit;resize:none;outline:none;line-height:1.5;height:72px;margin-bottom:14px;"></textarea>
+                <div style="display:flex;gap:10px;">
+                    <button id="skip-review-btn"
+                        style="flex:1;padding:11px;background:var(--surface-2);border:1px solid var(--border);border-radius:12px;color:var(--text-3);font-size:0.85rem;cursor:pointer;font-family:inherit;">
+                        Skip
+                    </button>
+                    <button id="submit-review-btn"
+                        style="flex:2;padding:11px;background:var(--accent);border:none;border-radius:12px;color:white;font-size:0.85rem;font-weight:600;cursor:pointer;font-family:inherit;opacity:0.4;pointer-events:none;">
+                        Submit
+                    </button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(overlay);
+
+        // Star interaction
+        const stars = overlay.querySelectorAll('[data-star]');
+        stars.forEach(star => {
+            star.addEventListener('click', () => {
+                selectedStars = Number(star.dataset.star);
+                stars.forEach(s => { s.style.opacity = Number(s.dataset.star) <= selectedStars ? '1' : '0.3'; });
+                const btn = overlay.querySelector('#submit-review-btn');
+                btn.style.opacity = '1'; btn.style.pointerEvents = 'auto';
+            });
+        });
+
+        overlay.querySelector('#skip-review-btn').addEventListener('click', () => {
+            overlay.remove(); handleSessionEnd();
+        });
+
+        overlay.querySelector('#submit-review-btn').addEventListener('click', async () => {
+            if (!selectedStars) return;
+            const reviewText = overlay.querySelector('#review-text').value.trim() || null;
+            overlay.remove();
+            try {
+                await supabase.from('listener_reviews').insert([{
+                    session_id: sessionId,
+                    listener_id: listenerId,
+                    user_id: currentUser.id,
+                    rating: selectedStars,
+                    review_text: reviewText,
+                }]);
+            } catch (e) { /* non-blocking */ }
+            handleSessionEnd();
+        });
+    }
 
     // ── Auto-journal a completed Human Connect session ─────────────────────────
     async function autoJournalConnectSession(sessionId) {

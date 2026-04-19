@@ -444,6 +444,10 @@ let gc = {
     // Sends queued while the WebSocket handshake was still in progress.
     subscriptionReady: false,
     broadcastQueue:    [],
+    // Aggressive polling fallback. Realtime WebSocket has proved unreliable in
+    // the wild (flaky networks, corporate proxies, Safari backgrounding). This
+    // guarantees message delivery at a ≤2 s floor regardless of WS state.
+    pollTimer:         null,
 };
 
 // ── Language detection ─────────────────────────────────────────────────────────
@@ -642,6 +646,7 @@ async function gcEnterRoom(isCreator) {
 
     // Subscribe first so we don't miss events during history load
     gcSubscribe();
+    gcStartMessagePoll();
 
     // Load history FIRST so messages appear in the right order
     await gcLoadMessages();
@@ -918,6 +923,41 @@ async function gcCatchUpMessages() {
     } catch (e) {
         console.warn('[GC] catch-up error', e);
     }
+}
+
+// ── Polling fallback ───────────────────────────────────────────────────────────
+// Belt-and-suspenders delivery: every 2 s, fetch any group_messages rows newer
+// than the latest one we've rendered. Guarantees delivery even if the Supabase
+// Realtime WebSocket is silently disconnected, proxied, or backgrounded (Safari
+// throttles WS but still runs timers). Also re-fires the AI trigger for any
+// user message we pick up this way.
+function gcStartMessagePoll() {
+    if (gc.pollTimer) return;
+    gc.pollTimer = setInterval(async () => {
+        if (!gc.roomId) return;
+        try {
+            const confirmed = gc.messages.filter(m => !String(m.id).startsWith('temp_'));
+            const lastTs = confirmed.length
+                ? confirmed.slice().sort((a,b) => new Date(a.created_at) - new Date(b.created_at)).at(-1).created_at
+                : new Date(Date.now() - 30_000).toISOString();
+            const { data, error } = await sb
+                .from('group_messages')
+                .select('*')
+                .eq('room_id', gc.roomId)
+                .gt('created_at', lastTs)
+                .order('created_at', { ascending: true });
+            if (error || !data?.length) return;
+            for (const msg of data) {
+                if (gc.messages.find(m => m.id === msg.id)) continue;
+                gcAppendMessage(msg);
+                if (msg.role === 'user') gcScheduleAI();
+            }
+        } catch { /* swallow — next tick retries */ }
+    }, 2000);
+}
+
+function gcStopMessagePoll() {
+    if (gc.pollTimer) { clearInterval(gc.pollTimer); gc.pollTimer = null; }
 }
 
 // ── Load history ───────────────────────────────────────────────────────────────
@@ -1394,6 +1434,7 @@ function gcLeave() {
     gcStopRecording();
     if (gc.presencePollTimer) { clearInterval(gc.presencePollTimer); gc.presencePollTimer = null; }
     if (gc.aiDebounceTimer)   { clearTimeout(gc.aiDebounceTimer);    gc.aiDebounceTimer   = null; }
+    gcStopMessagePoll();
     if (gc.subscription) { sb.removeChannel(gc.subscription); gc.subscription = null; }
     // Clear persisted room so next load shows the lobby
     gcClearRoom();
@@ -1402,7 +1443,7 @@ function gcLeave() {
            otherUserId:null, otherName:null, messages:[], subscription:null,
            aiTyping:false, ready:false, mediaRecorder:null, audioChunks:[], recording:false,
            aiDebounceTimer:null, aiRequestToken:0, presencePollTimer:null,
-           subscriptionReady:false, broadcastQueue:[] };
+           subscriptionReady:false, broadcastQueue:[], pollTimer:null };
     document.getElementById('gc-chat').style.display = 'none';
     document.getElementById('gc-chat').classList.remove('visible');
     document.getElementById('gc-join').style.display = 'flex';
