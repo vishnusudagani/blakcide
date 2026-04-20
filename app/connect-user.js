@@ -870,25 +870,38 @@ document.addEventListener('DOMContentLoaded', () => {
         let iceBuffer = [];
 
         peerConnection.ontrack = (event) => {
-            console.log('[WebRTC] ontrack', event.track.kind, 'streams:', event.streams.length);
+            console.log('[WebRTC] ontrack', event.track.kind, 'streams:', event.streams.length, 'muted:', event.track.muted);
             const remoteAudio = document.getElementById('remote-audio');
-            if (!remoteAudio) return;
-            if (remoteAudio.srcObject !== event.streams[0]) {
-                remoteAudio.srcObject = event.streams[0];
-                remoteAudio.muted   = false;
-                remoteAudio.volume  = 1.0;
-                remoteAudio.play().then(() => {
+            if (!remoteAudio || event.track.kind !== 'audio') return;
+
+            let stream = event.streams && event.streams[0];
+            if (!stream) {
+                stream = new MediaStream();
+                stream.addTrack(event.track);
+            }
+            remoteAudio.srcObject = stream;
+            remoteAudio.muted  = false;
+            remoteAudio.volume = 1.0;
+
+            const tryPlay = () => remoteAudio.play()
+                .then(() => {
                     document.getElementById('call-status').innerText = "Connected • Secure Voice Channel";
-                }).catch(err => {
-                    // iOS Safari and Chrome autoplay policies can reject play()
-                    // even after getUserMedia. Surface a tap-to-enable button.
+                })
+                .catch(err => {
                     console.warn('[WebRTC] remote audio autoplay blocked:', err.message);
                     const statusEl = document.getElementById('call-status');
                     if (statusEl) {
                         statusEl.innerHTML = '<button onclick="document.getElementById(\'remote-audio\').play()" style="background:#4CAF50;color:#fff;border:none;padding:8px 16px;border-radius:20px;cursor:pointer;">🔊 Tap to enable audio</button>';
                     }
                 });
-            }
+
+            // Retry on first RTP arrival — handles Android/Chromium where the
+            // track is muted until the first packet lands.
+            event.track.onunmute = () => {
+                console.log('[WebRTC] remote track unmuted');
+                tryPlay();
+            };
+            tryPlay();
         };
 
         peerConnection.onconnectionstatechange = async () => {
