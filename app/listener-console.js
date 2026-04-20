@@ -25,6 +25,20 @@ document.addEventListener('DOMContentLoaded', () => {
     let peerConnection = null;
     let localStream = null;
 
+    // Voice-optimized Opus SDP params — mirror of connect-user.js.
+    function tuneOpusSdp(sdp) {
+        if (!sdp) return sdp;
+        const lines = sdp.split('\r\n');
+        const opusRtpmapIdx = lines.findIndex(l => /a=rtpmap:\d+\s+opus\/48000/i.test(l));
+        if (opusRtpmapIdx < 0) return sdp;
+        const pt = lines[opusRtpmapIdx].match(/a=rtpmap:(\d+)/)[1];
+        const fmtpIdx = lines.findIndex(l => l.startsWith(`a=fmtp:${pt}`));
+        const fmtp = `a=fmtp:${pt} minptime=10;useinbandfec=1;stereo=0;usedtx=1;maxaveragebitrate=40000`;
+        if (fmtpIdx >= 0) lines[fmtpIdx] = fmtp;
+        else lines.splice(opusRtpmapIdx + 1, 0, fmtp);
+        return lines.join('\r\n');
+    }
+
     // Feature 5: call-duration tracking
     let callStartTime = null;
     let callTimerInterval = null;
@@ -530,15 +544,28 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function initWebRTC(isOfferer) {
         try {
-            localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            localStream = await navigator.mediaDevices.getUserMedia({
+                audio: {
+                    echoCancellation: true,
+                    noiseSuppression: true,
+                    autoGainControl:  true,
+                    channelCount:     1,
+                    sampleRate:       48000,
+                },
+            });
         } catch (err) {
             document.getElementById('call-status').innerText = "Microphone error.";
             alert("Microphone required for voice call.");
             return;
         }
 
-        // Feature 2: apply voice mask before tracks enter the peer connection
-        const streamToSend = await applyVoiceMask(localStream);
+        // NOTE: voice mask is DISABLED for reliability. The ScriptProcessor-based
+        // pitch shifter was a prime suspect in the "neither side can hear each
+        // other" bug — even with resume() it can produce silence under the
+        // browser's main-thread audio policy. Ship raw audio for now; replace
+        // with an AudioWorklet implementation before re-enabling.
+        const streamToSend = localStream;
+        // const streamToSend = await applyVoiceMask(localStream);
 
         // Feature 1: fetch TURN credentials from backend (avoids rate-limited hardcoded keys)
         let iceServers = [
@@ -558,6 +585,35 @@ document.addEventListener('DOMContentLoaded', () => {
         const servers = { iceServers };
         peerConnection = new RTCPeerConnection(servers);
         streamToSend.getTracks().forEach(track => peerConnection.addTrack(track, streamToSend));
+
+        // ── WebRTC diagnostics (mirrors connect-user.js) ─────────────────────
+        peerConnection.oniceconnectionstatechange = () => {
+            console.log('[WebRTC] iceConnectionState:', peerConnection.iceConnectionState);
+        };
+        peerConnection.onicegatheringstatechange = () => {
+            console.log('[WebRTC] iceGatheringState:', peerConnection.iceGatheringState);
+        };
+        peerConnection.onsignalingstatechange = () => {
+            console.log('[WebRTC] signalingState:', peerConnection.signalingState);
+        };
+        peerConnection.onicecandidateerror = (e) => {
+            console.warn('[WebRTC] iceCandidateError:', e.errorCode, e.errorText, e.url);
+        };
+        const statsInterval = setInterval(async () => {
+            if (!peerConnection || peerConnection.connectionState === 'closed') {
+                clearInterval(statsInterval);
+                return;
+            }
+            try {
+                const stats = await peerConnection.getStats();
+                let inbound = 0, outbound = 0;
+                stats.forEach(r => {
+                    if (r.type === 'inbound-rtp'  && r.kind === 'audio') inbound  = r.bytesReceived || 0;
+                    if (r.type === 'outbound-rtp' && r.kind === 'audio') outbound = r.bytesSent     || 0;
+                });
+                console.log(`[WebRTC] audio bytes — in:${inbound} out:${outbound}`);
+            } catch {}
+        }, 3000);
 
         let iceBuffer = [];
 
@@ -610,6 +666,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (peerConnection.signalingState !== 'stable') return;
                 await peerConnection.setRemoteDescription(new RTCSessionDescription(payload.payload.offer));
                 const answer = await peerConnection.createAnswer();
+                answer.sdp = tuneOpusSdp(answer.sdp);
                 await peerConnection.setLocalDescription(answer);
                 rtcChannel.send({ type: 'broadcast', event: 'answer', payload: { answer } });
                 iceBuffer.forEach(c => { try { peerConnection.addIceCandidate(new RTCIceCandidate(c)); } catch(e) {} });

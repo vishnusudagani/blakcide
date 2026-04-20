@@ -27,6 +27,22 @@ document.addEventListener('DOMContentLoaded', () => {
     let localStream = null;
     let lastListenerIds = '';
 
+    // Tune the Opus codec parameters in SDP for voice-optimized calling.
+    // stereo=0 (mono), useinbandfec=1 (forward error correction for packet loss),
+    // usedtx=1 (discontinuous transmission — don't send silence), maxaveragebitrate=40000.
+    function tuneOpusSdp(sdp) {
+        if (!sdp) return sdp;
+        const lines = sdp.split('\r\n');
+        const opusRtpmapIdx = lines.findIndex(l => /a=rtpmap:\d+\s+opus\/48000/i.test(l));
+        if (opusRtpmapIdx < 0) return sdp;
+        const pt = lines[opusRtpmapIdx].match(/a=rtpmap:(\d+)/)[1];
+        const fmtpIdx = lines.findIndex(l => l.startsWith(`a=fmtp:${pt}`));
+        const fmtp = `a=fmtp:${pt} minptime=10;useinbandfec=1;stereo=0;usedtx=1;maxaveragebitrate=40000`;
+        if (fmtpIdx >= 0) lines[fmtpIdx] = fmtp;
+        else lines.splice(opusRtpmapIdx + 1, 0, fmtp);
+        return lines.join('\r\n');
+    }
+
     async function init() {
         const { data: { session }, error } = await supabase.auth.getSession();
         if (error || !session) return window.location.replace('../index.html');
@@ -743,7 +759,17 @@ document.addEventListener('DOMContentLoaded', () => {
     // ============================================================
     async function initWebRTC(isOfferer) {
         try {
-            localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            // WhatsApp-quality mic: enable browser DSP (echo cancel, noise
+            // suppression, auto gain) and prefer 48 kHz mono for Opus.
+            localStream = await navigator.mediaDevices.getUserMedia({
+                audio: {
+                    echoCancellation: true,
+                    noiseSuppression: true,
+                    autoGainControl:  true,
+                    channelCount:     1,
+                    sampleRate:       48000,
+                },
+            });
         } catch (err) {
             document.getElementById('call-status').innerText = "Microphone access denied.";
             alert("Microphone required for voice call. Reverting to secure chat.");
@@ -767,7 +793,43 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const servers = { iceServers };
         peerConnection = new RTCPeerConnection(servers);
-        localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+        // Explicit transceiver with sendrecv direction — defends against buggy
+        // SDP where addTrack alone produces a sendonly direction on some browsers.
+        localStream.getTracks().forEach(track => {
+            peerConnection.addTrack(track, localStream);
+        });
+
+        // ── WebRTC diagnostics ────────────────────────────────────────────────
+        // Log every state transition and surface ICE errors. Without this, a
+        // failed call is a silent black box. Also run getStats every 3s to prove
+        // whether RTP is actually flowing.
+        peerConnection.oniceconnectionstatechange = () => {
+            console.log('[WebRTC] iceConnectionState:', peerConnection.iceConnectionState);
+        };
+        peerConnection.onicegatheringstatechange = () => {
+            console.log('[WebRTC] iceGatheringState:', peerConnection.iceGatheringState);
+        };
+        peerConnection.onsignalingstatechange = () => {
+            console.log('[WebRTC] signalingState:', peerConnection.signalingState);
+        };
+        peerConnection.onicecandidateerror = (e) => {
+            console.warn('[WebRTC] iceCandidateError:', e.errorCode, e.errorText, e.url);
+        };
+        const statsInterval = setInterval(async () => {
+            if (!peerConnection || peerConnection.connectionState === 'closed') {
+                clearInterval(statsInterval);
+                return;
+            }
+            try {
+                const stats = await peerConnection.getStats();
+                let inbound = 0, outbound = 0;
+                stats.forEach(r => {
+                    if (r.type === 'inbound-rtp'  && r.kind === 'audio') inbound  = r.bytesReceived || 0;
+                    if (r.type === 'outbound-rtp' && r.kind === 'audio') outbound = r.bytesSent     || 0;
+                });
+                console.log(`[WebRTC] audio bytes — in:${inbound} out:${outbound}`);
+            } catch {}
+        }, 3000);
 
         let iceBuffer = [];
 
@@ -804,6 +866,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 statusEl.innerText = "Reconnecting…";
                 try {
                     const offer = await peerConnection.createOffer({ iceRestart: true });
+                    offer.sdp = tuneOpusSdp(offer.sdp);
                     await peerConnection.setLocalDescription(offer);
                     rtcChannel?.send({ type: 'broadcast', event: 'offer', payload: { offer } });
                 } catch (e) { statusEl.innerText = "Connection lost. End and restart."; }
@@ -851,13 +914,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (status !== 'SUBSCRIBED') return;
 
                 if (isOfferer) {
-                    // Send offer immediately on subscribe
                     const offer = await peerConnection.createOffer();
+                    // Tune Opus for voice: stereo off, DTX on, max bitrate 40 kbps.
+                    // Mirrors WhatsApp/Zoom defaults — drastically improves
+                    // intelligibility and reduces jitter on mobile networks.
+                    offer.sdp = tuneOpusSdp(offer.sdp);
                     await peerConnection.setLocalDescription(offer);
                     rtcChannel.send({ type: 'broadcast', event: 'offer', payload: { offer } });
 
-                    // Retry every 3s until answer arrives — critical for mid-chat call upgrades
-                    // where the listener may subscribe to the RTC channel slightly later
+                    // Retry every 3 s for 27 s while we wait for the answer.
                     let offerRetries = 0;
                     const offerRetryTimer = setInterval(() => {
                         if (!peerConnection || peerConnection.signalingState !== 'have-local-offer' || offerRetries >= 9) {
@@ -867,6 +932,20 @@ document.addEventListener('DOMContentLoaded', () => {
                         rtcChannel.send({ type: 'broadcast', event: 'offer', payload: { offer } });
                         offerRetries++;
                     }, 3000);
+
+                    // Connection-timeout watchdog: if we're not connected in 25 s
+                    // the call is effectively dead. Show a "Call failed — retry"
+                    // state instead of leaving the user staring at "Connecting…"
+                    // forever.
+                    setTimeout(() => {
+                        if (!peerConnection) return;
+                        const st = peerConnection.connectionState;
+                        if (st === 'connected' || st === 'closed') return;
+                        const statusEl = document.getElementById('call-status');
+                        if (statusEl) {
+                            statusEl.innerHTML = 'Call failed to connect. <button onclick="window.location.reload()" style="background:#4CAF50;color:#fff;border:none;padding:6px 14px;border-radius:16px;cursor:pointer;margin-left:8px;">Retry</button>';
+                        }
+                    }, 25000);
                 }
                 // Answerer (listener) just waits — no action needed here
             });
