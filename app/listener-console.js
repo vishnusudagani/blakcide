@@ -600,8 +600,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     echoCancellation: true,
                     noiseSuppression: true,
                     autoGainControl:  true,
-                    channelCount:     1,
-                    sampleRate:       48000,
                 },
             });
         } catch (err) {
@@ -717,7 +715,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (peerConnection.signalingState !== 'stable') return;
                 await peerConnection.setRemoteDescription(new RTCSessionDescription(payload.payload.offer));
                 const answer = await peerConnection.createAnswer();
-                answer.sdp = tuneOpusSdp(answer.sdp);
+                // Opus munging removed — see note in connect-user.js
                 await peerConnection.setLocalDescription(answer);
                 rtcChannel.send({ type: 'broadcast', event: 'answer', payload: { answer } });
                 iceBuffer.forEach(c => { try { peerConnection.addIceCandidate(new RTCIceCandidate(c)); } catch(e) {} });

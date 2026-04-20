@@ -797,13 +797,13 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             // WhatsApp-quality mic: enable browser DSP (echo cancel, noise
             // suppression, auto gain) and prefer 48 kHz mono for Opus.
+            // Drop explicit channelCount/sampleRate — Android Chrome rejects or
+            // returns silent tracks on some devices when these are pinned.
             localStream = await navigator.mediaDevices.getUserMedia({
                 audio: {
                     echoCancellation: true,
                     noiseSuppression: true,
                     autoGainControl:  true,
-                    channelCount:     1,
-                    sampleRate:       48000,
                 },
             });
         } catch (err) {
@@ -902,7 +902,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 statusEl.innerText = "Reconnecting…";
                 try {
                     const offer = await peerConnection.createOffer({ iceRestart: true });
-                    offer.sdp = tuneOpusSdp(offer.sdp);
+                    // Opus SDP munging removed — it broke audio on Android/Windows Chromium
+            // (usedtx=1 suppressed silent frames that Chromium was expecting; the
+            // answerer-side rewrite also violated the spec's "answer mirrors offer"
+            // rule, leaving connected-but-silent calls).
                     await peerConnection.setLocalDescription(offer);
                     rtcChannel?.send({ type: 'broadcast', event: 'offer', payload: { offer } });
                 } catch (e) { statusEl.innerText = "Connection lost. End and restart."; }
@@ -954,7 +957,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     // Tune Opus for voice: stereo off, DTX on, max bitrate 40 kbps.
                     // Mirrors WhatsApp/Zoom defaults — drastically improves
                     // intelligibility and reduces jitter on mobile networks.
-                    offer.sdp = tuneOpusSdp(offer.sdp);
+                    // Opus SDP munging removed — it broke audio on Android/Windows Chromium
+            // (usedtx=1 suppressed silent frames that Chromium was expecting; the
+            // answerer-side rewrite also violated the spec's "answer mirrors offer"
+            // rule, leaving connected-but-silent calls).
                     await peerConnection.setLocalDescription(offer);
                     rtcChannel.send({ type: 'broadcast', event: 'offer', payload: { offer } });
 
