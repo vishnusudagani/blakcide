@@ -25,6 +25,29 @@ document.addEventListener('DOMContentLoaded', () => {
     let peerConnection = null;
     let localStream = null;
 
+    // Voice-optimized Opus SDP params — mirror of connect-user.js.
+    function tuneOpusSdp(sdp) {
+        if (!sdp) return sdp;
+        const lines = sdp.split('\r\n');
+        const opusRtpmapIdx = lines.findIndex(l => /a=rtpmap:\d+\s+opus\/48000/i.test(l));
+        if (opusRtpmapIdx < 0) return sdp;
+        const pt = lines[opusRtpmapIdx].match(/a=rtpmap:(\d+)/)[1];
+        const fmtpIdx = lines.findIndex(l => l.startsWith(`a=fmtp:${pt}`));
+        const fmtp = `a=fmtp:${pt} minptime=10;useinbandfec=1;stereo=0;usedtx=1;maxaveragebitrate=40000`;
+        if (fmtpIdx >= 0) lines[fmtpIdx] = fmtp;
+        else lines.splice(opusRtpmapIdx + 1, 0, fmtp);
+        return lines.join('\r\n');
+    }
+
+    // Feature 5: split-duration tracking (call vs chat)
+    let callStartTime = null;
+    let callTimerInterval = null;
+    let chatStartTime = null;
+
+    // Feature 2: voice-masking audio context
+    let audioContext = null;
+    let pitchShiftedStream = null;
+
     const statusToggleBtn = document.getElementById('status-toggle-btn');
     const statusBtnText = document.getElementById('status-btn-text');
     const statusText = document.getElementById('status-indicator-text');
@@ -53,6 +76,7 @@ document.addEventListener('DOMContentLoaded', () => {
             updateStatusUI(); 
             setupSessionWatcher(existingSession.id);
             existingSession.session_type === 'call' ? startVoiceCallInterface() : startLiveChatInterface();
+            window.showCopilot();
         } else {
             if (!currentListenerProfile.display_name || currentListenerProfile.display_name.trim() === '') {
                 await supabase.from('listeners').update({ is_online: false }).eq('id', currentListenerProfile.id);
@@ -127,8 +151,12 @@ document.addEventListener('DOMContentLoaded', () => {
         if (file) document.getElementById('prof-pic-preview').src = URL.createObjectURL(file);
     };
 
-    window.openProfile = function(forceLock = false) { 
+    window.openProfile = async function(forceLock = false) {
         if (!currentListenerProfile) return;
+        // Refresh row so rating/minutes reflect latest trigger + end-of-session writes
+        const { data: fresh } = await supabase.from('listeners').select('*').eq('id', currentListenerProfile.id).maybeSingle();
+        if (fresh) currentListenerProfile = fresh;
+        renderProfileStats();
         document.getElementById('prof-pic-preview').src = currentListenerProfile.profile_pic || 'https://i.pravatar.cc/150';
         document.getElementById('prof-name').value = currentListenerProfile.display_name || '';
         document.getElementById('prof-bio').value = currentListenerProfile.bio || '';
@@ -147,6 +175,44 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     window.closeProfile = () => profileModal.style.display = 'none';
+
+    function renderProfileStats() {
+        const host = document.getElementById('listener-stats-block');
+        if (!host || !currentListenerProfile) return;
+        const rating = currentListenerProfile.rating;
+        const count = currentListenerProfile.review_count || 0;
+        const callMin = Math.round(Number(currentListenerProfile.total_call_minutes) || Number(currentListenerProfile.total_minutes_spoken) || 0);
+        const chatMin = Math.round(Number(currentListenerProfile.total_chat_minutes) || 0);
+        const ratingStr = rating != null
+            ? `★ ${Number(rating).toFixed(2)} <span style="opacity:0.6;font-weight:400;">(${count} review${count === 1 ? '' : 's'})</span>`
+            : `<span style="opacity:0.6;font-weight:400;">No reviews yet</span>`;
+        host.innerHTML = `
+            <div style="display:flex;flex-direction:column;gap:8px;padding:14px;background:var(--glass-inner,rgba(255,255,255,0.04));border:1px solid var(--glass-border,rgba(255,255,255,0.08));border-radius:12px;margin-bottom:14px;">
+                <div style="font-size:0.7rem;text-transform:uppercase;letter-spacing:1.2px;opacity:0.6;">Rating</div>
+                <div style="font-size:1.05rem;font-weight:700;color:#FFC857;">${ratingStr}</div>
+                <div style="display:flex;gap:18px;margin-top:4px;">
+                    <div><div style="font-size:0.7rem;opacity:0.6;">Call minutes</div><div style="font-size:1rem;font-weight:700;">${callMin}</div></div>
+                    <div><div style="font-size:0.7rem;opacity:0.6;">Chat minutes</div><div style="font-size:1rem;font-weight:700;">${chatMin}</div></div>
+                    <div><div style="font-size:0.7rem;opacity:0.6;">Total</div><div style="font-size:1rem;font-weight:700;">${callMin + chatMin}</div></div>
+                </div>
+            </div>
+        `;
+    }
+
+    window.viewListenerReviews = async function() {
+        if (!currentListenerProfile) return;
+        const { data: reviews } = await supabase.from('listener_reviews')
+            .select('rating, review_text, created_at').eq('listener_id', currentListenerProfile.id)
+            .order('created_at', { ascending: false }).limit(20);
+        const list = (reviews && reviews.length)
+            ? reviews.map(r => `<div style="padding:10px;border-bottom:1px solid var(--glass-border,rgba(255,255,255,0.08));"><div style="color:#FFC857;">${'★'.repeat(r.rating)}${'☆'.repeat(5 - r.rating)}</div>${r.review_text ? `<div style="font-size:0.85rem;margin-top:4px;">${r.review_text.replace(/</g,'&lt;')}</div>` : ''}<div style="font-size:0.7rem;opacity:0.5;margin-top:4px;">${new Date(r.created_at).toLocaleDateString()}</div></div>`).join('')
+            : '<div style="opacity:0.6;text-align:center;padding:20px;">No reviews yet.</div>';
+        const modal = document.createElement('div');
+        modal.className = 'auth-overlay active';
+        modal.style.cssText = 'position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.7);';
+        modal.innerHTML = `<div class="glass-pane" style="width:90%;max-width:420px;max-height:70vh;overflow:auto;padding:20px;background:var(--bg-color);"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;"><h3 style="margin:0;">Reviews</h3><button onclick="this.closest('.auth-overlay').remove()" style="background:none;border:none;color:var(--text-color);font-size:1.8rem;cursor:pointer;">&times;</button></div>${list}</div>`;
+        document.body.appendChild(modal);
+    };
 
     window.saveProfile = async function() { 
         const name = document.getElementById('prof-name').value.trim();
@@ -289,6 +355,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         type === 'call' ? startVoiceCallInterface() : startLiveChatInterface();
         setupSessionWatcher(sessionId);
+        window.showCopilot(); // Feature 4: show AI copilot FAB once session is live
     };
 
     window.acceptMidChatCall = async function() {
@@ -308,7 +375,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function startLiveChatInterface() {
         currentUIState = 'chat';
-        if (rtcChannel) supabase.removeChannel(rtcChannel); 
+        if (rtcChannel) supabase.removeChannel(rtcChannel);
+        if (!chatStartTime) chatStartTime = Date.now();
 
         const feedContainer = cleanCentralPanel();
         if (!feedContainer) return;
@@ -339,13 +407,20 @@ document.addEventListener('DOMContentLoaded', () => {
             }).subscribe();
             
         if (messagePollInterval) clearInterval(messagePollInterval);
-        messagePollInterval = setInterval(syncMessages, 2500);
+        // Match the user side (1.5s) so listener doesn't lag on inbound messages.
+        messagePollInterval = setInterval(syncMessages, 1500);
     }
 
+    let lastSyncedAt = null;
     async function syncMessages() {
-        if (!activeSessionId || currentUIState !== 'chat') return;
-        const { data: msgs } = await supabase.from('messages').select('*').eq('session_id', activeSessionId).order('created_at', { ascending: true });
-        if (msgs) msgs.forEach(msg => renderChatMessage(msg));
+        if (!activeSessionId) return;   // poll even in call view so chat stays fresh
+        let q = supabase.from('messages').select('*').eq('session_id', activeSessionId).order('created_at', { ascending: true });
+        if (lastSyncedAt) q = q.gt('created_at', lastSyncedAt);
+        const { data: msgs } = await q;
+        if (msgs && msgs.length) {
+            msgs.forEach(msg => renderChatMessage(msg));
+            lastSyncedAt = msgs[msgs.length - 1].created_at;
+        }
     }
 
     window.sendReply = async function() {
@@ -353,17 +428,26 @@ document.addEventListener('DOMContentLoaded', () => {
         const input = document.getElementById('chat-reply-input');
         const text = input.value.trim();
         if (!text) return;
-        input.value = ''; 
-        
+        input.value = '';
+        // Optimistic echo so listener sees own message immediately (dedup handles the DB echo)
+        const tempId = 'temp-' + Date.now();
+        renderChatMessage({ id: tempId, sender_id: currentUser.id, content: text, created_at: new Date().toISOString() });
         await supabase.from('messages').insert([{ session_id: activeSessionId, sender_id: currentUser.id, content: text }]);
     };
 
     function renderChatMessage(msg) {
-        if (renderedMessageIds.has(msg.id)) return; 
+        if (renderedMessageIds.has(msg.id)) return;
         renderedMessageIds.add(msg.id);
 
         const feed = document.getElementById('live-chat-feed');
-        if(!feed) return; 
+        if(!feed) return;
+
+        // Drop any optimistic temp bubbles from this listener once the real DB row arrives.
+        // Without this, the listener sees their own message twice (once optimistic, once from realtime).
+        const isReal = typeof msg.id === 'string' && !msg.id.startsWith('temp-');
+        if (isReal && msg.sender_id === currentUser?.id) {
+            feed.querySelectorAll('[id^="msg-temp-"]').forEach(el => el.remove());
+        }
 
         const isMe = msg.sender_id === currentUser.id;
         let html = '';
@@ -375,10 +459,34 @@ document.addEventListener('DOMContentLoaded', () => {
                 html = `<div id="msg-${msg.id}" style="text-align:center; margin: 15px 0; width: 100%; opacity: 0.6; font-size: 0.85rem;">Ringing... Waiting for user to accept.</div>`;
             }
         } else {
+            // Render media or plain text
+            let innerHtml = '';
+            if (msg.content && msg.content.startsWith('IMAGE::')) {
+                const parts = msg.content.replace('IMAGE::', '').split('||DESC::');
+                const imgUrl = parts[0];
+                const desc   = parts[1] || '';
+                innerHtml = `<div style="max-width:220px;">
+                    <img src="${imgUrl}" style="width:100%;border-radius:10px;cursor:pointer;display:block;"
+                         onclick="window.open('${imgUrl}','_blank')" title="${desc}">
+                    ${desc ? `<div style="font-size:0.72rem;opacity:0.65;margin-top:5px;line-height:1.35;">${desc}</div>` : ''}
+                </div>`;
+            } else if (msg.content && msg.content.startsWith('AUDIO::')) {
+                const audioUrl = msg.content.replace('AUDIO::', '');
+                innerHtml = `<div style="min-width:200px;">
+                    <div style="font-size:0.72rem;opacity:0.55;margin-bottom:6px;display:flex;align-items:center;gap:4px;">
+                        <ion-icon name="mic-outline" style="font-size:0.85rem;"></ion-icon> Voice note
+                    </div>
+                    <audio src="${audioUrl}" controls preload="metadata"
+                        style="width:100%;height:32px;outline:none;border-radius:8px;"></audio>
+                </div>`;
+            } else {
+                innerHtml = msg.content || '';
+            }
+
             html = `
-                <div id="msg-${msg.id}" style="display: flex; justify-content: ${isMe ? 'flex-end' : 'flex-start'}; width: 100%; margin-bottom: 10px;">
-                    <div style="background: ${isMe ? 'var(--accent-red)' : 'var(--glass-inner)'}; color: ${isMe ? 'white' : 'var(--text-color)'}; padding: 10px 15px; border-radius: 12px; max-width: 70%; word-wrap: break-word;">
-                        ${msg.content}
+                <div id="msg-${msg.id}" style="display:flex;justify-content:${isMe ? 'flex-end' : 'flex-start'};width:100%;margin-bottom:10px;">
+                    <div style="background:${isMe ? 'var(--accent-red)' : 'var(--glass-inner)'};color:${isMe ? 'white' : 'var(--text-color)'};padding:10px 15px;border-radius:12px;max-width:75%;word-wrap:break-word;">
+                        ${innerHtml}
                     </div>
                 </div>
             `;
@@ -424,35 +532,163 @@ document.addEventListener('DOMContentLoaded', () => {
     //   - User  (isOfferer=true):  subscribes → sends offer immediately
     //   - Listener (isOfferer=false): subscribes → waits for offer → answers
     // ============================================================
+    // Voice mask — pitch-shift the listener's mic before it enters WebRTC.
+    //
+    // CRITICAL FIX: the previous implementation used ScriptProcessorNode inside an
+    // AudioContext that was never resumed. Browsers ship AudioContext in the
+    // "suspended" state until a user gesture calls resume(), so onaudioprocess
+    // never fired and the MediaStreamDestination output pure silence — meaning
+    // the USER heard NOTHING from the listener. This is the #1 reason callers
+    // reported "voice not working".
+    //
+    // New strategy:
+    //   1. Try to resume the AudioContext. If it stays suspended, bail out.
+    //   2. Verify the destination stream actually has an audio track before
+    //      handing it to WebRTC. If the track is missing/silent, fall back to
+    //      the raw mic stream so the call is never dead-air.
+    //   3. Any failure → return raw stream (audible call beats silent mask).
+    async function applyVoiceMask(rawStream) {
+        try {
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            // MUST resume — without this, suspended contexts produce silence.
+            if (audioContext.state === 'suspended') {
+                try { await audioContext.resume(); } catch {}
+            }
+            if (audioContext.state !== 'running') {
+                console.warn('[VoiceMask] AudioContext could not resume, using raw mic');
+                return rawStream;
+            }
+
+            const source = audioContext.createMediaStreamSource(rawStream);
+            const bufferSize = 4096;
+            const processor = audioContext.createScriptProcessor(bufferSize, 1, 1);
+            const pitchFactor = 0.82;   // ≈ −3 semitones
+
+            processor.onaudioprocess = (e) => {
+                const input  = e.inputBuffer.getChannelData(0);
+                const output = e.outputBuffer.getChannelData(0);
+                for (let i = 0; i < bufferSize; i++) {
+                    const srcIdx = Math.floor(i * pitchFactor);
+                    output[i] = srcIdx < input.length ? input[srcIdx] : 0;
+                }
+            };
+
+            const dest = audioContext.createMediaStreamDestination();
+            source.connect(processor);
+            processor.connect(dest);
+
+            // Verify the mask actually produced an audio track.
+            const maskedTracks = dest.stream.getAudioTracks();
+            if (!maskedTracks.length || !maskedTracks[0].enabled) {
+                console.warn('[VoiceMask] Mask produced no audio track, using raw mic');
+                return rawStream;
+            }
+
+            pitchShiftedStream = dest.stream;
+            console.log('[VoiceMask] Active — pitch factor', pitchFactor);
+            return dest.stream;
+        } catch (e) {
+            console.warn('[VoiceMask] Exception, falling back to raw mic:', e.message);
+            return rawStream;
+        }
+    }
+
     async function initWebRTC(isOfferer) {
         try {
-            localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            localStream = await navigator.mediaDevices.getUserMedia({
+                audio: {
+                    echoCancellation: true,
+                    noiseSuppression: true,
+                    autoGainControl:  true,
+                    channelCount:     1,
+                    sampleRate:       48000,
+                },
+            });
         } catch (err) {
             document.getElementById('call-status').innerText = "Microphone error.";
             alert("Microphone required for voice call.");
             return;
         }
 
-        const servers = {
-            iceServers: [
-                { urls: 'stun:stun.l.google.com:19302' },
-                { urls: 'stun:stun1.l.google.com:19302' },
-                { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
-                { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
-                { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' }
-            ]
-        };
+        // NOTE: voice mask is DISABLED for reliability. The ScriptProcessor-based
+        // pitch shifter was a prime suspect in the "neither side can hear each
+        // other" bug — even with resume() it can produce silence under the
+        // browser's main-thread audio policy. Ship raw audio for now; replace
+        // with an AudioWorklet implementation before re-enabling.
+        const streamToSend = localStream;
+        // const streamToSend = await applyVoiceMask(localStream);
+
+        // Feature 1: fetch TURN credentials from backend (avoids rate-limited hardcoded keys)
+        let iceServers = [
+            { urls: 'stun:stun.l.google.com:19302' },
+            { urls: 'stun:stun1.l.google.com:19302' },
+        ];
+        try {
+            const iceRes = await fetch('/api/ice-servers');
+            if (iceRes.ok) {
+                const iceData = await iceRes.json();
+                if (Array.isArray(iceData.iceServers)) iceServers = iceData.iceServers;
+            }
+        } catch (e) {
+            console.warn('[WebRTC] Could not fetch ICE servers, using defaults:', e.message);
+        }
+
+        const servers = { iceServers };
         peerConnection = new RTCPeerConnection(servers);
-        localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+        streamToSend.getTracks().forEach(track => peerConnection.addTrack(track, streamToSend));
+
+        // ── WebRTC diagnostics (mirrors connect-user.js) ─────────────────────
+        peerConnection.oniceconnectionstatechange = () => {
+            console.log('[WebRTC] iceConnectionState:', peerConnection.iceConnectionState);
+        };
+        peerConnection.onicegatheringstatechange = () => {
+            console.log('[WebRTC] iceGatheringState:', peerConnection.iceGatheringState);
+        };
+        peerConnection.onsignalingstatechange = () => {
+            console.log('[WebRTC] signalingState:', peerConnection.signalingState);
+        };
+        peerConnection.onicecandidateerror = (e) => {
+            console.warn('[WebRTC] iceCandidateError:', e.errorCode, e.errorText, e.url);
+        };
+        const statsInterval = setInterval(async () => {
+            if (!peerConnection || peerConnection.connectionState === 'closed') {
+                clearInterval(statsInterval);
+                return;
+            }
+            try {
+                const stats = await peerConnection.getStats();
+                let inbound = 0, outbound = 0;
+                stats.forEach(r => {
+                    if (r.type === 'inbound-rtp'  && r.kind === 'audio') inbound  = r.bytesReceived || 0;
+                    if (r.type === 'outbound-rtp' && r.kind === 'audio') outbound = r.bytesSent     || 0;
+                });
+                console.log(`[WebRTC] audio bytes — in:${inbound} out:${outbound}`);
+            } catch {}
+        }, 3000);
 
         let iceBuffer = [];
 
         peerConnection.ontrack = (event) => {
+            console.log('[WebRTC] ontrack', event.track.kind, 'streams:', event.streams.length);
             const remoteAudio = document.getElementById('remote-audio');
-            if (remoteAudio && remoteAudio.srcObject !== event.streams[0]) {
+            if (!remoteAudio) return;
+            if (remoteAudio.srcObject !== event.streams[0]) {
                 remoteAudio.srcObject = event.streams[0];
-                remoteAudio.play().catch(() => {});
-                document.getElementById('call-status').innerText = "Connected • Secure Voice Channel";
+                remoteAudio.muted   = false;
+                remoteAudio.volume  = 1.0;
+                // iOS Safari + Chrome autoplay policy: play() can reject if the
+                // context isn't user-activated yet. Surface the failure with a
+                // one-tap unblock button instead of silently eating it.
+                remoteAudio.play().then(() => {
+                    document.getElementById('call-status').innerText = "Connected • Secure Voice Channel";
+                    startCallTimer();
+                }).catch(err => {
+                    console.warn('[WebRTC] remote audio autoplay blocked:', err.message);
+                    const statusEl = document.getElementById('call-status');
+                    if (statusEl) {
+                        statusEl.innerHTML = '<button onclick="document.getElementById(\'remote-audio\').play()" style="background:#4CAF50;color:#fff;border:none;padding:8px 16px;border-radius:20px;cursor:pointer;">🔊 Tap to enable audio</button>';
+                    }
+                });
             }
         };
 
@@ -460,8 +696,9 @@ document.addEventListener('DOMContentLoaded', () => {
             const state = peerConnection.connectionState;
             const statusEl = document.getElementById('call-status');
             if (!statusEl) return;
-            if (state === 'connected') statusEl.innerText = "Connected • Secure Voice Channel";
-            if (state === 'disconnected' || state === 'failed') statusEl.innerText = "Connection lost.";
+            if (state === 'connected') { statusEl.innerText = "Connected • Secure Voice Channel"; startCallTimer(); }
+            if (state === 'disconnected') statusEl.innerText = "Reconnecting…";
+            if (state === 'failed') statusEl.innerText = "Reconnecting…"; // answerer waits for user's ICE-restart offer
         };
 
         if (rtcChannel) supabase.removeChannel(rtcChannel);
@@ -480,6 +717,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (peerConnection.signalingState !== 'stable') return;
                 await peerConnection.setRemoteDescription(new RTCSessionDescription(payload.payload.offer));
                 const answer = await peerConnection.createAnswer();
+                answer.sdp = tuneOpusSdp(answer.sdp);
                 await peerConnection.setLocalDescription(answer);
                 rtcChannel.send({ type: 'broadcast', event: 'answer', payload: { answer } });
                 iceBuffer.forEach(c => { try { peerConnection.addIceCandidate(new RTCIceCandidate(c)); } catch(e) {} });
@@ -506,14 +744,54 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function stopWebRTC() {
-        if(localStream) localStream.getTracks().forEach(t => t.stop());
-        if(peerConnection) peerConnection.close();
-        if(rtcChannel) supabase.removeChannel(rtcChannel); 
+        if (localStream) localStream.getTracks().forEach(t => t.stop());
+        if (pitchShiftedStream) pitchShiftedStream.getTracks().forEach(t => t.stop());
+        if (audioContext) { audioContext.close().catch(() => {}); audioContext = null; }
+        if (peerConnection) peerConnection.close();
+        if (rtcChannel) supabase.removeChannel(rtcChannel);
+    }
+
+    // Feature 5: call timer
+    function startCallTimer() {
+        if (callStartTime) return; // already running
+        callStartTime = Date.now();
+        const statusEl = document.getElementById('call-status');
+        callTimerInterval = setInterval(() => {
+            const secs = Math.floor((Date.now() - callStartTime) / 1000);
+            const m = String(Math.floor(secs / 60)).padStart(2, '0');
+            const s = String(secs % 60).padStart(2, '0');
+            if (statusEl) statusEl.innerText = `Connected • ${m}:${s}`;
+        }, 1000);
+    }
+
+    async function stopTimersAndSave() {
+        if (!currentListenerProfile) return;
+        const patch = {};
+        if (callStartTime) {
+            clearInterval(callTimerInterval);
+            const mins = (Date.now() - callStartTime) / 60000;
+            callStartTime = null; callTimerInterval = null;
+            const curCall = Number(currentListenerProfile.total_call_minutes) || 0;
+            patch.total_call_minutes = Math.round((curCall + mins) * 100) / 100;
+            // Keep legacy total_minutes_spoken in sync for any consumer still reading it
+            const curLegacy = Number(currentListenerProfile.total_minutes_spoken) || 0;
+            patch.total_minutes_spoken = Math.round((curLegacy + mins) * 100) / 100;
+        }
+        if (chatStartTime) {
+            const mins = (Date.now() - chatStartTime) / 60000;
+            chatStartTime = null;
+            const curChat = Number(currentListenerProfile.total_chat_minutes) || 0;
+            patch.total_chat_minutes = Math.round((curChat + mins) * 100) / 100;
+        }
+        if (Object.keys(patch).length === 0) return;
+        await supabase.from('listeners').update(patch).eq('id', currentListenerProfile.id);
+        Object.assign(currentListenerProfile, patch);
     }
 
     window.handleSessionEnd = function() {
-        if (isEnding) return; 
+        if (isEnding) return;
         isEnding = true;
+        window.hideCopilot();
         stopWebRTC();
         document.body.innerHTML = `
             <div style="display:flex; justify-content:center; align-items:center; height:100vh; flex-direction:column; background: var(--bg-color); color: var(--text-color);">
@@ -526,10 +804,58 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     window.endSession = async function(sessionId) {
-        if(!sessionId) return;
+        if (!sessionId) return;
         await supabase.from('connect_sessions').update({ status: 'completed' }).eq('id', sessionId);
+        // Feature 5: save accumulated call + chat minutes before unloading
+        await stopTimersAndSave();
+        // Feature 3: auto-journal session (mirrors logic in connect-user.js)
+        await autoJournalSession(sessionId);
         handleSessionEnd();
     };
+
+    // Feature 3: one-per-day journal upsert from the listener's side
+    async function autoJournalSession(sessionId) {
+        try {
+            const { data: sess } = await supabase.from('connect_sessions')
+                .select('session_type, user_id').eq('id', sessionId).maybeSingle();
+            if (!sess) return;
+            const userId = sess.user_id;
+            if (!userId) return;
+
+            const { data: msgs } = await supabase.from('messages')
+                .select('sender_id, content').eq('session_id', sessionId).order('created_at');
+            if (!msgs || msgs.length < 2) return;
+
+            const transcript = msgs
+                .filter(m => m.content && !m.content.startsWith('###'))
+                .map(m => ({ role: m.sender_id === userId ? 'user' : 'assistant', content: m.content }));
+            if (transcript.length < 2) return;
+
+            const res = await fetch('/api/summarize', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ messages: transcript, type: sess.session_type || 'chat', imageDescriptions: [] })
+            });
+            if (!res.ok) return;
+            const { title, content } = await res.json();
+            if (!title || !content) return;
+
+            const aiSource = sess.session_type === 'call' ? 'ai_call' : 'ai_chat';
+            const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
+            const { data: existing } = await supabase.from('journals')
+                .select('id, content').eq('user_id', userId).eq('ai_source', aiSource)
+                .gte('created_at', todayStart.toISOString())
+                .order('created_at', { ascending: true }).limit(1).maybeSingle();
+
+            if (existing) {
+                await supabase.from('journals').update({
+                    title, content: existing.content + '\n\n---\n\n' + content
+                }).eq('id', existing.id);
+            } else {
+                await supabase.from('journals').insert([{ user_id: userId, title, content, ai_source: aiSource }]);
+            }
+        } catch (e) { /* non-blocking */ }
+    }
 
     window.rejectRequest = async function(sessionId) {
         await supabase.from('connect_sessions').update({ status: 'rejected' }).eq('id', sessionId);
@@ -572,6 +898,143 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
         `;
         document.body.insertAdjacentHTML('beforeend', modalHTML);
+    };
+
+    // ── Feature 4: AI Copilot ─────────────────────────────────────────────────
+    // Inject copilot panel into the DOM and wire up streaming responses.
+    function injectCopilotPanel() {
+        if (document.getElementById('copilot-panel')) return;
+        const panel = document.createElement('div');
+        panel.id = 'copilot-panel';
+        panel.style.cssText = `
+            position:fixed; bottom:80px; right:18px; width:320px; max-height:480px;
+            background:var(--surface-1); border:1px solid var(--border);
+            border-radius:20px; display:none; flex-direction:column;
+            box-shadow:0 8px 40px rgba(0,0,0,0.4); z-index:600; overflow:hidden;
+        `;
+        panel.innerHTML = `
+            <div style="padding:14px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:var(--surface-2);">
+                <span style="font-size:0.78rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-2);">
+                    <ion-icon name="sparkles-outline" style="vertical-align:-2px;margin-right:5px;color:var(--accent);"></ion-icon>AI Copilot
+                </span>
+                <button onclick="document.getElementById('copilot-panel').style.display='none'"
+                    style="background:none;border:none;color:var(--text-3);font-size:1.2rem;cursor:pointer;padding:0 2px;line-height:1;">&times;</button>
+            </div>
+            <div id="copilot-messages" style="flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px;min-height:160px;"></div>
+            <div style="padding:10px 12px;border-top:1px solid var(--border);display:flex;gap:8px;align-items:flex-end;">
+                <textarea id="copilot-input" placeholder="Ask for a suggestion…"
+                    style="flex:1;background:var(--surface-2);border:1px solid var(--border);border-radius:12px;padding:10px 12px;color:var(--text);font-size:0.83rem;font-family:inherit;resize:none;outline:none;line-height:1.5;max-height:80px;"
+                    rows="1" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();window.sendCopilotMessage();}"></textarea>
+                <button onclick="window.sendCopilotMessage()"
+                    style="width:38px;height:38px;border-radius:50%;background:var(--accent);border:none;color:white;font-size:1rem;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;">
+                    <ion-icon name="arrow-up-outline"></ion-icon>
+                </button>
+            </div>
+        `;
+        document.body.appendChild(panel);
+
+        // FAB to toggle the panel (shown only during active session)
+        const fab = document.createElement('button');
+        fab.id = 'copilot-fab';
+        fab.title = 'AI Copilot';
+        fab.style.cssText = `
+            position:fixed; bottom:18px; right:18px; width:52px; height:52px;
+            border-radius:50%; background:var(--accent); border:none; color:white;
+            font-size:1.4rem; display:none; align-items:center; justify-content:center;
+            cursor:pointer; box-shadow:0 4px 20px rgba(0,212,170,0.35); z-index:601;
+        `;
+        fab.innerHTML = '<ion-icon name="sparkles-outline"></ion-icon>';
+        fab.onclick = () => {
+            const p = document.getElementById('copilot-panel');
+            p.style.display = p.style.display === 'flex' ? 'none' : 'flex';
+        };
+        document.body.appendChild(fab);
+    }
+
+    window.showCopilot = function() {
+        injectCopilotPanel();
+        const fab = document.getElementById('copilot-fab');
+        if (fab) fab.style.display = 'flex';
+    };
+
+    window.hideCopilot = function() {
+        const fab = document.getElementById('copilot-fab');
+        const panel = document.getElementById('copilot-panel');
+        if (fab) fab.style.display = 'none';
+        if (panel) panel.style.display = 'none';
+    };
+
+    window.sendCopilotMessage = async function() {
+        const input = document.getElementById('copilot-input');
+        const question = input ? input.value.trim() : '';
+        if (!question) return;
+        input.value = '';
+        input.style.height = 'auto';
+
+        const feed = document.getElementById('copilot-messages');
+        if (!feed) return;
+
+        // User bubble
+        feed.insertAdjacentHTML('beforeend', `
+            <div style="align-self:flex-end;background:var(--surface-2);border:1px solid var(--border);border-radius:12px 12px 4px 12px;padding:8px 12px;font-size:0.82rem;max-width:90%;word-wrap:break-word;">
+                ${question.replace(/</g,'&lt;')}
+            </div>
+        `);
+        feed.scrollTop = feed.scrollHeight;
+
+        // AI response bubble (streaming)
+        const replyId = 'cop-reply-' + Date.now();
+        feed.insertAdjacentHTML('beforeend', `
+            <div id="${replyId}" style="align-self:flex-start;background:rgba(0,212,170,0.07);border:1px solid rgba(0,212,170,0.2);border-radius:12px 12px 12px 4px;padding:8px 12px;font-size:0.82rem;max-width:90%;word-wrap:break-word;white-space:pre-wrap;color:var(--text);">
+                <span style="opacity:0.4;">Thinking…</span>
+            </div>
+        `);
+        feed.scrollTop = feed.scrollHeight;
+
+        const replyEl = document.getElementById(replyId);
+
+        // Gather connected-user profile context
+        let userProfile = {};
+        let recentMessages = [];
+        try {
+            if (activeSessionId) {
+                const { data: sess } = await supabase.from('connect_sessions')
+                    .select('user_id').eq('id', activeSessionId).maybeSingle();
+                if (sess && sess.user_id) {
+                    const { data: prof } = await supabase.from('profiles')
+                        .select('full_name, bio, user_memory').eq('id', sess.user_id).maybeSingle();
+                    if (prof) userProfile = prof;
+
+                    const { data: journals } = await supabase.from('journals')
+                        .select('title, content').eq('user_id', sess.user_id)
+                        .order('created_at', { ascending: false }).limit(3);
+                    if (journals) userProfile.recent_journals = journals;
+
+                    const { data: msgs } = await supabase.from('messages')
+                        .select('sender_id, content').eq('session_id', activeSessionId)
+                        .order('created_at', { ascending: false }).limit(20);
+                    if (msgs) recentMessages = msgs.reverse().map(m => ({
+                        role: m.sender_id === sess.user_id ? 'user' : 'assistant',
+                        content: m.content
+                    }));
+                }
+            }
+
+            const res = await fetch('/api/listener-copilot', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ listenerQuestion: question, userProfile, recentMessages })
+            });
+            const data = await res.json();
+            if (!res.ok || data.error) {
+                if (replyEl) replyEl.textContent = 'Error: ' + (data.error || res.status);
+                return;
+            }
+            if (replyEl) replyEl.textContent = data.reply || '(no reply)';
+        } catch (e) {
+            if (replyEl) replyEl.textContent = 'Error: ' + e.message;
+        }
+        feed.scrollTop = feed.scrollHeight;
     };
 
     init();
