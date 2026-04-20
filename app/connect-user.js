@@ -134,9 +134,16 @@ document.addEventListener('DOMContentLoaded', () => {
             const callPrice = listener.call_price_per_min || 25;
             const tagline = listener.bio || 'Here to listen without judgment';
             const lang = listener.language || 'English';
+            const callMin = Math.round(Number(listener.total_call_minutes) || Number(listener.total_minutes_spoken) || 0);
+            const chatMin = Math.round(Number(listener.total_chat_minutes) || 0);
+            const totalMin = callMin + chatMin;
+            const ratingStr = listener.rating != null
+                ? `★ ${Number(listener.rating).toFixed(1)} (${listener.review_count || 0})`
+                : 'New listener';
+            const experienceStr = totalMin > 0 ? `${totalMin} min listened` : null;
 
             newHTML += `
-                <div class="listener-card" onclick="openConnectModal('${listener.id}', '${safeName}', '${safePic}', ${chatPrice}, ${callPrice})">
+                <div class="listener-card" onclick="openConnectModal('${listener.id}', '${safeName}', '${safePic}', ${chatPrice}, ${callPrice}, ${callMin}, ${chatMin}, ${listener.rating != null ? Number(listener.rating) : 'null'}, ${listener.review_count || 0})">
                     <div class="listener-avatar-wrap">
                         <img src="${pic}" onerror="this.src='https://i.pravatar.cc/150?u=${listener.id}'" alt="${name}">
                         <div class="online-dot"></div>
@@ -147,6 +154,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         <div class="listener-meta">
                             <span class="listener-price-tag">₹${chatPrice}/min chat · ₹${callPrice}/min call</span>
                             <span class="listener-lang-tag">${lang}</span>
+                        </div>
+                        <div class="listener-meta" style="margin-top:4px;">
+                            <span class="listener-lang-tag" style="color:#FFC857;">${ratingStr}</span>
+                            ${experienceStr ? `<span class="listener-lang-tag">${experienceStr}</span>` : ''}
                         </div>
                     </div>
                     <div class="listener-card-action">
@@ -160,12 +171,21 @@ document.addEventListener('DOMContentLoaded', () => {
         grid.innerHTML = newHTML;
     }
 
-    window.openConnectModal = function(id, name, pic, chatPrice, callPrice) {
+    window.openConnectModal = function(id, name, pic, chatPrice, callPrice, callMin, chatMin, rating, reviewCount) {
         window.selectedListenerId = id;
         document.getElementById('modal-listener-name').innerText = `Connect with ${name}`;
         document.getElementById('modal-listener-pic').src = pic;
         document.getElementById('modal-chat-price').innerText = `₹${chatPrice} / min`;
         document.getElementById('modal-call-price').innerText = `₹${callPrice} / min`;
+        const stats = document.getElementById('modal-listener-stats');
+        if (stats) {
+            const ratingLbl = (rating != null && !isNaN(rating))
+                ? `<span style="color:#FFC857;">★ ${Number(rating).toFixed(1)}</span> · ${reviewCount || 0} review${reviewCount === 1 ? '' : 's'}`
+                : 'New listener';
+            const total = (Number(callMin) || 0) + (Number(chatMin) || 0);
+            const minsLbl = total > 0 ? ` · ${total} min listened (${callMin || 0} call, ${chatMin || 0} chat)` : '';
+            stats.innerHTML = ratingLbl + minsLbl;
+        }
         document.getElementById('connection-modal').classList.add('active');
     };
 
@@ -276,10 +296,26 @@ document.addEventListener('DOMContentLoaded', () => {
         setupSessionWatcher(data.id);
     };
 
+    let _callRequestInFlight = false;
     window.requestCallUpgrade = async function() {
-        if (!activeSessionId) return;
-        await supabase.from('messages').insert([{ session_id: activeSessionId, sender_id: currentUser.id, content: '###CALL_REQUEST###' }]);
-        syncMessages();
+        if (!activeSessionId || _callRequestInFlight) return;
+        _callRequestInFlight = true;
+        // Disable button to prevent double-taps that created duplicate CALL_REQUEST rows
+        const btns = document.querySelectorAll('button[onclick*="requestCallUpgrade"]');
+        btns.forEach(b => { b.disabled = true; b.style.opacity = '0.5'; b.style.pointerEvents = 'none'; });
+        try {
+            // Guard: if a pending call_request from this user already exists, don't insert another
+            const { data: recent } = await supabase.from('messages')
+                .select('id, sender_id, content').eq('session_id', activeSessionId)
+                .order('created_at', { ascending: false }).limit(1);
+            const last = recent && recent[0];
+            if (!(last && last.sender_id === currentUser.id && last.content === '###CALL_REQUEST###')) {
+                await supabase.from('messages').insert([{ session_id: activeSessionId, sender_id: currentUser.id, content: '###CALL_REQUEST###' }]);
+            }
+        } finally {
+            // Leave disabled — listener will respond or user ends session
+            setTimeout(() => { _callRequestInFlight = false; }, 4000);
+        }
     };
 
     window.acceptMidChatCall = async function() {
@@ -983,8 +1019,10 @@ document.addEventListener('DOMContentLoaded', () => {
         if (rtcChannel) supabase.removeChannel(rtcChannel);
     }
 
+    let _finalized = false;
     window.handleSessionEnd = function() {
-        if (isEnding) return;
+        if (_finalized) return;
+        _finalized = true;
         isEnding = true;
         stopWebRTC();
         document.body.innerHTML = `
@@ -1000,10 +1038,18 @@ document.addEventListener('DOMContentLoaded', () => {
     window.endUserSession = async function() {
         if (!activeSessionId) return;
         const sessId = activeSessionId;
-        const listenerId = activeListenerId; // captured below
+        const listenerId = activeListenerId;
+        // Freeze watchers BEFORE flipping status — otherwise the realtime UPDATE
+        // or the 800ms poll fires syncSessionStatus → handleSessionEnd, which
+        // replaces document.body and wipes the rating modal before the user sees it.
+        isEnding = true;
+        if (sessionPollInterval) clearInterval(sessionPollInterval);
+        if (messagePollInterval) clearInterval(messagePollInterval);
+        if (sessionChannel) supabase.removeChannel(sessionChannel);
+        if (chatChannel) supabase.removeChannel(chatChannel);
+        stopWebRTC();
         await supabase.from('connect_sessions').update({ status: 'completed' }).eq('id', sessId);
         await autoJournalConnectSession(sessId);
-        // Feature 6: show rating modal before final reload
         showRatingModal(sessId, listenerId);
     };
 

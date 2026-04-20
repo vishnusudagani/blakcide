@@ -39,9 +39,10 @@ document.addEventListener('DOMContentLoaded', () => {
         return lines.join('\r\n');
     }
 
-    // Feature 5: call-duration tracking
+    // Feature 5: split-duration tracking (call vs chat)
     let callStartTime = null;
     let callTimerInterval = null;
+    let chatStartTime = null;
 
     // Feature 2: voice-masking audio context
     let audioContext = null;
@@ -150,8 +151,12 @@ document.addEventListener('DOMContentLoaded', () => {
         if (file) document.getElementById('prof-pic-preview').src = URL.createObjectURL(file);
     };
 
-    window.openProfile = function(forceLock = false) { 
+    window.openProfile = async function(forceLock = false) {
         if (!currentListenerProfile) return;
+        // Refresh row so rating/minutes reflect latest trigger + end-of-session writes
+        const { data: fresh } = await supabase.from('listeners').select('*').eq('id', currentListenerProfile.id).maybeSingle();
+        if (fresh) currentListenerProfile = fresh;
+        renderProfileStats();
         document.getElementById('prof-pic-preview').src = currentListenerProfile.profile_pic || 'https://i.pravatar.cc/150';
         document.getElementById('prof-name').value = currentListenerProfile.display_name || '';
         document.getElementById('prof-bio').value = currentListenerProfile.bio || '';
@@ -170,6 +175,44 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     window.closeProfile = () => profileModal.style.display = 'none';
+
+    function renderProfileStats() {
+        const host = document.getElementById('listener-stats-block');
+        if (!host || !currentListenerProfile) return;
+        const rating = currentListenerProfile.rating;
+        const count = currentListenerProfile.review_count || 0;
+        const callMin = Math.round(Number(currentListenerProfile.total_call_minutes) || Number(currentListenerProfile.total_minutes_spoken) || 0);
+        const chatMin = Math.round(Number(currentListenerProfile.total_chat_minutes) || 0);
+        const ratingStr = rating != null
+            ? `★ ${Number(rating).toFixed(2)} <span style="opacity:0.6;font-weight:400;">(${count} review${count === 1 ? '' : 's'})</span>`
+            : `<span style="opacity:0.6;font-weight:400;">No reviews yet</span>`;
+        host.innerHTML = `
+            <div style="display:flex;flex-direction:column;gap:8px;padding:14px;background:var(--glass-inner,rgba(255,255,255,0.04));border:1px solid var(--glass-border,rgba(255,255,255,0.08));border-radius:12px;margin-bottom:14px;">
+                <div style="font-size:0.7rem;text-transform:uppercase;letter-spacing:1.2px;opacity:0.6;">Rating</div>
+                <div style="font-size:1.05rem;font-weight:700;color:#FFC857;">${ratingStr}</div>
+                <div style="display:flex;gap:18px;margin-top:4px;">
+                    <div><div style="font-size:0.7rem;opacity:0.6;">Call minutes</div><div style="font-size:1rem;font-weight:700;">${callMin}</div></div>
+                    <div><div style="font-size:0.7rem;opacity:0.6;">Chat minutes</div><div style="font-size:1rem;font-weight:700;">${chatMin}</div></div>
+                    <div><div style="font-size:0.7rem;opacity:0.6;">Total</div><div style="font-size:1rem;font-weight:700;">${callMin + chatMin}</div></div>
+                </div>
+            </div>
+        `;
+    }
+
+    window.viewListenerReviews = async function() {
+        if (!currentListenerProfile) return;
+        const { data: reviews } = await supabase.from('listener_reviews')
+            .select('rating, review_text, created_at').eq('listener_id', currentListenerProfile.id)
+            .order('created_at', { ascending: false }).limit(20);
+        const list = (reviews && reviews.length)
+            ? reviews.map(r => `<div style="padding:10px;border-bottom:1px solid var(--glass-border,rgba(255,255,255,0.08));"><div style="color:#FFC857;">${'★'.repeat(r.rating)}${'☆'.repeat(5 - r.rating)}</div>${r.review_text ? `<div style="font-size:0.85rem;margin-top:4px;">${r.review_text.replace(/</g,'&lt;')}</div>` : ''}<div style="font-size:0.7rem;opacity:0.5;margin-top:4px;">${new Date(r.created_at).toLocaleDateString()}</div></div>`).join('')
+            : '<div style="opacity:0.6;text-align:center;padding:20px;">No reviews yet.</div>';
+        const modal = document.createElement('div');
+        modal.className = 'auth-overlay active';
+        modal.style.cssText = 'position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.7);';
+        modal.innerHTML = `<div class="glass-pane" style="width:90%;max-width:420px;max-height:70vh;overflow:auto;padding:20px;background:var(--bg-color);"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;"><h3 style="margin:0;">Reviews</h3><button onclick="this.closest('.auth-overlay').remove()" style="background:none;border:none;color:var(--text-color);font-size:1.8rem;cursor:pointer;">&times;</button></div>${list}</div>`;
+        document.body.appendChild(modal);
+    };
 
     window.saveProfile = async function() { 
         const name = document.getElementById('prof-name').value.trim();
@@ -332,7 +375,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function startLiveChatInterface() {
         currentUIState = 'chat';
-        if (rtcChannel) supabase.removeChannel(rtcChannel); 
+        if (rtcChannel) supabase.removeChannel(rtcChannel);
+        if (!chatStartTime) chatStartTime = Date.now();
 
         const feedContainer = cleanCentralPanel();
         if (!feedContainer) return;
@@ -392,11 +436,18 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     function renderChatMessage(msg) {
-        if (renderedMessageIds.has(msg.id)) return; 
+        if (renderedMessageIds.has(msg.id)) return;
         renderedMessageIds.add(msg.id);
 
         const feed = document.getElementById('live-chat-feed');
-        if(!feed) return; 
+        if(!feed) return;
+
+        // Drop any optimistic temp bubbles from this listener once the real DB row arrives.
+        // Without this, the listener sees their own message twice (once optimistic, once from realtime).
+        const isReal = typeof msg.id === 'string' && !msg.id.startsWith('temp-');
+        if (isReal && msg.sender_id === currentUser?.id) {
+            feed.querySelectorAll('[id^="msg-temp-"]').forEach(el => el.remove());
+        }
 
         const isMe = msg.sender_id === currentUser.id;
         let html = '';
@@ -713,18 +764,28 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 1000);
     }
 
-    async function stopCallTimerAndSave() {
-        if (!callStartTime) return;
-        clearInterval(callTimerInterval);
-        const minutesSpoken = (Date.now() - callStartTime) / 60000;
-        callStartTime = null;
-        callTimerInterval = null;
+    async function stopTimersAndSave() {
         if (!currentListenerProfile) return;
-        // Increment total_minutes_spoken on the listener row
-        const current = Number(currentListenerProfile.total_minutes_spoken) || 0;
-        const updated = Math.round((current + minutesSpoken) * 100) / 100;
-        await supabase.from('listeners').update({ total_minutes_spoken: updated }).eq('id', currentListenerProfile.id);
-        currentListenerProfile.total_minutes_spoken = updated;
+        const patch = {};
+        if (callStartTime) {
+            clearInterval(callTimerInterval);
+            const mins = (Date.now() - callStartTime) / 60000;
+            callStartTime = null; callTimerInterval = null;
+            const curCall = Number(currentListenerProfile.total_call_minutes) || 0;
+            patch.total_call_minutes = Math.round((curCall + mins) * 100) / 100;
+            // Keep legacy total_minutes_spoken in sync for any consumer still reading it
+            const curLegacy = Number(currentListenerProfile.total_minutes_spoken) || 0;
+            patch.total_minutes_spoken = Math.round((curLegacy + mins) * 100) / 100;
+        }
+        if (chatStartTime) {
+            const mins = (Date.now() - chatStartTime) / 60000;
+            chatStartTime = null;
+            const curChat = Number(currentListenerProfile.total_chat_minutes) || 0;
+            patch.total_chat_minutes = Math.round((curChat + mins) * 100) / 100;
+        }
+        if (Object.keys(patch).length === 0) return;
+        await supabase.from('listeners').update(patch).eq('id', currentListenerProfile.id);
+        Object.assign(currentListenerProfile, patch);
     }
 
     window.handleSessionEnd = function() {
@@ -745,8 +806,8 @@ document.addEventListener('DOMContentLoaded', () => {
     window.endSession = async function(sessionId) {
         if (!sessionId) return;
         await supabase.from('connect_sessions').update({ status: 'completed' }).eq('id', sessionId);
-        // Feature 5: save accumulated minutes before unloading
-        await stopCallTimerAndSave();
+        // Feature 5: save accumulated call + chat minutes before unloading
+        await stopTimersAndSave();
         // Feature 3: auto-journal session (mirrors logic in connect-user.js)
         await autoJournalSession(sessionId);
         handleSessionEnd();
