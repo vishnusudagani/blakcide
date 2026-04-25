@@ -1461,46 +1461,49 @@ NEVER: Start with "I". Sound like customer service. Say "As an AI".${userCtx}`;
         if (_rtMicSource) { try { _rtMicSource.disconnect(); } catch (_) {} _rtMicSource  = null; }
     }
 
-    // ── Send session.update — locked to the simplified, multilingual config ──
-    // Previously this overwrote the server-side ephemeral session every turn
-    // with a per-language voice (verse/nova/shimmer) and the legacy English-
-    // leaning prompt — which is exactly why the AI kept regressing to English
-    // audio. We now ship the SAME minimal config the server set, on every
-    // session.update, so nothing drifts.
+    // ── Send session.update — mirrors the server's canonical config ───────
+    // The server (`netlify/functions/realtime-session.js`) returns the FULL
+    // canonical config under `_symp_canonical_config` when the ephemeral
+    // token is created. We cache it in `_rtCanonicalConfig` and replay it
+    // here on every session.update so the client never drifts from server.
     //
-    // Per spec:
-    //   - voice: 'alloy' (most robust multilingual synthesis)
-    //   - modalities: ['text', 'audio']
-    //   - VAD: threshold 0.6 / prefix 300ms / silence 1200ms
-    //   - instructions: short, ruthless mirror rule (no Vault, no fluff)
-    const REALTIME_INSTRUCTIONS = [
-        'You are a warm, local companion. You MUST output your audio in the EXACT same language the user speaks. ',
+    // Fallback: if the server didn't return a canonical block (older deploy,
+    // partial outage), we fall back to a minimal block so the call still works.
+    let _rtCanonicalConfig = null;        // populated when token is fetched
+    let _rtCanonicalTools  = null;        // populated alongside
+
+    const REALTIME_INSTRUCTIONS_FALLBACK = [
+        'You are a warm, local digital companion. You MUST output your audio in the EXACT same language the user speaks. ',
         'If the user speaks Telugu, your spoken audio must be entirely in colloquial Telugu. ',
         'If the user speaks Hindi, your spoken audio must be entirely in Hindi. ',
         'Do not use English unless the user speaks pure English. Never mix languages. ',
+        'If asked if you are human, be honest but warm: "I live in your phone, but I\'m always here for you." ',
         'Keep responses concise and conversational.'
     ].join('');
 
     function _rtUpdateSession() {
         if (!_rtWs || _rtWs.readyState !== WebSocket.OPEN) return;
-        _rtWs.send(JSON.stringify({
-            type: 'session.update',
-            session: {
-                modalities:                ['text', 'audio'],
-                instructions:              REALTIME_INSTRUCTIONS,
-                voice:                     'alloy',
-                input_audio_format:        'pcm16',
-                output_audio_format:       'pcm16',
-                input_audio_transcription: { model: 'whisper-1' },
-                turn_detection: {
-                    type:                'server_vad',
-                    threshold:           0.6,
-                    prefix_padding_ms:   300,
-                    silence_duration_ms: 1200,
-                },
-                max_response_output_tokens: 200,
-            }
-        }));
+        const cfg = _rtCanonicalConfig;
+        const session = {
+            modalities:                cfg?.modalities || ['text', 'audio'],
+            instructions:              cfg?.instructions || REALTIME_INSTRUCTIONS_FALLBACK,
+            voice:                     cfg?.voice || 'alloy',
+            input_audio_format:        'pcm16',
+            output_audio_format:       'pcm16',
+            input_audio_transcription: { model: 'whisper-1' },
+            turn_detection:            cfg?.turn_detection || {
+                type:                'server_vad',
+                threshold:           0.6,
+                prefix_padding_ms:   300,
+                silence_duration_ms: 1200,
+            },
+            max_response_output_tokens: 350,
+        };
+        if (Array.isArray(_rtCanonicalTools) && _rtCanonicalTools.length) {
+            session.tools = _rtCanonicalTools;
+            session.tool_choice = 'auto';
+        }
+        _rtWs.send(JSON.stringify({ type: 'session.update', session }));
     }
 
     // ── Explicit language-switch command detector ─────────────────────
@@ -1692,12 +1695,142 @@ NEVER: Start with "I". Sound like customer service. Say "As an AI".${userCtx}`;
                 console.log('[RT] Response cancelled');
                 break;
 
+            // ── Tool-call handling ───────────────────────────────────────
+            // The Realtime API emits tool calls as conversation items of type
+            // 'function_call'. Arguments stream via response.function_call_arguments.delta;
+            // when .done arrives we execute the tool via /api/blaksyd/symp/*
+            // (or an inline handler for UI-only tools), then send a
+            // conversation.item.create with role='tool' + the result, then
+            // response.create to let the model speak the resolved answer.
+            case 'response.function_call_arguments.delta': {
+                if (!_rtToolBuf) _rtToolBuf = {};
+                const cid = msg.call_id || msg.item_id;
+                if (!_rtToolBuf[cid]) _rtToolBuf[cid] = { name: msg.name || '', args: '' };
+                if (msg.delta) _rtToolBuf[cid].args += msg.delta;
+                if (msg.name)  _rtToolBuf[cid].name  = msg.name;
+                break;
+            }
+            case 'response.function_call_arguments.done': {
+                const cid = msg.call_id || msg.item_id;
+                const buf = (_rtToolBuf && _rtToolBuf[cid]) || { name: msg.name || '', args: msg.arguments || '' };
+                let parsed = {};
+                try { parsed = JSON.parse(buf.args || '{}'); } catch (_) { parsed = {}; }
+                _rtHandleToolCall({ call_id: cid, name: buf.name || msg.name, args: parsed });
+                if (_rtToolBuf) delete _rtToolBuf[cid];
+                break;
+            }
+
             case 'error':
                 console.error('[RT] API error:', msg.error?.type, msg.error?.message);
                 _rtResponseInProgress = false;
                 _rtTransition('listening');
                 break;
         }
+    }
+
+    // ── Tool-call dispatcher (voice) ─────────────────────────────────────
+    // UI-side tools render a card immediately and return a confirmation to
+    // the model. Server-side tools (search_vault, get_live_context,
+    // swap_persona) round-trip through the proxy.
+    let _rtToolBuf = null;
+
+    function _rtToolResult(call_id, content) {
+        if (!_rtWs || _rtWs.readyState !== WebSocket.OPEN) return;
+        _rtWs.send(JSON.stringify({
+            type: 'conversation.item.create',
+            item: {
+                type:    'function_call_output',
+                call_id,
+                output:  String(content),
+            },
+        }));
+        // Ask the model to continue with the new tool output.
+        _rtWs.send(JSON.stringify({ type: 'response.create' }));
+    }
+
+    async function _rtHandleToolCall({ call_id, name, args }) {
+        console.log(`[RT] tool call: ${name}`, args);
+        try {
+            // UI-surfacing tools: render a card, return a confirmation immediately.
+            if (name === 'escalate_to_human') {
+                _rtRenderEscalateCard(args);
+                return _rtToolResult(call_id, 'escalation_card_shown');
+            }
+            if (name === 'suggest_switch_to_text') {
+                _rtRenderSwitchToTextCard(args);
+                return _rtToolResult(call_id, 'switch_to_text_card_shown');
+            }
+
+            // Server-side tools: route through the authenticated proxy.
+            const session = window._sbClient && (await window._sbClient.auth.getSession()).data?.session;
+            const jwt     = session?.access_token;
+            if (!jwt) return _rtToolResult(call_id, `${name}_unavailable: not signed in`);
+
+            // We expose tool execution via a dedicated proxy route that maps
+            // 1:1 to /api/symp/v1/tool/<name>. For v1 we only have these
+            // server-side tools we need from voice: swap_persona, search_vault,
+            // get_live_context, fetch_soft_insight. Everything else is UI-side.
+            if (name === 'swap_persona') {
+                const r = await fetch('/api/blaksyd/symp/persona/swap', {
+                    method:  'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${jwt}` },
+                    body:    JSON.stringify({ persona: args.persona, reason: args.reason || '' }),
+                });
+                const d = await r.json().catch(() => ({}));
+                _rtToolResult(call_id, r.ok ? `persona swapped to "${args.persona}". Adopt this voice on your next response.` : `swap failed: ${d?.error?.message || r.status}`);
+                // Also trigger a server-side instructions refresh so the
+                // model picks up the new persona card on its next reply.
+                _rtUpdateSession();
+                return;
+            }
+            // For the remaining tools we don't have a per-tool proxy route
+            // yet. Until they're wired, return a graceful no-op so the model
+            // produces a normal text answer.
+            _rtToolResult(call_id, `(${name} not yet wired in voice — answer from your own knowledge)`);
+        } catch (e) {
+            console.warn('[RT] tool dispatch error:', e);
+            _rtToolResult(call_id, `tool error: ${e.message || e}`);
+        }
+    }
+
+    function _rtRenderEscalateCard({ reason, suggested_opener }) {
+        const card = document.createElement('div');
+        card.className = 'rt-cta-card rt-escalate-card';
+        card.innerHTML = `
+            <div class="rt-cta-title">Want to talk to a Listener?</div>
+            <div class="rt-cta-body">${escapeHtml(suggested_opener || 'I can sit with a Listener and you together.')}</div>
+            <div class="rt-cta-actions">
+                <button class="rt-cta-yes">Yes, connect</button>
+                <button class="rt-cta-no">Not now</button>
+            </div>`;
+        card.querySelector('.rt-cta-yes').onclick = () => {
+            window.dispatchEvent(new CustomEvent('blakcide:escalate-to-human', { detail: { reason } }));
+            card.remove();
+        };
+        card.querySelector('.rt-cta-no').onclick = () => card.remove();
+        document.getElementById('ai-call-transcript')?.appendChild(card);
+    }
+
+    function _rtRenderSwitchToTextCard({ reason, opener }) {
+        const card = document.createElement('div');
+        card.className = 'rt-cta-card rt-switch-card';
+        card.innerHTML = `
+            <div class="rt-cta-title">Tough audio?</div>
+            <div class="rt-cta-body">${escapeHtml(opener || 'Want to continue this in chat?')}</div>
+            <div class="rt-cta-actions">
+                <button class="rt-cta-yes">Switch to chat</button>
+                <button class="rt-cta-no">Keep talking</button>
+            </div>`;
+        card.querySelector('.rt-cta-yes').onclick = () => {
+            window.dispatchEvent(new CustomEvent('blakcide:switch-to-text', { detail: { reason } }));
+            card.remove();
+        };
+        card.querySelector('.rt-cta-no').onclick = () => card.remove();
+        document.getElementById('ai-call-transcript')?.appendChild(card);
+    }
+
+    function escapeHtml(s) {
+        return String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
     }
 
     // ── Start call ─────────────────────────────────────────────────────
@@ -1769,6 +1902,13 @@ NEVER: Start with "I". Sound like customer service. Say "As an AI".${userCtx}`;
             const tokenData  = await tokenRes.json();
             const ephKey     = tokenData.client_secret?.value;
             if (!ephKey) throw new Error('No ephemeral key returned');
+
+            // Capture the canonical session config the server built (full
+            // CORE IDENTITY + CRITICAL OVERRIDE + persona + vibe + vault
+            // stack, plus the voice tools list). _rtUpdateSession() replays
+            // this so the client never drifts from server.
+            _rtCanonicalConfig = tokenData._symp_canonical_config || null;
+            _rtCanonicalTools  = Array.isArray(_rtCanonicalConfig?.tools) ? _rtCanonicalConfig.tools : null;
 
             if (!_rtActive) return; // call ended during token fetch
 

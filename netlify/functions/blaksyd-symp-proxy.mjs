@@ -59,7 +59,16 @@ export default async (req) => {
 
     // Allowlist — only expose endpoints Blaksyd is meant to hit. Admin routes
     // (vault/:user_id) and raw whisper WS are deliberately excluded.
-    const ALLOWED = new Set(['health', 'chat', 'transcribe', 'vision', 'tts', 'session/ingest', 'analyse/run', 'copilot/hint']);
+    const ALLOWED = new Set([
+        'health', 'chat', 'transcribe', 'vision', 'tts',
+        'session/ingest', 'analyse/run', 'copilot/hint',
+        'proactive-checkin',
+        // Unified Soul:
+        'vibe', 'vibe/event',
+        'personas', 'persona/state', 'persona/swap',
+        'listener/brief', 'listener/vibe-check',
+        // action-loop/run intentionally omitted — CRON-only, never browser
+    ]);
     if (!ALLOWED.has(splat)) {
         return jsonError('BAD_REQUEST', `Endpoint '${splat}' not exposed via proxy`, 404);
     }

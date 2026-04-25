@@ -32,7 +32,18 @@
         COPILOT_HINT:   SYMP_API_BASE + '/copilot/hint',     // POST  — JSON (listener whisper)
         VAULT_GET:      SYMP_API_BASE + '/vault',            // GET /vault/:user_id (admin)
         WHISPER_WS:     SYMP_API_BASE + '/whisper',          // WebSocket
+        PROACTIVE_CHECKIN: SYMP_API_BASE + '/proactive-checkin', // POST — JSON
+        VIBE:                SYMP_API_BASE + '/vibe',                // GET — current vibe state
+        VIBE_EVENT:          SYMP_API_BASE + '/vibe/event',          // POST — record an event
+        PERSONAS:            SYMP_API_BASE + '/personas',            // GET — list of available personas
+        PERSONA_STATE:       SYMP_API_BASE + '/persona/state',       // GET — current persona row
+        PERSONA_SWAP:        SYMP_API_BASE + '/persona/swap',        // POST — swap active persona
+        ACTION_LOOP_RUN:     SYMP_API_BASE + '/action-loop/run',     // POST — CRON entry
+        LISTENER_BRIEF:      SYMP_API_BASE + '/listener/brief',      // POST — pre-session brief
+        LISTENER_VIBE_CHECK: SYMP_API_BASE + '/listener/vibe-check', // POST — mid-session check
     });
+
+    const PERSONAS = Object.freeze(['friend', 'father', 'mother', 'astrologer', 'spiritual', 'tech_savvy']);
 
     const SESSION_TYPES = Object.freeze({
         AI_CHAT:    'ai_chat',
@@ -170,6 +181,7 @@
         ENTRY_TYPES,
         SESSION_TYPE_TO_ENTRY_TYPE,
         LANGUAGES,
+        PERSONAS,
         ERROR_CODES,
         WHISPER_FRAME_TYPES,
     };

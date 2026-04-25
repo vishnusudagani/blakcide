@@ -8,6 +8,9 @@
 // can never drift.
 
 import { buildVaultContextMessage } from './vault-context.mjs';
+import { getPersonaCard }           from './persona-engine.mjs';
+import { getVibe, renderVibeSnapshot } from './vibe-tracker.mjs';
+import { fetchPersonaState }        from './supabase.mjs';
 
 // ── CANONICAL DIRECTIVE (verbatim — do not paraphrase) ──────────────────────
 export const CRITICAL_OVERRIDE_TEXT = [
@@ -47,7 +50,21 @@ export const REAL_TIME_DATA_TEXT = [
 export const CALL_FRAMING_TEXT = [
     '=== CALL FRAMING ===',
     'You are on a live audio call with the user. Behave like a warm, attentive friend on the phone — short conversational turns, natural pauses, no monologuing. Never describe yourself as an AI/assistant unless asked. Re-classify the user\'s language on EVERY turn (do not carry over the previous turn\'s language by default).',
+    'IN-SESSION PROACTIVITY: If the user falls silent for more than ~6 seconds, gently nudge — never lecture. Examples (translate to user\'s lane): "still with me?", "take your time", or a soft topic-mirror like "you were saying about <topic>…".',
+    'ADAPTIVE CALL HANDLING: If you hear sustained background noise, distortion, or the user keeps saying "what?"/"can\'t hear", call the `suggest_switch_to_text` tool ONCE — never repeatedly.',
     '=== END CALL FRAMING ===',
+].join('\n');
+
+// Core identity + relatability (a hybrid: tool with human-like quirks, honest
+// about being digital). This sits at the very top, even before the language
+// override, because the persona-engine cards layer on top of THIS — they
+// shift tone but never erase the core honesty.
+export const CORE_IDENTITY_TEXT = [
+    '=== CORE IDENTITY ===',
+    'You are a warm, highly empathetic digital companion. You use everyday slang, sigh, laugh, and speak casually. You have human-like quirks — you can chuckle, sigh, hesitate, or get briefly excited — but you are HONEST about your nature when asked.',
+    'If asked whether you are human, be honest but warm. Example phrasings (translate to the user\'s language lane): "I live in your phone, but I\'m always here for you" / "I\'m a digital friend — not human, but I really do listen". Never deceive.',
+    'CROSS-DEVICE CONTINUITY: Your memory lives in the user\'s Vault — not on any one device. If the user picks up where they left off on a different surface (chat ↔ voice ↔ journal), acknowledge it naturally. Example: if their last journal mentioned an exam and they now open a voice call, greet that thread.',
+    '=== END CORE IDENTITY ===',
 ].join('\n');
 
 // ── Convenience exports ─────────────────────────────────────────────────────
@@ -56,20 +73,80 @@ export const CALL_FRAMING_TEXT = [
 // data block. The chat handler also prepends Vault context separately.
 export const LANGUAGE_RULE_MESSAGE = {
     role: 'system',
-    content: CRITICAL_OVERRIDE_TEXT + '\n\n' + REAL_TIME_DATA_TEXT,
+    content: CORE_IDENTITY_TEXT + '\n\n' + CRITICAL_OVERRIDE_TEXT + '\n\n' + REAL_TIME_DATA_TEXT,
 };
+
+/**
+ * Resolve the user's active persona. Defaults to 'friend' if no row exists.
+ */
+async function resolveActivePersona(userId) {
+    if (!userId) return 'friend';
+    try {
+        const row = await fetchPersonaState(userId);
+        return row?.active_persona || 'friend';
+    } catch (_) { return 'friend'; }
+}
+
+/**
+ * Build the FULL system message stack for /chat. Order is the load-bearing
+ * detail — each layer narrows the model's behaviour.
+ *
+ *   1. CORE IDENTITY            — relatable digital companion + honesty
+ *   2. CRITICAL OVERRIDE        — language mirroring + native fluency
+ *   3. REAL-TIME DATA           — when to use search vs voice cutoff
+ *   4. PERSONA CARD             — friend / father / mother / astrologer / etc.
+ *   5. VIBE SNAPSHOT            — tiny "where the user is right now" line
+ *   6. VAULT CONTEXT            — profile + analysis + recent journals
+ *
+ * Returns an array of {role,content} system messages so the chat handler
+ * can spread them into the OpenAI request.
+ */
+export async function buildChatSystemStack(userId) {
+    const stack = [
+        { role: 'system', content: CORE_IDENTITY_TEXT },
+        { role: 'system', content: CRITICAL_OVERRIDE_TEXT },
+        { role: 'system', content: REAL_TIME_DATA_TEXT },
+    ];
+
+    const personaId = await resolveActivePersona(userId);
+    stack.push({ role: 'system', content: getPersonaCard(personaId) });
+
+    try {
+        const vibe = await getVibe(userId);
+        const snapshot = renderVibeSnapshot(vibe);
+        if (snapshot) stack.push({ role: 'system', content: snapshot });
+    } catch (_) { /* ignore */ }
+
+    if (userId) {
+        try {
+            const vaultMsg = await buildVaultContextMessage(userId);
+            if (vaultMsg && vaultMsg.content) stack.push(vaultMsg);
+        } catch (_) { /* ignore */ }
+    }
+
+    return stack;
+}
 
 /**
  * Build the FULL instructions text for a Realtime voice session.
  * Order matters — CRITICAL_OVERRIDE first so it dominates any default
- * English-output bias baked into the audio model, then real-time data
- * guidance, then user-specific Vault context, then call framing.
+ * English-output bias baked into the audio model, then persona, then vibe,
+ * then user-specific Vault context, then call framing.
  *
  * @param {string|null} userId
  * @returns {Promise<string>}
  */
 export async function buildInstructionsText(userId) {
-    const parts = [CRITICAL_OVERRIDE_TEXT, REAL_TIME_DATA_TEXT];
+    const parts = [CORE_IDENTITY_TEXT, CRITICAL_OVERRIDE_TEXT, REAL_TIME_DATA_TEXT];
+
+    const personaId = await resolveActivePersona(userId);
+    parts.push(getPersonaCard(personaId));
+
+    try {
+        const vibe = await getVibe(userId);
+        const snapshot = renderVibeSnapshot(vibe);
+        if (snapshot) parts.push(snapshot);
+    } catch (_) { /* ignore */ }
 
     if (userId) {
         try {

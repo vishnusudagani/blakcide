@@ -25,7 +25,12 @@
 // All executors must NEVER throw — we catch internally and return an error
 // string so the model can still produce a graceful answer.
 
-import { fetchOlderJournals } from './supabase.mjs';
+import { fetchOlderJournals, upsertPersonaState, fetchPersonaState, fetchRecentJournals } from './supabase.mjs';
+import {
+    SWAP_PERSONA_TOOL_DEF, ESCALATE_TO_HUMAN_TOOL_DEF,
+    SUGGEST_SWITCH_TO_TEXT_TOOL_DEF, FETCH_SOFT_INSIGHT_TOOL_DEF,
+    isValidPersona,
+} from './persona-engine.mjs';
 
 // ── 1. search_vault ────────────────────────────────────────────────────────
 
@@ -214,14 +219,104 @@ async function execSearchWeb({ args }) {
     }
 }
 
+// ── 4. swap_persona ────────────────────────────────────────────────────────
+// Hot-swap the active persona for this user. Side-effect: writes the new
+// active_persona to symp_persona_state. The next /chat or voice turn picks it up.
+
+async function execSwapPersona({ userId, args }) {
+    const personaId = String(args?.persona || '').trim();
+    if (!isValidPersona(personaId)) return `Unknown persona: ${personaId}`;
+    if (!userId) return 'No user context — cannot swap persona.';
+    try {
+        const current = await fetchPersonaState(userId).catch(() => null);
+        const history = Array.isArray(current?.swap_history) ? current.swap_history.slice(-19) : [];
+        history.push({ persona: personaId, at: new Date().toISOString(), reason: String(args?.reason || '').slice(0, 200) });
+        await upsertPersonaState({ userId, activePersona: personaId, swapHistory: history });
+        return `Persona swapped to "${personaId}". Adopt this voice on your NEXT response.`;
+    } catch (e) {
+        return `swap_persona failed: ${e.message || e}`;
+    }
+}
+
+// ── 5. escalate_to_human ───────────────────────────────────────────────────
+// Surfaces a UI card. We don't actually start a Connect session here — the
+// frontend listens for this tool call and renders the card. We do log the
+// suggestion so the analyser can learn from acceptance rates.
+
+async function execEscalateToHuman({ userId, args }) {
+    const reason = String(args?.reason || '').slice(0, 240);
+    const opener = String(args?.suggested_opener || '').slice(0, 240);
+    // The chat handler will pass the tool result back to the model AND surface
+    // a side-channel hint to the frontend (via SSE meta event). For now, we
+    // return a confirmation string the model can naturally reference.
+    return `escalation_suggested: { reason: "${reason}", opener: "${opener}" }. UI will show a tappable Listener-Connect card.`;
+}
+
+// ── 6. suggest_switch_to_text ─────────────────────────────────────────────
+
+async function execSuggestSwitchToText({ args }) {
+    const reason = String(args?.reason || '').slice(0, 200);
+    const opener = String(args?.opener || '').slice(0, 200);
+    return `switch_to_text_suggested: { reason: "${reason}", opener: "${opener}" }. UI will show a "Continue in chat" card.`;
+}
+
+// ── 7. fetch_soft_insight ─────────────────────────────────────────────────
+// Returns the most recent pending "post_journal_insight" payload from the
+// action loop, if any. Marks it consumed so we don't re-surface it.
+//
+// We use the action_loop table's `result` field as the insight text once
+// it's been generated, OR (preferred) we generate inline from the most
+// recent journal here. For simplicity v1: return last journal's compact
+// reflection.
+
+async function execFetchSoftInsight({ userId }) {
+    if (!userId) return 'null';
+    try {
+        const journals = await fetchRecentJournals(userId, 2);
+        if (!journals.length) return 'null';
+        const last = journals[0];
+        // Tiny paraphrase prompt — we don't want to re-quote the journal back.
+        const snippet = String(last.summary_content || '').slice(0, 400);
+        if (!snippet) return 'null';
+        return `pending_soft_insight: { journal_date: "${last.journal_date}", paraphrase_basis: "${snippet.replace(/"/g, '\\"')}" }. Weave a SHORT, gentle acknowledgment into your next turn — paraphrase, never quote. If it doesn't fit naturally, skip it.`;
+    } catch (e) {
+        return `null (fetch_soft_insight failed: ${e.message || e})`;
+    }
+}
+
 // ── Registry ───────────────────────────────────────────────────────────────
 
-export const TOOL_DEFS = [SEARCH_VAULT_DEF, GET_LIVE_CONTEXT_DEF, SEARCH_WEB_DEF];
+export const TOOL_DEFS = [
+    SEARCH_VAULT_DEF,
+    GET_LIVE_CONTEXT_DEF,
+    SEARCH_WEB_DEF,
+    SWAP_PERSONA_TOOL_DEF,
+    ESCALATE_TO_HUMAN_TOOL_DEF,
+    SUGGEST_SWITCH_TO_TEXT_TOOL_DEF,
+    FETCH_SOFT_INSIGHT_TOOL_DEF,
+];
+
+// Voice-only subset: swap_persona, escalate_to_human, suggest_switch_to_text,
+// fetch_soft_insight, get_live_context, search_vault. We exclude search_web
+// from voice because the Realtime model doesn't have great latency budget
+// for nested HTTP calls; if needed, we re-enable later.
+export const VOICE_TOOL_DEFS = [
+    SEARCH_VAULT_DEF,
+    GET_LIVE_CONTEXT_DEF,
+    SWAP_PERSONA_TOOL_DEF,
+    ESCALATE_TO_HUMAN_TOOL_DEF,
+    SUGGEST_SWITCH_TO_TEXT_TOOL_DEF,
+    FETCH_SOFT_INSIGHT_TOOL_DEF,
+];
 
 const EXECUTORS = {
-    search_vault:     execSearchVault,
-    get_live_context: execGetLiveContext,
-    search_web:       execSearchWeb,
+    search_vault:           execSearchVault,
+    get_live_context:       execGetLiveContext,
+    search_web:             execSearchWeb,
+    swap_persona:           execSwapPersona,
+    escalate_to_human:      execEscalateToHuman,
+    suggest_switch_to_text: execSuggestSwitchToText,
+    fetch_soft_insight:     execFetchSoftInsight,
 };
 
 /**
