@@ -4,10 +4,14 @@
 const _PM_URL = 'https://uoosspumdmffccinszuj.supabase.co';
 const _PM_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVvb3NzcHVtZG1mZmNjaW5zenVqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcxNzYyNTUsImV4cCI6MjA4Mjc1MjI1NX0.3NayM6uC5-yZv9im-8W7ko28rZFRTnDQbIagN6BArs0';
 
-if (!window._blakcideSupabase) {
-    window._blakcideSupabase = window.supabase.createClient(_PM_URL, _PM_KEY);
+// Reuse the page's shared client if it's already been created. Falls back to
+// its own instance under the legacy _blakcideSupabase name if profile-manager
+// loads before the page-level JS — both paths keep the count to ONE client.
+if (!window._sbClient) {
+    window._sbClient = window.supabase.createClient(_PM_URL, _PM_KEY);
 }
-const _pmClient = window._blakcideSupabase;
+window._blakcideSupabase = window._sbClient; // legacy alias preserved
+const _pmClient = window._sbClient;
 
 document.addEventListener('DOMContentLoaded', async () => {
     const { data: { session } } = await _pmClient.auth.getSession();

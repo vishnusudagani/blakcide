@@ -4,8 +4,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let supabase;
     if (typeof window.supabase !== 'undefined') {
-        supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        supabase = window._sbClient || (window._sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY));
     } else { return console.error("Supabase failed to load."); }
+
+    if (typeof window.SympClient === 'function' && supabase && !window.symp) {
+        try {
+            window.symp = new window.SympClient({
+                getAuthToken: async () => {
+                    const { data } = await supabase.auth.getSession();
+                    return data?.session?.access_token || '';
+                },
+            });
+        } catch (e) { console.warn('[symp] init failed:', e.message); }
+    }
 
     let currentUser = null;
     window.selectedListenerId = null;
@@ -547,13 +558,18 @@ document.addEventListener('DOMContentLoaded', () => {
             // Vision analysis
             let imageDesc = '';
             try {
-                const vRes = await fetch('/api/vision', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ imageUrl: publicUrl })
-                });
-                const vData = await vRes.json();
-                imageDesc = vData.description || '';
+                if (window.symp) {
+                    const r = await window.symp.describeImage({ imageUrl: publicUrl });
+                    imageDesc = r?.data?.description || '';
+                } else {
+                    const vRes = await fetch('/api/vision', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ imageUrl: publicUrl })
+                    });
+                    const vData = await vRes.json();
+                    imageDesc = vData.description || '';
+                }
             } catch(_) {}
 
             document.getElementById(tempId)?.remove();
@@ -1141,7 +1157,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!sess || !currentUser) return;
 
             const { data: msgs } = await supabase.from('messages')
-                .select('sender_id, content').eq('session_id', sessionId).order('created_at');
+                .select('sender_id, content, created_at').eq('session_id', sessionId).order('created_at');
             if (!msgs || msgs.length < 2) return;
 
             // Build transcript (filter system messages)
@@ -1152,6 +1168,18 @@ document.addEventListener('DOMContentLoaded', () => {
                     content: m.content
                 }));
             if (transcript.length < 2) return;
+
+            // Symp.ai Vault — fire-and-forget ingest into daily Human-Connect journal.
+            if (window.symp) {
+                const sessionType = sess.session_type === 'call' ? 'human_call' : 'human_chat';
+                window.symp.ingestSession({
+                    session_type: sessionType,
+                    session_id:   sessionId,
+                    transcript,
+                    started_at:   msgs[0]?.created_at || new Date().toISOString(),
+                    ended_at:     msgs[msgs.length - 1]?.created_at || new Date().toISOString(),
+                }).catch(e => console.warn(`[symp.ingest ${sessionType}] failed:`, e.message));
+            }
 
             const res = await fetch('/api/summarize', {
                 method: 'POST',

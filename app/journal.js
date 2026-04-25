@@ -5,8 +5,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let supabase;
     if (typeof window.supabase !== 'undefined') {
-        supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        supabase = window._sbClient || (window._sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY));
     } else { return console.error("Supabase failed to load."); }
+
+    if (typeof window.SympClient === 'function' && supabase && !window.symp) {
+        try {
+            window.symp = new window.SympClient({
+                getAuthToken: async () => {
+                    const { data } = await supabase.auth.getSession();
+                    return data?.session?.access_token || '';
+                },
+            });
+        } catch (e) { console.warn('[symp] init failed:', e.message); }
+    }
 
     let currentUser = null;
     let currentEntryId = null;
@@ -746,13 +757,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function analyzeAndStoreImageDescription(imageUrl) {
         try {
-            const res = await fetch('/api/vision', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ imageUrl })
-            });
-            if (!res.ok) return;
-            const { description } = await res.json();
+            let description;
+            if (window.symp) {
+                const r = await window.symp.describeImage({ imageUrl });
+                description = r?.data?.description;
+            } else {
+                const res = await fetch('/api/vision', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ imageUrl })
+                });
+                if (!res.ok) return;
+                ({ description } = await res.json());
+            }
             if (!description) return;
 
             // Store on the current entry if it exists

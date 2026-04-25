@@ -8,9 +8,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let supabase;
     if (typeof window.supabase !== 'undefined') {
-        supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        // Single shared client across all page JS files (app.js, profile-manager.js,
+        // listener-console.js, etc). Without this guard the browser sees multiple
+        // GoTrueClient instances on the same storage key and warns.
+        supabase = window._sbClient || (window._sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY));
     } else {
         console.error("Supabase failed to load.");
+    }
+
+    // Symp.ai SDK init — routes through Blaksyd proxy with Supabase JWT.
+    if (typeof window.SympClient === 'function' && supabase && !window.symp) {
+        try {
+            window.symp = new window.SympClient({
+                getAuthToken: async () => {
+                    const { data } = await supabase.auth.getSession();
+                    return data?.session?.access_token || '';
+                },
+            });
+        } catch (e) {
+            console.warn('[symp] init failed:', e.message);
+        }
     }
 
     const canvas = document.getElementById('pearl-canvas');
@@ -102,34 +119,126 @@ document.addEventListener('DOMContentLoaded', () => {
         loadUserContext();
         startNewChat(null, false);
         loadSidebar();
+
+        // Symp.ai — silent fire-and-forget run of yesterday's Omniscient
+        // Analyser. Idempotent server-side, so calling on every login is fine;
+        // it skips when already analysed. Never blocks the UI.
+        if (window.symp && currentUser) {
+            window.symp.triggerAnalysis().then(r => {
+                if (r?.ok && r?.data && !r.data.skipped) {
+                    console.log('[symp] daily analysis updated for', r.data.analysis_date);
+                }
+            });
+        }
     }
 
-    // ── Load user profile + recent journals into AI context ──────────────────
+    // ── Load full "Context Engine" — profile, journals, Spotify ──────────
+    // Cross-chat continuity is now handled server-side by Symp.ai: the /chat
+    // endpoint reads symp_vault_profiles.symp_analysis (the daily Analyser
+    // output) so the brain already knows recent moods/themes/people without
+    // needing the browser to fetch a flat message list. We dropped the old
+    // `messages !inner(chats)` join because (a) it was 400-ing in PostgREST
+    // and (b) the Vault is the new source of truth.
     async function loadUserContext() {
         try {
             const [profileRes, journalsRes] = await Promise.all([
                 supabase.from('profiles').select('full_name, bio, user_memory').eq('id', currentUser.id).maybeSingle(),
-                supabase.from('journals').select('title, emotion, content').eq('user_id', currentUser.id).order('created_at', { ascending: false }).limit(5)
+                supabase.from('journals').select('title, emotion, content, created_at').eq('user_id', currentUser.id).order('created_at', { ascending: false }).limit(5),
             ]);
 
-            const profile  = profileRes.data;
-            const journals = journalsRes.data || [];
+            const profile   = profileRes.data;
+            const journals  = journalsRes.data || [];
+            const crossMsgs = []; // legacy var kept so downstream code doesn't break
+
+            // Spotify: currently playing, else most recent played
+            let spotifyLine = '';
+            try {
+                const token = (typeof window.getSpotifyToken === 'function') ? window.getSpotifyToken() : null;
+                if (token) {
+                    let res = await fetch('https://api.spotify.com/v1/me/player/currently-playing', {
+                        headers: { Authorization: `Bearer ${token}` }
+                    });
+                    let track = null, playing = false;
+                    if (res.status === 200) {
+                        const d = await res.json();
+                        if (d?.item) { track = d.item; playing = !!d.is_playing; }
+                    }
+                    if (!track) {
+                        res = await fetch('https://api.spotify.com/v1/me/player/recently-played?limit=1', {
+                            headers: { Authorization: `Bearer ${token}` }
+                        });
+                        if (res.ok) {
+                            const d = await res.json();
+                            track = d?.items?.[0]?.track || null;
+                        }
+                    }
+                    if (track) {
+                        const name    = track.name;
+                        const artists = (track.artists || []).map(a => a.name).join(', ');
+                        spotifyLine = playing
+                            ? `Currently listening to "${name}" by ${artists}.`
+                            : `Last played on Spotify: "${name}" by ${artists}.`;
+                    }
+                }
+            } catch(_) { /* spotify optional */ }
 
             let ctx = '';
             if (profile?.full_name) ctx += `User's name: ${profile.full_name}. `;
             if (profile?.bio)       ctx += `About them: ${profile.bio}. `;
             if (profile?.user_memory) ctx += `Notes from past sessions: ${profile.user_memory} `;
+
             if (journals.length) {
-                const recent = journals.map(j =>
-                    `"${j.title}"${j.emotion ? ` (felt ${j.emotion})` : ''}${j.content ? ': ' + j.content.substring(0, 80) : ''}`
-                ).join(' | ');
-                ctx += `Recent journal entries: ${recent}.`;
+                const recent = journals.map(j => {
+                    const when = j.created_at ? new Date(j.created_at).toLocaleDateString() : '';
+                    return `[${when}] "${j.title}"${j.emotion ? ` (felt ${j.emotion})` : ''}${j.content ? ': ' + j.content.substring(0, 120) : ''}`;
+                }).join(' | ');
+                ctx += `Recent journal entries: ${recent}. `;
             }
 
+            if (crossMsgs.length) {
+                const recentTalk = crossMsgs.map(m =>
+                    `${m.role === 'user' ? 'User' : 'You'}: ${String(m.content || '').substring(0, 140)}`
+                ).join(' | ');
+                ctx += `Recent messages between you two (carry this continuity forward even on a "New Chat"): ${recentTalk}. `;
+            }
+
+            if (spotifyLine) ctx += spotifyLine + ' ';
+
             window.blakcideUserContext = ctx.trim() || null;
+
+            // Proactivity check — run once per session after context loads
+            checkProactiveThought({ profile, journals, crossMsgs });
         } catch(e) {
             window.blakcideUserContext = null;
         }
+    }
+
+    // ── Proactivity: if recent journals show low mood, surface a gentle check-in ──────
+    // Fires once per day (localStorage-gated) so we never nag.
+    function checkProactiveThought({ journals = [], profile = null } = {}) {
+        try {
+            const key = `blakcide_proactive_${currentUser?.id || 'anon'}_${new Date().toDateString()}`;
+            if (localStorage.getItem(key)) return;
+
+            const LOW = ['sad','down','low','anxious','anxiety','stressed','stress','overwhelmed','depressed','hopeless','tired','lonely','angry','hurt'];
+            const recentLow = journals.slice(0, 3).filter(j => {
+                const blob = `${j.emotion || ''} ${j.content || ''}`.toLowerCase();
+                return LOW.some(k => blob.includes(k));
+            });
+            if (recentLow.length < 2) return; // need sustained signal
+
+            const hookJournal = recentLow[0];
+            const hint = hookJournal.title || hookJournal.emotion || 'what you wrote recently';
+            const name = profile?.full_name ? profile.full_name.split(' ')[0] : null;
+
+            window.blakcideProactiveHook = {
+                hint,
+                message: name
+                    ? `Hey ${name} — been thinking about you. You mentioned ${hint} in your journal. How's that sitting with you today?`
+                    : `Hey — been thinking about you. You mentioned ${hint} recently. How's that sitting today?`
+            };
+            localStorage.setItem(key, '1');
+        } catch(_) {}
     }
 
     // ==========================================
@@ -456,6 +565,14 @@ document.addEventListener('DOMContentLoaded', () => {
         const chatForm = getEl('chat-form');
         if(chatForm) chatForm.dataset.pendingFolder = fid || '';
         getEl('main-sidebar')?.classList.remove('open');
+
+        // Proactive check-in: if low-mood signal detected, open with a gentle friend-style message
+        if (window.blakcideProactiveHook?.message) {
+            const msg = window.blakcideProactiveHook.message;
+            window.blakcideProactiveHook = null; // fire once
+            renderMessage(msg, 'ai');
+            chatMessageHistory.push({ role: 'assistant', content: msg });
+        }
     }
 
     // ── Auto-save AI chat as journal entry (one entry per day — updates throughout day) ──
@@ -466,7 +583,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const { data: chat } = await supabase.from('chats').select('auto_journaled').eq('id', chatId).maybeSingle();
             if (chat?.auto_journaled) return;
 
-            const { data: msgs } = await supabase.from('messages').select('role, content').eq('chat_id', chatId).order('created_at');
+            const { data: msgs } = await supabase.from('messages').select('role, content, created_at').eq('chat_id', chatId).order('created_at');
             if (!msgs || msgs.length < 2) return;
 
             // Collect image descriptions
@@ -479,6 +596,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 role: m.role === 'ai' ? 'assistant' : 'user',
                 content: m.content
             }));
+
+            // Symp.ai Vault — fire-and-forget ingest into daily AI-companion journal.
+            if (window.symp) {
+                window.symp.ingestSession({
+                    session_type: 'ai_chat',
+                    session_id:   chatId,
+                    transcript:   msgPayload,
+                    started_at:   msgs[0]?.created_at || new Date().toISOString(),
+                    ended_at:     msgs[msgs.length - 1]?.created_at || new Date().toISOString(),
+                }).catch(e => console.warn('[symp.ingest ai_chat] failed:', e.message));
+            }
 
             const res = await fetch('/api/summarize', {
                 method: 'POST',
@@ -862,13 +990,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Vision analysis
                 let imageDesc = 'An image was shared.';
                 try {
-                    const vRes = await fetch('/api/vision', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ imageUrl: publicUrl })
-                    });
-                    const vData = await vRes.json();
-                    imageDesc = vData.description || imageDesc;
+                    if (window.symp) {
+                        const r = await window.symp.describeImage({ imageUrl: publicUrl });
+                        imageDesc = r?.data?.description || imageDesc;
+                    } else {
+                        const vRes = await fetch('/api/vision', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ imageUrl: publicUrl })
+                        });
+                        const vData = await vRes.json();
+                        imageDesc = vData.description || imageDesc;
+                    }
                 } catch(_) {}
 
                 // Remove upload placeholder, render actual image
@@ -1127,6 +1260,12 @@ document.addEventListener('DOMContentLoaded', () => {
     let _rtActive        = false;
     let _rtMuted         = false;
     let _rtSpeaker       = true;
+    // Mic ducking: when true, the mic-capture loop drops frames so background
+    // noise (and the AI's own voice bleeding through speakers) can't trigger
+    // server VAD speech_started → barge-in. Set when AI audio starts streaming,
+    // cleared when AI audio fully drains. The user can still barge in by
+    // speaking loudly enough to override the duck — handled in the mic loop.
+    let _rtAiSpeaking    = false;
     let _rtTimerInt      = null;
     let _rtSecs          = 0;
     let _rtStartTime     = null;
@@ -1282,6 +1421,12 @@ NEVER: Start with "I". Sound like customer service. Say "As an AI".${userCtx}`;
         _rtProcessor.onaudioprocess = (e) => {
             if (!_rtActive || _rtMuted || !_rtWs || _rtWs.readyState !== WebSocket.OPEN) return;
 
+            // Duck the mic while the AI is speaking. Drops frames entirely so
+            // server VAD can't pick up speaker bleed-through and falsely fire
+            // speech_started → cancel-AI-mid-sentence. This is the cause of
+            // "AI cuts off mid-sentence" without speakerphone echo cancellation.
+            if (_rtAiSpeaking) return;
+
             const input = e.inputBuffer.getChannelData(0);
 
             // Linear downsample to 24 kHz
@@ -1316,30 +1461,44 @@ NEVER: Start with "I". Sound like customer service. Say "As an AI".${userCtx}`;
         if (_rtMicSource) { try { _rtMicSource.disconnect(); } catch (_) {} _rtMicSource  = null; }
     }
 
-    // ── Send session.update with current language instructions ────────
+    // ── Send session.update — locked to the simplified, multilingual config ──
+    // Previously this overwrote the server-side ephemeral session every turn
+    // with a per-language voice (verse/nova/shimmer) and the legacy English-
+    // leaning prompt — which is exactly why the AI kept regressing to English
+    // audio. We now ship the SAME minimal config the server set, on every
+    // session.update, so nothing drifts.
+    //
+    // Per spec:
+    //   - voice: 'alloy' (most robust multilingual synthesis)
+    //   - modalities: ['text', 'audio']
+    //   - VAD: threshold 0.6 / prefix 300ms / silence 1200ms
+    //   - instructions: short, ruthless mirror rule (no Vault, no fluff)
+    const REALTIME_INSTRUCTIONS = [
+        'You are a warm, local companion. You MUST output your audio in the EXACT same language the user speaks. ',
+        'If the user speaks Telugu, your spoken audio must be entirely in colloquial Telugu. ',
+        'If the user speaks Hindi, your spoken audio must be entirely in Hindi. ',
+        'Do not use English unless the user speaks pure English. Never mix languages. ',
+        'Keep responses concise and conversational.'
+    ].join('');
+
     function _rtUpdateSession() {
         if (!_rtWs || _rtWs.readyState !== WebSocket.OPEN) return;
-        // Pick voice by language — Shimmer for Telugu (closer to South Indian prosody)
-        const voice = _rtDetectedLang === 'te' ? 'shimmer'
-                    : _rtDetectedLang === 'hi' ? 'nova'
-                    : 'verse';
         _rtWs.send(JSON.stringify({
             type: 'session.update',
             session: {
-                modalities:               ['text', 'audio'],
-                instructions:             _rtBuildSystem(_rtDetectedLang),
-                voice,
-                input_audio_format:       'pcm16',
-                output_audio_format:      'pcm16',
+                modalities:                ['text', 'audio'],
+                instructions:              REALTIME_INSTRUCTIONS,
+                voice:                     'alloy',
+                input_audio_format:        'pcm16',
+                output_audio_format:       'pcm16',
                 input_audio_transcription: { model: 'whisper-1' },
                 turn_detection: {
                     type:                'server_vad',
-                    threshold:           0.7,    // raised from 0.45 — filter background noise
-                    prefix_padding_ms:   400,    // more context before speech
-                    silence_duration_ms: 1000,   // raised from 600ms — avoid premature cuts
+                    threshold:           0.6,
+                    prefix_padding_ms:   300,
+                    silence_duration_ms: 1200,
                 },
-                temperature:              0.8,
-                max_response_output_tokens: 120,
+                max_response_output_tokens: 200,
             }
         }));
     }
@@ -1386,6 +1545,7 @@ NEVER: Start with "I". Sound like customer service. Say "As an AI".${userCtx}`;
                 // Server VAD: user started speaking — record time and stop AI audio (barge-in)
                 _rtSpeechStartMs = Date.now();
                 console.log('[RT] Speech started');
+                _rtAiSpeaking = false; // un-duck — user is genuinely talking
                 _rtStopAudio();
                 _rtTransition('listening');
                 break;
@@ -1478,6 +1638,7 @@ NEVER: Start with "I". Sound like customer service. Say "As an AI".${userCtx}`;
                         _rtCurAIText = '';
                         _rtAddMsg('ai', '');
                     }
+                    _rtAiSpeaking = true; // duck mic
                     _rtEnqueueAudio(msg.delta);
                 }
                 break;
@@ -1501,6 +1662,7 @@ NEVER: Start with "I". Sound like customer service. Say "As an AI".${userCtx}`;
                 (function checkDrained() {
                     if (!_rtActive) return;
                     if (!_rtAudioPlaying || _rtNextPlayTime <= (_rtAudioCtx?.currentTime || 0) + 0.15) {
+                        _rtAiSpeaking = false; // un-duck mic once playback fully drained
                         _rtTransition('listening');
                     } else {
                         setTimeout(checkDrained, 100);
@@ -1594,8 +1756,15 @@ NEVER: Start with "I". Sound like customer service. Say "As an AI".${userCtx}`;
         }, 1000);
 
         // 4. Fetch ephemeral token then open Realtime WebSocket
+        // Pass user_id so the server can inject this user's Vault context
+        // into the Realtime session's `instructions` (polyglot + fluency
+        // rules always inject; vault context is user-specific).
         try {
-            const tokenRes = await fetch('/api/realtime-session', { method: 'POST' });
+            const tokenRes = await fetch('/api/realtime-session', {
+                method:  'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body:    JSON.stringify({ user_id: currentUser?.id || null }),
+            });
             if (!tokenRes.ok) throw new Error(`Token ${tokenRes.status}: ${await tokenRes.text()}`);
             const tokenData  = await tokenRes.json();
             const ephKey     = tokenData.client_secret?.value;
@@ -1754,6 +1923,22 @@ NEVER: Start with "I". Sound like customer service. Say "As an AI".${userCtx}`;
 
     async function saveCallAsJournal(callHistory, userId, durationSec, langsUsed) {
         try {
+            // Symp.ai Vault — fire-and-forget ingest into daily AI-companion journal.
+            if (window.symp) {
+                const endedAt   = new Date();
+                const startedAt = new Date(endedAt.getTime() - durationSec * 1000);
+                window.symp.ingestSession({
+                    session_type: 'ai_call',
+                    session_id:   `ai_call_${endedAt.getTime()}`,
+                    transcript:   (callHistory || []).map(m => ({
+                        role:    m.role === 'assistant' ? 'assistant' : 'user',
+                        content: m.content,
+                    })),
+                    started_at:   startedAt.toISOString(),
+                    ended_at:     endedAt.toISOString(),
+                }).catch(e => console.warn('[symp.ingest ai_call] failed:', e.message));
+            }
+
             const durMin  = Math.floor(durationSec / 60);
             const durSec  = durationSec % 60;
             const durStr  = durMin > 0 ? `${durMin}m ${durSec}s` : `${durSec}s`;

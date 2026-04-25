@@ -4,8 +4,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let supabase;
     if (typeof window.supabase !== 'undefined') {
-        supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        supabase = window._sbClient || (window._sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY));
     } else { return console.error("Supabase failed to load."); }
+
+    if (typeof window.SympClient === 'function' && supabase && !window.symp) {
+        try {
+            window.symp = new window.SympClient({
+                getAuthToken: async () => {
+                    const { data } = await supabase.auth.getSession();
+                    return data?.session?.access_token || '';
+                },
+            });
+        } catch (e) { console.warn('[symp] init failed:', e.message); }
+    }
 
     let currentUser = null;
     let currentListenerProfile = null;
@@ -1009,11 +1020,13 @@ document.addEventListener('DOMContentLoaded', () => {
         // Gather connected-user profile context
         let userProfile = {};
         let recentMessages = [];
+        let seekerId = null;
         try {
             if (activeSessionId) {
                 const { data: sess } = await supabase.from('connect_sessions')
                     .select('user_id').eq('id', activeSessionId).maybeSingle();
                 if (sess && sess.user_id) {
+                    seekerId = sess.user_id;
                     const { data: prof } = await supabase.from('profiles')
                         .select('full_name, bio, user_memory').eq('id', sess.user_id).maybeSingle();
                     if (prof) userProfile = prof;
@@ -1030,6 +1043,31 @@ document.addEventListener('DOMContentLoaded', () => {
                         role: m.sender_id === sess.user_id ? 'user' : 'assistant',
                         content: m.content
                     }));
+                }
+            }
+
+            // Prefer Symp.ai Co-Pilot — grounded in the seeker's Vault analysis.
+            // Falls back to legacy /api/listener-copilot if SDK unavailable or errors.
+            if (window.symp && seekerId) {
+                try {
+                    const r = await window.symp.getCopilotHint({
+                        target_user_id:    seekerId,
+                        session_id:        activeSessionId,
+                        recent_messages:   recentMessages,
+                        listener_question: question,
+                    });
+                    if (r && r.ok && r.data && r.data.hint) {
+                        const risk = r.data.risk_level;
+                        const tag  = (risk && risk !== 'low')
+                            ? `<div style="font-size:0.68rem;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;color:${risk === 'high' ? '#ff6a6a' : '#ffb547'};margin-bottom:4px;">⚠ ${risk} risk</div>`
+                            : '';
+                        if (replyEl) replyEl.innerHTML = tag + r.data.hint.replace(/</g,'&lt;');
+                        feed.scrollTop = feed.scrollHeight;
+                        return;
+                    }
+                    console.warn('[copilot] Symp.ai returned no hint, falling back', r);
+                } catch (e) {
+                    console.warn('[copilot] Symp.ai hint failed, falling back:', e.message);
                 }
             }
 

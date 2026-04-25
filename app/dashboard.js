@@ -5,7 +5,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let supabase;
     if (typeof window.supabase !== 'undefined') {
-        supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        supabase = window._sbClient || (window._sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY));
     }
 
     let currentUser = null;

@@ -7,7 +7,7 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 
 let db;
 if (typeof window.supabase !== 'undefined') {
-    db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    db = window._sbClient || (window._sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY));
 }
 
 // ── Global state ──────────────────────────────────────
