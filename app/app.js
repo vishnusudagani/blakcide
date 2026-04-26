@@ -1946,7 +1946,7 @@ NEVER: Start with "I". Sound like customer service. Say "As an AI".${userCtx}`;
         if (menu) menu.setAttribute('hidden', '');
 
         try {
-            const session = window.supabase ? (await window.supabase.auth.getSession()).data?.session : null;
+            const session = window._sbClient && (await window._sbClient.auth.getSession()).data?.session;
             const token = session?.access_token;
             if (!token) {
                 _personaToast('Please sign in first');
@@ -1980,7 +1980,7 @@ NEVER: Start with "I". Sound like customer service. Say "As an AI".${userCtx}`;
     // Read current persona from server on page load. Falls back to 'friend'.
     async function _hydrateActivePersona() {
         try {
-            const session = window.supabase ? (await window.supabase.auth.getSession()).data?.session : null;
+            const session = window._sbClient && (await window._sbClient.auth.getSession()).data?.session;
             const token = session?.access_token;
             if (!token) { _renderPersonaPill(); return; }
             const res = await fetch('/api/blaksyd/symp/persona/state?user_id=self', {
