@@ -67,6 +67,7 @@ export default async (req) => {
         'vibe', 'vibe/event',
         'personas', 'persona/state', 'persona/swap',
         'listener/brief', 'listener/vibe-check',
+        'diagnostic/turn', 'diagnostic/peek',
         // action-loop/run intentionally omitted — CRON-only, never browser
     ]);
     if (!ALLOWED.has(splat)) {
@@ -84,7 +85,12 @@ export default async (req) => {
     const authUserId = verified.user_id;
 
     // ── 3. Build forwarded request ───────────────────────────────────────
-    const targetUrl = `${incoming.origin}${SYMP_API_BASE}/${splat}${incoming.search || ''}`;
+    // For GET requests, override any user_id query param with the JWT-derived
+    // one so a compromised client cannot read someone else's vibe/persona/etc.
+    const fwdSearch = new URLSearchParams(incoming.search || '');
+    if (fwdSearch.has('user_id')) fwdSearch.set('user_id', authUserId);
+    const fwdQs = fwdSearch.toString();
+    const targetUrl = `${incoming.origin}${SYMP_API_BASE}/${splat}${fwdQs ? '?' + fwdQs : ''}`;
 
     // Preserve request-id if caller sent one, else create
     const requestId = req.headers.get(SYMP_REQUEST_ID_HEADER)

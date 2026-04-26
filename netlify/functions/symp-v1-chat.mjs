@@ -29,6 +29,7 @@ import { buildChatSystemStack } from '../../symp-core/lib/system-prompt.mjs';
 import { TOOL_DEFS, executeTool } from '../../symp-core/lib/tools.mjs';
 import { runStreamingChatWithTools } from '../../symp-core/lib/chat-runner.mjs';
 import { recordEventAsync } from '../../symp-core/lib/vibe-tracker.mjs';
+import { analyseTurn } from '../../symp-core/lib/diagnostic.mjs';
 import SympContract from '../../symp-core/contract/endpoints.js';
 
 const { ENDPOINTS, ERROR_CODES, SYMP_REQUEST_ID_HEADER } = SympContract;
@@ -132,6 +133,16 @@ export default async (req) => {
             evidence: `User: ${lastUser}\n\nAssistant: ${assembled}`,
         });
 
+        // Self-correction analysis — synchronous but cheap (regex-only).
+        try {
+            analyseTurn({
+                userId:    user_id,
+                userText:  lastUser,
+                modelText: assembled,
+                surface:   'chat',
+            });
+        } catch (_) { /* never block on diagnostic */ }
+
         logAccess({ requestId, endpoint: ENDPOINTS.CHAT, statusCode: 200, latencyMs: Date.now() - t0, userId: user_id });
         return new Response(
             JSON.stringify({ ok: true, data: { reply: assembled, meta: metaEvents }, request_id: requestId }),
@@ -181,6 +192,16 @@ export default async (req) => {
                 sourceSessionId: source_session_id,
                 evidence: `User: ${lastUser}\n\nAssistant: ${assembledForVibe}`,
             });
+
+            // Self-correction analysis — pins next-turn corrective hint.
+            try {
+                analyseTurn({
+                    userId:    user_id,
+                    userText:  lastUser,
+                    modelText: assembledForVibe,
+                    surface:   'chat',
+                });
+            } catch (_) { /* never block on diagnostic */ }
 
             logAccess({ requestId, endpoint: ENDPOINTS.CHAT, statusCode: 200, latencyMs: Date.now() - t0, userId: user_id });
         }

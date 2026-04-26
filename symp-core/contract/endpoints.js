@@ -41,6 +41,8 @@
         ACTION_LOOP_RUN:     SYMP_API_BASE + '/action-loop/run',     // POST — CRON entry
         LISTENER_BRIEF:      SYMP_API_BASE + '/listener/brief',      // POST — pre-session brief
         LISTENER_VIBE_CHECK: SYMP_API_BASE + '/listener/vibe-check', // POST — mid-session check
+        DIAGNOSTIC_TURN:     SYMP_API_BASE + '/diagnostic/turn',     // POST — analyse last turn
+        DIAGNOSTIC_PEEK:     SYMP_API_BASE + '/diagnostic/peek',     // GET  — read pinned corrections
     });
 
     const PERSONAS = Object.freeze(['friend', 'father', 'mother', 'astrologer', 'spiritual', 'tech_savvy']);

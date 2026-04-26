@@ -11,6 +11,7 @@ import { buildVaultContextMessage } from './vault-context.mjs';
 import { getPersonaCard }           from './persona-engine.mjs';
 import { getVibe, renderVibeSnapshot } from './vibe-tracker.mjs';
 import { fetchPersonaState }        from './supabase.mjs';
+import { buildCorrectionHint }      from './diagnostic.mjs';
 
 // ── CANONICAL DIRECTIVE (verbatim — do not paraphrase) ──────────────────────
 export const CRITICAL_OVERRIDE_TEXT = [
@@ -124,6 +125,13 @@ export async function buildChatSystemStack(userId) {
         } catch (_) { /* ignore */ }
     }
 
+    // Self-correction hint goes LAST in the system stack — closest to the
+    // model's next response, so it dominates any drift from earlier layers.
+    try {
+        const correction = buildCorrectionHint(userId);
+        if (correction) stack.push({ role: 'system', content: correction });
+    } catch (_) { /* ignore */ }
+
     return stack;
 }
 
@@ -158,5 +166,12 @@ export async function buildInstructionsText(userId) {
     }
 
     parts.push(CALL_FRAMING_TEXT);
+
+    // Self-correction hint last — overrides everything above for one turn.
+    try {
+        const correction = buildCorrectionHint(userId);
+        if (correction) parts.push(correction);
+    } catch (_) { /* ignore */ }
+
     return parts.join('\n\n');
 }
