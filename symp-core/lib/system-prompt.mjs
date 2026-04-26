@@ -8,9 +8,9 @@
 // can never drift.
 
 import { buildVaultContextMessage } from './vault-context.mjs';
-import { getPersonaCard }           from './persona-engine.mjs';
+import { getPersonaCard, renderPersonaCard } from './persona-engine.mjs';
 import { getVibe, renderVibeSnapshot } from './vibe-tracker.mjs';
-import { fetchPersonaState }        from './supabase.mjs';
+import { fetchPersonaState, fetchPersonaFacts } from './supabase.mjs';
 import { buildCorrectionHint }      from './diagnostic.mjs';
 
 // ── CANONICAL DIRECTIVE (verbatim — do not paraphrase) ──────────────────────
@@ -110,7 +110,14 @@ export async function buildChatSystemStack(userId) {
     ];
 
     const personaId = await resolveActivePersona(userId);
-    stack.push({ role: 'system', content: getPersonaCard(personaId) });
+    let personaCard = getPersonaCard(personaId);
+    if (userId) {
+        try {
+            const facts = await fetchPersonaFacts(userId, personaId);
+            personaCard = renderPersonaCard(personaId, facts);
+        } catch (_) { /* fall back to base card */ }
+    }
+    stack.push({ role: 'system', content: personaCard });
 
     try {
         const vibe = await getVibe(userId);
@@ -148,7 +155,16 @@ export async function buildInstructionsText(userId) {
     const parts = [CORE_IDENTITY_TEXT, CRITICAL_OVERRIDE_TEXT, REAL_TIME_DATA_TEXT];
 
     const personaId = await resolveActivePersona(userId);
-    parts.push(getPersonaCard(personaId));
+    if (userId) {
+        try {
+            const facts = await fetchPersonaFacts(userId, personaId);
+            parts.push(renderPersonaCard(personaId, facts));
+        } catch (_) {
+            parts.push(getPersonaCard(personaId));
+        }
+    } else {
+        parts.push(getPersonaCard(personaId));
+    }
 
     try {
         const vibe = await getVibe(userId);

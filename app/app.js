@@ -1778,6 +1778,10 @@ NEVER: Start with "I". Sound like customer service. Say "As an AI".${userCtx}`;
                 });
                 const d = await r.json().catch(() => ({}));
                 _rtToolResult(call_id, r.ok ? `persona swapped to "${args.persona}". Adopt this voice on your next response.` : `swap failed: ${d?.error?.message || r.status}`);
+                // Update the header pill so the user sees their voice request was honoured.
+                if (r.ok && typeof window.notifyPersonaSwapped === 'function') {
+                    window.notifyPersonaSwapped(args.persona);
+                }
                 // Also trigger a server-side instructions refresh so the
                 // model picks up the new persona card on its next reply.
                 _rtUpdateSession();
@@ -1831,6 +1835,180 @@ NEVER: Start with "I". Sound like customer service. Say "As an AI".${userCtx}`;
 
     function escapeHtml(s) {
         return String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
+
+    // ─────────────────────────────────────────────────────────────────
+    // Persona picker — clickable mode menu.
+    //
+    // Two paths achieve the same outcome:
+    //   1. EXPLICIT (this menu): user taps the pill in the chat header,
+    //      picks a persona, we POST /persona/swap → the next /chat reply
+    //      lands in the new voice. If a voice call is live, we also fire
+    //      _rtUpdateSession() so the next utterance switches mid-call.
+    //   2. NATURAL ("be my astrologer"): the model itself calls the
+    //      `swap_persona` tool from inside chat or voice — same backend
+    //      endpoint, same outcome. We just refresh the pill afterwards.
+    //
+    // The 7 personas mirror the server-side enum in persona-engine.mjs.
+    // ─────────────────────────────────────────────────────────────────
+    const PERSONA_META = {
+        friend:     { emoji: '🤝', label: 'Friend',     one_liner: 'Equal, casual, supportive — daily banter & venting.' },
+        father:     { emoji: '🛡️', label: 'Father',     one_liner: 'Protective, logical — financial advice, stability, tough love.' },
+        mother:     { emoji: '🌷', label: 'Mother',     one_liner: 'Nurturing, empathetic — feelings, healing, self-care.' },
+        astrologer: { emoji: '✨', label: 'Astrologer', one_liner: 'Vedic-style, birth-data aware — purpose, timing, hope.' },
+        spiritual:  { emoji: '🕉️', label: 'Spiritual',  one_liner: 'Zen, scripture-aware — peace, mindfulness, the Now.' },
+        tech_savvy: { emoji: '💻', label: 'Tech Savvy', one_liner: 'Logical, efficient — productivity, gadgets, problem-solving.' },
+        therapist:  { emoji: '🪶', label: 'Therapist',  one_liner: 'Reflective, psychologist-style — listening sessions, reframing.' },
+    };
+    let _activePersona = 'friend';
+
+    // Render the pill in the header.
+    function _renderPersonaPill() {
+        const emoji = document.getElementById('persona-picker-emoji');
+        const label = document.getElementById('persona-picker-label');
+        if (!emoji || !label) return;
+        const m = PERSONA_META[_activePersona] || PERSONA_META.friend;
+        emoji.textContent = m.emoji;
+        label.textContent = m.label;
+    }
+
+    // Build the menu list. Re-runs on every open so the active item highlights.
+    function _renderPersonaMenu() {
+        const list = document.getElementById('persona-picker-list');
+        if (!list) return;
+        list.innerHTML = Object.entries(PERSONA_META).map(([id, m]) => `
+            <div class="persona-picker-item ${id === _activePersona ? 'is-active' : ''}" data-persona="${id}">
+                <span class="persona-picker-item-emoji">${m.emoji}</span>
+                <div class="persona-picker-item-body">
+                    <div class="persona-picker-item-label">${escapeHtml(m.label)}</div>
+                    <div class="persona-picker-item-oneliner">${escapeHtml(m.one_liner)}</div>
+                </div>
+                ${id === _activePersona ? '<ion-icon class="persona-picker-item-check" name="checkmark-outline"></ion-icon>' : ''}
+            </div>
+        `).join('');
+        list.querySelectorAll('.persona-picker-item').forEach(el => {
+            el.addEventListener('click', () => {
+                const id = el.getAttribute('data-persona');
+                if (id) _swapPersona(id);
+            });
+        });
+    }
+
+    window.togglePersonaPicker = function () {
+        const menu = document.getElementById('persona-picker-menu');
+        if (!menu) return;
+        if (menu.hasAttribute('hidden')) {
+            _renderPersonaMenu();
+            menu.removeAttribute('hidden');
+            // Close on outside click — single-shot listener.
+            setTimeout(() => {
+                document.addEventListener('click', _personaMenuOutside, { once: true });
+            }, 0);
+        } else {
+            menu.setAttribute('hidden', '');
+        }
+    };
+    function _personaMenuOutside(e) {
+        const menu = document.getElementById('persona-picker-menu');
+        const btn  = document.getElementById('persona-picker-btn');
+        if (!menu || menu.hasAttribute('hidden')) return;
+        if (menu.contains(e.target) || (btn && btn.contains(e.target))) {
+            // Re-arm for the next outside click.
+            document.addEventListener('click', _personaMenuOutside, { once: true });
+            return;
+        }
+        menu.setAttribute('hidden', '');
+    }
+
+    function _personaToast(msg) {
+        const t = document.createElement('div');
+        t.className = 'persona-swap-toast';
+        t.textContent = msg;
+        document.body.appendChild(t);
+        setTimeout(() => t.remove(), 2400);
+    }
+
+    // POST /persona/swap → update local state → close menu → toast.
+    async function _swapPersona(personaId) {
+        if (!PERSONA_META[personaId]) return;
+        if (personaId === _activePersona) {
+            // No-op — just close.
+            const menu = document.getElementById('persona-picker-menu');
+            if (menu) menu.setAttribute('hidden', '');
+            return;
+        }
+
+        // Optimistic UI — flip first, reconcile on response.
+        const prev = _activePersona;
+        _activePersona = personaId;
+        _renderPersonaPill();
+        const menu = document.getElementById('persona-picker-menu');
+        if (menu) menu.setAttribute('hidden', '');
+
+        try {
+            const session = window.supabase ? (await window.supabase.auth.getSession()).data?.session : null;
+            const token = session?.access_token;
+            if (!token) {
+                _personaToast('Please sign in first');
+                _activePersona = prev; _renderPersonaPill();
+                return;
+            }
+            const res = await fetch('/api/blaksyd/symp/persona/swap', {
+                method:  'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body:    JSON.stringify({ persona: personaId, reason: 'user picked from menu' }),
+            });
+            if (!res.ok) {
+                const d = await res.json().catch(() => ({}));
+                throw new Error(d?.error?.message || `swap failed (${res.status})`);
+            }
+            _personaToast(`✓ Now in ${PERSONA_META[personaId].label} mode`);
+
+            // If a voice call is live, replay the canonical config so the
+            // next utterance picks up the new persona card. The server
+            // rebuilds instructions on the next session.update.
+            if (_rtActive && typeof _rtUpdateSession === 'function') {
+                try { _rtUpdateSession(); } catch (_) {}
+            }
+        } catch (e) {
+            console.warn('[persona] swap failed:', e.message);
+            _personaToast('Couldn\'t switch — try again');
+            _activePersona = prev; _renderPersonaPill();
+        }
+    }
+
+    // Read current persona from server on page load. Falls back to 'friend'.
+    async function _hydrateActivePersona() {
+        try {
+            const session = window.supabase ? (await window.supabase.auth.getSession()).data?.session : null;
+            const token = session?.access_token;
+            if (!token) { _renderPersonaPill(); return; }
+            const res = await fetch('/api/blaksyd/symp/persona/state?user_id=self', {
+                headers: { 'Authorization': `Bearer ${token}` },
+            });
+            if (!res.ok) { _renderPersonaPill(); return; }
+            const d = await res.json();
+            const id = d?.data?.active_persona;
+            if (id && PERSONA_META[id]) _activePersona = id;
+        } catch (_) { /* ignore */ }
+        _renderPersonaPill();
+    }
+
+    // Public hook — the model's `swap_persona` tool path or voice tool
+    // executor calls this after a successful swap so the pill updates
+    // without a full reload.
+    window.notifyPersonaSwapped = function (personaId) {
+        if (!PERSONA_META[personaId]) return;
+        _activePersona = personaId;
+        _renderPersonaPill();
+        _personaToast(`✓ Now in ${PERSONA_META[personaId].label} mode`);
+    };
+
+    // Hydrate on DOM ready (page load is async — auth may not be ready yet).
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => setTimeout(_hydrateActivePersona, 600));
+    } else {
+        setTimeout(_hydrateActivePersona, 600);
     }
 
     // ── Start call ─────────────────────────────────────────────────────

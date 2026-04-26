@@ -45,7 +45,7 @@
         DIAGNOSTIC_PEEK:     SYMP_API_BASE + '/diagnostic/peek',     // GET  — read pinned corrections
     });
 
-    const PERSONAS = Object.freeze(['friend', 'father', 'mother', 'astrologer', 'spiritual', 'tech_savvy']);
+    const PERSONAS = Object.freeze(['friend', 'father', 'mother', 'astrologer', 'spiritual', 'tech_savvy', 'therapist']);
 
     const SESSION_TYPES = Object.freeze({
         AI_CHAT:    'ai_chat',

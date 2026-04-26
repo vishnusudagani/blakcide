@@ -268,6 +268,49 @@ export async function upsertPersonaState({ userId, activePersona, locked, swapHi
     return { ok: ins.ok, action: 'created' };
 }
 
+// ── Persona-scoped facts (DOB for astrologer, religion for spiritual, …) ──
+
+/**
+ * Fetch the facts JSONB for one (user, persona). Returns {} if no row.
+ */
+export async function fetchPersonaFacts(userId, personaId) {
+    const u = encodeURIComponent(userId);
+    const p = encodeURIComponent(personaId);
+    const { ok, data } = await sbFetch(
+        `symp_persona_facts?user_id=eq.${u}&persona_id=eq.${p}&select=facts`
+    );
+    if (ok && Array.isArray(data) && data[0]) return data[0].facts || {};
+    return {};
+}
+
+/**
+ * Upsert the entire facts blob for one (user, persona). Caller is responsible
+ * for merging with existing facts (the executor already does this).
+ */
+export async function upsertPersonaFacts({ userId, personaId, facts }) {
+    if (!userId || !personaId) throw new Error('upsertPersonaFacts: userId+personaId required');
+    const u = encodeURIComponent(userId);
+    const p = encodeURIComponent(personaId);
+    const existing = await sbFetch(
+        `symp_persona_facts?user_id=eq.${u}&persona_id=eq.${p}&select=user_id`
+    );
+    const body = { facts: facts || {} };
+
+    if (existing.ok && Array.isArray(existing.data) && existing.data[0]) {
+        const upd = await sbFetch(
+            `symp_persona_facts?user_id=eq.${u}&persona_id=eq.${p}`,
+            { method: 'PATCH', body, prefer: 'return=representation' }
+        );
+        return { ok: upd.ok, action: 'updated' };
+    }
+    const ins = await sbFetch('symp_persona_facts', {
+        method: 'POST',
+        body:   { user_id: userId, persona_id: personaId, ...body },
+        prefer: 'return=representation',
+    });
+    return { ok: ins.ok, action: 'created' };
+}
+
 // ── Action loop ─────────────────────────────────────────────────────────
 
 /**

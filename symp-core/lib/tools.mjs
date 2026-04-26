@@ -25,10 +25,14 @@
 // All executors must NEVER throw — we catch internally and return an error
 // string so the model can still produce a graceful answer.
 
-import { fetchOlderJournals, upsertPersonaState, fetchPersonaState, fetchRecentJournals } from './supabase.mjs';
+import {
+    fetchOlderJournals, upsertPersonaState, fetchPersonaState, fetchRecentJournals,
+    fetchPersonaFacts, upsertPersonaFacts,
+} from './supabase.mjs';
 import {
     SWAP_PERSONA_TOOL_DEF, ESCALATE_TO_HUMAN_TOOL_DEF,
     SUGGEST_SWITCH_TO_TEXT_TOOL_DEF, FETCH_SOFT_INSIGHT_TOOL_DEF,
+    SET_PERSONA_FACT_TOOL_DEF,
     isValidPersona,
 } from './persona-engine.mjs';
 
@@ -260,6 +264,54 @@ async function execSuggestSwitchToText({ args }) {
     return `switch_to_text_suggested: { reason: "${reason}", opener: "${opener}" }. UI will show a "Continue in chat" card.`;
 }
 
+// ── 6b. set_persona_fact ──────────────────────────────────────────────────
+// Persists persona-scoped facts (astrologer DOB/TOB/POB, spiritual religion).
+// Merges with whatever's already stored — never destructive.
+
+const PERSONA_FACT_ALLOWLIST = {
+    astrologer: ['dob', 'tob', 'pob', 'charts_summary'],
+    spiritual:  ['religion', 'prefers_scriptures'],
+    // others may be added later — empty array means "reject all keys".
+};
+
+async function execSetPersonaFact({ userId, args }) {
+    if (!userId) return 'No user context — cannot save persona fact.';
+    const personaId = String(args?.persona || '').trim();
+    if (!isValidPersona(personaId)) return `Unknown persona: ${personaId}`;
+    const incoming = (args && typeof args.facts === 'object' && args.facts) || {};
+
+    const allow = PERSONA_FACT_ALLOWLIST[personaId] || [];
+    if (allow.length === 0) {
+        return `Persona "${personaId}" does not accept stored facts.`;
+    }
+
+    // Sanitise: keep only allowlisted keys with truthy values, cap string length.
+    const clean = {};
+    for (const key of allow) {
+        const v = incoming[key];
+        if (v == null) continue;
+        if (typeof v === 'string') {
+            const s = v.trim().slice(0, 200);
+            if (s) clean[key] = s;
+        } else if (Array.isArray(v)) {
+            clean[key] = v.slice(0, 10).map(x => String(x).slice(0, 60));
+        } else {
+            clean[key] = String(v).slice(0, 200);
+        }
+    }
+    if (Object.keys(clean).length === 0) return 'No usable facts in payload.';
+
+    try {
+        const existing = await fetchPersonaFacts(userId, personaId).catch(() => ({}));
+        const merged   = { ...(existing || {}), ...clean, asked_at: new Date().toISOString() };
+        await upsertPersonaFacts({ userId, personaId, facts: merged });
+        return `persona_fact_saved: persona="${personaId}", keys=${Object.keys(clean).join(',')}. ` +
+               `Do NOT ask the user for these again — they are pre-injected for you on every future turn.`;
+    } catch (e) {
+        return `set_persona_fact failed: ${e.message || e}`;
+    }
+}
+
 // ── 7. fetch_soft_insight ─────────────────────────────────────────────────
 // Returns the most recent pending "post_journal_insight" payload from the
 // action loop, if any. Marks it consumed so we don't re-surface it.
@@ -291,19 +343,19 @@ export const TOOL_DEFS = [
     GET_LIVE_CONTEXT_DEF,
     SEARCH_WEB_DEF,
     SWAP_PERSONA_TOOL_DEF,
+    SET_PERSONA_FACT_TOOL_DEF,
     ESCALATE_TO_HUMAN_TOOL_DEF,
     SUGGEST_SWITCH_TO_TEXT_TOOL_DEF,
     FETCH_SOFT_INSIGHT_TOOL_DEF,
 ];
 
-// Voice-only subset: swap_persona, escalate_to_human, suggest_switch_to_text,
-// fetch_soft_insight, get_live_context, search_vault. We exclude search_web
-// from voice because the Realtime model doesn't have great latency budget
-// for nested HTTP calls; if needed, we re-enable later.
+// Voice-only subset. We exclude search_web from voice because the Realtime
+// model doesn't have great latency budget for nested HTTP calls.
 export const VOICE_TOOL_DEFS = [
     SEARCH_VAULT_DEF,
     GET_LIVE_CONTEXT_DEF,
     SWAP_PERSONA_TOOL_DEF,
+    SET_PERSONA_FACT_TOOL_DEF,
     ESCALATE_TO_HUMAN_TOOL_DEF,
     SUGGEST_SWITCH_TO_TEXT_TOOL_DEF,
     FETCH_SOFT_INSIGHT_TOOL_DEF,
@@ -314,6 +366,7 @@ const EXECUTORS = {
     get_live_context:       execGetLiveContext,
     search_web:             execSearchWeb,
     swap_persona:           execSwapPersona,
+    set_persona_fact:       execSetPersonaFact,
     escalate_to_human:      execEscalateToHuman,
     suggest_switch_to_text: execSuggestSwitchToText,
     fetch_soft_insight:     execFetchSoftInsight,
