@@ -241,7 +241,19 @@ window.BlakcideAI = {
     detectLangWithFallback: (text, fallback) => detectLang(text, fallback),
 
     // ── Build messages array with system prompt injected ─────────────────────
+    // IMPORTANT: when going through the symp endpoint, the server already
+    // prepends the FULL Unified Soul stack (CORE_IDENTITY + CRITICAL_OVERRIDE
+    // + REAL_TIME_DATA + active persona card + vibe + vault + correction).
+    // Adding the legacy "you are blaksyd, the user's best friend" prompt on
+    // top of that puts a competing system message right before the user turn
+    // and clobbers the persona — chat replies stay in Friend tone even when
+    // the user has switched to Astrologer/Therapist/etc.
+    //
+    // So: in symp mode, pass raw user/assistant turns only. In legacy
+    // /api/chat mode (no server-side stack), keep the old behaviour.
     _withSystem(messages) {
+        if (window.symp) return messages; // server provides the full stack
+
         const userCtx    = window.blakcideUserContext || '';
         const basePrompt = (userCtx && messages[0]?.role !== 'system')
             ? SYSTEM_PROMPT + `\n\n━━━ ABOUT THIS USER (weave in naturally, never announce) ━━━\n${userCtx}`
@@ -251,37 +263,43 @@ window.BlakcideAI = {
             : [{ role: 'system', content: basePrompt }, ...messages];
     },
 
+    // Strip any leading system message — used for the dev-fallback path when
+    // the parent already injected one and we'd otherwise double up.
+    _stripLeadingSystem(messages) {
+        return (messages[0]?.role === 'system') ? messages.slice(1) : messages;
+    },
+
     // ── Standard (buffered) response — used by chat, journal, etc. ───────────
     async getResponse(messages, onToken = null) {
-        const withSystem = this._withSystem(messages);
+        const forSymp = this._withSystem(messages);
 
         // Try real SSE stream from server; collect full reply
         try {
-            const reply = await this._streamCollect(withSystem);
+            const reply = await this._streamCollect(forSymp);
             if (onToken) this._simulateStream(reply, onToken);
             return reply;
         } catch (err) {
             console.warn('BlakcideAI server error:', err.message);
         }
 
-        // Dev fallback — direct OpenAI call
-        return this._devFallback(withSystem, onToken);
+        // Dev fallback — direct OpenAI call. The fallback has no server-side
+        // stack so it MUST get the legacy system prompt to behave at all.
+        const fallbackMsgs = window.symp
+            ? [{ role: 'system', content: SYSTEM_PROMPT }, ...this._stripLeadingSystem(messages)]
+            : forSymp;
+        return this._devFallback(fallbackMsgs, onToken);
     },
 
-    // ── Streaming response for AI Call — fires onSentence as each sentence
-    //   completes, so TTS can start immediately without waiting for full reply.
-    //   Returns final full text via Promise.
-    //
-    //   onSentence(sentence: string, fullSoFar: string)  — called per sentence
-    //   onToken(token: string, fullSoFar: string)         — called per token (for UI)
     async getResponseStreaming(messages, { onSentence, onToken } = {}) {
-        const withSystem = this._withSystem(messages);
+        const forSymp = this._withSystem(messages);
         try {
-            return await this._streamParsed(withSystem, onSentence, onToken);
+            return await this._streamParsed(forSymp, onSentence, onToken);
         } catch (err) {
             console.warn('BlakcideAI streaming error, falling back:', err.message);
-            // Graceful fallback: buffered response, fire onSentence once at end
-            const reply = await this._devFallback(withSystem, onToken);
+            const fallbackMsgs = window.symp
+                ? [{ role: 'system', content: SYSTEM_PROMPT }, ...this._stripLeadingSystem(messages)]
+                : forSymp;
+            const reply = await this._devFallback(fallbackMsgs, onToken);
             if (onSentence && reply) onSentence(reply, reply);
             return reply;
         }
