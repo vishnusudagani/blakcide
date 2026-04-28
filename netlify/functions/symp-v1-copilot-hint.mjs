@@ -19,12 +19,10 @@ import {
 import {
     fetchVaultProfile, fetchRecentJournals, fetchBlaksydProfile,
 } from '../../symp-core/lib/supabase.mjs';
+import { chatComplete, InferenceError } from '../../symp-core/lib/inference.mjs';
 import SympContract from '../../symp-core/contract/endpoints.js';
 
 const { ENDPOINTS, ERROR_CODES } = SympContract;
-
-const OPENAI_KEY = process.env.BLAKCIDE_OPENAI_KEY || process.env.OPENAI_API_KEY || '';
-const MODEL      = 'gpt-4o-mini';
 
 const SYSTEM_PROMPT = `You are the Co-Pilot — a private assistant whispering to a
 human listener during a live mental-wellness session. The seeker NEVER sees
@@ -106,9 +104,6 @@ export default async (req) => {
     if (!target_user_id) {
         return jsonError(ERROR_CODES.BAD_REQUEST, 'target_user_id (seeker) is required', 400, requestId);
     }
-    if (!OPENAI_KEY) {
-        return jsonError(ERROR_CODES.INTERNAL_ERROR, 'OpenAI key not configured', 500, requestId);
-    }
 
     // ── Pull Vault context for the seeker ────────────────────────────────────
     let vault, journals, blaksydProfile;
@@ -152,29 +147,21 @@ export default async (req) => {
     // ── Generate the hint ────────────────────────────────────────────────────
     let hint = '';
     try {
-        const res = await fetch('https://api.openai.com/v1/chat/completions', {
-            method:  'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${OPENAI_KEY}` },
-            body:    JSON.stringify({
-                model:       MODEL,
-                temperature: 0.55,
-                max_tokens:  220,
-                messages: [
-                    { role: 'system', content: SYSTEM_PROMPT },
-                    { role: 'user',   content: userMsg },
-                ],
-            }),
+        const out = await chatComplete({
+            task:        'hint',
+            temperature: 0.55,
+            max_tokens:  220,
+            messages: [
+                { role: 'system', content: SYSTEM_PROMPT },
+                { role: 'user',   content: userMsg },
+            ],
         });
-        if (!res.ok) {
-            const txt = await res.text();
-            logAccess({ requestId, endpoint: ENDPOINTS.COPILOT_HINT, statusCode: 502, latencyMs: Date.now() - t0, userId: user_id, errorCode: 'UPSTREAM_FAILED' });
-            return jsonError(ERROR_CODES.UPSTREAM_FAILED, `OpenAI ${res.status}: ${txt.slice(0, 200)}`, 502, requestId);
-        }
-        const data = await res.json();
-        hint = data.choices?.[0]?.message?.content?.trim() || '';
+        hint = out.content?.trim() || '';
     } catch (e) {
-        logAccess({ requestId, endpoint: ENDPOINTS.COPILOT_HINT, statusCode: 502, latencyMs: Date.now() - t0, userId: user_id, errorCode: 'UPSTREAM_FAILED' });
-        return jsonError(ERROR_CODES.UPSTREAM_FAILED, `Co-pilot fetch failed: ${e.message || e}`, 502, requestId);
+        const status = e instanceof InferenceError ? 502 : 500;
+        const code   = e instanceof InferenceError ? ERROR_CODES.UPSTREAM_FAILED : ERROR_CODES.INTERNAL_ERROR;
+        logAccess({ requestId, endpoint: ENDPOINTS.COPILOT_HINT, statusCode: status, latencyMs: Date.now() - t0, userId: user_id, errorCode: code });
+        return jsonError(code, `Co-pilot fetch failed: ${e.message || e}`, status, requestId);
     }
 
     const risk = vault?.symp_analysis?.risk_level || 'low';

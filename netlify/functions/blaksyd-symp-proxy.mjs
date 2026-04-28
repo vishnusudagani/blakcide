@@ -68,6 +68,18 @@ export default async (req) => {
         'personas', 'persona/state', 'persona/swap',
         'listener/brief', 'listener/vibe-check',
         'diagnostic/turn', 'diagnostic/peek',
+        // Nexus (community module):
+        'nexus/communities', 'nexus/communities/by-slug',
+        'nexus/communities/join', 'nexus/communities/leave',
+        'nexus/feed', 'nexus/posts', 'nexus/comments',
+        'nexus/impacts', 'nexus/me/impact-stats',
+        // Credits — user-facing wallet read + Stripe stub:
+        'credits/balance', 'credits/transactions', 'credits/checkout/start',
+        // Credits — admin (handler enforces profiles.role='admin' itself):
+        'admin/credits/grant', 'admin/credits/lookup', 'admin/users/search',
+        // Admin dashboard feeds (all admin-role-gated server-side):
+        'admin/overview', 'admin/users/list', 'admin/users/detail',
+        'admin/symp-status', 'admin/recent-activity',
         // action-loop/run intentionally omitted — CRON-only, never browser
     ]);
     if (!ALLOWED.has(splat)) {
@@ -85,10 +97,12 @@ export default async (req) => {
     const authUserId = verified.user_id;
 
     // ── 3. Build forwarded request ───────────────────────────────────────
-    // For GET requests, override any user_id query param with the JWT-derived
-    // one so a compromised client cannot read someone else's vibe/persona/etc.
+    // For GET requests, always stamp user_id from the verified JWT. This
+    // both overrides any client-supplied value (so a compromised client
+    // cannot read someone else's data) and adds it when absent (so handlers
+    // that need it but didn't have it in the query receive it consistently).
     const fwdSearch = new URLSearchParams(incoming.search || '');
-    if (fwdSearch.has('user_id')) fwdSearch.set('user_id', authUserId);
+    fwdSearch.set('user_id', authUserId);
     const fwdQs = fwdSearch.toString();
     const targetUrl = `${incoming.origin}${SYMP_API_BASE}/${splat}${fwdQs ? '?' + fwdQs : ''}`;
 

@@ -32,13 +32,10 @@ import {
 } from '../../symp-core/lib/middleware.mjs';
 import { buildVaultContextMessage } from '../../symp-core/lib/vault-context.mjs';
 import { CRITICAL_OVERRIDE_TEXT }    from '../../symp-core/lib/system-prompt.mjs';
+import { chatComplete }              from '../../symp-core/lib/inference.mjs';
 import SympContract from '../../symp-core/contract/endpoints.js';
 
 const { ENDPOINTS, ERROR_CODES, SYMP_REQUEST_ID_HEADER } = SympContract;
-
-// Generation model — kept on plain gpt-4o (no web search needed for a
-// 1-sentence proactive ping; we want speed + low cost).
-const MODEL = 'gpt-4o';
 
 // Hard cap on output. The model is told to stay short, but we also clip
 // the length on the way out as a backstop — push systems often truncate
@@ -130,12 +127,6 @@ export default async (req) => {
         return jsonError(ERROR_CODES.MISSING_USER_ID, 'user_id is required', 400, requestId);
     }
 
-    const openaiKey = process.env.BLAKCIDE_OPENAI_KEY || process.env.OPENAI_API_KEY;
-    if (!openaiKey) {
-        logAccess({ requestId, endpoint, statusCode: 500, latencyMs: Date.now() - t0, errorCode: 'INTERNAL_ERROR', userId: user_id });
-        return jsonError(ERROR_CODES.INTERNAL_ERROR, 'OpenAI key not configured', 500, requestId);
-    }
-
     // ── Pull Vault context ───────────────────────────────────────────────
     let vaultContent = '';
     try {
@@ -151,25 +142,18 @@ export default async (req) => {
     // ── Generate ─────────────────────────────────────────────────────────
     let payload = null;
     try {
-        const res = await fetch('https://api.openai.com/v1/chat/completions', {
-            method:  'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${openaiKey}` },
-            body:    JSON.stringify({
-                model:           MODEL,
-                messages:        [
-                    { role: 'system', content: systemPrompt },
-                    { role: 'user',   content: `${USER_TURN} (trigger: ${trigger})` },
-                ],
-                temperature:     0.85,
-                max_tokens:      200,
-                response_format: { type: 'json_object' },
-            }),
-            signal: AbortSignal.timeout(15000),
+        const out = await chatComplete({
+            task: 'proactive',
+            messages: [
+                { role: 'system', content: systemPrompt },
+                { role: 'user',   content: `${USER_TURN} (trigger: ${trigger})` },
+            ],
+            temperature:     0.85,
+            max_tokens:      200,
+            response_format: { type: 'json_object' },
+            timeoutMs:       15000,
         });
-        if (!res.ok) throw new Error(`OpenAI ${res.status}: ${(await res.text()).slice(0, 200)}`);
-        const data    = await res.json();
-        const content = data?.choices?.[0]?.message?.content || '';
-        try { payload = JSON.parse(content); } catch (_) { payload = null; }
+        try { payload = JSON.parse(out.content); } catch (_) { payload = null; }
     } catch (e) {
         console.warn(`[proactive-checkin] generation failed for ${user_id}: ${e.message}`);
         payload = null;

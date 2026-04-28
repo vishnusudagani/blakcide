@@ -3,11 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Listener Console — Blakcide</title>
+    <title>Listener Console — Blaksyd</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="app-style.css">
+    <link rel="stylesheet" href="blakcide-ui-v3.css">
     <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
     <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
     <style>
@@ -564,7 +565,9 @@
 
     <!-- ── Top Bar ── -->
     <header class="lc-topbar">
-        <span class="lc-brand">Blakcide</span>
+        <span class="lc-brand" style="display:inline-flex;align-items:center;">
+            <img src="blaksyd-logo-white.png" alt="Blaksyd" style="height:22px;width:auto;max-width:110px;object-fit:contain;display:block;">
+        </span>
         <div style="display:flex;align-items:center;gap:10px;">
             <span id="status-indicator-text">Offline</span>
             <!-- Status toggle pill -->
@@ -785,5 +788,6 @@ window.addEventListener('load', () => {
     if (btnText) observer.observe(btnText, { characterData: true, childList: true, subtree: true });
 });
 </script>
+<script src="blakcide-ui-v3.js"></script>
 </body>
 </html>

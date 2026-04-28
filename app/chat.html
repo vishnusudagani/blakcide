@@ -3,8 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>BLAKCIDE</title>
+    <title>Echo – Blaksyd</title>
     <link rel="stylesheet" href="app-style.css">
+    <link rel="stylesheet" href="blakcide-ui-v3.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,500;0,600&display=swap" rel="stylesheet">
@@ -147,7 +148,9 @@
     <!-- ── SIDEBAR ── -->
     <aside class="sidebar glass-panel" id="main-sidebar">
         <div class="sidebar-header">
-            <button id="home-btn" class="brand-small-btn">BLAKCIDE</button>
+            <button id="home-btn" class="brand-small-btn" style="display:inline-flex;align-items:center;">
+                <img src="blaksyd-logo-white.png" alt="Blaksyd" style="height:22px;width:auto;max-width:110px;object-fit:contain;display:block;">
+            </button>
             <button id="toggle-sidebar-btn" class="collapse-btn">
                 <ion-icon name="chevron-back"></ion-icon>
             </button>
@@ -180,13 +183,16 @@
                 <ion-icon name="home-outline"></ion-icon><span>Home</span>
             </a>
             <a class="snav-item active" href="chat.html">
-                <ion-icon name="sparkles-outline"></ion-icon><span>AI Chat</span>
+                <ion-icon name="sparkles-outline"></ion-icon><span>Echo</span>
             </a>
             <a class="snav-item" href="journal.html">
                 <ion-icon name="book-outline"></ion-icon><span>Journal</span>
             </a>
             <a class="snav-item" href="connect.html">
-                <ion-icon name="people-outline"></ion-icon><span>Connect</span>
+                <ion-icon name="people-outline"></ion-icon><span>Listeners</span>
+            </a>
+            <a class="snav-item" href="nexus.html">
+                <ion-icon name="planet-outline"></ion-icon><span>Nexus</span>
             </a>
         </nav>
 
@@ -222,7 +228,7 @@
             <button id="mobile-menu-btn" class="mobile-menu-btn">
                 <ion-icon name="menu-outline"></ion-icon>
             </button>
-            <span class="mobile-chat-title" id="mobile-chat-title">AI Companion</span>
+            <span class="mobile-chat-title" id="mobile-chat-title">Echo</span>
             <!-- Persona picker — click to swap mode (or just say "be my astrologer" mid-chat) -->
             <button id="persona-picker-btn" class="persona-picker-btn" title="Choose mode"
                 onclick="window.togglePersonaPicker && window.togglePersonaPicker()">
@@ -230,6 +236,12 @@
                 <span class="persona-picker-label" id="persona-picker-label">Friend</span>
                 <ion-icon name="chevron-down-outline" style="font-size:0.8rem;opacity:0.7;"></ion-icon>
             </button>
+            <a id="invite-friend-btn" class="invite-friend-btn v3-press"
+                href="group-chat.html"
+                title="Invite a friend — Echo mediates between you both">
+                <ion-icon name="person-add-outline"></ion-icon>
+                <span class="invite-friend-label">Invite friend</span>
+            </a>
             <button id="ai-call-trigger-btn" class="ai-call-trigger-btn"
                 title="Start AI Voice Call"
                 onclick="window.startAICall && window.startAICall()">
@@ -365,7 +377,7 @@
     <div class="ai-call-avatar" id="ai-call-avatar-el">
         <span style="font-size:2.4rem;color:var(--accent);opacity:0.8;">✦</span>
     </div>
-    <div class="ai-call-name">BLAKCIDE AI</div>
+    <div class="ai-call-name">Echo</div>
     <div class="ai-call-status" id="ai-call-status">Connecting…</div>
     <div class="ai-call-timer"  id="ai-call-timer">0:00</div>
     <div id="ai-call-transcript"></div>
@@ -384,6 +396,7 @@
 
 <script src="/symp-core/contract/endpoints.js"></script>
 <script src="/symp-core/sdk/symp-client.js"></script>
+<script src="blakcide-ui-v3.js"></script>
 <script src="sidebar-common.js"></script>
 <script src="ai-service.js"></script>
 <script src="app.js"></script>

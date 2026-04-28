@@ -3,11 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Blakcide</title>
+    <title>Blaksyd</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="app-style.css">
+    <link rel="stylesheet" href="blakcide-ui-v3.css">
     <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
     <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -55,7 +56,26 @@
             justify-content: space-between;
             flex-shrink: 0;
             z-index: 50;
+            overflow: hidden;          /* prevent oversized logo bleed */
         }
+        .dash-mobile-brand {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            line-height: 1;
+            min-width: 0;
+            overflow: hidden;
+        }
+        .dash-mobile-logo {
+            height: 22px;
+            width: auto;
+            max-width: 130px;
+            object-fit: contain;
+            display: block;
+            flex-shrink: 0;
+        }
+        /* The PNG already contains the "blaksyd" wordmark — hide the duplicate text. */
+        .dash-mobile-wordmark { display: none; }
         @media (max-width: 768px) {
             .dash-mobile-header { display: flex; }
             .home-header { display: none; }
@@ -285,7 +305,9 @@
 <!-- ── SIDEBAR ── -->
 <aside class="sidebar glass-panel" id="main-sidebar">
     <div class="sidebar-header">
-        <span class="brand-small-btn" style="cursor:default;">BLAKCIDE</span>
+        <span class="brand-small-btn" style="cursor:default;display:inline-flex;align-items:center;">
+            <img src="blaksyd-logo-white.png" alt="Blaksyd" style="height:22px;width:auto;max-width:110px;object-fit:contain;display:block;">
+        </span>
         <button id="toggle-sidebar-btn" class="collapse-btn">
             <ion-icon name="chevron-back-outline"></ion-icon>
         </button>
@@ -298,13 +320,16 @@
             <ion-icon name="home"></ion-icon><span>Home</span>
         </a>
         <a class="snav-item" href="chat.html">
-            <ion-icon name="sparkles-outline"></ion-icon><span>AI Chat</span>
+            <ion-icon name="sparkles-outline"></ion-icon><span>Echo</span>
         </a>
         <a class="snav-item" href="journal.html">
             <ion-icon name="book-outline"></ion-icon><span>Journal</span>
         </a>
         <a class="snav-item" href="connect.html">
-            <ion-icon name="people-outline"></ion-icon><span>Connect</span>
+            <ion-icon name="people-outline"></ion-icon><span>Listeners</span>
+        </a>
+        <a class="snav-item" href="nexus.html">
+            <ion-icon name="planet-outline"></ion-icon><span>Nexus</span>
         </a>
     </nav>
 
@@ -353,22 +378,27 @@
 <!-- ── MAIN CONTENT ── -->
 <div class="dashboard-main">
 
-<!-- Mobile header -->
+<!-- Mobile header (hidden on desktop, the desktop header below renders instead) -->
 <div class="dash-mobile-header">
     <button class="mobile-menu-btn" id="mobile-menu-btn">
         <ion-icon name="menu-outline"></ion-icon>
     </button>
-    <span style="font-weight:700;font-size:0.88rem;letter-spacing:3px;opacity:0.4;text-transform:uppercase;">BLAKCIDE</span>
-    <button id="logout-btn" class="mobile-menu-btn" title="Logout" style="font-size:1.2rem;">
+    <span class="dash-mobile-brand">
+        <img src="blaksyd-logo-white.png" alt="" class="dash-mobile-logo">
+        <span class="dash-mobile-wordmark">BLAKSYD</span>
+    </span>
+    <button id="logout-btn-mobile" class="mobile-menu-btn" title="Logout" style="font-size:1.2rem;">
         <ion-icon name="log-out-outline"></ion-icon>
     </button>
 </div>
 
 <div class="home-wrap">
 
-    <!-- Header -->
+    <!-- Header (desktop only — mobile header above takes its place under 880px) -->
     <header class="home-header">
-        <span class="home-brand">Blakcide</span>
+        <span class="home-brand" style="display:inline-flex;align-items:center;opacity:0.85;">
+            <img src="blaksyd-logo-white.png" alt="Blaksyd" style="height:26px;width:auto;max-width:140px;object-fit:contain;display:block;">
+        </span>
         <div style="display:flex;align-items:center;gap:4px;">
             <button id="logout-btn" class="header-icon-btn" title="Logout">
                 <ion-icon name="log-out-outline"></ion-icon>
@@ -382,82 +412,84 @@
             <img class="global-avatar home-avatar" src="" alt="Avatar">
         </div>
         <div class="home-greeting-text">
-            <div class="home-greeting" id="time-greeting">Good morning</div>
+            <div class="home-greeting" id="time-greeting" data-v3-greeting>Good morning</div>
             <div class="home-name global-name">Welcome back</div>
         </div>
         <ion-icon name="chevron-forward-outline" style="font-size:0.9rem;color:var(--text-3);opacity:0.5;"></ion-icon>
     </div>
 
-    <!-- Section label -->
-    <p class="section-label">Your Sanctuary</p>
-
-    <!-- 3 Feature cards -->
-    <div class="feature-cards">
-
-        <div class="feature-card card-ai" onclick="window.location.href='chat.html'">
-            <div class="fc-icon-wrap">
-                <ion-icon name="sparkles"></ion-icon>
-            </div>
-            <div class="fc-text">
-                <div class="fc-label">AI Companion</div>
-                <div class="fc-desc">Your intelligent, always-on friend</div>
-                <div class="fc-chips">
-                    <span class="fc-chip">Chat</span>
-                    <span class="fc-chip">Voice Call</span>
+    <!-- ── v3 HERO: streak + momentum + meta ─────────────────────────── -->
+    <section class="v3-hero v3-rise" data-d="1" aria-label="Your momentum">
+        <div class="v3-hero-row">
+            <div class="v3-ring" id="dash-streak-ring" data-target="42" style="--p:0;--sz:104px;">
+                <div>
+                    <div class="v3-ring-num" id="dash-streak-num">3</div>
+                    <span class="v3-ring-label">Day streak</span>
                 </div>
             </div>
-            <ion-icon name="chevron-forward-outline" class="fc-arrow"></ion-icon>
+            <div class="v3-hero-text">
+                <div class="v3-hero-eyebrow">Your week so far</div>
+                <h2 class="v3-hero-title">You showed up <span style="color:var(--pulse-1);">three days in a row</span>.</h2>
+                <p class="v3-hero-sub">Tiny steps build a quieter mind. Keep going at your own pace.</p>
+            </div>
         </div>
-
-        <div class="feature-card card-journal" onclick="window.location.href='journal.html'">
-            <div class="fc-icon-wrap">
-                <ion-icon name="book-outline"></ion-icon>
+        <div class="v3-hero-meta">
+            <div class="v3-meta-cell">
+                <div class="v3-meta-num" id="dash-meta-chats">12<small>×</small></div>
+                <span class="v3-meta-lbl">Chats</span>
             </div>
-            <div class="fc-text">
-                <div class="fc-label">Living Journal</div>
-                <div class="fc-desc">Capture thoughts, moods & moments</div>
-                <div class="fc-chips">
-                    <span class="fc-chip">Write</span>
-                    <span class="fc-chip">Reflect</span>
-                    <span class="fc-chip">Memories</span>
-                </div>
+            <div class="v3-meta-cell">
+                <div class="v3-meta-num" id="dash-meta-entries">5<small>×</small></div>
+                <span class="v3-meta-lbl">Journal</span>
             </div>
-            <ion-icon name="chevron-forward-outline" class="fc-arrow"></ion-icon>
+            <div class="v3-meta-cell">
+                <div class="v3-meta-num"><span class="v3-pulse-dot" style="margin-right:5px;"></span><span id="dash-meta-listeners">2</span></div>
+                <span class="v3-meta-lbl">Listeners online</span>
+            </div>
         </div>
+    </section>
 
-        <div class="feature-card card-connect" onclick="window.location.href='connect.html'">
-            <div class="fc-icon-wrap">
-                <ion-icon name="people-outline"></ion-icon>
-            </div>
-            <div class="fc-text">
-                <div class="fc-label">Human Connect</div>
-                <div class="fc-desc">Talk to a real, verified listener</div>
-                <div class="fc-chips">
-                    <span class="fc-chip">Chat</span>
-                    <span class="fc-chip">Voice Call</span>
-                </div>
-            </div>
-            <ion-icon name="chevron-forward-outline" class="fc-arrow"></ion-icon>
-        </div>
+    <!-- ── v3 FOCUS: today's invitation (single primary CTA) ─────────── -->
+    <a class="v3-focus v3-rise v3-press" data-d="2" data-v3-invite href="chat.html?call=1">
+        <span class="v3-focus-icon"><ion-icon name="leaf-outline"></ion-icon></span>
+        <span class="v3-focus-text">
+            <div class="v3-focus-eyebrow">Today's invitation</div>
+            <div class="v3-focus-title">Take one slow breath together.</div>
+            <div class="v3-focus-sub">A 30-second pause. Just you and Echo.</div>
+        </span>
+        <ion-icon class="v3-focus-arrow" name="arrow-forward-outline"></ion-icon>
+    </a>
 
-        <div class="feature-card" onclick="window.location.href='group-chat.html'"
-             style="border-color:rgba(160,103,255,0.3);background:linear-gradient(135deg,rgba(160,103,255,0.08),rgba(0,212,170,0.06));">
-            <div class="fc-icon-wrap" style="background:rgba(160,103,255,0.15);">
-                <ion-icon name="chatbubbles-outline" style="color:#a067ff;"></ion-icon>
-            </div>
-            <div class="fc-text">
-                <div class="fc-label">Group Chat</div>
-                <div class="fc-desc">Chat with a friend · AI mediates</div>
-                <div class="fc-chips">
-                    <span class="fc-chip">Telugu</span>
-                    <span class="fc-chip">Hindi</span>
-                    <span class="fc-chip">English</span>
-                </div>
-            </div>
-            <ion-icon name="chevron-forward-outline" class="fc-arrow"></ion-icon>
-        </div>
-
+    <!-- ── v3 QUICK ACTIONS — single source of truth, no duplicates ──── -->
+    <div class="v3-quick v3-rise" data-d="3">
+        <a class="v3-quick-item v3-press" href="chat.html">
+            <ion-icon name="sparkles-outline"></ion-icon>
+            <div class="v3-quick-label">Echo</div>
+            <div class="v3-quick-sub">Your AI companion. Text or voice.</div>
+        </a>
+        <a class="v3-quick-item v3-press tone-iris" href="journal.html">
+            <ion-icon name="create-outline"></ion-icon>
+            <div class="v3-quick-label">Journal</div>
+            <div class="v3-quick-sub">A line a day is enough.</div>
+        </a>
+        <a class="v3-quick-item v3-press tone-coral" href="connect.html">
+            <ion-icon name="people-outline"></ion-icon>
+            <div class="v3-quick-label">Listener</div>
+            <div class="v3-quick-sub">A real human, on call.</div>
+        </a>
+        <a class="v3-quick-item v3-press tone-amber" href="nexus.html">
+            <ion-icon name="planet-outline"></ion-icon>
+            <div class="v3-quick-label">Nexus &nbsp;<span style="font-size:0.62rem;font-weight:800;padding:2px 7px;border-radius:6px;background:rgba(255,179,51,0.15);color:#ffb733;letter-spacing:0.6px;">NEW</span></div>
+            <div class="v3-quick-sub">Anonymous communities.</div>
+        </a>
     </div>
+
+    <!-- Section label -->
+    <p class="section-label v3-rise" data-d="4" style="display:none;">Your Sanctuary</p>
+
+    <!-- Feature cards intentionally removed — the four v3-quick tiles above
+         are the single source of truth for navigation. -->
+    <div class="feature-cards" hidden></div>
 
     <!-- Mood check-in -->
     <div class="mood-section">
@@ -499,7 +531,7 @@
     <div class="glass-pane profile-pane-wide" style="display:flex;flex-direction:column;padding:0;background:var(--bg);">
         <div class="mobile-top-header" style="display:flex;border-radius:var(--r-lg) var(--r-lg) 0 0;border-bottom:1px solid var(--border);height:54px;">
             <button class="brand-small-btn" id="close-journal-btn"><ion-icon name="close-outline" style="font-size:1.4rem;"></ion-icon></button>
-            <span class="view-title" style="margin:0;font-style:normal;font-weight:600;">Living Journal</span>
+            <span class="view-title" style="margin:0;font-style:normal;font-weight:600;">Journal</span>
             <button class="brand-small-btn" id="write-new-journal-btn"><ion-icon name="create-outline" style="font-size:1.4rem;"></ion-icon></button>
         </div>
         <div id="journal-list-view" style="flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:8px;"></div>
@@ -516,6 +548,34 @@
 <script src="spotify-auth.js"></script>
 <script src="profile-manager.js"></script>
 <script src="nav-bar.js"></script>
+<script src="blakcide-ui-v3.js"></script>
+<script>
+// v3 — try to populate the hero ring with the user's real streak/metrics.
+// Fully optional: every selector falls back to the seeded "endowed progress"
+// defaults already rendered in the HTML, so the hero never goes blank.
+(function v3HydrateHero() {
+    function setRing(target) {
+        const ring = document.getElementById('dash-streak-ring');
+        const num  = document.getElementById('dash-streak-num');
+        if (!ring) return;
+        // Map streak (days) → ring percentage. Goal = 7-day streak.
+        const days = Math.max(0, Math.min(99, Number(target) || 0));
+        const pct  = Math.min(100, Math.round((days / 7) * 100));
+        ring.setAttribute('data-target', String(pct));
+        if (num) num.textContent = String(days);
+        if (window.blakcideAnimateRings) window.blakcideAnimateRings();
+    }
+    // 1) Try the existing client cache (set by other pages).
+    try {
+        const cached = JSON.parse(localStorage.getItem('blakcide-streak') || 'null');
+        if (cached && typeof cached.days === 'number') return setRing(cached.days);
+    } catch (_) {}
+    // 2) Fallback — keep the friendly seed value of 3 already in the HTML;
+    //    just animate the ring to the matching percentage so it never
+    //    sits empty.
+    setRing(3);
+})();
+</script>
 <script>
 // Mobile sidebar wiring for dashboard
 (function() {

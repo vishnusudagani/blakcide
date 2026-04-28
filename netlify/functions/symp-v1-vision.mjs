@@ -6,6 +6,7 @@ import {
     corsPreflight, getRequestId, validateApiKey, jsonSuccess, jsonError,
     readJson, logAccess,
 } from '../../symp-core/lib/middleware.mjs';
+import { chatComplete, InferenceError } from '../../symp-core/lib/inference.mjs';
 import SympContract from '../../symp-core/contract/endpoints.js';
 
 const { ENDPOINTS, ERROR_CODES } = SympContract;
@@ -35,41 +36,33 @@ export default async (req) => {
         return jsonError(ERROR_CODES.BAD_REQUEST, 'imageUrl is required', 400, requestId);
     }
 
-    const openaiKey = process.env.BLAKCIDE_OPENAI_KEY || process.env.OPENAI_API_KEY;
-    if (!openaiKey) {
-        return jsonError(ERROR_CODES.INTERNAL_ERROR, 'OpenAI key not configured', 500, requestId);
-    }
-
     try {
-        const res = await fetch('https://api.openai.com/v1/chat/completions', {
-            method:  'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${openaiKey}` },
-            body: JSON.stringify({
-                model:      'gpt-4o-mini',
-                max_tokens: 200,
-                messages: [{
-                    role: 'user',
-                    content: [
-                        { type: 'text', text: PROMPT },
-                        { type: 'image_url', image_url: { url: imageUrl, detail: 'low' } },
-                    ],
-                }],
-            }),
+        const out = await chatComplete({
+            task:       'vision',
+            max_tokens: 200,
+            temperature: 0.7,
+            messages: [{
+                role: 'user',
+                content: [
+                    { type: 'text', text: PROMPT },
+                    { type: 'image_url', image_url: { url: imageUrl, detail: 'low' } },
+                ],
+            }],
         });
 
-        const data = await res.json();
-        if (!res.ok) {
-            logAccess({ requestId, endpoint: ENDPOINTS.VISION, statusCode: 200, latencyMs: Date.now() - t0, userId: user_id || null, errorCode: 'UPSTREAM_FAILED' });
-            // Soft-fail: return a generic description so the calling flow doesn't break.
-            return jsonSuccess({ description: 'An image was shared.' }, requestId);
-        }
-
-        const description = data.choices?.[0]?.message?.content?.trim() || 'An image was shared.';
+        const description = out.content?.trim() || 'An image was shared.';
         logAccess({ requestId, endpoint: ENDPOINTS.VISION, statusCode: 200, latencyMs: Date.now() - t0, userId: user_id || null });
         return jsonSuccess({ description }, requestId);
     } catch (e) {
-        logAccess({ requestId, endpoint: ENDPOINTS.VISION, statusCode: 500, latencyMs: Date.now() - t0, userId: user_id || null, errorCode: 'INTERNAL_ERROR' });
-        return jsonError(ERROR_CODES.INTERNAL_ERROR, `Vision error: ${e.message || e}`, 500, requestId);
+        const isUpstream = e instanceof InferenceError;
+        logAccess({
+            requestId, endpoint: ENDPOINTS.VISION,
+            statusCode: 200, latencyMs: Date.now() - t0,
+            userId: user_id || null,
+            errorCode: isUpstream ? 'UPSTREAM_FAILED' : 'INTERNAL_ERROR',
+        });
+        // Soft-fail: return a generic description so the calling flow doesn't break.
+        return jsonSuccess({ description: 'An image was shared.' }, requestId);
     }
 };
 

@@ -1,12 +1,14 @@
 // Post-session summariser. Takes a completed transcript and produces a
 // 2–4 paragraph first-person journal entry plus a best-effort extraction of
-// names / emotions / times / specifics. Uses gpt-4o-mini (cheap, fast, and
-// plenty for summarisation).
+// names / emotions / times / specifics.
+//
+// Routed through the inference router. Default task=summary → gpt-4o-mini.
+// Switch with SYMP_LLM_PROVIDER or SYMP_LLM_MODEL_SUMMARY.
 //
 // Output contract:
 //   { summary: string, extracted: { names, emotions, times, specifics } }
 
-const OPENAI_KEY = process.env.BLAKCIDE_OPENAI_KEY || process.env.OPENAI_API_KEY;
+import { chatComplete } from './inference.mjs';
 
 const SYSTEM_PROMPT = `You are Symp.ai's post-session journaler.
 Read the transcript of a completed session between a user and either the Blaksyd AI companion or a human listener, and produce a concise first-person journal entry from the USER's perspective (2–4 short paragraphs). Capture emotional arc, what they opened up about, and anything they committed to or resolved.
@@ -44,8 +46,6 @@ function safeParseJson(text) {
 }
 
 export async function summariseSession({ sessionType, transcript, startedAt, endedAt }) {
-    if (!OPENAI_KEY) throw new Error('OpenAI key not configured');
-
     const flat = flattenTranscript(transcript);
     if (!flat) {
         return { summary: '', extracted: { names: [], emotions: [], times: [], specifics: [] } };
@@ -61,28 +61,18 @@ export async function summariseSession({ sessionType, transcript, startedAt, end
         '--- END TRANSCRIPT ---',
     ].filter(Boolean).join('\n');
 
-    const res = await fetch('https://api.openai.com/v1/chat/completions', {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${OPENAI_KEY}` },
-        body: JSON.stringify({
-            model:           'gpt-4o-mini',
-            response_format: { type: 'json_object' },
-            messages: [
-                { role: 'system', content: SYSTEM_PROMPT },
-                { role: 'user',   content: userPrompt },
-            ],
-            temperature: 0.4,
-            max_tokens:  800,
-        }),
+    const out = await chatComplete({
+        task:            'summary',
+        response_format: { type: 'json_object' },
+        messages: [
+            { role: 'system', content: SYSTEM_PROMPT },
+            { role: 'user',   content: userPrompt },
+        ],
+        temperature: 0.4,
+        max_tokens:  800,
     });
 
-    if (!res.ok) {
-        const errText = await res.text();
-        throw new Error(`OpenAI summarise failed: ${res.status} ${errText}`);
-    }
-
-    const data    = await res.json();
-    const content = data.choices?.[0]?.message?.content || '';
+    const content = out.content;
     const parsed  = safeParseJson(content);
 
     if (!parsed || typeof parsed.summary !== 'string') {

@@ -1929,6 +1929,18 @@ NEVER: Start with "I". Sound like customer service. Say "As an AI".${userCtx}`;
     }
 
     // POST /persona/swap → update local state → close menu → toast.
+    // Persona id is also kept in localStorage as a soft fallback so we can
+    // recover the user's last choice if the backend persona/state endpoint
+    // is briefly unreachable (network blip, cold-start) and so the pill
+    // never silently drops back to 'friend' on a slow page load.
+    const PERSONA_LS_KEY = 'blaksyd.activePersona';
+    function _stashPersonaLocal(id) {
+        try { localStorage.setItem(PERSONA_LS_KEY, id); } catch (_) {}
+    }
+    function _readPersonaLocal() {
+        try { return localStorage.getItem(PERSONA_LS_KEY) || null; } catch (_) { return null; }
+    }
+
     async function _swapPersona(personaId) {
         if (!PERSONA_META[personaId]) return;
         if (personaId === _activePersona) {
@@ -1942,55 +1954,131 @@ NEVER: Start with "I". Sound like customer service. Say "As an AI".${userCtx}`;
         const prev = _activePersona;
         _activePersona = personaId;
         _renderPersonaPill();
+        _stashPersonaLocal(personaId);
         const menu = document.getElementById('persona-picker-menu');
         if (menu) menu.setAttribute('hidden', '');
 
-        try {
-            const session = window._sbClient && (await window._sbClient.auth.getSession()).data?.session;
-            const token = session?.access_token;
-            if (!token) {
-                _personaToast('Please sign in first');
-                _activePersona = prev; _renderPersonaPill();
-                return;
+        // Resolve auth token. We retry briefly because Supabase init is async
+        // and on freshly-loaded chat.html the very first tap can land before
+        // the SDK has finished hydrating the session.
+        async function _waitForToken(attempts = 4) {
+            for (let i = 0; i < attempts; i++) {
+                const sb = window._sbClient;
+                const session = sb && (await sb.auth.getSession()).data?.session;
+                if (session?.access_token) return session.access_token;
+                await new Promise(r => setTimeout(r, 300 + i * 200));
             }
-            const res = await fetch('/api/blaksyd/symp/persona/swap', {
+            return null;
+        }
+
+        const token = await _waitForToken();
+        if (!token) {
+            // No auth — definitely a hard fail. Revert and prompt sign-in.
+            _activePersona = prev; _renderPersonaPill();
+            _personaToast('Please sign in first');
+            return;
+        }
+
+        let res;
+        try {
+            res = await fetch('/api/blaksyd/symp/persona/swap', {
                 method:  'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                 body:    JSON.stringify({ persona: personaId, reason: 'user picked from menu' }),
             });
-            if (!res.ok) {
-                const d = await res.json().catch(() => ({}));
-                throw new Error(d?.error?.message || `swap failed (${res.status})`);
-            }
-            _personaToast(`✓ Now in ${PERSONA_META[personaId].label} mode`);
+        } catch (netErr) {
+            // Network-layer failure: keep the optimistic flip, surface a
+            // soft "Saved on this device" toast so the user understands
+            // their next message will use the new mode locally even if
+            // the server didn't acknowledge yet. No revert — the pill
+            // matches what the user wanted.
+            console.warn('[persona] swap network error:', netErr?.message || netErr);
+            _personaToast(`✓ ${PERSONA_META[personaId].label} mode (offline)`);
+            return;
+        }
 
-            // If a voice call is live, replay the canonical config so the
-            // next utterance picks up the new persona card. The server
-            // rebuilds instructions on the next session.update.
+        if (res.ok) {
+            try { await _hydrateActivePersona(); } catch (_) {}
+            _personaToast(`✓ Now in ${PERSONA_META[personaId].label} mode`);
             if (_rtActive && typeof _rtUpdateSession === 'function') {
                 try { _rtUpdateSession(); } catch (_) {}
             }
-        } catch (e) {
-            console.warn('[persona] swap failed:', e.message);
-            _personaToast('Couldn\'t switch — try again');
-            _activePersona = prev; _renderPersonaPill();
+            return;
         }
+
+        // Non-OK — distinguish "the server rejected the swap" (hard error,
+        // revert) from "transient upstream issue" (keep flip, soft toast).
+        let errMsg = '';
+        let errCode = '';
+        try {
+            const d = await res.json();
+            errMsg  = d?.error?.message || '';
+            errCode = d?.error?.code    || '';
+        } catch (_) {}
+        const hardReject =
+            res.status === 400 ||
+            res.status === 409 ||
+            errCode === 'BAD_REQUEST' ||
+            /invalid persona|locked/i.test(errMsg);
+
+        if (hardReject) {
+            console.warn(`[persona] swap rejected: ${res.status} ${errCode} ${errMsg}`);
+            _activePersona = prev; _renderPersonaPill();
+            _stashPersonaLocal(prev);
+            _personaToast(errMsg || "That mode isn't available right now");
+            return;
+        }
+
+        // 401 / 502 / 504 / 500 etc. — keep optimistic flip, schedule a
+        // background retry so the server eventually catches up.
+        console.warn(`[persona] swap upstream issue: ${res.status} — retrying in background`);
+        _personaToast(`✓ ${PERSONA_META[personaId].label} mode (syncing…)`);
+        setTimeout(async () => {
+            try {
+                const t = await _waitForToken(2);
+                if (!t) return;
+                await fetch('/api/blaksyd/symp/persona/swap', {
+                    method:  'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${t}` },
+                    body:    JSON.stringify({ persona: personaId, reason: 'background retry' }),
+                });
+            } catch (_) {}
+        }, 6000);
     }
 
     // Read current persona from server on page load. Falls back to 'friend'.
-    async function _hydrateActivePersona() {
+    // Retries up to 6× over ~12s until Supabase auth is ready, since the
+    // page's Supabase init is async — the 600ms one-shot used to lose the
+    // race and leave the pill stuck on 'friend' even when the user had
+    // already switched personas in a previous session.
+    async function _hydrateActivePersona({ attempt = 0 } = {}) {
+        // 1. Pre-fill from localStorage IMMEDIATELY so the pill never shows
+        //    a stale 'friend' default while we round-trip to the server.
+        const stashed = _readPersonaLocal();
+        if (stashed && PERSONA_META[stashed]) _activePersona = stashed;
+
         try {
-            const session = window._sbClient && (await window._sbClient.auth.getSession()).data?.session;
+            const sb = window._sbClient;
+            const session = sb && (await sb.auth.getSession()).data?.session;
             const token = session?.access_token;
-            if (!token) { _renderPersonaPill(); return; }
+            if (!token) {
+                if (attempt < 6) {
+                    setTimeout(() => _hydrateActivePersona({ attempt: attempt + 1 }), 1500 + attempt * 400);
+                }
+                _renderPersonaPill();
+                return;
+            }
             const res = await fetch('/api/blaksyd/symp/persona/state?user_id=self', {
                 headers: { 'Authorization': `Bearer ${token}` },
             });
             if (!res.ok) { _renderPersonaPill(); return; }
             const d = await res.json();
             const id = d?.data?.active_persona;
-            if (id && PERSONA_META[id]) _activePersona = id;
-        } catch (_) { /* ignore */ }
+            if (id && PERSONA_META[id]) {
+                _activePersona = id;
+                _stashPersonaLocal(id);
+            }
+        } catch (_) { /* keep stashed value */ }
         _renderPersonaPill();
     }
 
@@ -2000,6 +2088,7 @@ NEVER: Start with "I". Sound like customer service. Say "As an AI".${userCtx}`;
     window.notifyPersonaSwapped = function (personaId) {
         if (!PERSONA_META[personaId]) return;
         _activePersona = personaId;
+        _stashPersonaLocal(personaId);
         _renderPersonaPill();
         _personaToast(`✓ Now in ${PERSONA_META[personaId].label} mode`);
     };

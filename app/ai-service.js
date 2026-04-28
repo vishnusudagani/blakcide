@@ -423,12 +423,23 @@ window.BlakcideAI = {
     },
 
     // ── Dev fallback — direct OpenAI call when server unavailable ────────────
+    // SECURITY: in production we NEVER prompt the user for an API key. The
+    // dev fallback only fires when the host is localhost / 127.0.0.1 AND a
+    // key has been set manually via `localStorage.setItem('BLAKCIDE_DEV_KEY', …)`.
+    // On prod, we surface a friendly retry message so the user isn't yelled at
+    // by a `prompt()` dialog when the upstream is hiccuping.
     async _devFallback(messages, onToken) {
-        let devKey = localStorage.getItem('BLAKCIDE_DEV_KEY');
+        const isLocal =
+            location.hostname === 'localhost' ||
+            location.hostname === '127.0.0.1' ||
+            location.hostname.endsWith('.local');
+        const devKey = isLocal ? localStorage.getItem('BLAKCIDE_DEV_KEY') : null;
         if (!devKey) {
-            devKey = prompt('Dev Mode: Enter your OpenAI API Key (sk-...):');
-            if (devKey) localStorage.setItem('BLAKCIDE_DEV_KEY', devKey);
-            else throw new Error('No API key provided.');
+            const friendly =
+                "Echo's having a quiet moment — the server didn't reply. " +
+                "Give it a few seconds and try again.";
+            if (onToken) this._simulateStream(friendly, onToken);
+            return friendly;
         }
         const r = await fetch('https://api.openai.com/v1/chat/completions', {
             method: 'POST',
@@ -436,11 +447,11 @@ window.BlakcideAI = {
             body: JSON.stringify({ model: 'gpt-4o', messages, temperature: 0.75, max_tokens: 500 })
         });
         if (!r.ok) {
-            localStorage.removeItem('BLAKCIDE_DEV_KEY');
-            alert('API key failed — please refresh.');
-            throw new Error('Invalid dev key.');
+            const friendly = "Echo couldn't reach its mind right now — try again in a moment.";
+            if (onToken) this._simulateStream(friendly, onToken);
+            return friendly;
         }
-        const data  = r.ok ? await r.json() : null;
+        const data  = await r.json();
         const reply = data?.choices?.[0]?.message?.content || 'I am here for you.';
         if (onToken) this._simulateStream(reply, onToken);
         return reply;

@@ -3,11 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Human Connect – Blakcide</title>
+    <title>Listeners – Blaksyd</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="app-style.css">
+    <link rel="stylesheet" href="blakcide-ui-v3.css">
     <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
     <style>
         html, body {
@@ -97,24 +98,47 @@
             border: 1.5px solid var(--border-md);
         }
 
-        /* ── Hero ── */
+        /* ── Hero (redesigned) ── */
         .connect-hero {
-            padding: 28px 20px 20px;
+            padding: 32px 20px 22px;
             text-align: center;
+            background:
+                radial-gradient(120% 90% at 50% 0%,
+                    rgba(0, 240, 192, 0.08) 0%,
+                    rgba(176, 115, 255, 0.05) 35%,
+                    transparent 70%);
         }
         .connect-hero h1 {
             font-family: 'Playfair Display', serif;
-            font-size: clamp(1.6rem, 5vw, 2.2rem);
+            font-size: clamp(1.7rem, 5.5vw, 2.4rem);
             font-weight: 500;
             letter-spacing: -0.02em;
-            margin-bottom: 8px;
+            margin-bottom: 10px;
+            line-height: 1.18;
         }
         .connect-hero p {
             color: var(--text-2);
-            font-size: 0.9rem;
-            max-width: 320px;
+            font-size: 0.92rem;
+            max-width: 340px;
             margin: 0 auto;
             line-height: 1.55;
+        }
+        .connect-trust-row {
+            display: flex; justify-content: center; flex-wrap: wrap;
+            gap: 8px; margin-top: 18px;
+        }
+        .trust-pip {
+            display: inline-flex; align-items: center; gap: 6px;
+            padding: 6px 12px; border-radius: 999px;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.07);
+            font-size: 0.74rem; color: var(--text-2);
+            font-weight: 600; letter-spacing: 0.2px;
+        }
+        .trust-pip ion-icon {
+            font-size: 0.95rem;
+            color: var(--accent);
+            opacity: 0.85;
         }
 
         /* Filter chips */
@@ -310,7 +334,9 @@
 <!-- ── SIDEBAR ── -->
 <aside class="sidebar glass-panel" id="main-sidebar">
     <div class="sidebar-header">
-        <span class="brand-small-btn" style="cursor:default;">BLAKCIDE</span>
+        <span class="brand-small-btn" style="cursor:default;display:inline-flex;align-items:center;">
+            <img src="blaksyd-logo-white.png" alt="Blaksyd" style="height:22px;width:auto;max-width:110px;object-fit:contain;display:block;">
+        </span>
         <button id="toggle-sidebar-btn" class="collapse-btn">
             <ion-icon name="chevron-back-outline"></ion-icon>
         </button>
@@ -323,13 +349,16 @@
             <ion-icon name="home-outline"></ion-icon><span>Home</span>
         </a>
         <a class="snav-item" href="chat.html">
-            <ion-icon name="sparkles-outline"></ion-icon><span>AI Chat</span>
+            <ion-icon name="sparkles-outline"></ion-icon><span>Echo</span>
         </a>
         <a class="snav-item" href="journal.html">
             <ion-icon name="book-outline"></ion-icon><span>Journal</span>
         </a>
         <a class="snav-item active" href="connect.html">
-            <ion-icon name="people-outline"></ion-icon><span>Connect</span>
+            <ion-icon name="people-outline"></ion-icon><span>Listeners</span>
+        </a>
+        <a class="snav-item" href="nexus.html">
+            <ion-icon name="planet-outline"></ion-icon><span>Nexus</span>
         </a>
     </nav>
 
@@ -363,7 +392,7 @@
     <button class="mobile-menu-btn" id="mobile-menu-btn">
         <ion-icon name="menu-outline"></ion-icon>
     </button>
-    <span class="connect-header-title">Human Connect</span>
+    <span class="connect-header-title">Listeners</span>
     <button class="connect-avatar-btn" onclick="document.getElementById('global-profile-modal').style.display='flex'">
         <img class="global-avatar" style="width:34px;height:34px;border-radius:50%;object-fit:cover;border:1.5px solid var(--border-md);background:var(--surface-3);">
     </button>
@@ -376,31 +405,21 @@
         <button class="connect-back-btn" onclick="window.location.href='dashboard.html'">
             <ion-icon name="arrow-back-outline"></ion-icon> Back
         </button>
-        <span class="connect-header-title">Human Connect</span>
+        <span class="connect-header-title">Listeners</span>
         <button class="connect-avatar-btn" onclick="document.getElementById('global-profile-modal').style.display='flex'">
             <img class="global-avatar" style="width:34px;height:34px;border-radius:50%;object-fit:cover;border:1.5px solid var(--border-md);background:var(--surface-3);">
         </button>
     </header>
 
-    <!-- Group Chat banner -->
-    <div style="margin: 0 16px 4px; background: linear-gradient(135deg,rgba(160,103,255,0.13),rgba(0,212,170,0.10));
-         border: 1px solid rgba(160,103,255,0.25); border-radius: 14px; padding: 14px 18px;
-         display: flex; align-items: center; gap: 14px; cursor: pointer; text-decoration: none;"
-         onclick="window.location.href='group-chat.html'">
-        <div style="font-size:1.8rem;flex-shrink:0;">💬</div>
-        <div>
-            <div style="font-weight:700;font-size:0.95rem;color:var(--text);">Group Chat with AI</div>
-            <div style="font-size:0.78rem;color:var(--text-2);margin-top:2px;">
-                Chat with a friend — AI joins as a neutral mediator. Telugu · Hindi · English
-            </div>
-        </div>
-        <ion-icon name="arrow-forward-outline" style="margin-left:auto;color:var(--accent);font-size:1.1rem;flex-shrink:0;"></ion-icon>
-    </div>
-
-    <!-- Hero -->
+    <!-- Hero — calmer, more spacious, with reassurance band -->
     <div class="connect-hero">
-        <h1>Find a Listener</h1>
-        <p>Real, verified humans. Judgment-free. 100% confidential.</p>
+        <h1>Talk to a real person.</h1>
+        <p>Verified listeners. No judgment. End-to-end private. Pay only for the minutes you use.</p>
+        <div class="connect-trust-row" aria-hidden="true">
+            <span class="trust-pip"><ion-icon name="shield-checkmark-outline"></ion-icon> Verified</span>
+            <span class="trust-pip"><ion-icon name="lock-closed-outline"></ion-icon> Private</span>
+            <span class="trust-pip"><ion-icon name="time-outline"></ion-icon> Per-minute</span>
+        </div>
     </div>
 
     <!-- Filters -->
@@ -472,6 +491,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="/symp-core/contract/endpoints.js"></script>
 <script src="/symp-core/sdk/symp-client.js"></script>
+<script src="blakcide-ui-v3.js"></script>
 <script src="sidebar-common.js"></script>
 <script src="connect-user.js"></script>
 <script src="spotify-auth.js"></script>

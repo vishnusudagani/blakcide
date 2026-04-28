@@ -43,7 +43,35 @@
         LISTENER_VIBE_CHECK: SYMP_API_BASE + '/listener/vibe-check', // POST — mid-session check
         DIAGNOSTIC_TURN:     SYMP_API_BASE + '/diagnostic/turn',     // POST — analyse last turn
         DIAGNOSTIC_PEEK:     SYMP_API_BASE + '/diagnostic/peek',     // GET  — read pinned corrections
+
+        // ── Nexus (community module) ──
+        NEXUS_COMMUNITIES:        SYMP_API_BASE + '/nexus/communities',           // GET list / POST create
+        NEXUS_COMMUNITY_BY_SLUG:  SYMP_API_BASE + '/nexus/communities/by-slug',   // GET ?slug=
+        NEXUS_COMMUNITY_JOIN:     SYMP_API_BASE + '/nexus/communities/join',      // POST { community_id }
+        NEXUS_COMMUNITY_LEAVE:    SYMP_API_BASE + '/nexus/communities/leave',     // POST { community_id }
+        NEXUS_FEED:               SYMP_API_BASE + '/nexus/feed',                  // GET ?community_id=
+        NEXUS_POSTS:              SYMP_API_BASE + '/nexus/posts',                 // GET ?id= / POST create
+        NEXUS_COMMENTS:           SYMP_API_BASE + '/nexus/comments',              // POST create
+        NEXUS_IMPACTS:            SYMP_API_BASE + '/nexus/impacts',               // POST give / DELETE withdraw
+        NEXUS_ME_IMPACT_STATS:    SYMP_API_BASE + '/nexus/me/impact-stats',       // GET ?days=
+
+        // ── Credits (wallet, ledger, admin grants) ──
+        CREDITS_BALANCE:          SYMP_API_BASE + '/credits/balance',             // GET — caller's wallet
+        CREDITS_TRANSACTIONS:     SYMP_API_BASE + '/credits/transactions',        // GET ?limit=&before=
+        CREDITS_CHECKOUT_START:   SYMP_API_BASE + '/credits/checkout/start',      // POST — Stripe stub (Phase 2)
+        ADMIN_CREDITS_GRANT:      SYMP_API_BASE + '/admin/credits/grant',         // POST { target_user_id, amount, reason }
+        ADMIN_CREDITS_LOOKUP:     SYMP_API_BASE + '/admin/credits/lookup',        // GET ?user_id= — wallet + history
+        ADMIN_USERS_SEARCH:       SYMP_API_BASE + '/admin/users/search',          // GET ?q=
+
+        // ── Admin dashboard data feeds ──
+        ADMIN_OVERVIEW:           SYMP_API_BASE + '/admin/overview',              // GET — KPI strip
+        ADMIN_USERS_LIST:         SYMP_API_BASE + '/admin/users/list',            // GET ?q=&limit=&offset=
+        ADMIN_USER_DETAIL:        SYMP_API_BASE + '/admin/users/detail',          // GET ?target_user_id=
+        ADMIN_SYMP_STATUS:        SYMP_API_BASE + '/admin/symp-status',           // GET — inference + loop + nexus AI
+        ADMIN_RECENT_ACTIVITY:    SYMP_API_BASE + '/admin/recent-activity',       // GET ?limit=
     });
+
+    const NEXUS_IMPACT_TYPES = Object.freeze(['felt_seen','resonated','helpful','sending_strength']);
 
     const PERSONAS = Object.freeze(['friend', 'father', 'mother', 'astrologer', 'spiritual', 'tech_savvy', 'therapist']);
 
@@ -64,14 +92,21 @@
     const LANGUAGES = Object.freeze({ TELUGU: 'te', HINDI: 'hi', ENGLISH: 'en' });
 
     const ERROR_CODES = Object.freeze({
-        INVALID_API_KEY: 'INVALID_API_KEY',   // 401 — missing/wrong x-symp-api-key
-        MISSING_USER_ID: 'MISSING_USER_ID',   // 400
-        USER_NOT_FOUND:  'USER_NOT_FOUND',    // 404 — user_id not in profiles
-        BAD_REQUEST:     'BAD_REQUEST',       // 400 — malformed payload
-        RATE_LIMITED:    'RATE_LIMITED',      // 429
-        UPSTREAM_FAILED: 'UPSTREAM_FAILED',   // 502 — OpenAI/Supabase error
-        INTERNAL_ERROR:  'INTERNAL_ERROR',    // 500
+        INVALID_API_KEY:      'INVALID_API_KEY',   // 401 — missing/wrong x-symp-api-key
+        MISSING_USER_ID:      'MISSING_USER_ID',   // 400
+        USER_NOT_FOUND:       'USER_NOT_FOUND',    // 404 — user_id not in profiles
+        BAD_REQUEST:          'BAD_REQUEST',       // 400 — malformed payload
+        RATE_LIMITED:         'RATE_LIMITED',      // 429
+        UPSTREAM_FAILED:      'UPSTREAM_FAILED',   // 502 — OpenAI/Supabase error
+        INTERNAL_ERROR:       'INTERNAL_ERROR',    // 500
+        FORBIDDEN:            'FORBIDDEN',         // 403 — non-admin hitting admin endpoint
+        INSUFFICIENT_CREDITS: 'INSUFFICIENT_CREDITS', // 402 — wallet would go negative
     });
+
+    const CREDIT_TRANSACTION_TYPES = Object.freeze([
+        'admin_grant', 'purchase', 'promo', 'referral',
+        'spend_ai_chat', 'spend_human', 'refund', 'correction',
+    ]);
 
     // Maps session_type → entry_type. Consumed by /session/ingest to choose
     // the (user_id, journal_date, entry_type) row in symp_daily_journals.
@@ -186,5 +221,7 @@
         PERSONAS,
         ERROR_CODES,
         WHISPER_FRAME_TYPES,
+        NEXUS_IMPACT_TYPES,
+        CREDIT_TRANSACTION_TYPES,
     };
 });

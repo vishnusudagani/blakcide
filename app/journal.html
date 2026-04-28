@@ -3,11 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Living Journal – Blakcide</title>
+    <title>Journal – Blaksyd</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="app-style.css">
+    <link rel="stylesheet" href="blakcide-ui-v3.css">
     <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
     <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -227,7 +228,9 @@
     <!-- ── SIDEBAR ── -->
     <nav class="sidebar glass-panel" id="main-sidebar">
         <div class="sidebar-header">
-            <button id="nav-dashboard-btn" class="brand-small-btn">BLAKCIDE</button>
+            <button id="nav-dashboard-btn" class="brand-small-btn" style="display:inline-flex;align-items:center;">
+                <img src="blaksyd-logo-white.png" alt="Blaksyd" style="height:22px;width:auto;max-width:110px;object-fit:contain;display:block;">
+            </button>
             <button id="toggle-sidebar-btn" class="collapse-btn">
                 <ion-icon name="chevron-back-outline"></ion-icon>
             </button>
@@ -256,13 +259,16 @@
                 <ion-icon name="home-outline"></ion-icon><span>Home</span>
             </a>
             <a class="snav-item" href="chat.html">
-                <ion-icon name="sparkles-outline"></ion-icon><span>AI Chat</span>
+                <ion-icon name="sparkles-outline"></ion-icon><span>Echo</span>
             </a>
             <a class="snav-item active" href="journal.html">
                 <ion-icon name="book-outline"></ion-icon><span>Journal</span>
             </a>
             <a class="snav-item" href="connect.html">
-                <ion-icon name="people-outline"></ion-icon><span>Connect</span>
+                <ion-icon name="people-outline"></ion-icon><span>Listeners</span>
+            </a>
+            <a class="snav-item" href="nexus.html">
+                <ion-icon name="planet-outline"></ion-icon><span>Nexus</span>
             </a>
         </nav>
 
@@ -300,7 +306,7 @@
                 <ion-icon name="menu-outline"></ion-icon>
             </button>
             <span id="mobile-journal-title" style="font-weight:600;font-size:0.92rem;flex:1;text-align:center;padding:0 8px;">
-                Living Journal
+                Journal
             </span>
             <button id="delete-entry-btn" class="mobile-menu-btn" style="color:var(--red);display:none;">
                 <ion-icon name="trash-outline"></ion-icon>
@@ -485,6 +491,7 @@
     </div>
 </div>
 
+<script src="blakcide-ui-v3.js"></script>
 <script src="sidebar-common.js"></script>
 <script src="journal.js"></script>
 <script src="spotify-auth.js"></script>

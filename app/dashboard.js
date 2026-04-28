@@ -25,12 +25,104 @@ document.addEventListener('DOMContentLoaded', () => {
 
         currentUser = session.user;
 
+        // Check if this user is an admin — redirect to admin console
+        const { data: profile } = await supabase.from('profiles').select('role').eq('id', currentUser.id).maybeSingle();
+        if (profile?.role === 'admin') {
+            window.location.href = 'admin.html';
+            return;
+        }
+
         // Check if this user is a listener — redirect to listener console
         const { data: listener } = await supabase.from('listeners').select('id').eq('user_id', currentUser.id).maybeSingle();
         if (listener) {
             window.location.href = 'listener-console.html';
             return;
         }
+
+        hydrateDashboardMetrics();
+    }
+
+    // Pulls real per-user counts (chats, journals, streak) and online-listener
+    // count, then patches the v3 hero. Falls back silently if any query fails
+    // so the dashboard never shows a broken state.
+    async function hydrateDashboardMetrics() {
+        if (!supabase || !currentUser) return;
+        try {
+            const [chatsRes, journalsRes, listenersRes, streakRes] = await Promise.all([
+                supabase.from('chats').select('id', { count: 'exact', head: true }).eq('user_id', currentUser.id),
+                supabase.from('journals').select('id', { count: 'exact', head: true }).eq('user_id', currentUser.id),
+                supabase.from('listeners').select('id', { count: 'exact', head: true }).eq('is_online', true),
+                computeStreakDays(currentUser.id),
+            ]);
+
+            const chats     = chatsRes.count     ?? 0;
+            const journals  = journalsRes.count  ?? 0;
+            const onlineLs  = listenersRes.count ?? 0;
+            const streak    = streakRes;
+
+            const elChats     = getEl('dash-meta-chats');
+            const elEntries   = getEl('dash-meta-entries');
+            const elListeners = getEl('dash-meta-listeners');
+            const elStreakNum = getEl('dash-streak-num');
+            const elRing      = getEl('dash-streak-ring');
+            const elHeroTitle = document.querySelector('.v3-hero-title');
+
+            if (elChats)     elChats.innerHTML     = `${chats}<small>×</small>`;
+            if (elEntries)   elEntries.innerHTML   = `${journals}<small>×</small>`;
+            if (elListeners) elListeners.textContent = String(onlineLs);
+            if (elStreakNum) elStreakNum.textContent = String(streak);
+
+            if (elRing) {
+                const pct = Math.min(100, Math.round((streak / 7) * 100));
+                elRing.setAttribute('data-target', String(pct));
+                if (window.blakcideAnimateRings) window.blakcideAnimateRings();
+            }
+
+            if (elHeroTitle) {
+                if (streak === 0) {
+                    elHeroTitle.innerHTML = `Welcome back. <span style="color:var(--pulse-1);">Today is a fresh start.</span>`;
+                } else if (streak === 1) {
+                    elHeroTitle.innerHTML = `You showed up <span style="color:var(--pulse-1);">today</span>. That's the hardest part.`;
+                } else {
+                    const wordMap = ['zero','one','two','three','four','five','six','seven'];
+                    const word = streak <= 7 ? wordMap[streak] : String(streak);
+                    elHeroTitle.innerHTML = `You showed up <span style="color:var(--pulse-1);">${word} days in a row</span>.`;
+                }
+            }
+
+            try { localStorage.setItem('blakcide-streak', JSON.stringify({ days: streak, ts: Date.now() })); } catch (_) {}
+        } catch (e) {
+            console.warn('[dashboard] metric hydration skipped:', e?.message || e);
+        }
+    }
+
+    // Walks the user's chat + journal activity (last 60 days) and counts
+    // consecutive days ending at today (or yesterday if nothing today yet).
+    async function computeStreakDays(userId) {
+        const since = new Date(Date.now() - 60 * 86400_000).toISOString();
+        const [{ data: chatRows = [] }, { data: jrnRows = [] }] = await Promise.all([
+            supabase.from('chats').select('created_at').eq('user_id', userId).gte('created_at', since),
+            supabase.from('journals').select('created_at').eq('user_id', userId).gte('created_at', since),
+        ]);
+        const days = new Set();
+        const toDayKey = (ts) => {
+            const d = new Date(ts);
+            return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+        };
+        chatRows.forEach(r => r.created_at && days.add(toDayKey(r.created_at)));
+        jrnRows.forEach(r => r.created_at && days.add(toDayKey(r.created_at)));
+        if (days.size === 0) return 0;
+
+        let streak = 0;
+        const cursor = new Date();
+        // If nothing today, start counting from yesterday so a missed day at the
+        // very start of the day doesn't zero out an active streak.
+        if (!days.has(toDayKey(cursor))) cursor.setDate(cursor.getDate() - 1);
+        while (days.has(toDayKey(cursor))) {
+            streak += 1;
+            cursor.setDate(cursor.getDate() - 1);
+        }
+        return streak;
     }
 
     // 2. Dashboard Navigation Routing

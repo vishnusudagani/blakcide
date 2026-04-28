@@ -14,6 +14,7 @@
 import {
     fetchVibeState, upsertVibeState, insertVibeEvent,
 } from './supabase.mjs';
+import { chatComplete } from './inference.mjs';
 
 // Decay constant for vibe score: a delta from 24h ago has ~50% influence.
 // We don't actually decay rows in storage — we only rebuild the live state
@@ -86,8 +87,10 @@ export function renderVibeSnapshot(vibe) {
 }
 
 // ── Classifier (async, never blocks) ───────────────────────────────────────
-
-const CLASSIFIER_MODEL = 'gpt-4o-mini';
+//
+// Routed through the inference router. Default model is gpt-4o-mini (unchanged
+// from the original direct-OpenAI call); flip SYMP_LLM_PROVIDER or set
+// SYMP_LLM_MODEL_CLASSIFIER to use an alternative.
 
 /**
  * Build the classifier prompt — one-shot JSON-mode call that emits a delta
@@ -132,31 +135,19 @@ function buildClassifierPrompt({ source, currentVibe, evidence }) {
  * on failure. NEVER throws.
  */
 async function classify({ source, currentVibe, evidence }) {
-    const key = process.env.BLAKCIDE_OPENAI_KEY || process.env.OPENAI_API_KEY;
-    if (!key) return null;
     try {
-        const res = await fetch('https://api.openai.com/v1/chat/completions', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
-            body: JSON.stringify({
-                model:           CLASSIFIER_MODEL,
-                messages: [
-                    { role: 'system', content: buildClassifierPrompt({ source, currentVibe, evidence }) },
-                    { role: 'user',   content: 'Output the JSON now.' },
-                ],
-                temperature:     0.2,
-                max_tokens:      200,
-                response_format: { type: 'json_object' },
-            }),
-            signal: AbortSignal.timeout(8000),
+        const out = await chatComplete({
+            task: 'classifier',
+            messages: [
+                { role: 'system', content: buildClassifierPrompt({ source, currentVibe, evidence }) },
+                { role: 'user',   content: 'Output the JSON now.' },
+            ],
+            temperature:     0.2,
+            max_tokens:      200,
+            response_format: { type: 'json_object' },
+            timeoutMs:       8000,
         });
-        if (!res.ok) {
-            console.warn(`[vibe-tracker] classifier ${res.status}`);
-            return null;
-        }
-        const data = await res.json();
-        const txt  = data?.choices?.[0]?.message?.content || '';
-        const obj  = JSON.parse(txt);
+        const obj = JSON.parse(out.content);
         return normaliseClassifierOutput(obj, currentVibe);
     } catch (e) {
         console.warn(`[vibe-tracker] classifier failed: ${e.message}`);

@@ -363,6 +363,299 @@ export async function markActionRow(id, fields) {
     return upd.ok;
 }
 
+// ── Nexus (Community Module) ────────────────────────────────────────────
+//
+// All helpers below talk to the nexus_* tables created in
+// supabase/migrations/20260427_nexus.sql. They run service-role and bypass
+// RLS — the proxy/auth layer guarantees the user_id passed in is the
+// caller's authenticated id.
+
+// — AI participant —
+export async function fetchNexusAiIdentity() {
+    const { ok, data } = await sbFetch('nexus_ai_identity?id=eq.1&select=*');
+    return (ok && Array.isArray(data) && data[0]) ? data[0] : null;
+}
+
+// — Communities —
+export async function fetchNexusCommunity(communityId) {
+    const { ok, data } = await sbFetch(
+        `nexus_communities?id=eq.${encodeURIComponent(communityId)}&select=*`
+    );
+    return (ok && Array.isArray(data) && data[0]) ? data[0] : null;
+}
+
+export async function fetchNexusCommunityBySlug(slug) {
+    const { ok, data } = await sbFetch(
+        `nexus_communities?slug=eq.${encodeURIComponent(slug)}&select=*`
+    );
+    return (ok && Array.isArray(data) && data[0]) ? data[0] : null;
+}
+
+export async function listNexusCommunities({ limit = 50, includeArchived = false } = {}) {
+    const filter = includeArchived ? '' : '&archived_at=is.null';
+    const { ok, data } = await sbFetch(
+        `nexus_communities?select=*${filter}&order=created_at.desc&limit=${limit}`
+    );
+    return (ok && Array.isArray(data)) ? data : [];
+}
+
+export async function insertNexusCommunity(row) {
+    const ins = await sbFetch('nexus_communities', {
+        method: 'POST', body: row, prefer: 'return=representation',
+    });
+    return (ins.ok && Array.isArray(ins.data) && ins.data[0]) ? ins.data[0] : null;
+}
+
+export async function joinNexusCommunity({ communityId, userId, joinResonance, role = 'member' }) {
+    // Idempotent — duplicate (community_id, user_id) is a no-op via 409.
+    const ins = await sbFetch('nexus_community_members', {
+        method: 'POST',
+        body:   { community_id: communityId, user_id: userId, join_resonance: joinResonance, role },
+        prefer: 'resolution=ignore-duplicates,return=representation',
+    });
+    return ins.ok;
+}
+
+export async function leaveNexusCommunity({ communityId, userId }) {
+    const del = await sbFetch(
+        `nexus_community_members?community_id=eq.${encodeURIComponent(communityId)}` +
+        `&user_id=eq.${encodeURIComponent(userId)}`,
+        { method: 'DELETE' }
+    );
+    return del.ok;
+}
+
+export async function listNexusMemberships(userId, { limit = 50 } = {}) {
+    const { ok, data } = await sbFetch(
+        `nexus_community_members?user_id=eq.${encodeURIComponent(userId)}` +
+        `&order=joined_at.desc&limit=${limit}` +
+        `&select=community_id,joined_at,join_resonance,role`
+    );
+    return (ok && Array.isArray(data)) ? data : [];
+}
+
+export async function listNexusMemberIds(communityId, { limit = 5000 } = {}) {
+    const { ok, data } = await sbFetch(
+        `nexus_community_members?community_id=eq.${encodeURIComponent(communityId)}` +
+        `&select=user_id&limit=${limit}`
+    );
+    return (ok && Array.isArray(data)) ? data.map(r => r.user_id) : [];
+}
+
+// — Anonymous handles —
+export async function fetchNexusHandle({ communityId, userId }) {
+    const { ok, data } = await sbFetch(
+        `nexus_anonymous_handles?community_id=eq.${encodeURIComponent(communityId)}` +
+        `&user_id=eq.${encodeURIComponent(userId)}&select=handle,avatar_seed`
+    );
+    return (ok && Array.isArray(data) && data[0]) ? data[0] : null;
+}
+
+export async function insertNexusHandle({ communityId, userId, handle, avatarSeed }) {
+    const ins = await sbFetch('nexus_anonymous_handles', {
+        method: 'POST',
+        body:   { community_id: communityId, user_id: userId, handle, avatar_seed: avatarSeed },
+        prefer: 'return=representation',
+    });
+    return ins.ok ? (Array.isArray(ins.data) ? ins.data[0] : null) : null;
+}
+
+export async function fetchNexusHandlesBulk({ communityId, userIds }) {
+    if (!userIds || !userIds.length) return {};
+    const inList = userIds.map(encodeURIComponent).join(',');
+    const { ok, data } = await sbFetch(
+        `nexus_anonymous_handles?community_id=eq.${encodeURIComponent(communityId)}` +
+        `&user_id=in.(${inList})&select=user_id,handle,avatar_seed`
+    );
+    if (!ok || !Array.isArray(data)) return {};
+    const map = {};
+    for (const r of data) map[r.user_id] = { handle: r.handle, avatar_seed: r.avatar_seed };
+    return map;
+}
+
+// — Vault embeddings —
+export async function fetchNexusVaultEmbedding(userId) {
+    const { ok, data } = await sbFetch(
+        `nexus_vault_embeddings?user_id=eq.${encodeURIComponent(userId)}&select=*`
+    );
+    return (ok && Array.isArray(data) && data[0]) ? data[0] : null;
+}
+
+export async function upsertNexusVaultEmbedding({ userId, embedding, sourceVersion }) {
+    const existing = await fetchNexusVaultEmbedding(userId);
+    const body = {
+        embedding,                  // PostgREST accepts a JS array for vector when sent as JSON
+        source_version: sourceVersion,
+        computed_at:    new Date().toISOString(),
+    };
+    if (existing) {
+        const upd = await sbFetch(
+            `nexus_vault_embeddings?user_id=eq.${encodeURIComponent(userId)}`,
+            { method: 'PATCH', body, prefer: 'return=representation' }
+        );
+        return upd.ok;
+    }
+    const ins = await sbFetch('nexus_vault_embeddings', {
+        method: 'POST', body: { user_id: userId, ...body }, prefer: 'return=representation',
+    });
+    return ins.ok;
+}
+
+// — Resonance score cache —
+export async function fetchResonanceScore({ viewerUserId, targetUserId }) {
+    const { ok, data } = await sbFetch(
+        `nexus_resonance_scores?viewer_user_id=eq.${encodeURIComponent(viewerUserId)}` +
+        `&target_user_id=eq.${encodeURIComponent(targetUserId)}&select=*`
+    );
+    return (ok && Array.isArray(data) && data[0]) ? data[0] : null;
+}
+
+export async function upsertResonanceScore({ viewerUserId, targetUserId, score, viewerVersion, targetVersion }) {
+    const existing = await fetchResonanceScore({ viewerUserId, targetUserId });
+    const body = {
+        score,
+        viewer_version: viewerVersion,
+        target_version: targetVersion,
+        computed_at:    new Date().toISOString(),
+    };
+    if (existing) {
+        const upd = await sbFetch(
+            `nexus_resonance_scores?viewer_user_id=eq.${encodeURIComponent(viewerUserId)}` +
+            `&target_user_id=eq.${encodeURIComponent(targetUserId)}`,
+            { method: 'PATCH', body, prefer: 'return=representation' }
+        );
+        return upd.ok;
+    }
+    const ins = await sbFetch('nexus_resonance_scores', {
+        method: 'POST',
+        body:   { viewer_user_id: viewerUserId, target_user_id: targetUserId, ...body },
+        prefer: 'return=representation',
+    });
+    return ins.ok;
+}
+
+// — Posts —
+export async function insertNexusPost(row) {
+    const ins = await sbFetch('nexus_posts', {
+        method: 'POST', body: row, prefer: 'return=representation',
+    });
+    return (ins.ok && Array.isArray(ins.data) && ins.data[0]) ? ins.data[0] : null;
+}
+
+export async function fetchNexusPost(postId) {
+    const { ok, data } = await sbFetch(
+        `nexus_posts?id=eq.${encodeURIComponent(postId)}&select=*`
+    );
+    return (ok && Array.isArray(data) && data[0]) ? data[0] : null;
+}
+
+export async function patchNexusPost(postId, fields) {
+    const upd = await sbFetch(
+        `nexus_posts?id=eq.${encodeURIComponent(postId)}`,
+        { method: 'PATCH', body: fields, prefer: 'return=representation' }
+    );
+    return upd.ok;
+}
+
+export async function listNexusPosts({ communityId, limit = 30, before }) {
+    let q = `nexus_posts?community_id=eq.${encodeURIComponent(communityId)}` +
+            `&is_soft_hidden=eq.false&order=created_at.desc&limit=${limit}` +
+            `&select=*`;
+    if (before) q += `&created_at=lt.${encodeURIComponent(before)}`;
+    const { ok, data } = await sbFetch(q);
+    return (ok && Array.isArray(data)) ? data : [];
+}
+
+export async function listZeroEngagementPosts({ olderThanIso, limit = 50 }) {
+    const { ok, data } = await sbFetch(
+        `nexus_posts?comment_count=eq.0&ai_replied_at=is.null&is_soft_hidden=eq.false` +
+        `&created_at=lt.${encodeURIComponent(olderThanIso)}` +
+        `&order=created_at.desc&limit=${limit}&select=*`
+    );
+    return (ok && Array.isArray(data)) ? data : [];
+}
+
+export async function listPostsNeedingTldr({ minComments = 15, limit = 30 }) {
+    const { ok, data } = await sbFetch(
+        `nexus_posts?comment_count=gte.${minComments}&ai_tldr=is.null` +
+        `&order=comment_count.desc&limit=${limit}&select=*`
+    );
+    return (ok && Array.isArray(data)) ? data : [];
+}
+
+// — Comments —
+export async function insertNexusComment(row) {
+    const ins = await sbFetch('nexus_comments', {
+        method: 'POST', body: row, prefer: 'return=representation',
+    });
+    return (ins.ok && Array.isArray(ins.data) && ins.data[0]) ? ins.data[0] : null;
+}
+
+export async function listNexusComments({ postId, limit = 200 }) {
+    const { ok, data } = await sbFetch(
+        `nexus_comments?post_id=eq.${encodeURIComponent(postId)}` +
+        `&is_soft_hidden=eq.false&order=created_at.asc&limit=${limit}&select=*`
+    );
+    return (ok && Array.isArray(data)) ? data : [];
+}
+
+// — Impacts —
+export async function insertNexusImpact(row) {
+    const ins = await sbFetch('nexus_impacts', {
+        method: 'POST', body: row,
+        prefer: 'resolution=ignore-duplicates,return=representation',
+    });
+    return ins.ok;
+}
+
+export async function deleteNexusImpact({ userId, postId, commentId, impactType }) {
+    let q = `nexus_impacts?user_id=eq.${encodeURIComponent(userId)}` +
+            `&impact_type=eq.${encodeURIComponent(impactType)}`;
+    if (postId)    q += `&post_id=eq.${encodeURIComponent(postId)}`;
+    if (commentId) q += `&comment_id=eq.${encodeURIComponent(commentId)}`;
+    const del = await sbFetch(q, { method: 'DELETE' });
+    return del.ok;
+}
+
+export async function countImpactsGivenByUser({ userId, sinceIso }) {
+    // PostgREST count via Prefer: count=exact + HEAD-style; we do a cheap
+    // SELECT id and array length for simplicity / portability.
+    const { ok, data } = await sbFetch(
+        `nexus_impacts?user_id=eq.${encodeURIComponent(userId)}` +
+        `&created_at=gte.${encodeURIComponent(sinceIso)}&select=id`
+    );
+    return (ok && Array.isArray(data)) ? data.length : 0;
+}
+
+export async function countImpactsReceivedByUser({ userId, sinceIso }) {
+    // Two queries: posts authored by user, then impacts on those posts.
+    // For volume we have today this is fine; swap to a SQL view later.
+    const posts = await sbFetch(
+        `nexus_posts?author_user_id=eq.${encodeURIComponent(userId)}` +
+        `&created_at=gte.${encodeURIComponent(sinceIso)}&select=id,impact_count`
+    );
+    if (!posts.ok || !Array.isArray(posts.data)) return 0;
+    return posts.data.reduce((sum, p) => sum + (p.impact_count || 0), 0);
+}
+
+// — Trend signals —
+export async function insertTrendSignal({ themeKey, themeLabel, evidence, weight = 1.0 }) {
+    const ins = await sbFetch('nexus_trend_signals', {
+        method: 'POST',
+        body:   { theme_key: themeKey, theme_label: themeLabel, evidence, weight },
+        prefer: 'return=representation',
+    });
+    return ins.ok;
+}
+
+export async function listRecentTrendSignals({ sinceIso, limit = 1000 }) {
+    const { ok, data } = await sbFetch(
+        `nexus_trend_signals?observed_at=gte.${encodeURIComponent(sinceIso)}` +
+        `&order=observed_at.desc&limit=${limit}&select=*`
+    );
+    return (ok && Array.isArray(data)) ? data : [];
+}
+
 // ── Listener briefs ─────────────────────────────────────────────────────
 
 export async function fetchListenerBrief(connectSessionId) {
