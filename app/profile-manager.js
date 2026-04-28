@@ -647,10 +647,13 @@ window.saveUniversalProfile = async function() {
         if (statusEl) statusEl.innerText = 'Photo uploaded!';
     }
 
-    const payload = { id: session.user.id, full_name: name, dob, gender };
+    const payload = { full_name: name, dob, gender };
     if (avatarUrl) payload.avatar_url = avatarUrl;
 
-    const { error } = await _pmClient.from('profiles').upsert(payload);
+    // UPDATE (not upsert) — the profile row already exists from onboarding,
+    // and an upsert's INSERT-validation path would trip the NOT NULL username
+    // constraint since this modal doesn't manage username.
+    const { error } = await _pmClient.from('profiles').update(payload).eq('id', session.user.id);
 
     if (error) {
         alert("Error saving profile: " + error.message);
