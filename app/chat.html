@@ -135,6 +135,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
     <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
+    <link rel="stylesheet" href="blaksyd-pulse.css?v=20260428b">
 </head>
 <body class="dark-mode" data-page="chat">
 
@@ -403,5 +404,11 @@
 <script src="spotify-auth.js"></script>
 <script src="profile-manager.js?v=20260428b"></script>
 <script src="nav-bar.js"></script>
+<script src="blaksyd-pulse.js?v=20260428b"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    if (window.BlaksydPulse) window.BlaksydPulse.trigger('ai_echo', { delayMs: 12000 });
+});
+</script>
 </body>
 </html>

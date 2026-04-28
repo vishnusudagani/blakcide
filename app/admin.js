@@ -235,6 +235,7 @@ const PANEL_META = {
     symp:       { title: 'Symp.ai Brain',    sub: 'Inference router, action loop, corrections',  loader: loadSymp,       pollMs: 60_000 },
     actionloop: { title: 'Action Loop',      sub: 'Pending → Done → Failed counts',              loader: loadActionLoop, pollMs: 30_000 },
     nexus:      { title: 'Nexus Community',  sub: 'Posts, distress flags, AI participant',       loader: loadNexus,      pollMs: 60_000 },
+    pulse:      { title: 'Pulse',            sub: 'Anonymous user feedback, master switch',      loader: loadPulse,      pollMs: 60_000 },
     activity:   { title: 'Activity',         sub: 'Recent API calls and journal writes',         loader: loadActivity,   pollMs: 60_000 },
 };
 
@@ -799,6 +800,152 @@ async function loadNexus() {
     } catch (e) {
         setHTML('nexus-posts-list', `<div class="empty">${escapeHtml(e.message)}</div>`);
     }
+}
+
+// ── PULSE ─────────────────────────────────────────────
+//
+// "The Pulse" admin panel.
+//   - Master switch reads/writes public.global_settings (key='pulse_active')
+//   - Inbox reads public.blaksyd_pulse_logs (admin-only by RLS)
+//   - Filter pills narrow the rendered set by page_context
+//
+// We hold the most recent batch in memory so filter clicks don't re-fetch.
+let pulseRows       = [];
+let pulseFilter     = 'all';
+let pulseToggleBound = false;
+let pulseFiltersBound = false;
+
+const PULSE_VIBE_META = {
+    calm:            { emoji: '🌿', label: 'Calm' },
+    glitchy:         { emoji: '⚡', label: 'Glitchy' },
+    needs_something: { emoji: '💡', label: 'Needs something' },
+};
+const PULSE_CONTEXT_LABEL = {
+    ai_echo:       'AI Echo',
+    journal:       'Journal',
+    human_connect: 'Listener',
+    community:     'Community',
+    dashboard:     'Dashboard',
+    other:         'Other',
+};
+
+async function loadPulse() {
+    if (!db) return;
+
+    // 1) Master switch state
+    try {
+        const { data, error } = await db
+            .from('global_settings')
+            .select('value, updated_at')
+            .eq('key', 'pulse_active')
+            .maybeSingle();
+        if (error) throw error;
+        const enabled = !!(data?.value?.enabled);
+        const tgl = $('pulse-master-toggle');
+        if (tgl) tgl.checked = enabled;
+        setText('pulse-toggle-label', enabled ? 'ON' : 'OFF');
+        setText('pulse-toggle-meta', data?.updated_at
+            ? `Last changed ${ago(data.updated_at)}`
+            : 'Default state — never changed.');
+    } catch (e) {
+        setText('pulse-toggle-meta', 'Could not read switch state: ' + e.message);
+    }
+
+    // 2) Wire toggle (once)
+    if (!pulseToggleBound) {
+        const tgl = $('pulse-master-toggle');
+        if (tgl) {
+            tgl.addEventListener('change', async () => {
+                const next = !!tgl.checked;
+                tgl.disabled = true;
+                try {
+                    const { error } = await db
+                        .from('global_settings')
+                        .upsert({ key: 'pulse_active', value: { enabled: next } }, { onConflict: 'key' });
+                    if (error) throw error;
+                    setText('pulse-toggle-label', next ? 'ON' : 'OFF');
+                    setText('pulse-toggle-meta', `Just changed — ${next ? 'collecting' : 'paused'}.`);
+                    toast(next ? 'Pulse is now ON.' : 'Pulse is paused.');
+                } catch (err) {
+                    tgl.checked = !next; // revert
+                    toast('Switch failed: ' + err.message, 'var(--accent-red)');
+                } finally {
+                    tgl.disabled = false;
+                }
+            });
+            pulseToggleBound = true;
+        }
+    }
+
+    // 3) Wire filter pills (once)
+    if (!pulseFiltersBound) {
+        document.querySelectorAll('#pulse-filters .pulse-filter').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('#pulse-filters .pulse-filter')
+                    .forEach(b => b.classList.toggle('active', b === btn));
+                pulseFilter = btn.dataset.filter || 'all';
+                renderPulseGrid();
+            });
+        });
+        pulseFiltersBound = true;
+    }
+
+    // 4) Inbox
+    try {
+        const { data, error } = await db
+            .from('blaksyd_pulse_logs')
+            .select('id, user_id, page_context, vibe_rating, feedback_text, created_at')
+            .order('created_at', { ascending: false })
+            .limit(120);
+        if (error) throw error;
+        pulseRows = data || [];
+        setText('nav-pulse-count', pulseRows.length ? String(pulseRows.length) : '');
+        renderPulseGrid();
+    } catch (e) {
+        setHTML('pulse-grid', `<div class="empty-state">Inbox failed: ${escapeHtml(e.message)}</div>`);
+    }
+}
+
+function renderPulseGrid() {
+    const grid = $('pulse-grid');
+    if (!grid) return;
+
+    const rows = pulseFilter === 'all'
+        ? pulseRows
+        : pulseRows.filter(r => r.page_context === pulseFilter);
+
+    setText('pulse-inbox-sub', rows.length
+        ? `Showing ${rows.length}${pulseFilter === 'all' ? '' : ` in ${PULSE_CONTEXT_LABEL[pulseFilter] || pulseFilter}`}`
+        : 'No pulses to show yet');
+
+    if (!rows.length) {
+        grid.innerHTML = `<div class="empty-state">No pulses ${pulseFilter === 'all' ? 'yet' : 'in this surface'}.</div>`;
+        return;
+    }
+
+    grid.innerHTML = rows.map(r => {
+        const vibeMeta = PULSE_VIBE_META[r.vibe_rating] || { emoji: '·', label: r.vibe_rating };
+        const ctxLabel = PULSE_CONTEXT_LABEL[r.page_context] || r.page_context;
+        const text = (r.feedback_text || '').trim();
+        const userTag = r.user_id ? `${r.user_id.slice(0, 6)}…` : 'anon';
+        return `
+            <div class="pulse-card vibe-${escapeHtml(r.vibe_rating)}">
+                <div class="pulse-card-head">
+                    <span class="pulse-vibe-tag vibe-${escapeHtml(r.vibe_rating)}">
+                        <span aria-hidden="true">${vibeMeta.emoji}</span> ${escapeHtml(vibeMeta.label)}
+                    </span>
+                    <span class="pulse-context-tag">${escapeHtml(ctxLabel)}</span>
+                </div>
+                ${text
+                    ? `<div class="pulse-text">${escapeHtml(text)}</div>`
+                    : `<div class="pulse-text no-text">No words left — vibe only.</div>`}
+                <div class="pulse-foot">
+                    <span class="pulse-user">${escapeHtml(userTag)}</span>
+                    <span title="${escapeHtml(new Date(r.created_at).toLocaleString())}">${escapeHtml(ago(r.created_at))}</span>
+                </div>
+            </div>
+        `;
+    }).join('');
 }
 
 // ── ACTIVITY ──────────────────────────────────────────

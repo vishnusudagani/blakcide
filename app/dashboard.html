@@ -295,6 +295,7 @@
         .mood-word  { font-size: 0.58rem; font-weight: 600; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.5px; }
         .mood-btn.selected .mood-word { color: var(--accent); }
     </style>
+    <link rel="stylesheet" href="blaksyd-pulse.css?v=20260428b">
 </head>
 <body class="dark-mode" data-page="dashboard">
 
@@ -638,6 +639,12 @@ function selectMood(btn) {
 // Logout
 document.getElementById('logout-btn')?.addEventListener('click', () => {
     if (window.universalLogout) window.universalLogout();
+});
+</script>
+<script src="blaksyd-pulse.js?v=20260428b"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    if (window.BlaksydPulse) window.BlaksydPulse.trigger('dashboard', { delayMs: 22000 });
 });
 </script>
 </body>

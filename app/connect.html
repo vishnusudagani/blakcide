@@ -324,6 +324,7 @@
         }
         .conn-cancel:hover { color: var(--text); }
     </style>
+    <link rel="stylesheet" href="blaksyd-pulse.css?v=20260428b">
 </head>
 <body class="dark-mode" data-page="connect">
 
@@ -531,6 +532,12 @@
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', wireConnectSidebar);
     else wireConnectSidebar();
 })();
+</script>
+<script src="blaksyd-pulse.js?v=20260428b"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    if (window.BlaksydPulse) window.BlaksydPulse.trigger('human_connect', { delayMs: 15000 });
+});
 </script>
 </body>
 </html>

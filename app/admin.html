@@ -445,7 +445,78 @@
         .picker-row:hover { background: var(--hover); }
         .picker-row:last-child { border-bottom: none; }
         .picker-bal { margin-left: auto; font-family: var(--mono); font-size: 0.82rem; color: var(--accent); }
+
+        /* ── Pulse panel ── */
+        .pulse-toggle { display:inline-flex; align-items:center; gap:10px; cursor:pointer; user-select:none; }
+        .pulse-toggle input { position:absolute; opacity:0; pointer-events:none; }
+        .pulse-track {
+            position:relative; width:46px; height:26px; border-radius:999px;
+            background:#1f2733; border:1px solid var(--border);
+            transition: background 200ms ease, border-color 200ms ease;
+        }
+        .pulse-thumb {
+            position:absolute; top:2px; left:2px; width:20px; height:20px; border-radius:999px;
+            background:#7a8390; box-shadow:0 1px 2px rgba(0,0,0,0.4);
+            transition: transform 220ms cubic-bezier(0.22,1,0.36,1), background 200ms ease;
+        }
+        .pulse-toggle input:checked + .pulse-track { background:rgba(92,220,138,0.22); border-color:rgba(92,220,138,0.5); }
+        .pulse-toggle input:checked + .pulse-track .pulse-thumb { transform: translateX(20px); background:#5cdc8a; }
+        .pulse-toggle-label { font-family: var(--mono); font-size:0.78rem; letter-spacing:0.06em; color: var(--muted); }
+        .pulse-toggle input:checked ~ .pulse-toggle-label { color: #5cdc8a; }
+
+        .pulse-filters { display:flex; gap:6px; flex-wrap:wrap; }
+        .pulse-filter {
+            padding: 6px 12px; border-radius:999px;
+            background: transparent; border:1px solid var(--border);
+            color: var(--muted); font-family: inherit; font-size: 0.78rem; font-weight:500;
+            cursor:pointer; transition: all 160ms ease;
+        }
+        .pulse-filter:hover { color: var(--text); border-color: var(--border-strong); }
+        .pulse-filter.active {
+            color: #06121a; background: linear-gradient(135deg, #5cdc8a, #7a9bff);
+            border-color: rgba(92,220,138,0.5);
+        }
+
+        .pulse-grid {
+            display: grid; gap: 12px;
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            margin-top: 14px;
+        }
+        .pulse-card {
+            position: relative; padding: 14px 14px 12px;
+            background: var(--panel-2); border: 1px solid var(--border);
+            border-radius: 14px;
+            transition: border-color 160ms ease, transform 160ms ease;
+        }
+        .pulse-card:hover { border-color: var(--border-strong); transform: translateY(-1px); }
+        .pulse-card.vibe-calm            { box-shadow: inset 3px 0 0 rgba(92,220,138,0.6); }
+        .pulse-card.vibe-glitchy         { box-shadow: inset 3px 0 0 rgba(255,179,51,0.65); }
+        .pulse-card.vibe-needs_something { box-shadow: inset 3px 0 0 rgba(122,155,255,0.65); }
+        .pulse-card-head { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom: 8px; }
+        .pulse-vibe-tag {
+            display:inline-flex; align-items:center; gap:6px;
+            padding: 3px 9px; border-radius:999px;
+            font-size: 0.72rem; font-weight: 600; letter-spacing: 0.02em;
+            border: 1px solid var(--border);
+        }
+        .pulse-vibe-tag.vibe-calm            { background: rgba(92,220,138,0.10); color:#9be8b8; border-color: rgba(92,220,138,0.28); }
+        .pulse-vibe-tag.vibe-glitchy         { background: rgba(255,179,51,0.08);  color:#ffce80; border-color: rgba(255,179,51,0.28); }
+        .pulse-vibe-tag.vibe-needs_something { background: rgba(122,155,255,0.08); color:#a8b9ee; border-color: rgba(122,155,255,0.28); }
+        .pulse-context-tag {
+            font-family: var(--mono); font-size: 0.7rem; color: var(--muted);
+            text-transform: uppercase; letter-spacing: 0.08em;
+        }
+        .pulse-text {
+            color: var(--text); font-size: 0.88rem; line-height: 1.5;
+            margin: 6px 0 8px;
+            display: -webkit-box; -webkit-line-clamp: 6; -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+        .pulse-text.no-text { font-style: italic; color: var(--muted); font-size: 0.8rem; }
+        .pulse-foot { display:flex; justify-content:space-between; gap:8px; font-size: 0.72rem; color: var(--muted); }
+        .pulse-foot .pulse-user { font-family: var(--mono); }
     </style>
+    <link rel="stylesheet" href="blaksyd-pulse.css?v=20260428b">
 </head>
 <body>
 
@@ -493,6 +564,10 @@
         </div>
         <div class="nav-item" data-tab="nexus" onclick="showPanel('nexus')">
             <ion-icon name="planet-outline"></ion-icon> Nexus
+        </div>
+        <div class="nav-item" data-tab="pulse" onclick="showPanel('pulse')">
+            <ion-icon name="pulse-outline"></ion-icon> Pulse
+            <span class="nav-count" id="nav-pulse-count"></span>
         </div>
 
         <div class="sidebar-section">Data</div>
@@ -813,6 +888,44 @@
             <div class="card">
                 <div class="card-h"><div><div class="card-title">Latest Nexus posts</div><div class="card-sub">Newest first</div></div></div>
                 <div class="activity-list" id="nexus-posts-list">
+                    <div class="empty-state">Loading…</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ════════════════════════════════ PULSE ════════════════════════════════ -->
+        <div id="panel-pulse" class="panel">
+            <div class="card" style="margin-bottom:18px;">
+                <div class="card-h" style="align-items:center;">
+                    <div>
+                        <div class="card-title">Pulse Feedback Collection</div>
+                        <div class="card-sub">Master switch — when ON, "The Pulse" appears across user-facing pages.</div>
+                    </div>
+                    <label class="pulse-toggle">
+                        <input type="checkbox" id="pulse-master-toggle">
+                        <span class="pulse-track"><span class="pulse-thumb"></span></span>
+                        <span class="pulse-toggle-label" id="pulse-toggle-label">OFF</span>
+                    </label>
+                </div>
+                <div class="pulse-toggle-meta" id="pulse-toggle-meta" style="margin-top:6px; color:var(--muted); font-size:0.82rem;">—</div>
+            </div>
+
+            <div class="card">
+                <div class="card-h" style="flex-wrap:wrap; gap:12px;">
+                    <div>
+                        <div class="card-title">Inbox</div>
+                        <div class="card-sub" id="pulse-inbox-sub">Latest pulses across all surfaces</div>
+                    </div>
+                    <div class="pulse-filters" id="pulse-filters">
+                        <button class="pulse-filter active" data-filter="all">All</button>
+                        <button class="pulse-filter" data-filter="ai_echo">AI Echo</button>
+                        <button class="pulse-filter" data-filter="journal">Journal</button>
+                        <button class="pulse-filter" data-filter="human_connect">Listener</button>
+                        <button class="pulse-filter" data-filter="community">Community</button>
+                        <button class="pulse-filter" data-filter="dashboard">Dashboard</button>
+                    </div>
+                </div>
+                <div class="pulse-grid" id="pulse-grid">
                     <div class="empty-state">Loading…</div>
                 </div>
             </div>
