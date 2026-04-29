@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Blaksyd | Command Center</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
     <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -515,6 +516,195 @@
         .pulse-text.no-text { font-style: italic; color: var(--muted); font-size: 0.8rem; }
         .pulse-foot { display:flex; justify-content:space-between; gap:8px; font-size: 0.72rem; color: var(--muted); }
         .pulse-foot .pulse-user { font-family: var(--mono); }
+
+        /* ════════════════════════════════════════════════════════════════
+           SympOS — Hi-Tech Command Center refinements
+           ════════════════════════════════════════════════════════════════ */
+
+        /* Soft starfield behind the whole app */
+        body::before {
+            content: '';
+            position: fixed; inset: 0; pointer-events: none; z-index: 0;
+            background:
+              radial-gradient(800px circle at 12% -10%, rgba(0,229,176,0.07), transparent 60%),
+              radial-gradient(700px circle at 110% 10%, rgba(176,115,255,0.06), transparent 55%),
+              radial-gradient(900px circle at 60% 120%, rgba(61,158,255,0.05), transparent 60%);
+        }
+        .sidebar, .main { position: relative; z-index: 1; }
+
+        /* HUD — persistent telemetry rail under the topbar */
+        .hud-rail {
+            display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 12px;
+            padding: 12px 28px;
+            border-bottom: 1px solid var(--border);
+            background:
+              linear-gradient(180deg, rgba(13,17,23,0.92), rgba(13,17,23,0.78)),
+              repeating-linear-gradient(90deg, rgba(255,255,255,0.018) 0 1px, transparent 1px 22px);
+            backdrop-filter: blur(8px) saturate(140%);
+            -webkit-backdrop-filter: blur(8px) saturate(140%);
+            position: relative;
+            flex-shrink: 0;
+        }
+        .hud-rail::after {
+            content: ''; position: absolute; left:0; right:0; bottom:-1px; height:1px;
+            background: linear-gradient(90deg, transparent, rgba(0,229,176,0.45), rgba(176,115,255,0.35), transparent);
+            opacity: 0.9;
+        }
+        .hud-tile {
+            position: relative;
+            display: flex; align-items: center; gap: 14px;
+            padding: 10px 14px;
+            background: rgba(11,15,22,0.62);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+            transition: border-color 200ms ease, transform 200ms ease;
+        }
+        .hud-tile:hover { border-color: var(--border-strong); transform: translateY(-1px); }
+        .hud-tile::before {
+            content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 2px;
+            background: var(--hud-accent, var(--accent));
+            box-shadow: 0 0 14px var(--hud-accent, var(--accent));
+            opacity: 0.85;
+        }
+        .hud-tile.green   { --hud-accent: #00e5b0; }
+        .hud-tile.purple  { --hud-accent: #b073ff; }
+        .hud-tile.blue    { --hud-accent: #3d9eff; }
+        .hud-tile-glyph {
+            width: 38px; height: 38px; flex: 0 0 38px;
+            display: inline-flex; align-items: center; justify-content: center;
+            border-radius: 10px;
+            background: linear-gradient(135deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01));
+            border: 1px solid var(--border);
+            color: var(--hud-accent, var(--accent));
+            font-size: 1.05rem;
+        }
+        .hud-tile-body { flex: 1; min-width: 0; }
+        .hud-tile-label {
+            font-family: var(--mono); font-size: 0.66rem; letter-spacing: 1.6px;
+            text-transform: uppercase; color: var(--muted-2);
+        }
+        .hud-tile-value {
+            font-family: var(--mono); font-weight: 700;
+            font-size: 1.45rem; line-height: 1.05;
+            margin-top: 3px; letter-spacing: -0.005em;
+            color: var(--text);
+        }
+        .hud-tile-delta {
+            display: inline-flex; align-items: center; gap: 4px;
+            font-family: var(--mono); font-size: 0.68rem;
+            color: var(--muted-2); margin-left: 8px;
+        }
+        .hud-tile-delta.up   { color: #5cdc8a; }
+        .hud-tile-delta.down { color: #ff8a8a; }
+        .hud-tile-spark {
+            position: absolute; right: 10px; top: 10px;
+            width: 6px; height: 6px; border-radius: 50%;
+            background: var(--hud-accent, var(--accent));
+            box-shadow: 0 0 10px var(--hud-accent, var(--accent));
+            animation: hud-blink 1.6s ease-in-out infinite;
+        }
+        @keyframes hud-blink { 0%,100% { opacity: 1; } 50% { opacity: 0.25; } }
+
+        /* Glow upgrade for KPI bars */
+        .kpi-bar { box-shadow: 0 0 18px rgba(0, 229, 176, 0.55); }
+        .kpi { background: linear-gradient(180deg, rgba(14,18,26,0.92), rgba(11,14,20,0.92)); }
+        .kpi::after {
+            content: ''; position: absolute; right: -40px; bottom: -40px; width: 140px; height: 140px;
+            border-radius: 50%; pointer-events: none;
+            background: radial-gradient(closest-side, rgba(0,229,176,0.10), transparent 70%);
+        }
+
+        /* FinOps chart card */
+        .finops-card { padding: 18px 18px 14px; }
+        .finops-canvas-wrap {
+            position: relative; height: 240px; margin-top: 10px;
+        }
+        .finops-legend {
+            display:flex; gap: 16px; margin-top: 10px;
+            font-family: var(--mono); font-size: 0.72rem; color: var(--muted);
+        }
+        .finops-legend .swatch {
+            display:inline-block; width: 10px; height: 10px; border-radius: 3px;
+            margin-right: 6px; vertical-align: middle;
+        }
+        .finops-legend .tokens { background: #00e5b0; box-shadow: 0 0 8px rgba(0,229,176,0.6); }
+        .finops-legend .credits { background: #b073ff; box-shadow: 0 0 8px rgba(176,115,255,0.6); }
+
+        /* Control Deck */
+        .deck-grid {
+            display: grid; gap: 14px;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+        }
+        .deck-card {
+            position: relative;
+            padding: 18px 18px 16px;
+            background: linear-gradient(180deg, rgba(14,18,26,0.92), rgba(11,14,20,0.92));
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            overflow: hidden;
+        }
+        .deck-card::before {
+            content: ''; position: absolute; inset: 0; pointer-events: none;
+            background: radial-gradient(closest-side at 10% 0%, var(--deck-glow, rgba(0,229,176,0.12)), transparent 60%);
+            opacity: 0.9;
+        }
+        .deck-card.danger { --deck-glow: rgba(255,76,106,0.18); }
+        .deck-card.calm   { --deck-glow: rgba(0,229,176,0.16); }
+        .deck-head { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; }
+        .deck-title-row { display:flex; align-items:center; gap:10px; }
+        .deck-title-row .ico {
+            width: 34px; height: 34px; border-radius: 10px;
+            display: inline-flex; align-items:center; justify-content:center;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid var(--border);
+            font-size: 1.05rem;
+        }
+        .deck-card.calm   .deck-title-row .ico { color: #5cdc8a; }
+        .deck-card.danger .deck-title-row .ico { color: #ff8a8a; }
+        .deck-title { font-weight: 700; font-size: 1rem; }
+        .deck-sub   { font-size: 0.78rem; color: var(--muted); margin-top: 3px; }
+        .deck-meta  {
+            margin-top: 14px;
+            font-family: var(--mono); font-size: 0.74rem; color: var(--muted-2);
+            display: flex; align-items: center; gap: 8px;
+        }
+        .deck-meta .dot {
+            width: 8px; height: 8px; border-radius: 50%;
+            background: var(--muted); display: inline-block;
+        }
+        .deck-card.calm   .deck-meta.on .dot { background: #5cdc8a; box-shadow: 0 0 10px #5cdc8a; }
+        .deck-card.danger .deck-meta.on .dot { background: #ff4c6a; box-shadow: 0 0 12px #ff4c6a; }
+
+        /* Bigger glowing kill-switch toggle for danger zone */
+        .deck-toggle { display:inline-flex; align-items:center; gap:12px; cursor:pointer; user-select:none; }
+        .deck-toggle input { position:absolute; opacity:0; pointer-events:none; }
+        .deck-track {
+            position:relative; width:60px; height:32px; border-radius:999px;
+            background:#1a2230; border:1px solid var(--border);
+            transition: background 220ms ease, border-color 220ms ease, box-shadow 220ms ease;
+        }
+        .deck-thumb {
+            position:absolute; top:3px; left:3px; width:24px; height:24px; border-radius:999px;
+            background:#7a8390; box-shadow:0 1px 2px rgba(0,0,0,0.5);
+            transition: transform 240ms cubic-bezier(0.22,1,0.36,1), background 220ms ease;
+        }
+        .deck-card.calm   .deck-toggle input:checked + .deck-track { background: rgba(0,229,176,0.22); border-color: rgba(0,229,176,0.6); box-shadow: 0 0 22px rgba(0,229,176,0.35); }
+        .deck-card.calm   .deck-toggle input:checked + .deck-track .deck-thumb { transform: translateX(28px); background: #00e5b0; }
+        .deck-card.danger .deck-toggle input:checked + .deck-track { background: rgba(255,76,106,0.22); border-color: rgba(255,76,106,0.6); box-shadow: 0 0 22px rgba(255,76,106,0.4); }
+        .deck-card.danger .deck-toggle input:checked + .deck-track .deck-thumb { transform: translateX(28px); background: #ff4c6a; }
+        .deck-state {
+            font-family: var(--mono); font-size: 0.78rem; letter-spacing: 0.08em;
+            color: var(--muted-2);
+        }
+        .deck-card.calm   .deck-toggle input:checked ~ .deck-state { color: #5cdc8a; }
+        .deck-card.danger .deck-toggle input:checked ~ .deck-state { color: #ff8a8a; }
+
+        /* Reduce motion */
+        @media (prefers-reduced-motion: reduce) {
+            .hud-tile-spark { animation: none; }
+        }
     </style>
     <link rel="stylesheet" href="blaksyd-pulse.css?v=20260428b">
 </head>
@@ -570,6 +760,12 @@
             <span class="nav-count" id="nav-pulse-count"></span>
         </div>
 
+        <div class="sidebar-section">System</div>
+        <div class="nav-item" data-tab="controls" onclick="showPanel('controls')">
+            <ion-icon name="toggle-outline"></ion-icon> Controls
+            <span class="nav-count" id="nav-controls-count"></span>
+        </div>
+
         <div class="sidebar-section">Data</div>
         <div class="nav-item" data-tab="activity" onclick="showPanel('activity')">
             <ion-icon name="receipt-outline"></ion-icon> Activity feed
@@ -606,12 +802,68 @@
         </div>
     </div>
 
+    <!-- ── HUD: persistent telemetry rail (Live Users · Listeners · API Burn) ── -->
+    <div class="hud-rail" id="hud-rail">
+        <div class="hud-tile green">
+            <span class="hud-tile-spark" aria-hidden="true"></span>
+            <span class="hud-tile-glyph"><ion-icon name="people-outline"></ion-icon></span>
+            <div class="hud-tile-body">
+                <div class="hud-tile-label">Live users online</div>
+                <div class="hud-tile-value">
+                    <span id="hud-live-users">—</span>
+                    <span class="hud-tile-delta" id="hud-live-users-delta"></span>
+                </div>
+            </div>
+        </div>
+        <div class="hud-tile purple">
+            <span class="hud-tile-spark" aria-hidden="true"></span>
+            <span class="hud-tile-glyph"><ion-icon name="ear-outline"></ion-icon></span>
+            <div class="hud-tile-body">
+                <div class="hud-tile-label">Active human listeners</div>
+                <div class="hud-tile-value">
+                    <span id="hud-listeners">—</span>
+                    <span class="hud-tile-delta" id="hud-listeners-delta"></span>
+                </div>
+            </div>
+        </div>
+        <div class="hud-tile blue">
+            <span class="hud-tile-spark" aria-hidden="true"></span>
+            <span class="hud-tile-glyph"><ion-icon name="flame-outline"></ion-icon></span>
+            <div class="hud-tile-body">
+                <div class="hud-tile-label">API burn · tokens / min</div>
+                <div class="hud-tile-value">
+                    <span id="hud-burn">—</span>
+                    <span class="hud-tile-delta" id="hud-burn-delta"></span>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="panels-area">
 
         <!-- ════════════════════════════════ OVERVIEW ════════════════════════════════ -->
         <div id="panel-overview" class="panel active">
             <div class="kpi-row" id="kpi-row">
                 <!-- populated by JS -->
+            </div>
+
+            <!-- FinOps: tokens consumed vs credits spent (last 7d) -->
+            <div class="card finops-card" style="margin-bottom:18px;">
+                <div class="card-h">
+                    <div>
+                        <div class="card-title">FinOps · last 7 days</div>
+                        <div class="card-sub">API tokens consumed vs credits spent — daily totals</div>
+                    </div>
+                    <span class="pill" id="finops-pill">—</span>
+                </div>
+                <div class="finops-canvas-wrap">
+                    <canvas id="finops-chart"></canvas>
+                </div>
+                <div class="finops-legend">
+                    <span><span class="swatch tokens"></span>Tokens consumed</span>
+                    <span><span class="swatch credits"></span>Credits spent</span>
+                    <span style="margin-left:auto;" id="finops-totals">—</span>
+                </div>
             </div>
 
             <div class="grid-2">
@@ -636,6 +888,55 @@
                     </div>
                     <div class="activity-list" id="overview-journal-list">
                         <div class="empty-state">Loading…</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ════════════════════════════════ CONTROLS (System switches) ════════════════════════════════ -->
+        <div id="panel-controls" class="panel">
+            <div class="deck-grid">
+                <!-- Pulse master switch -->
+                <div class="deck-card calm">
+                    <div class="deck-head">
+                        <div class="deck-title-row">
+                            <span class="ico"><ion-icon name="pulse-outline"></ion-icon></span>
+                            <div>
+                                <div class="deck-title">The Pulse · feedback collector</div>
+                                <div class="deck-sub">Quiet card asks how each surface feels. OFF by default.</div>
+                            </div>
+                        </div>
+                        <label class="deck-toggle">
+                            <input type="checkbox" id="ctl-pulse-toggle">
+                            <span class="deck-track"><span class="deck-thumb"></span></span>
+                            <span class="deck-state" id="ctl-pulse-state">OFF</span>
+                        </label>
+                    </div>
+                    <div class="deck-meta" id="ctl-pulse-meta">
+                        <span class="dot"></span>
+                        <span id="ctl-pulse-meta-text">Loading switch state…</span>
+                    </div>
+                </div>
+
+                <!-- AI Voice kill switch -->
+                <div class="deck-card danger">
+                    <div class="deck-head">
+                        <div class="deck-title-row">
+                            <span class="ico"><ion-icon name="alert-circle-outline"></ion-icon></span>
+                            <div>
+                                <div class="deck-title">AI Voice · emergency kill</div>
+                                <div class="deck-sub">When ON, all AI chat & voice routes return a soft 503. Use only in incident.</div>
+                            </div>
+                        </div>
+                        <label class="deck-toggle">
+                            <input type="checkbox" id="ctl-aikill-toggle">
+                            <span class="deck-track"><span class="deck-thumb"></span></span>
+                            <span class="deck-state" id="ctl-aikill-state">LIVE</span>
+                        </label>
+                    </div>
+                    <div class="deck-meta" id="ctl-aikill-meta">
+                        <span class="dot"></span>
+                        <span id="ctl-aikill-meta-text">Loading switch state…</span>
                     </div>
                 </div>
             </div>

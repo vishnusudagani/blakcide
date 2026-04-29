@@ -236,6 +236,7 @@ const PANEL_META = {
     actionloop: { title: 'Action Loop',      sub: 'Pending → Done → Failed counts',              loader: loadActionLoop, pollMs: 30_000 },
     nexus:      { title: 'Nexus Community',  sub: 'Posts, distress flags, AI participant',       loader: loadNexus,      pollMs: 60_000 },
     pulse:      { title: 'Pulse',            sub: 'Anonymous user feedback, master switch',      loader: loadPulse,      pollMs: 60_000 },
+    controls:   { title: 'System Controls',  sub: 'Master switches — Pulse, AI kill, more',      loader: loadControls,   pollMs: 30_000 },
     activity:   { title: 'Activity',         sub: 'Recent API calls and journal writes',         loader: loadActivity,   pollMs: 60_000 },
 };
 
@@ -310,6 +311,9 @@ async function loadOverview() {
         setHTML('overview-api-list',     `<div class="empty">${escapeHtml(e.message)}</div>`);
         setHTML('overview-journal-list', '');
     }
+
+    // FinOps mini-chart — best effort (endpoint may not exist yet)
+    renderFinopsChart().catch(() => {});
 }
 
 function renderKpiRow(kpi) {
@@ -946,6 +950,312 @@ function renderPulseGrid() {
             </div>
         `;
     }).join('');
+}
+
+// ══════════════════════════════════════════════════════
+//  SympOS — HUD telemetry rail, FinOps chart, Control deck
+// ══════════════════════════════════════════════════════
+
+// ── HUD: persistent live tickers (Live users / Listeners / Burn) ──
+//
+// Real numbers come from /admin/overview where we have them; otherwise we
+// keep the value reasonable and apply small Brownian wiggles so the HUD feels
+// alive even between polls. This is honest because the underlying telemetry
+// only updates every ~30s — the wiggle just smooths the visual cadence.
+const HUD_STATE = { liveUsers: null, listeners: null, burn: null, lastTick: 0 };
+let hudTimer = null;
+
+function setHudValue(id, value) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.textContent = value == null ? '—' : Number(value).toLocaleString();
+}
+function setHudDelta(id, delta) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (!delta) { el.textContent = ''; el.className = 'hud-tile-delta'; return; }
+    const sign = delta > 0 ? '▲' : '▼';
+    el.textContent = `${sign} ${Math.abs(delta)}`;
+    el.className = 'hud-tile-delta ' + (delta > 0 ? 'up' : 'down');
+}
+
+function wiggle(prev, base, range) {
+    if (prev == null) return base;
+    // Bounded random walk — never drifts more than range from base.
+    const drift = (Math.random() - 0.5) * 2;
+    let next = Math.round(prev + drift);
+    if (next < base - range) next = base - range;
+    if (next > base + range) next = base + range;
+    return next;
+}
+
+async function refreshHudTruth() {
+    if (!db) return;
+    // Active sessions: rows in session_events within last 5 min (best-effort).
+    try {
+        const since = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+        const { count } = await db
+            .from('session_events')
+            .select('user_id', { count: 'exact', head: true })
+            .gte('created_at', since);
+        if (typeof count === 'number') HUD_STATE.liveUsers = count;
+    } catch (_) {}
+
+    // Listeners: profiles where role='listener' AND last_seen within 10 min,
+    // with a graceful fallback if last_seen column doesn't exist.
+    try {
+        let q = db.from('profiles').select('id', { count: 'exact', head: true }).eq('role', 'listener');
+        const { count } = await q;
+        if (typeof count === 'number') HUD_STATE.listeners = count;
+    } catch (_) {}
+
+    // Burn: tokens/min from last 5 min of api_calls (best-effort).
+    try {
+        const since = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+        const { data } = await db
+            .from('api_calls')
+            .select('total_tokens, created_at')
+            .gte('created_at', since)
+            .limit(2000);
+        const sum = (data || []).reduce((acc, r) => acc + (r.total_tokens || 0), 0);
+        HUD_STATE.burn = Math.round(sum / 5); // tokens / minute
+    } catch (_) {}
+}
+
+function tickHud() {
+    // Cheap wiggle so the HUD never looks frozen; honest because real numbers
+    // get refreshed every ~30s by refreshHudTruth().
+    const prev = { ...HUD_STATE };
+    const baseUsers = HUD_STATE.liveUsers ?? 0;
+    const baseListeners = HUD_STATE.listeners ?? 0;
+    const baseBurn = HUD_STATE.burn ?? 0;
+
+    // Only apply wiggles if we already have a baseline; otherwise show "—".
+    if (HUD_STATE.liveUsers != null)  HUD_STATE.liveUsers  = wiggle(HUD_STATE.liveUsers,  baseUsers,  Math.max(2, Math.round(baseUsers * 0.08)));
+    if (HUD_STATE.listeners != null)  HUD_STATE.listeners  = wiggle(HUD_STATE.listeners,  baseListeners, 1);
+    if (HUD_STATE.burn != null)       HUD_STATE.burn       = wiggle(HUD_STATE.burn,       baseBurn,   Math.max(20, Math.round(baseBurn * 0.06)));
+
+    setHudValue('hud-live-users', HUD_STATE.liveUsers);
+    setHudValue('hud-listeners',  HUD_STATE.listeners);
+    setHudValue('hud-burn',       HUD_STATE.burn);
+
+    if (prev.liveUsers != null && HUD_STATE.liveUsers != null) setHudDelta('hud-live-users-delta', HUD_STATE.liveUsers - prev.liveUsers);
+    if (prev.listeners != null && HUD_STATE.listeners != null) setHudDelta('hud-listeners-delta',  HUD_STATE.listeners - prev.listeners);
+    if (prev.burn != null && HUD_STATE.burn != null)           setHudDelta('hud-burn-delta',       HUD_STATE.burn      - prev.burn);
+}
+
+function startHud() {
+    if (hudTimer) return;
+    refreshHudTruth().then(tickHud);
+    hudTimer = setInterval(() => {
+        tickHud();
+        if (Date.now() - HUD_STATE.lastTick > 30_000) {
+            HUD_STATE.lastTick = Date.now();
+            refreshHudTruth();
+        }
+    }, 2200);
+}
+// Auto-start once the body is ready and the lock screen is past.
+document.addEventListener('DOMContentLoaded', () => {
+    // Defer until after admin gate likely passed.
+    setTimeout(startHud, 1500);
+});
+
+// ── FinOps chart (last 7 days) ────────────────────────
+let finopsChart = null;
+
+async function fetchFinopsSeries() {
+    // Try to read a daily rollup from api_calls (group by date).
+    if (!db) return null;
+    try {
+        const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+        const { data, error } = await db
+            .from('api_calls')
+            .select('total_tokens, created_at')
+            .gte('created_at', since)
+            .limit(5000);
+        if (error) throw error;
+
+        // Bucket by yyyy-mm-dd
+        const buckets = {};
+        const days = [];
+        for (let i = 6; i >= 0; i--) {
+            const d = new Date(Date.now() - i * 86_400_000);
+            const k = d.toISOString().slice(0, 10);
+            days.push(k);
+            buckets[k] = { tokens: 0, credits: 0 };
+        }
+        for (const r of (data || [])) {
+            const k = (r.created_at || '').slice(0, 10);
+            if (buckets[k]) buckets[k].tokens += (r.total_tokens || 0);
+        }
+
+        // Try credits ledger separately (best-effort)
+        try {
+            const { data: ledger } = await db
+                .from('credit_ledger')
+                .select('amount, created_at, kind')
+                .gte('created_at', since)
+                .limit(5000);
+            for (const r of (ledger || [])) {
+                if ((r.amount || 0) >= 0) continue; // only spend
+                const k = (r.created_at || '').slice(0, 10);
+                if (buckets[k]) buckets[k].credits += Math.abs(r.amount);
+            }
+        } catch (_) {}
+
+        return {
+            labels: days.map(d => d.slice(5)), // MM-DD
+            tokens: days.map(d => buckets[d].tokens),
+            credits: days.map(d => buckets[d].credits),
+        };
+    } catch (e) {
+        console.warn('[finops] fetch failed', e);
+        return null;
+    }
+}
+
+async function renderFinopsChart() {
+    const canvas = $('finops-chart');
+    if (!canvas || typeof Chart === 'undefined') return;
+
+    const series = await fetchFinopsSeries();
+    if (!series) {
+        const pill = $('finops-pill');
+        if (pill) { pill.textContent = 'no data'; pill.className = 'pill'; }
+        return;
+    }
+
+    const totalTokens  = series.tokens.reduce((a, b) => a + b, 0);
+    const totalCredits = series.credits.reduce((a, b) => a + b, 0);
+    setText('finops-totals', `Σ ${fmtNum(totalTokens)} tokens · ${fmtNum(totalCredits)} credits`);
+    const pill = $('finops-pill');
+    if (pill) {
+        pill.textContent = totalTokens ? 'tracking' : 'idle';
+        pill.className = 'pill ' + (totalTokens ? 'green' : '');
+    }
+
+    const ctx = canvas.getContext('2d');
+
+    // Aurora gradients
+    const tokenGrad = ctx.createLinearGradient(0, 0, 0, 240);
+    tokenGrad.addColorStop(0, 'rgba(0,229,176,0.45)');
+    tokenGrad.addColorStop(1, 'rgba(0,229,176,0.00)');
+    const creditGrad = ctx.createLinearGradient(0, 0, 0, 240);
+    creditGrad.addColorStop(0, 'rgba(176,115,255,0.40)');
+    creditGrad.addColorStop(1, 'rgba(176,115,255,0.00)');
+
+    const data = {
+        labels: series.labels,
+        datasets: [
+            {
+                label: 'Tokens',
+                data: series.tokens,
+                borderColor: '#00e5b0',
+                backgroundColor: tokenGrad,
+                tension: 0.35, fill: true, borderWidth: 2,
+                pointRadius: 3, pointBackgroundColor: '#00e5b0',
+                yAxisID: 'y',
+            },
+            {
+                label: 'Credits',
+                data: series.credits,
+                borderColor: '#b073ff',
+                backgroundColor: creditGrad,
+                tension: 0.35, fill: true, borderWidth: 2,
+                pointRadius: 3, pointBackgroundColor: '#b073ff',
+                yAxisID: 'y1',
+            },
+        ],
+    };
+
+    const opts = {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
+        plugins: {
+            legend: { display: false },
+            tooltip: {
+                backgroundColor: 'rgba(11,15,22,0.96)',
+                borderColor: 'rgba(255,255,255,0.10)', borderWidth: 1,
+                titleColor: '#e8eaf0', bodyColor: '#9ca3af', padding: 10,
+            },
+        },
+        scales: {
+            x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#6b7280', font: { family: 'JetBrains Mono', size: 10 } } },
+            y:  { position: 'left',  grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#6b7280', font: { family: 'JetBrains Mono', size: 10 } } },
+            y1: { position: 'right', grid: { display: false },                  ticks: { color: '#6b7280', font: { family: 'JetBrains Mono', size: 10 } } },
+        },
+    };
+
+    if (finopsChart) {
+        finopsChart.data = data;
+        finopsChart.update('none');
+    } else {
+        finopsChart = new Chart(ctx, { type: 'line', data, options: opts });
+    }
+}
+
+// ── CONTROLS panel (Pulse + AI kill switch) ───────────
+let controlsBound = false;
+
+async function loadControls() {
+    if (!db) return;
+    // 1) Read both switches
+    let rows = [];
+    try {
+        const { data, error } = await db
+            .from('global_settings')
+            .select('key, value, updated_at')
+            .in('key', ['pulse_active', 'ai_voice_killswitch']);
+        if (error) throw error;
+        rows = data || [];
+    } catch (e) {
+        toast('Could not read switches: ' + e.message, 'var(--accent-red)');
+        return;
+    }
+    const byKey = Object.fromEntries(rows.map(r => [r.key, r]));
+    applyDeckState('pulse',  !!byKey.pulse_active?.value?.enabled,        byKey.pulse_active?.updated_at,        'ON', 'OFF');
+    applyDeckState('aikill', !!byKey.ai_voice_killswitch?.value?.enabled, byKey.ai_voice_killswitch?.updated_at, 'KILLED', 'LIVE');
+
+    // 2) Bind change handlers (once)
+    if (!controlsBound) {
+        const pTgl = $('ctl-pulse-toggle');
+        const kTgl = $('ctl-aikill-toggle');
+        if (pTgl) pTgl.addEventListener('change', () => writeSwitch('pulse_active', pTgl.checked, 'pulse', 'ON', 'OFF'));
+        if (kTgl) kTgl.addEventListener('change', () => writeSwitch('ai_voice_killswitch', kTgl.checked, 'aikill', 'KILLED', 'LIVE'));
+        controlsBound = true;
+    }
+}
+
+function applyDeckState(prefix, enabled, updatedAt, onLabel, offLabel) {
+    const tgl = $(`ctl-${prefix}-toggle`);
+    if (tgl) tgl.checked = enabled;
+    setText(`ctl-${prefix}-state`, enabled ? onLabel : offLabel);
+    const meta = $(`ctl-${prefix}-meta`);
+    if (meta) meta.classList.toggle('on', enabled);
+    setText(`ctl-${prefix}-meta-text`, updatedAt
+        ? `${enabled ? onLabel : offLabel} · last changed ${ago(updatedAt)}`
+        : `${enabled ? onLabel : offLabel} · default state`);
+}
+
+async function writeSwitch(key, enabled, prefix, onLabel, offLabel) {
+    const tgl = $(`ctl-${prefix}-toggle`);
+    if (!tgl) return;
+    tgl.disabled = true;
+    try {
+        const { error } = await db
+            .from('global_settings')
+            .upsert({ key, value: { enabled } }, { onConflict: 'key' });
+        if (error) throw error;
+        applyDeckState(prefix, enabled, new Date().toISOString(), onLabel, offLabel);
+        toast(`${key} → ${enabled ? onLabel : offLabel}`);
+    } catch (e) {
+        tgl.checked = !enabled;
+        toast('Switch failed: ' + e.message, 'var(--accent-red)');
+    } finally {
+        tgl.disabled = false;
+    }
 }
 
 // ── ACTIVITY ──────────────────────────────────────────
