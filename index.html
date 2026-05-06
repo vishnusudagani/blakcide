@@ -1,310 +1,481 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BLAKCIDE | AI Companion</title>
-    <link rel="stylesheet" href="style.css">
-    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#0F172A">
+    <meta name="description" content="A quiet place for loud thoughts. Journal, Nexus, Echo, Listeners — your private sanctuary, locked from the inside.">
+    <title>blaksyd — a quiet place for loud thoughts</title>
+
+    <link rel="icon" type="image/png" href="assets/blaksyd-white.png">
+    <link rel="stylesheet" href="style.css?v=blkd">
+
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@400;500;600;700&family=Inter:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
-    
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500;9..144,600&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400&display=swap" rel="stylesheet">
+
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
-    <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
 </head>
 <body>
 
-    <canvas id="pearl-canvas"></canvas>
+    <!-- ─────── The Symp Core: signature visual orb ─────── -->
+    <div class="symp-core" id="symp-core" aria-hidden="true">
+        <div class="symp-orb orb-a"></div>
+        <div class="symp-orb orb-b"></div>
+        <div class="symp-orb orb-c"></div>
+    </div>
 
-    <div id="toast-container" class="toast-container"></div>
+    <!-- ─────── Theme bloom transition layer ─────── -->
+    <div class="theme-bloom" id="theme-bloom" aria-hidden="true"></div>
 
-    <div id="landing-view">
-        
-        <nav class="fixed-nav">
-            <a href="#welcome" class="nav-brand">BLAKCIDE</a>
-            <div class="menu-wrapper">
-                <button id="menu-toggle-btn" class="nav-menu-btn">
-                    <span>MENU</span>
-                    <ion-icon name="menu-outline"></ion-icon>
-                </button>
-                
-                <div id="dropdown-menu" class="glass-dropdown">
-                    <a href="#promise" onclick="closeMenu()"><ion-icon name="heart-outline"></ion-icon> Our Promise</a>
-                    <a href="#features" onclick="closeMenu()"><ion-icon name="star-outline"></ion-icon> Features</a>
-                    <a href="#connect" onclick="closeMenu()"><ion-icon name="mail-outline"></ion-icon> Connect</a>
+    <!-- ─────── Top navigation ─────── -->
+    <nav class="top-nav">
+        <a href="#hero" class="brand-mark" aria-label="blaksyd home">
+            <img src="assets/blaksyd-white.png" alt="blaksyd" class="brand-logo brand-logo-dark">
+            <img src="assets/blaksyd-black.png" alt="blaksyd" class="brand-logo brand-logo-light">
+        </a>
+        <div class="nav-actions">
+            <button id="theme-toggle" class="theme-toggle" aria-label="Switch theme" title="Switch theme">
+                <span class="theme-toggle-track">
+                    <span class="theme-toggle-thumb"></span>
+                </span>
+                <span class="theme-toggle-label">
+                    <span data-when="dark">Midnight</span>
+                    <span data-when="light">Morning</span>
+                </span>
+            </button>
+            <button id="nav-tell-us" class="nav-tell-us">
+                <span>Tell us</span>
+            </button>
+        </div>
+    </nav>
+
+    <main class="page">
+
+        <!-- ═════════════════════════════════════════════════ -->
+        <!--   1.  HERO  —  The Trigger                        -->
+        <!-- ═════════════════════════════════════════════════ -->
+        <section class="hero" id="hero">
+            <div class="hero-inner">
+                <p class="hero-eyebrow">
+                    <span class="eyebrow-dot"></span>
+                    <span class="eyebrow-text">your sanctuary is open</span>
+                </p>
+
+                <h1 class="hero-title">
+                    A quiet place
+                    <span class="hero-title-soft">for loud thoughts.</span>
+                </h1>
+
+                <p class="hero-sub">
+                    No judgment. No noise. Just a soft room where the heavy things you carry can finally sit down for a moment.
+                </p>
+
+                <form class="hero-input-wrap" id="hero-input-form" autocomplete="off">
+                    <label for="hero-input" class="visually-hidden">What's heavy on your mind right now?</label>
+                    <input
+                        type="text"
+                        id="hero-input"
+                        class="hero-input"
+                        placeholder="What's heavy on your mind right now?"
+                        maxlength="240"
+                        autocomplete="off"
+                        spellcheck="false"
+                    >
+                    <button type="submit" class="hero-input-send" aria-label="Send">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M5 12h14M13 6l6 6-6 6"/>
+                        </svg>
+                    </button>
+                </form>
+
+                <p class="hero-hint">
+                    <span class="hint-key">↵</span> press enter — nothing is saved unless you say so
+                </p>
+            </div>
+
+            <a href="#vibe" class="hero-scroll-cue" aria-label="Scroll">
+                <span></span>
+            </a>
+        </section>
+
+        <!-- ═════════════════════════════════════════════════ -->
+        <!--   2.  THE VIBE MAP  —  gamified emotional slider   -->
+        <!-- ═════════════════════════════════════════════════ -->
+        <section class="vibe" id="vibe">
+            <div class="vibe-head">
+                <p class="kicker">your weather, right now</p>
+                <h2 class="section-title">Drag the dot. <span class="title-soft">Show us how today actually feels.</span></h2>
+                <p class="section-sub">No words needed yet. Just slide. Watch the room breathe with you.</p>
+            </div>
+
+            <div class="vibe-stage" id="vibe-stage">
+                <div class="vibe-axis vibe-axis-y">
+                    <span class="axis-cap top">activated</span>
+                    <span class="axis-cap bot">still</span>
+                </div>
+                <div class="vibe-axis vibe-axis-x">
+                    <span class="axis-cap left">heavy</span>
+                    <span class="axis-cap right">light</span>
+                </div>
+
+                <div class="vibe-grid"></div>
+
+                <div class="vibe-pad" id="vibe-pad" tabindex="0" role="slider" aria-label="Emotional state slider" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50">
+                    <div class="vibe-glow" id="vibe-glow"></div>
+                    <div class="vibe-dot" id="vibe-dot">
+                        <div class="vibe-dot-pulse"></div>
+                        <div class="vibe-dot-core"></div>
+                    </div>
+                </div>
+
+                <div class="vibe-readout" id="vibe-readout">
+                    <div class="readout-label">we're reading you as</div>
+                    <div class="readout-word" id="vibe-word">somewhere in the middle</div>
+                    <div class="readout-line" id="vibe-line">that's a fine place to sit. take a breath.</div>
                 </div>
             </div>
-        </nav>
+        </section>
 
-        <div class="doodles-container">
-            <svg class="doodle doodle-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
-            <svg class="doodle doodle-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 21a9 9 0 0 0 0-18h-4"></path></svg>
+        <!-- ═════════════════════════════════════════════════ -->
+        <!--   3.  FOUR MICRO-TRIALS  —  Variable Reward Loop  -->
+        <!-- ═════════════════════════════════════════════════ -->
+        <section class="trials" id="trials">
+            <div class="trials-head">
+                <p class="kicker">four rooms inside</p>
+                <h2 class="section-title">Four ways to be <span class="title-soft">heard.</span></h2>
+                <p class="section-sub">Touch any one. The room opens. No sign-in. No promise. Just a taste of what waits inside.</p>
+            </div>
+
+            <div class="pane-grid">
+
+                <!-- ───────── Journal pane ───────── -->
+                <article class="pane pane-journal" data-trial="journal" tabindex="0" role="button" aria-label="Open Journal">
+                    <div class="pane-glow"></div>
+                    <div class="pane-idle">
+                        <div class="pane-icon" aria-hidden="true">
+                            <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M7 5h14a2 2 0 0 1 2 2v18a2 2 0 0 1-2 2H7z"/>
+                                <path d="M7 5v22"/>
+                                <path d="M11 11h8M11 15h8M11 19h5"/>
+                            </svg>
+                        </div>
+                        <div class="pane-name">Journal</div>
+                        <div class="pane-tag">a place to leave it</div>
+                        <div class="pane-cue">tap to open</div>
+                    </div>
+                </article>
+
+                <!-- ───────── Nexus pane ───────── -->
+                <article class="pane pane-nexus" data-trial="nexus" tabindex="0" role="button" aria-label="Open Nexus">
+                    <div class="pane-glow"></div>
+                    <div class="pane-constellation" aria-hidden="true">
+                        <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+                    </div>
+                    <div class="pane-idle">
+                        <div class="pane-icon" aria-hidden="true">
+                            <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="16" cy="16" r="2"/>
+                                <circle cx="6" cy="9" r="1.6"/>
+                                <circle cx="26" cy="9" r="1.6"/>
+                                <circle cx="6" cy="23" r="1.6"/>
+                                <circle cx="26" cy="23" r="1.6"/>
+                                <path d="M16 16 6 9M16 16l10-7M16 16 6 23M16 16l10 7"/>
+                            </svg>
+                        </div>
+                        <div class="pane-name">Nexus</div>
+                        <div class="pane-tag">you are not the only one</div>
+                        <div class="pane-cue">tap to open</div>
+                    </div>
+                </article>
+
+                <!-- ───────── Echo pane ───────── -->
+                <article class="pane pane-echo" data-trial="echo" tabindex="0" role="button" aria-label="Open Echo">
+                    <div class="pane-glow"></div>
+                    <div class="pane-wave" aria-hidden="true">
+                        <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+                    </div>
+                    <div class="pane-idle">
+                        <div class="pane-icon" aria-hidden="true">
+                            <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="16" cy="16" r="11"/>
+                                <circle cx="16" cy="16" r="6"/>
+                                <circle cx="16" cy="16" r="1.5" fill="currentColor"/>
+                            </svg>
+                        </div>
+                        <div class="pane-name">Echo</div>
+                        <div class="pane-tag">a voice in the quiet</div>
+                        <div class="pane-cue">tap to open</div>
+                    </div>
+                </article>
+
+                <!-- ───────── Listener pane ───────── -->
+                <article class="pane pane-listener" data-trial="listener" tabindex="0" role="button" aria-label="Open Listeners">
+                    <div class="pane-glow"></div>
+                    <div class="pane-idle">
+                        <div class="pane-icon" aria-hidden="true">
+                            <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M9 20a4 4 0 0 1-4-4v-2a4 4 0 0 1 8 0v2a4 4 0 0 1-4 4z"/>
+                                <path d="M23 20a4 4 0 0 1-4-4v-2a4 4 0 0 1 8 0v2a4 4 0 0 1-4 4z"/>
+                                <path d="M9 20v3a3 3 0 0 0 3 3h8a3 3 0 0 0 3-3v-3"/>
+                            </svg>
+                        </div>
+                        <div class="pane-name">Listeners</div>
+                        <div class="pane-tag">someone is ready to listen</div>
+                        <div class="pane-cue">tap to open</div>
+                        <div class="pane-online">
+                            <span class="online-dot"></span>
+                            <span><b id="listeners-online">12</b> online right now</span>
+                        </div>
+                    </div>
+                </article>
+
+            </div>
+        </section>
+
+        <!-- ═════════════════════════════════════════════════ -->
+        <!--   4.  THE SANCTUARY + FORTRESS  —  Trust frame   -->
+        <!-- ═════════════════════════════════════════════════ -->
+        <section class="why" id="why">
+            <div class="why-grid">
+                <div class="why-card why-sanctuary">
+                    <div class="why-icon">
+                        <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M16 27s-9-5.5-9-13a6 6 0 0 1 11-3 6 6 0 0 1 11 3c0 1.1-.2 2.1-.5 3"/>
+                            <path d="M22 18l-3 5-3-3-3 4"/>
+                        </svg>
+                    </div>
+                    <p class="why-kicker">the sanctuary</p>
+                    <h3 class="why-title">Heard, the way you wanted to be heard.</h3>
+                    <p class="why-body">
+                        Most of the world wants you to be okay quickly. We don't. Sit here for as long as you need. We won't fix you, hurry you, or hand you a worksheet. We will just be here.
+                    </p>
+                </div>
+
+                <div class="why-card why-fortress">
+                    <div class="why-icon">
+                        <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M16 4 5 9v8c0 6.5 4.7 10.4 11 11 6.3-.6 11-4.5 11-11V9z"/>
+                            <path d="M11 16l3 3 7-7"/>
+                        </svg>
+                    </div>
+                    <p class="why-kicker">the fortress</p>
+                    <h3 class="why-title">Locked from the inside.</h3>
+                    <p class="why-body">
+                        Your Vault is end-to-end private. We can't read it. Nobody you know can find it. No ads, no resale, no algorithm staring at you. The door has one key and you hold it.
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- ═════════════════════════════════════════════════ -->
+        <!--   5.  FOOTER  —  We are always here.              -->
+        <!-- ═════════════════════════════════════════════════ -->
+        <footer class="foot" id="foot">
+            <div class="foot-top">
+                <img src="assets/blaksyd-white.png" alt="blaksyd" class="foot-logo brand-logo-dark">
+                <img src="assets/blaksyd-black.png" alt="blaksyd" class="foot-logo brand-logo-light">
+                <p class="foot-line">we are always here.</p>
+            </div>
+
+            <div class="foot-grid">
+                <a href="https://wa.me/917702063434" target="_blank" rel="noopener" class="foot-lifeline">
+                    <span class="lifeline-icon">
+                        <svg viewBox="0 0 32 32" fill="currentColor">
+                            <path d="M16 3a13 13 0 0 0-11 19.7L3 29l6.5-1.7A13 13 0 1 0 16 3zm7.6 18.4c-.3.9-1.7 1.7-2.4 1.8-.6.1-1.4.1-2.3-.1a13 13 0 0 1-2.2-.8 16 16 0 0 1-6.2-5.5c-.5-.7-1.1-1.7-1.1-2.7 0-.9.5-1.4.7-1.6.2-.2.5-.3.7-.3h.5c.2 0 .4 0 .6.5.2.5.7 1.7.8 1.8.1.2.2.4 0 .6-.1.2-.2.3-.4.5l-.5.6c-.2.2-.4.4-.2.7.2.3.9 1.4 1.9 2.3 1.3 1.2 2.4 1.5 2.7 1.7.3.2.5.1.7-.1l.8-1c.2-.3.4-.2.7-.1.3.1 1.7.8 2 .9.3.2.5.2.6.4.1.2.1.9-.2 1.7z"/>
+                        </svg>
+                    </span>
+                    <span class="lifeline-body">
+                        <span class="lifeline-title">Text our human team on WhatsApp</span>
+                        <span class="lifeline-sub">a real person reads every message — usually within an hour</span>
+                    </span>
+                    <span class="lifeline-arrow">→</span>
+                </a>
+            </div>
+
+            <div class="foot-channels">
+                <div class="channels-block">
+                    <p class="channels-kicker">prefer to write a letter?</p>
+                    <a href="mailto:connect@blakcide.com" class="channel-row">
+                        <span class="channel-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+                                <rect x="3" y="5" width="18" height="14" rx="2"/>
+                                <path d="m3 7 9 6 9-6"/>
+                            </svg>
+                        </span>
+                        <span>connect@blakcide.com</span>
+                    </a>
+                </div>
+
+                <div class="channels-block">
+                    <p class="channels-kicker">join our extended community of listeners and thinkers</p>
+                    <div class="channel-row-group">
+                        <a href="https://instagram.com/blakcide_" target="_blank" rel="noopener" class="channel-pill">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+                                <rect x="3" y="3" width="18" height="18" rx="5"/>
+                                <circle cx="12" cy="12" r="4"/>
+                                <circle cx="17.5" cy="6.5" r=".5" fill="currentColor"/>
+                            </svg>
+                            <span>Instagram</span>
+                        </a>
+                        <a href="https://youtube.com/@Blakcide" target="_blank" rel="noopener" class="channel-pill">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+                                <rect x="2" y="5" width="20" height="14" rx="3"/>
+                                <path d="m10 9 6 3-6 3z" fill="currentColor"/>
+                            </svg>
+                            <span>YouTube</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="foot-bottom">
+                <span>© <span id="foot-year"></span> blaksyd</span>
+                <span class="foot-sep">·</span>
+                <a href="privacy/index.html">Privacy</a>
+                <span class="foot-sep">·</span>
+                <a href="terms/index.html">Terms</a>
+                <span class="foot-sep">·</span>
+                <span class="foot-made">made with care, in the quiet hours</span>
+            </div>
+        </footer>
+
+    </main>
+
+    <!-- ═════════════════════════════════════════════════ -->
+    <!--   TRIAL OVERLAY  —  expanded glass pane           -->
+    <!-- ═════════════════════════════════════════════════ -->
+    <div class="trial-overlay" id="trial-overlay" aria-hidden="true">
+        <div class="trial-backdrop" data-close></div>
+
+        <div class="trial-card" id="trial-card" role="dialog" aria-modal="true" aria-labelledby="trial-title">
+            <button class="trial-close" data-close aria-label="Close">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+                    <path d="m6 6 12 12M18 6 6 18"/>
+                </svg>
+            </button>
+
+            <div class="trial-progress">
+                <span class="trial-progress-bar"></span>
+            </div>
+
+            <div class="trial-head">
+                <span class="trial-tag" id="trial-tag">a place to leave it</span>
+                <h3 class="trial-title" id="trial-title">Journal</h3>
+            </div>
+
+            <div class="trial-body" id="trial-body">
+                <!-- populated by JS per trial -->
+            </div>
+
+            <div class="trial-hook" id="trial-hook" hidden>
+                <div class="hook-line">
+                    <span class="hook-shimmer"></span>
+                    <p>This is just the surface. Let's create your private Vault so we can remember this for next time.</p>
+                </div>
+                <button class="hook-cta" id="hook-cta">
+                    <span>Create my space</span>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M5 12h14M13 6l6 6-6 6"/>
+                    </svg>
+                </button>
+                <p class="hook-fineprint">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" width="14" height="14">
+                        <rect x="5" y="11" width="14" height="9" rx="2"/>
+                        <path d="M8 11V8a4 4 0 0 1 8 0v3"/>
+                    </svg>
+                    end-to-end private vault · locked from the inside
+                </p>
+            </div>
         </div>
+    </div>
 
-        <main class="scroll-container" id="main-scroll">
-            
-            <section class="section" id="welcome">
-                <div class="content-wrapper">
-                    
-                    <div class="handwriting-wrapper">
-                        <span class="handwriting-text">Welcome to your,</span>
-                    </div>
+    <!-- ═════════════════════════════════════════════════ -->
+    <!--   AUTH OVERLAY  —  Frictionless Sanctuary         -->
+    <!-- ═════════════════════════════════════════════════ -->
+    <div class="auth-overlay" id="auth-overlay" aria-hidden="true">
+        <div class="auth-backdrop" data-close-auth></div>
+        <div class="auth-card" role="dialog" aria-modal="true" aria-labelledby="auth-title">
+            <button class="auth-close" id="close-auth-btn" data-close-auth aria-label="Close">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+                    <path d="m6 6 12 12M18 6 6 18"/>
+                </svg>
+            </button>
 
-                    <h1 class="hero-brand">BLAKCIDE</h1>
-                    
-                    <h2 class="dynamic-tagline">
-                        A Best <span class="typewriter-word"> Digital </span> Friend.
-                    </h2>
-
-                    <div class="desc-block">
-                        <p class="hero-desc">
-                            Always here, only for you. No judgment, just clarity.
-                            A peaceful space where you are heard, supported, and understood.
-                        </p>
-                    </div>
-
-                    <div class="hero-buttons">
-                        <button id="know-us-btn" class="btn-magic-glass">
-                            <span>Know Us</span>
-                            <ion-icon name="sparkles-outline"></ion-icon>
-                        </button>
-                        <button id="tell-us-btn" class="btn-magic-solid">
-                            <span>Tell Us</span>
-                            <ion-icon name="arrow-forward-outline"></ion-icon>
-                        </button>
-                    </div>
+            <div class="auth-head">
+                <div class="auth-lock">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="5" y="11" width="14" height="10" rx="2"/>
+                        <path d="M8 11V8a4 4 0 0 1 8 0v3"/>
+                    </svg>
                 </div>
-            </section>
+                <h2 class="auth-title" id="auth-title">Secure your space</h2>
+                <p class="auth-sub">a private vault, locked from the inside. only you have the key.</p>
+            </div>
 
-            <section class="section" id="promise">
-                <div class="glass-pane center-pane large-pane">
-                    <p class="script-header">Our Promise</p>
-                    <h2 class="serif-header">Why We Exist?</h2>
-                    
-                    <div class="text-body centered poetic-text" style="text-align: justify; text-justify: inter-word; hyphens: auto;">
-                        <p>
-                            For the heart that needs to speak and the soul that needs to be heard.
-                            We are the ear that never judges, the presence that offers empathy without advice.
-                            In a world where therapy can feel heavy and friends are often busy,
-                            we offer a private, loyal, and deeper connection.
-                        </p>
-                    </div>
+            <button class="google-btn" id="google-login-btn" onclick="loginWithGoogle()">
+                <svg viewBox="0 0 24 24" width="20" height="20">
+                    <path fill="#EA4335" d="M12 10.2v3.9h5.4c-.2 1.4-1.6 4-5.4 4-3.2 0-5.9-2.7-5.9-6s2.7-6 5.9-6c1.8 0 3 .8 3.7 1.4l2.5-2.4C16.7 3.7 14.5 2.8 12 2.8 6.9 2.8 2.8 6.9 2.8 12s4.1 9.2 9.2 9.2c5.3 0 8.8-3.7 8.8-9 0-.6 0-1-.1-1.5z"/>
+                </svg>
+                <span>Secure my space with Google</span>
+            </button>
 
-                    <div class="promise-box-wrapper">
-                        <div class="promise-box">
-                            <ion-icon name="heart-outline"></ion-icon>
-                            <span>Here always, just for you.</span>
-                        </div>
-                    </div>
-                </div>
-            </section>
+            <div class="auth-divider"><span>or with email</span></div>
 
-            <section class="section" id="features">
-                <div class="features-wrapper">
-                    <h2 class="serif-header feature-main-title">Become your own Follower</h2>
-                    
-                    <div class="bento-grid">
-                        
-                        <div class="bento-card card-ai">
-                            <div class="card-inner">
-                                <div class="card-face card-front">
-                                    <div class="card-icon"><ion-icon name="sparkles"></ion-icon></div>
-                                    <h3>AI Companion</h3>
-                                    <p class="tagline">A friend who is always there.</p>
-                                    <div class="flip-hint"><ion-icon name="add-circle-outline"></ion-icon></div>
-                                </div>
-                                <div class="card-face card-back">
-                                    <div class="doodle-overlay">
-                                        <svg viewBox="0 0 100 100"><path d="M10,20 Q20,5 30,20 T50,20" stroke-dasharray="2,2"/><circle cx="80" cy="20" r="2" /><circle cx="90" cy="15" r="1" /></svg>
-                                    </div>
-                                    <p class="highlight-desc">"How are you feeling?"</p>
-                                    <p class="sub-desc">Texts back instantly. Remembers you.</p>
-                                    <div class="modes-container">
-                                        <span class="mode-pill"><ion-icon name="moon"></ion-icon> Silent</span>
-                                        <span class="mode-pill"><ion-icon name="water"></ion-icon> Deep</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+            <form id="login-form" onsubmit="event.preventDefault();" autocomplete="off">
+                <input type="email" id="email" class="auth-input" placeholder="email" required>
+                <input type="password" id="password" class="auth-input" placeholder="password" required>
 
-                        <div class="bento-card card-human">
-                            <div class="card-inner">
-                                <div class="card-face card-front">
-                                    <div class="card-icon"><ion-icon name="people"></ion-icon></div>
-                                    <h3>Human Connect</h3>
-                                    <p class="tagline">Real hearts. Zero judgment.</p>
-                                    <div class="flip-hint"><ion-icon name="add-circle-outline"></ion-icon></div>
-                                </div>
-                                <div class="card-face card-back">
-                                    <div class="doodle-overlay">
-                                        <svg viewBox="0 0 100 100"><path d="M20,20 A5,5 0 0,1 30,20 A5,5 0 0,1 40,20" /><circle cx="80" cy="20" r="3" /><line x1="80" y1="20" x2="70" y2="40" /></svg>
-                                    </div>
-                                    <div class="status-badge"><span class="dot"></span> Online Now</div>
-                                    <p class="highlight-desc">Vent to a trained listener.</p>
-                                </div>
-                            </div>
-                        </div>
+                <p id="auth-error" class="auth-error"></p>
 
-                        <div class="bento-card card-journal">
-                            <div class="card-inner">
-                                <div class="card-face card-front">
-                                    <div class="card-icon"><ion-icon name="book"></ion-icon></div>
-                                    <h3>Living Journal</h3>
-                                    <p class="tagline">Your soul, captured.</p>
-                                    <div class="flip-hint"><ion-icon name="add-circle-outline"></ion-icon></div>
-                                </div>
-                                <div class="card-face card-back">
-                                    <div class="doodle-overlay">
-                                        <svg viewBox="0 0 100 100"><rect x="20" y="20" width="20" height="30" rx="2" /><path d="M70,20 L65,30 L75,30 Z" /></svg>
-                                    </div>
-                                    <p class="highlight-desc">Capture the moment.</p>
-                                    <div class="journal-tools">
-                                        <ion-icon name="mic-circle"></ion-icon>
-                                        <ion-icon name="camera"></ion-icon>
-                                        <ion-icon name="musical-notes"></ion-icon>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="bento-card card-games">
-                            <div class="card-inner">
-                                <div class="card-face card-front">
-                                    <div class="card-icon"><ion-icon name="game-controller"></ion-icon></div>
-                                    <h3>Mood Games</h3>
-                                    <p class="tagline">Play. Heal. Relax.</p>
-                                </div>
-                                <div class="card-face card-back">
-                                    <div class="doodle-overlay">
-                                        <svg viewBox="0 0 100 100"><circle cx="30" cy="30" r="5" /><rect x="60" y="20" width="10" height="10" transform="rotate(20)" /></svg>
-                                    </div>
-                                    <ion-icon name="balloon" class="big-icon"></ion-icon>
-                                    <p class="highlight-desc">Pop away stress.</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="bento-card card-insights">
-                            <div class="card-inner">
-                                <div class="card-face card-front">
-                                    <div class="card-icon"><ion-icon name="bulb"></ion-icon></div>
-                                    <h3>AI Insights</h3>
-                                    <p class="tagline">Wisdom from your own words.</p>
-                                    <div class="flip-hint"><ion-icon name="add-circle-outline"></ion-icon></div>
-                                </div>
-                                <div class="card-face card-back">
-                                    <div class="doodle-overlay">
-                                        <svg viewBox="0 0 100 100"><path d="M40,40 A10,10 0 0,1 60,40" /><path d="M30,70 Q50,90 70,70" /></svg>
-                                    </div>
-                                    <p class="highlight-desc">"You seem happier on Fridays."</p>
-                                </div>
-                            </div>
-                        </div>
-
-                    </div>
-                </div>
-            </section>
-
-            <section class="section" id="connect">
-                <div class="glass-pane center-pane large-pane">
-                    <h2 class="serif-header">Begin the Journey</h2>
-                    
-                    <div class="email-wrapper">
-                        <button class="join-btn-large" onclick="document.getElementById('auth-overlay').classList.add('active')">
-                            Enter Sanctuary <ion-icon name="arrow-forward"></ion-icon>
-                        </button>
-                    </div>
-
-                    <div class="connect-divider">
-                        <span>or reach out to us</span>
-                    </div>
-
-                    <div class="social-connect-grid">
-                        <a href="https://instagram.com/blakcide_" target="_blank" class="social-link-card instagram">
-                            <ion-icon name="logo-instagram"></ion-icon> <span>Instagram</span>
-                        </a>
-                        <a href="https://wa.me/917702063434" target="_blank" class="social-link-card whatsapp">
-                            <ion-icon name="logo-whatsapp"></ion-icon> <span>WhatsApp</span>
-                        </a>
-                        <a href="https://youtube.com/@Blakcide" target="_blank" class="social-link-card youtube">
-                            <ion-icon name="logo-youtube"></ion-icon> <span>YouTube</span>
-                        </a>
-                        <a href="mailto:connect@blakcide.com" class="social-link-card email">
-                            <ion-icon name="mail-open-outline"></ion-icon> <span>Email Us</span>
-                        </a>
-                    </div>
-                </div>
-                
-                <footer class="landing-footer">
-                    <a href="privacy/index.html" target="_blank">Privacy</a> • <a href="terms/index.html" target="_blank">Terms</a>
-                </footer>
-            </section>
-
-        </main>
-
-       <div class="auth-overlay" id="auth-overlay">
-        <div class="auth-card">
-            <button class="auth-close" id="close-auth-btn"><ion-icon name="close-outline"></ion-icon></button>
-            <h2 class="auth-title">Welcome Back</h2>
-            
-            <form id="login-form" onsubmit="event.preventDefault();">
-                <input type="email" id="email" class="auth-input" placeholder="Email Address" required>
-                <input type="password" id="password" class="auth-input" placeholder="Password" required>
-                
-                <p id="auth-error" style="color: #ff4c4c; font-size: 0.85rem; margin-bottom: 15px; text-align: center;"></p>
-                
-                <div style="display: flex; flex-direction: column; gap: 10px;">
-                    <button type="button" onclick="logInUser()" class="auth-btn">Log In</button>
-                    <button type="button" onclick="signUpUser()" class="auth-btn" style="background: transparent; border: 1px solid var(--glass-border); color: var(--text-color);">Create Account</button>
+                <div class="auth-btn-row">
+                    <button type="button" onclick="logInUser()" class="auth-btn auth-btn-primary">Open my vault</button>
+                    <button type="button" onclick="signUpUser()" class="auth-btn auth-btn-ghost">Create vault</button>
                 </div>
             </form>
 
-            <div class="auth-divider">or</div>
-            
-            <button class="google-btn" id="google-login-btn" onclick="loginWithGoogle()">
-                <ion-icon name="logo-google"></ion-icon> Continue with Google
-            </button>
+            <p class="auth-trust">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" width="14" height="14">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                </svg>
+                end-to-end private · we cannot read your vault
+            </p>
         </div>
     </div>
-    </div>
 
+    <!-- ─────── Toast ─────── -->
+    <div id="toast" class="toast" aria-live="polite"></div>
+
+    <!-- ─────── Supabase auth (kept exactly as before, just re-styled) ─────── -->
     <script>
         const SUPA_URL = 'https://uoosspumdmffccinszuj.supabase.co';
         const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVvb3NzcHVtZG1mZmNjaW5zenVqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcxNzYyNTUsImV4cCI6MjA4Mjc1MjI1NX0.3NayM6uC5-yZv9im-8W7ko28rZFRTnDQbIagN6BArs0';
-        
+
         let authClient;
         if (typeof window.supabase !== 'undefined') {
             authClient = window.supabase.createClient(SUPA_URL, SUPA_KEY);
         }
 
-        const emInput = document.getElementById('email');
-        const pwInput = document.getElementById('password');
-        const errDiv = document.getElementById('auth-error');
+        function _err(msg, isInfo) {
+            const el = document.getElementById('auth-error');
+            if (!el) return;
+            el.style.color = isInfo ? 'var(--ink-soft)' : 'var(--accent-warn)';
+            el.innerText = msg || '';
+        }
 
         async function logInUser() {
             if (!authClient) return;
-            errDiv.style.color = "white";
-            errDiv.innerText = "Logging in...";
-            const { error } = await authClient.auth.signInWithPassword({
-                email: emInput.value.trim(),
-                password: pwInput.value
-            });
-
+            _err('opening your vault…', true);
+            const email = document.getElementById('email').value.trim();
+            const password = document.getElementById('password').value;
+            const { error } = await authClient.auth.signInWithPassword({ email, password });
             if (error) {
-                errDiv.style.color = "#ff4c4c";
-                errDiv.innerText = error.message;
+                _err(error.message);
             } else {
-                // Check if user is a listener — route them to listener console
                 const { data: { session } } = await authClient.auth.getSession();
                 if (session) {
                     const { data: listener } = await authClient.from('listeners').select('id').eq('user_id', session.user.id).maybeSingle();
-                    if (listener) {
-                        window.location.href = 'app/listener-console.html';
-                        return;
-                    }
+                    if (listener) { window.location.href = 'app/listener-console.html'; return; }
                 }
                 window.location.href = 'app/dashboard.html';
             }
@@ -312,36 +483,25 @@
 
         async function signUpUser() {
             if (!authClient) return;
-            errDiv.style.color = "white";
-            errDiv.innerText = "Creating account...";
-            const { error } = await authClient.auth.signUp({
-                email: emInput.value.trim(),
-                password: pwInput.value
-            });
-
+            _err('building your vault…', true);
+            const email = document.getElementById('email').value.trim();
+            const password = document.getElementById('password').value;
+            const { error } = await authClient.auth.signUp({ email, password });
             if (error) {
-                errDiv.style.color = "#ff4c4c";
-                errDiv.innerText = error.message;
+                _err(error.message);
             } else {
-                // FIXED: Looks inside the 'app' folder for onboarding!
-                window.location.href = 'app/onboarding.html'; 
+                window.location.href = 'app/onboarding.html';
             }
         }
 
         async function loginWithGoogle() {
             if (!authClient) return;
-            errDiv.style.color = "white";
-            errDiv.innerText = "Redirecting to Google...";
-            const { error } = await authClient.auth.signInWithOAuth({
-                provider: 'google'
-            });
-            if (error) {
-                 errDiv.style.color = "#ff4c4c";
-                 errDiv.innerText = error.message;
-            }
+            _err('handing the key to Google…', true);
+            const { error } = await authClient.auth.signInWithOAuth({ provider: 'google' });
+            if (error) _err(error.message);
         }
     </script>
 
-    <script src="script.js"></script>
+    <script src="script.js?v=blk7"></script>
 </body>
 </html>
