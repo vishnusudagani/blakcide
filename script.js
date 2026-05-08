@@ -279,6 +279,7 @@
     }
 
     function bindOverlay() {
+        // legacy 4-tile grid (kept for back-compat — hidden in CSS)
         $$('.pane').forEach(p => {
             const kind = p.dataset.trial;
             p.addEventListener('click', () => openTrial(kind));
@@ -286,6 +287,30 @@
                 if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openTrial(kind); }
             });
         });
+        // new split-layout: clicking a preview card (but NOT an inner control) opens the modal
+        $$('.feature-preview').forEach(card => {
+            const kind = card.dataset.trial;
+            card.addEventListener('click', (e) => {
+                if (e.target.closest('input, textarea, button, .preview-input-row, .preview-nexus-input-row, .preview-journal-foot, .listener-rows, .nexus-matches, .preview-stream')) return;
+                openTrial(kind);
+            });
+            card.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    if (e.target !== card) return;
+                    e.preventDefault();
+                    openTrial(kind);
+                }
+            });
+        });
+        // header CTA on each feature row also opens the modal
+        $$('.feature-row .feature-cta-text').forEach(cta => {
+            const row = cta.closest('.feature-row');
+            const kind = row?.dataset.trial;
+            if (!kind) return;
+            cta.style.cursor = 'pointer';
+            cta.addEventListener('click', () => openTrial(kind));
+        });
+
         $$('[data-close]').forEach(el => el.addEventListener('click', closeTrial));
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape' && overlay()?.classList.contains('is-open')) closeTrial();
@@ -294,6 +319,322 @@
         $('#hook-cta')?.addEventListener('click', () => {
             closeTrial();
             setTimeout(() => openAuth(), 250);
+        });
+    }
+
+    /* ═══════════════════════════════════════════════════════════════
+       5B. LIVE PREVIEWS — inline, on-page interactive cards
+       ═══════════════════════════════════════════════════════════════ */
+    function bindFeaturePreviews() {
+        bindJournalPreview();
+        bindEchoPreview();
+        bindListenerPreview();
+        bindNexusPreview();
+        bindFeatureReveal();
+    }
+
+    /* — 01 · Journal preview — */
+    function bindJournalPreview() {
+        const ta   = $('#jp-text');
+        const cnt  = $('#jp-count');
+        const btn  = $('#jp-release');
+        const dust = $('#jp-dust');
+        const val  = $('#jp-validation');
+        if (!ta) return;
+
+        const MAX = 200;
+        ta.addEventListener('input', () => {
+            const len = ta.value.length;
+            if (len > MAX) ta.value = ta.value.slice(0, MAX);
+            cnt.textContent = `${ta.value.length} / ${MAX}`;
+            cnt.classList.toggle('over', ta.value.length >= MAX);
+            btn.disabled = ta.value.trim().length === 0;
+        });
+        btn.disabled = true;
+
+        ta.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey && ta.value.trim()) {
+                e.preventDefault(); release();
+            }
+        });
+        btn.addEventListener('click', release);
+
+        async function release() {
+            const txt = ta.value.trim();
+            if (!txt) { ta.focus(); return; }
+            btn.disabled = true;
+
+            const taRect = ta.getBoundingClientRect();
+            const dustRect = dust.getBoundingClientRect();
+            const baseLeft = taRect.left - dustRect.left;
+            const baseTop  = taRect.top  - dustRect.top + 4;
+
+            const PIECES = clamp(Math.floor(txt.length * 1.4), 18, 50);
+            for (let i = 0; i < PIECES; i++) {
+                const d = document.createElement('span');
+                d.className = 'dust-particle';
+                const rx = Math.random() * (taRect.width - 20);
+                const ry = Math.random() * Math.min(taRect.height - 12, 80);
+                d.style.left = `${baseLeft + rx}px`;
+                d.style.top  = `${baseTop + ry}px`;
+                const angle = (Math.random() - .5) * Math.PI;
+                const dist  = 50 + Math.random() * 130;
+                d.style.setProperty('--dx', `${Math.cos(angle) * dist}px`);
+                d.style.setProperty('--dy', `${-30 - Math.random() * dist}px`);
+                d.style.transitionDelay = `${Math.random() * .2}s`;
+                d.style.background = ['#E8A85B', '#C97B5A', '#D4A373', '#B8896C'][i % 4];
+                dust.appendChild(d);
+            }
+            requestAnimationFrame(() => {
+                $$('.dust-particle', dust).forEach(p => { p.classList.add('born'); requestAnimationFrame(() => p.classList.add('go')); });
+            });
+
+            ta.style.transition = 'opacity .55s ease';
+            ta.style.opacity = 0;
+
+            await sleep(900);
+            ta.value = '';
+            ta.style.opacity = 1;
+            cnt.textContent = `0 / ${MAX}`;
+            dust.innerHTML = '';
+
+            val.textContent = "released. that thought no longer lives anywhere — not on this page, not in our servers.";
+            val.hidden = false;
+            val.style.animation = 'none';
+            void val.offsetWidth;
+            val.style.animation = '';
+            btn.disabled = true;
+
+            // auto-hide after a moment so the card is reusable
+            clearTimeout(release._t);
+            release._t = setTimeout(() => { val.hidden = true; ta.focus(); }, 6000);
+        }
+    }
+
+    /* — 02 · Echo preview — */
+    function bindEchoPreview() {
+        const stream = $('#ep-stream');
+        const inp    = $('#ep-input');
+        const btn    = $('#ep-send');
+        if (!stream || !inp || !btn) return;
+
+        let busy = false;
+        btn.addEventListener('click', send);
+        inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') send(); });
+
+        async function send() {
+            if (busy) return;
+            const txt = inp.value.trim();
+            if (!txt) { inp.focus(); return; }
+            busy = true; btn.disabled = true;
+
+            const me = document.createElement('div');
+            me.className = 'preview-bubble preview-bubble-you';
+            me.textContent = txt;
+            stream.appendChild(me);
+            stream.scrollTop = stream.scrollHeight;
+
+            inp.value = '';
+            const bot = document.createElement('div');
+            bot.className = 'preview-bubble preview-bubble-bot typing';
+            bot.textContent = '';
+            stream.appendChild(bot);
+            stream.scrollTop = stream.scrollHeight;
+
+            let reply = '';
+            try {
+                const r = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        stream: false,
+                        messages: [
+                            { role: 'system', content:
+                                'You are Echo, a quietly empathetic companion on the blaksyd landing page. ' +
+                                'Reply in under 40 words. Warm, present, no advice, no clinical language, no piling on questions. ' +
+                                'Match their language. Lowercase or sentence case is fine. No emojis. Sound like a friend who reads slowly.' },
+                            { role: 'user', content: txt },
+                        ],
+                    }),
+                });
+                if (r.ok) {
+                    const data = await r.json();
+                    reply = (data.reply || data.message || '').toString().trim();
+                }
+            } catch (_) { /* fall through */ }
+
+            if (!reply) reply = canonicalEchoReply(txt);
+
+            bot.classList.remove('typing');
+            await typeOut(bot, reply, stream);
+
+            // CTA bubble after the reply
+            const cta = document.createElement('button');
+            cta.className = 'preview-bubble preview-bubble-bot';
+            cta.style.cursor = 'pointer';
+            cta.style.borderStyle = 'dashed';
+            cta.textContent = '↗ open Echo full conversation';
+            cta.addEventListener('click', () => openTrial('echo', { seed: txt }));
+            stream.appendChild(cta);
+            stream.scrollTop = stream.scrollHeight;
+
+            btn.disabled = false;
+            busy = false;
+        }
+
+        function canonicalEchoReply(txt) {
+            const t = txt.toLowerCase();
+            if (/(tired|exhaust|drain)/.test(t))   return "i hear you. the kind of tired that sleep doesn't fix, right? i'm right here. take a breath, there's no rush.";
+            if (/(anxious|anxiety|panic|nerv)/.test(t)) return "your body is doing a lot right now, even if no one can see it. that's real. you can sit here as long as you need.";
+            if (/(sad|down|low|empty|numb)/.test(t)) return "you don't have to call it anything. it's heavy and that's enough of a reason. i'm here.";
+            if (/(lonely|alone|isolat)/.test(t))   return "being unseen is its own kind of loud. you are seen here. not by an algorithm — by us.";
+            if (/(angry|mad|furious|rage)/.test(t)) return "anger usually means something underneath it got hurt. you don't have to explain. i'm not going anywhere.";
+            if (/(work|boss|job|career)/.test(t)) return "work bleeds into the rest of you in ways people underestimate. tell me what's loudest right now.";
+            return "thank you for trusting me with that. it's safe here. you don't have to perform anything.";
+        }
+
+        async function typeOut(node, text, scrollHost) {
+            let out = '';
+            for (let i = 0; i < text.length; i++) {
+                out += text[i];
+                node.textContent = out;
+                if (scrollHost) scrollHost.scrollTop = scrollHost.scrollHeight;
+                let d = 22;
+                const ch = text[i];
+                if (ch === ' ') d = 14;
+                if (/[.,!?;:]/.test(ch)) d = 200;
+                await sleep(d);
+            }
+        }
+    }
+
+    /* — 03 · Listener preview — */
+    function bindListenerPreview() {
+        const rows = $$('.preview-listener-card .listener-row');
+        if (!rows.length) return;
+        rows.forEach(row => {
+            const btn = row.querySelector('.listener-connect');
+            if (!btn) return;
+            btn.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                if (row.classList.contains('is-connecting')) return;
+                rows.forEach(r => r.classList.remove('is-connecting'));
+                row.classList.add('is-connecting');
+                btn.textContent = 'Calling…';
+                await sleep(900);
+                btn.textContent = '✓ Connected';
+                await sleep(700);
+                openTrial('listener');
+                setTimeout(() => {
+                    btn.textContent = 'Connect';
+                    row.classList.remove('is-connecting');
+                }, 600);
+            });
+        });
+    }
+
+    /* — 04 · Nexus preview — */
+    function bindNexusPreview() {
+        const inp     = $('#np-input');
+        const share   = $('#np-share');
+        const matches = $('#np-matches');
+        if (!inp || !share || !matches) return;
+
+        // a small bank of believable anonymous voices keyed loosely by intent
+        const voices = [
+            { q: '"I say I\'m fine so many times I\'ve started to believe it myself."',     pct: 94, ago: '2 min ago',  tags: ['fine','okay','tired','mask'] },
+            { q: '"The loneliness isn\'t about being alone. It\'s about not being understood."', pct: 88, ago: '8 min ago',  tags: ['lonely','alone','isolated','understood'] },
+            { q: '"I check on everyone. Nobody checks on me."',                              pct: 81, ago: '14 min ago', tags: ['caretaker','overgive','tired','seen'] },
+            { q: '"I\'m doing everything right and I still feel behind."',                   pct: 92, ago: '4 min ago',  tags: ['behind','stuck','career','doing'] },
+            { q: '"I keep saying I\'ll talk to someone. Then I don\'t."',                    pct: 86, ago: '11 min ago', tags: ['avoid','therapy','help','later'] },
+            { q: '"It\'s 3am again. I can\'t turn my brain off."',                           pct: 90, ago: '6 min ago',  tags: ['anxious','sleep','3am','spiral','anxiety'] },
+            { q: '"I love them and I\'m still drained."',                                    pct: 83, ago: '17 min ago', tags: ['relationship','drained','love','tired'] },
+            { q: '"Everyone says I\'ve grown. I just feel hollow."',                         pct: 89, ago: '9 min ago',  tags: ['empty','numb','hollow','grow','sad'] },
+        ];
+
+        share.addEventListener('click', (e) => { e.stopPropagation(); doMatch(); });
+        inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') doMatch(); });
+
+        function doMatch() {
+            const txt = inp.value.trim();
+            if (!txt) { inp.focus(); return; }
+            const t = txt.toLowerCase();
+
+            // pick the voices most relevant to the user's input via simple tag overlap, fall back to defaults
+            const ranked = voices
+                .map(v => ({ v, score: v.tags.reduce((s, tag) => s + (t.includes(tag) ? 1 : 0), 0) + Math.random() * 0.3 }))
+                .sort((a, b) => b.score - a.score)
+                .slice(0, 3);
+
+            // animate input → "shared" state
+            share.textContent = '✓ shared';
+            share.disabled = true;
+
+            // wipe & re-build the match list with fresh entries
+            matches.innerHTML = '';
+            const tints = ['nexus-match-1', 'nexus-match-2', 'nexus-match-3'];
+            ranked.forEach((r, i) => {
+                const card = document.createElement('div');
+                card.className = `nexus-match ${tints[i]} fresh`;
+                card.innerHTML = `
+                    <div class="match-pct">${r.v.pct}% MATCH</div>
+                    <p class="match-quote">${r.v.q}</p>
+                    <p class="match-meta">Anonymous · ${r.v.ago}</p>
+                `;
+                card.style.animationDelay = `${i * .12}s`;
+                matches.appendChild(card);
+            });
+
+            setTimeout(() => {
+                share.textContent = 'Share →';
+                share.disabled = false;
+                inp.value = '';
+            }, 1800);
+        }
+    }
+
+    /* — scroll-reveal: fade rows in as they enter the viewport — */
+    function bindFeatureReveal() {
+        const rows = $$('.feature-row');
+        if (!rows.length) return;
+        if (!('IntersectionObserver' in window)) {
+            rows.forEach(r => r.classList.add('is-visible'));
+            return;
+        }
+        const io = new IntersectionObserver((entries) => {
+            entries.forEach(en => {
+                if (en.isIntersecting) {
+                    en.target.classList.add('is-visible');
+                    io.unobserve(en.target);
+                }
+            });
+        }, { threshold: .12, rootMargin: '0px 0px -8% 0px' });
+        rows.forEach(r => io.observe(r));
+
+        // pointer-following 3D tilt on the preview cards (desktop, fine pointer only)
+        const fine = matchMedia('(hover: hover) and (pointer: fine)').matches;
+        if (!fine) return;
+        $$('.feature-preview').forEach(host => {
+            const card = host.querySelector('.preview-card');
+            if (!card) return;
+            let raf = 0;
+            host.addEventListener('mousemove', (e) => {
+                const r = host.getBoundingClientRect();
+                const px = (e.clientX - r.left) / r.width;
+                const py = (e.clientY - r.top)  / r.height;
+                cancelAnimationFrame(raf);
+                raf = requestAnimationFrame(() => {
+                    const rx = (py - .5) * -4;
+                    const ry = (px - .5) *  5;
+                    card.style.transform = `perspective(1100px) translateY(-4px) rotateX(${rx.toFixed(2)}deg) rotateY(${ry.toFixed(2)}deg)`;
+                    host.style.setProperty('--mx', `${px * 100}%`);
+                    host.style.setProperty('--my', `${py * 100}%`);
+                });
+            });
+            host.addEventListener('mouseleave', () => {
+                cancelAnimationFrame(raf);
+                card.style.transform = '';
+            });
         });
     }
 
@@ -715,14 +1056,18 @@
        8. LISTENERS-ONLINE — gentle drift to feel alive
        ═══════════════════════════════════════════════════════════════ */
     function bindLiveCount() {
-        const a = $('#listeners-online');
-        const b = $('#l-online');
+        const a  = $('#listeners-online'); // hidden ambient counter
+        const b  = $('#l-online');         // legacy modal element
+        const lp = $('#lp-online');        // new preview-card element (small int e.g. "6")
         let n = 12;
+        let preview = 6;
         function tick() {
             const drift = Math.random() < .5 ? -1 : 1;
             n = clamp(n + drift, 8, 18);
-            if (a) a.textContent = n;
-            if (b) b.textContent = `${n} listeners online`;
+            preview = clamp(preview + (Math.random() < .5 ? -1 : 1), 4, 9);
+            if (a)  a.textContent = n;
+            if (b)  b.textContent = `${n} listeners online`;
+            if (lp) lp.textContent = preview;
         }
         setInterval(tick, 8000);
     }
@@ -744,6 +1089,7 @@
         bindHero();
         bindVibe();
         bindOverlay();
+        bindFeaturePreviews();
         bindAuth();
         bindLiveCount();
         bindMisc();

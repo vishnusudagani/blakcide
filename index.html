@@ -8,7 +8,7 @@
     <title>blaksyd — a quiet place for loud thoughts</title>
 
     <link rel="icon" type="image/png" href="assets/blaksyd-white.png">
-    <link rel="stylesheet" href="style.css?v=blkd">
+    <link rel="stylesheet" href="style.css?v=blke1">
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -138,99 +138,205 @@
         </section>
 
         <!-- ═════════════════════════════════════════════════ -->
-        <!--   3.  FOUR MICRO-TRIALS  —  Variable Reward Loop  -->
+        <!--   3.  FOUR FEATURES  —  Split-layout interactive   -->
         <!-- ═════════════════════════════════════════════════ -->
-        <section class="trials" id="trials">
-            <div class="trials-head">
-                <p class="kicker">four rooms inside</p>
+        <section class="features" id="features">
+            <div class="features-head">
+                <p class="kicker">four sanctuaries inside</p>
                 <h2 class="section-title">Four ways to be <span class="title-soft">heard.</span></h2>
-                <p class="section-sub">Touch any one. The room opens. No sign-in. No promise. Just a taste of what waits inside.</p>
+                <p class="section-sub">No sign-in to feel them. Type into any one — it answers right here, on this page.</p>
             </div>
 
-            <div class="pane-grid">
+            <!-- ───────── 01 · JOURNAL ───────── -->
+            <article class="feature-row" data-feature="journal" data-trial="journal">
+                <div class="feature-text">
+                    <p class="feature-num">01 — JOURNAL</p>
+                    <h3 class="feature-headline">Leave it on<br>the page.</h3>
+                    <p class="feature-desc">A blank page that doesn't keep what you don't want it to. Type the sentence you can't say out loud — release it, and watch the words dissolve into dust. Whatever you write here, no one ever sees. Not even us.</p>
+                    <div class="feature-pills">
+                        <button class="feature-pill" type="button" tabindex="-1"><span class="pill-emoji">🪶</span> Private</button>
+                        <button class="feature-pill" type="button" tabindex="-1"><span class="pill-emoji">🌙</span> No saves</button>
+                        <button class="feature-pill" type="button" tabindex="-1"><span class="pill-emoji">✨</span> Dissolves</button>
+                    </div>
+                    <p class="feature-cta-text">— TYPE SOMETHING — WATCH IT GO</p>
+                </div>
 
-                <!-- ───────── Journal pane ───────── -->
-                <article class="pane pane-journal" data-trial="journal" tabindex="0" role="button" aria-label="Open Journal">
-                    <div class="pane-glow"></div>
-                    <div class="pane-idle">
-                        <div class="pane-icon" aria-hidden="true">
-                            <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M7 5h14a2 2 0 0 1 2 2v18a2 2 0 0 1-2 2H7z"/>
-                                <path d="M7 5v22"/>
-                                <path d="M11 11h8M11 15h8M11 19h5"/>
-                            </svg>
+                <div class="feature-preview" data-trial="journal" tabindex="0" role="button" aria-label="Open Journal">
+                    <div class="preview-card preview-journal">
+                        <div class="preview-paper-grain" aria-hidden="true"></div>
+                        <div class="preview-journal-head">
+                            <span class="journal-date">today · 11:42 pm</span>
+                            <span class="journal-mode">private</span>
                         </div>
-                        <div class="pane-name">Journal</div>
-                        <div class="pane-tag">a place to leave it</div>
-                        <div class="pane-cue">tap to open</div>
+                        <div class="journal-canvas" id="jp-canvas">
+                            <textarea
+                                id="jp-text"
+                                class="journal-mini-area"
+                                placeholder="i feel like…"
+                                spellcheck="false"
+                                rows="4"
+                                aria-label="Type a thought to release"
+                            ></textarea>
+                            <div class="journal-dust" id="jp-dust" aria-hidden="true"></div>
+                        </div>
+                        <div class="preview-journal-foot">
+                            <span class="char-count" id="jp-count">0 / 200</span>
+                            <button class="journal-release" id="jp-release" type="button">
+                                <span>Release</span>
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M5 12h14M13 6l6 6-6 6"/>
+                                </svg>
+                            </button>
+                        </div>
+                        <p class="journal-validation" id="jp-validation" hidden></p>
                     </div>
-                </article>
+                </div>
+            </article>
 
-                <!-- ───────── Nexus pane ───────── -->
-                <article class="pane pane-nexus" data-trial="nexus" tabindex="0" role="button" aria-label="Open Nexus">
-                    <div class="pane-glow"></div>
-                    <div class="pane-constellation" aria-hidden="true">
-                        <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+            <!-- ───────── 02 · ECHO ───────── -->
+            <article class="feature-row feature-row-flip" data-feature="echo" data-trial="echo">
+                <div class="feature-text">
+                    <p class="feature-num">02 — ECHO</p>
+                    <h3 class="feature-headline">Always here.<br>Never tired.</h3>
+                    <p class="feature-desc">Echo is your AI companion — not a chatbot. It remembers your moods, patterns, and the things you share. It grows with you. And it's the only presence that never gets tired of listening.</p>
+                    <div class="feature-pills">
+                        <button class="feature-pill" type="button" tabindex="-1"><span class="pill-emoji">🧠</span> Remembers you</button>
+                        <button class="feature-pill" type="button" tabindex="-1"><span class="pill-emoji">🌙</span> Available at 2am</button>
+                        <button class="feature-pill" type="button" tabindex="-1"><span class="pill-emoji">📞</span> Voice calls</button>
                     </div>
-                    <div class="pane-idle">
-                        <div class="pane-icon" aria-hidden="true">
-                            <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
-                                <circle cx="16" cy="16" r="2"/>
-                                <circle cx="6" cy="9" r="1.6"/>
-                                <circle cx="26" cy="9" r="1.6"/>
-                                <circle cx="6" cy="23" r="1.6"/>
-                                <circle cx="26" cy="23" r="1.6"/>
-                                <path d="M16 16 6 9M16 16l10-7M16 16 6 23M16 16l10 7"/>
-                            </svg>
-                        </div>
-                        <div class="pane-name">Nexus</div>
-                        <div class="pane-tag">you are not the only one</div>
-                        <div class="pane-cue">tap to open</div>
-                    </div>
-                </article>
+                    <p class="feature-cta-text">— SAY HELLO TO ECHO</p>
+                </div>
 
-                <!-- ───────── Echo pane ───────── -->
-                <article class="pane pane-echo" data-trial="echo" tabindex="0" role="button" aria-label="Open Echo">
-                    <div class="pane-glow"></div>
-                    <div class="pane-wave" aria-hidden="true">
-                        <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
-                    </div>
-                    <div class="pane-idle">
-                        <div class="pane-icon" aria-hidden="true">
-                            <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
-                                <circle cx="16" cy="16" r="11"/>
-                                <circle cx="16" cy="16" r="6"/>
-                                <circle cx="16" cy="16" r="1.5" fill="currentColor"/>
-                            </svg>
+                <div class="feature-preview" data-trial="echo" tabindex="0" role="button" aria-label="Open Echo">
+                    <div class="preview-card preview-echo">
+                        <div class="preview-echo-head">
+                            <div class="preview-avatar preview-avatar-echo" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" fill="none">
+                                    <path d="M12 2 L13.5 9 L20 10.5 L13.5 12 L12 19 L10.5 12 L4 10.5 L10.5 9 Z" fill="currentColor"/>
+                                </svg>
+                            </div>
+                            <div class="preview-meta">
+                                <p class="preview-name">Echo</p>
+                                <p class="preview-status"><span class="dot dot-online"></span> Online · always here</p>
+                            </div>
                         </div>
-                        <div class="pane-name">Echo</div>
-                        <div class="pane-tag">a voice in the quiet</div>
-                        <div class="pane-cue">tap to open</div>
+                        <div class="preview-stream" id="ep-stream">
+                            <div class="preview-bubble preview-bubble-bot">
+                                "You showed up. That already says something. What is on your mind right now?"
+                            </div>
+                        </div>
+                        <div class="preview-input-row">
+                            <input class="preview-input" id="ep-input" placeholder="Talk to Echo…" autocomplete="off" spellcheck="false">
+                            <button class="preview-send" id="ep-send" type="button" aria-label="Send">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M12 19V5M5 12l7-7 7 7"/>
+                                </svg>
+                            </button>
+                        </div>
                     </div>
-                </article>
+                </div>
+            </article>
 
-                <!-- ───────── Listener pane ───────── -->
-                <article class="pane pane-listener" data-trial="listener" tabindex="0" role="button" aria-label="Open Listeners">
-                    <div class="pane-glow"></div>
-                    <div class="pane-idle">
-                        <div class="pane-icon" aria-hidden="true">
-                            <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M9 20a4 4 0 0 1-4-4v-2a4 4 0 0 1 8 0v2a4 4 0 0 1-4 4z"/>
-                                <path d="M23 20a4 4 0 0 1-4-4v-2a4 4 0 0 1 8 0v2a4 4 0 0 1-4 4z"/>
-                                <path d="M9 20v3a3 3 0 0 0 3 3h8a3 3 0 0 0 3-3v-3"/>
-                            </svg>
+            <!-- ───────── 03 · LISTENER ───────── -->
+            <article class="feature-row" data-feature="listener" data-trial="listener">
+                <div class="feature-text">
+                    <p class="feature-num">03 — LISTENER</p>
+                    <h3 class="feature-headline">Real hearts.<br>Zero judgment.</h3>
+                    <p class="feature-desc">Sometimes AI is not enough. Real, trained humans are on standby — chosen for their ability to listen, not fix. 100% confidential. Anonymous if you want. Available right now.</p>
+                    <div class="feature-pills">
+                        <button class="feature-pill" type="button" tabindex="-1"><span class="pill-live"></span> Online now</button>
+                        <button class="feature-pill" type="button" tabindex="-1"><span class="pill-emoji">🤡</span> Anonymous</button>
+                        <button class="feature-pill" type="button" tabindex="-1"><span class="pill-emoji">🔒</span> Confidential</button>
+                    </div>
+                    <p class="feature-cta-text">— PICK WHO FEELS RIGHT</p>
+                </div>
+
+                <div class="feature-preview" data-trial="listener" tabindex="0" role="button" aria-label="Open Listeners">
+                    <div class="preview-card preview-listener-card">
+                        <div class="preview-listener-head">
+                            <h4>Find a Listener</h4>
+                            <span class="online-count"><span class="dot dot-online"></span> <b id="lp-online">6</b> online</span>
                         </div>
-                        <div class="pane-name">Listeners</div>
-                        <div class="pane-tag">someone is ready to listen</div>
-                        <div class="pane-cue">tap to open</div>
-                        <div class="pane-online">
-                            <span class="online-dot"></span>
-                            <span><b id="listeners-online">12</b> online right now</span>
+                        <div class="listener-rows">
+                            <div class="listener-row" data-listener="priya">
+                                <div class="listener-avatar listener-avatar-rose">P</div>
+                                <div class="listener-info">
+                                    <p class="listener-name">Priya M.</p>
+                                    <p class="listener-tags-line">Anxiety · Relationships · Women's w…</p>
+                                    <p class="listener-status-line"><span class="dot dot-online"></span> Online · 847 sessions</p>
+                                </div>
+                                <button class="listener-connect" type="button">Connect</button>
+                            </div>
+                            <div class="listener-row" data-listener="arjun">
+                                <div class="listener-avatar listener-avatar-blue">A</div>
+                                <div class="listener-info">
+                                    <p class="listener-name">Arjun K.</p>
+                                    <p class="listener-tags-line">Career · Burnout · Men's wellbeing</p>
+                                    <p class="listener-status-line"><span class="dot dot-online"></span> Online · 523 sessions</p>
+                                </div>
+                                <button class="listener-connect" type="button">Connect</button>
+                            </div>
+                            <div class="listener-row" data-listener="meera">
+                                <div class="listener-avatar listener-avatar-mint">M</div>
+                                <div class="listener-info">
+                                    <p class="listener-name">Meera T.</p>
+                                    <p class="listener-tags-line">Grief · Heartbreak · Hindi · Telugu</p>
+                                    <p class="listener-status-line"><span class="dot dot-online"></span> Online · 312 sessions</p>
+                                </div>
+                                <button class="listener-connect" type="button">Connect</button>
+                            </div>
                         </div>
                     </div>
-                </article>
+                </div>
+            </article>
 
-            </div>
+            <!-- ───────── 04 · NEXUS ───────── -->
+            <article class="feature-row feature-row-flip" data-feature="nexus" data-trial="nexus">
+                <div class="feature-text">
+                    <p class="feature-num">04 — NEXUS</p>
+                    <h3 class="feature-headline">You are never<br>as alone as<br>you think.</h3>
+                    <p class="feature-desc">An anonymous space where you discover others feel exactly what you feel. No names. No profiles. Just shared humanity — the neurological relief of realising "I am not the only one."</p>
+                    <div class="feature-pills">
+                        <button class="feature-pill" type="button" tabindex="-1"><span class="pill-emoji">🤡</span> Anonymous</button>
+                        <button class="feature-pill" type="button" tabindex="-1"><span class="pill-emoji">🦋</span> Shared feelings</button>
+                        <button class="feature-pill" type="button" tabindex="-1"><span class="pill-emoji">💬</span> Real voices</button>
+                    </div>
+                    <p class="feature-cta-text">— SHARE SOMETHING — SEE WHO MATCHES</p>
+                </div>
+
+                <div class="feature-preview" data-trial="nexus" tabindex="0" role="button" aria-label="Open Nexus">
+                    <div class="preview-card preview-nexus-card">
+                        <div class="preview-nexus-head">
+                            <h4>What is weighing on you?</h4>
+                            <p class="preview-nexus-sub">Anonymous · no names · no judgment</p>
+                        </div>
+                        <div class="preview-nexus-input-row">
+                            <input class="preview-input" id="np-input" placeholder="Something I can't shake…" autocomplete="off" spellcheck="false">
+                            <button class="preview-share" id="np-share" type="button">Share →</button>
+                        </div>
+                        <div class="nexus-matches" id="np-matches">
+                            <div class="nexus-match nexus-match-1">
+                                <div class="match-pct">94% MATCH</div>
+                                <p class="match-quote">"I say I'm fine so many times I've started to believe it myself."</p>
+                                <p class="match-meta">Anonymous · 2 min ago</p>
+                            </div>
+                            <div class="nexus-match nexus-match-2">
+                                <div class="match-pct">88% MATCH</div>
+                                <p class="match-quote">"The loneliness isn't about being alone. It's about not being understood."</p>
+                                <p class="match-meta">Anonymous · 8 min ago</p>
+                            </div>
+                            <div class="nexus-match nexus-match-3">
+                                <div class="match-pct">81% MATCH</div>
+                                <p class="match-quote">"I check on everyone. Nobody checks on me."</p>
+                                <p class="match-meta">Anonymous · 14 min ago</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </article>
+
+            <!-- ambient hidden listener counter still drives nav badge -->
+            <span class="visually-hidden"><b id="listeners-online">12</b></span>
         </section>
 
         <!-- ═════════════════════════════════════════════════ -->
@@ -413,11 +519,14 @@
                 <p class="auth-sub">a private vault, locked from the inside. only you have the key.</p>
             </div>
 
-            <button class="google-btn" id="google-login-btn" onclick="loginWithGoogle()">
-                <svg viewBox="0 0 24 24" width="20" height="20">
-                    <path fill="#EA4335" d="M12 10.2v3.9h5.4c-.2 1.4-1.6 4-5.4 4-3.2 0-5.9-2.7-5.9-6s2.7-6 5.9-6c1.8 0 3 .8 3.7 1.4l2.5-2.4C16.7 3.7 14.5 2.8 12 2.8 6.9 2.8 2.8 6.9 2.8 12s4.1 9.2 9.2 9.2c5.3 0 8.8-3.7 8.8-9 0-.6 0-1-.1-1.5z"/>
+            <button class="google-btn" id="google-login-btn" type="button" onclick="loginWithGoogle()">
+                <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+                    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.76h3.56c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.56-2.76c-.98.66-2.24 1.06-3.72 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84A11 11 0 0 0 12 23z"/>
+                    <path fill="#FBBC05" d="M5.84 14.11A6.61 6.61 0 0 1 5.5 12c0-.73.13-1.45.34-2.11V7.05H2.18A11 11 0 0 0 1 12c0 1.78.43 3.46 1.18 4.95l3.66-2.84z"/>
+                    <path fill="#EA4335" d="M12 5.38c1.62 0 3.07.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.05l3.66 2.84C6.71 7.31 9.14 5.38 12 5.38z"/>
                 </svg>
-                <span>Secure my space with Google</span>
+                <span>Continue with Google</span>
             </button>
 
             <div class="auth-divider"><span>or with email</span></div>
@@ -495,13 +604,64 @@
         }
 
         async function loginWithGoogle() {
-            if (!authClient) return;
+            if (!authClient) {
+                _err('still warming up — try again in a sec.');
+                return;
+            }
             _err('handing the key to Google…', true);
-            const { error } = await authClient.auth.signInWithOAuth({ provider: 'google' });
-            if (error) _err(error.message);
+
+            // build an explicit return path so Supabase + Google land us back on the right page
+            // (without this, Supabase falls back to its own URL and Google rejects the redirect)
+            const origin = window.location.origin;
+            const returnTo = `${origin}/app/dashboard.html`;
+
+            try {
+                const { error } = await authClient.auth.signInWithOAuth({
+                    provider: 'google',
+                    options: {
+                        redirectTo: returnTo,
+                        queryParams: {
+                            // ask Google for fresh consent so refresh tokens flow through reliably
+                            access_type: 'offline',
+                            prompt: 'select_account',
+                        },
+                    },
+                });
+                if (error) {
+                    // surface a friendlier message for the most common cause: Google provider
+                    // not yet enabled in the Supabase dashboard.
+                    if (/provider/i.test(error.message) && /not enabled/i.test(error.message)) {
+                        _err('Google sign-in is being switched on. Use email for now — we\'ll have it back in a moment.');
+                    } else if (/redirect/i.test(error.message)) {
+                        _err('Sign-in needs a redirect URL fix on our end. Try email for now.');
+                    } else {
+                        _err(error.message);
+                    }
+                }
+            } catch (e) {
+                _err('Google sign-in didn\'t open. Check your popup blocker, or use email.');
+            }
         }
+
+        // when Supabase returns the user via the URL fragment after Google,
+        // route them to dashboard or listener console without a manual click
+        (async () => {
+            if (!authClient) return;
+            if (!/access_token=|error_description=/.test(window.location.hash)) return;
+            _err('opening your vault…', true);
+            try {
+                const { data: { session } } = await authClient.auth.getSession();
+                if (session) {
+                    const { data: listener } = await authClient
+                        .from('listeners').select('id').eq('user_id', session.user.id).maybeSingle();
+                    window.location.href = listener
+                        ? 'app/listener-console.html'
+                        : 'app/dashboard.html';
+                }
+            } catch (_) { /* swallow — landing stays usable */ }
+        })();
     </script>
 
-    <script src="script.js?v=blk7"></script>
+    <script src="script.js?v=blke1"></script>
 </body>
 </html>
