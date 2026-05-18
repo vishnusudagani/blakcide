@@ -33,18 +33,27 @@
         if (meta) meta.setAttribute('content', theme === 'light' ? '#F8F4ED' : '#0F172A');
     }
     function setTheme(theme, originEl) {
+        const html = document.documentElement;
         const bloom = $('#theme-bloom');
-        if (bloom && originEl) {
-            const r = originEl.getBoundingClientRect();
-            bloom.style.setProperty('--bx', `${r.left + r.width / 2}px`);
-            bloom.style.setProperty('--by', `${r.top + r.height / 2}px`);
-            bloom.classList.remove('bloom-active');
-            void bloom.offsetWidth; // restart animation
-            bloom.classList.add('bloom-active');
-        }
-        document.documentElement.setAttribute('data-theme', theme);
+
+        // 1. freeze heavy transitions/animations briefly
+        html.classList.add('theme-switching');
+
+        // 2. flip the variables — paint the new theme behind the bloom
+        html.setAttribute('data-theme', theme);
         localStorage.setItem(THEME_KEY, theme);
         updateThemeMeta(theme);
+
+        // 3. trigger a quick GPU-only crossfade (no clip-path, no layout work)
+        if (bloom) {
+            bloom.classList.remove('bloom-active');
+            void bloom.offsetWidth;
+            bloom.classList.add('bloom-active');
+        }
+
+        // 4. release transitions after the short fade (~420ms)
+        clearTimeout(setTheme._t);
+        setTheme._t = setTimeout(() => html.classList.remove('theme-switching'), 460);
     }
     function bindTheme() {
         const btn = $('#theme-toggle');
@@ -96,26 +105,27 @@
        maps emotional state, re-tints the Symp Core in real time
        ═══════════════════════════════════════════════════════════════ */
     const vibePresets = [
-        // [xMin, xMax, yMin, yMax, word, line, orbA, orbB, orbC]
+        // [xMin, xMax, yMin, yMax, word, line, orbA, orbB, orbC, rgb]
         // x = heavy (0) → light (1)  ·  y = still (0) → activated (1)
+        // rgb = the cell-tint color when this region is "active"
         { x:[0,.33], y:[.66,1],   w:'on edge',          l:"a lot is moving inside. let's slow it down together.",
-          a:'rgba(167,139,250,.55)', b:'rgba(245,107,107,.4)', c:'rgba(94,234,212,.3)' },
+          a:'rgba(167,139,250,.55)', b:'rgba(245,107,107,.4)', c:'rgba(94,234,212,.3)',  rgb:[167,139,250] },
         { x:[.33,.66], y:[.66,1], w:'wired',            l:'energy without a home. we have a place for it.',
-          a:'rgba(245,185,98,.55)',  b:'rgba(167,139,250,.4)', c:'rgba(94,234,212,.4)' },
+          a:'rgba(245,185,98,.55)',  b:'rgba(167,139,250,.4)', c:'rgba(94,234,212,.4)',  rgb:[245,185,98] },
         { x:[.66,1], y:[.66,1],   w:'lit up',           l:'this is a good kind of awake. enjoy it.',
-          a:'rgba(94,234,212,.55)',  b:'rgba(245,185,98,.45)', c:'rgba(167,243,208,.4)' },
+          a:'rgba(94,234,212,.55)',  b:'rgba(245,185,98,.45)', c:'rgba(167,243,208,.4)', rgb:[94,234,212] },
         { x:[0,.33], y:[.33,.66], w:'heavy',            l:"the weight is real. you don't have to lift it alone.",
-          a:'rgba(167,139,250,.5)',  b:'rgba(80,100,160,.4)',  c:'rgba(94,234,212,.25)' },
+          a:'rgba(167,139,250,.5)',  b:'rgba(80,100,160,.4)',  c:'rgba(94,234,212,.25)', rgb:[129,118,196] },
         { x:[.33,.66], y:[.33,.66], w:'somewhere in the middle', l:"that's a fine place to sit. take a breath.",
-          a:'rgba(245,185,98,.45)',  b:'rgba(94,234,212,.35)', c:'rgba(167,139,250,.3)' },
+          a:'rgba(245,185,98,.45)',  b:'rgba(94,234,212,.35)', c:'rgba(167,139,250,.3)', rgb:[214,164,118] },
         { x:[.66,1], y:[.33,.66], w:'open',             l:'a soft kind of okay. nice to meet you here.',
-          a:'rgba(94,234,212,.5)',   b:'rgba(167,243,208,.4)', c:'rgba(245,185,98,.3)' },
+          a:'rgba(94,234,212,.5)',   b:'rgba(167,243,208,.4)', c:'rgba(245,185,98,.3)',  rgb:[120,210,180] },
         { x:[0,.33], y:[0,.33],   w:'flat',             l:"low and quiet. we'll just sit with you.",
-          a:'rgba(80,100,160,.5)',   b:'rgba(167,139,250,.35)',c:'rgba(94,234,212,.2)' },
+          a:'rgba(80,100,160,.5)',   b:'rgba(167,139,250,.35)',c:'rgba(94,234,212,.2)',  rgb:[100,118,170] },
         { x:[.33,.66], y:[0,.33], w:'still',            l:'the rest you needed. let it stay a while.',
-          a:'rgba(94,234,212,.4)',   b:'rgba(167,139,250,.3)', c:'rgba(245,185,98,.3)' },
+          a:'rgba(94,234,212,.4)',   b:'rgba(167,139,250,.3)', c:'rgba(245,185,98,.3)',  rgb:[140,200,200] },
         { x:[.66,1], y:[0,.33],   w:'at peace',         l:"hold this one. it's the rare one.",
-          a:'rgba(167,243,208,.55)', b:'rgba(94,234,212,.4)',  c:'rgba(245,185,98,.3)' },
+          a:'rgba(167,243,208,.55)', b:'rgba(94,234,212,.4)',  c:'rgba(245,185,98,.3)',  rgb:[167,222,180] },
     ];
 
     function vibeReadout(nx, ny) {
@@ -132,7 +142,25 @@
         const word  = $('#vibe-word');
         const line  = $('#vibe-line');
         const core  = $('#symp-core');
+        const grid  = $('.vibe-grid');
         if (!pad) return;
+
+        // ─── build the 12 × 10 grid of 120 cells once ───
+        const COLS = 12, ROWS = 10, CELLS = COLS * ROWS;
+        const cells = [];
+        if (grid && !grid.children.length) {
+            const frag = document.createDocumentFragment();
+            for (let i = 0; i < CELLS; i++) {
+                const c = document.createElement('div');
+                c.className = 'vibe-cell idle';
+                c.style.setProperty('--breath-delay', `${(Math.random() * 6).toFixed(2)}s`);
+                frag.appendChild(c);
+                cells.push(c);
+            }
+            grid.appendChild(frag);
+        } else if (grid) {
+            cells.push(...grid.children);
+        }
 
         // start centered
         let x = .5, y = .5;
@@ -158,6 +186,56 @@
             core?.style.setProperty('--orb-a', r.a);
             core?.style.setProperty('--orb-b', r.b);
             core?.style.setProperty('--orb-c', r.c);
+
+            // ─── light up the 120-cell grid based on the dot position ───
+            // dot lives in pad's coord-space; cells fill the whole vibe-stage.
+            // map pad's normalized (nx, ny) into the larger grid coordinate space.
+            const stage = grid?.parentElement;
+            if (cells.length && stage) {
+                const padOffsetX = pad.offsetLeft;
+                const padOffsetY = pad.offsetTop;
+                const stageW = stage.clientWidth || 1;
+                const stageH = stage.clientHeight || 1;
+
+                const dotStageX = padOffsetX + nx * pad.clientWidth;
+                const dotStageY = padOffsetY + (1 - ny) * pad.clientHeight;
+                const dotCellX = (dotStageX / stageW) * COLS - .5;
+                const dotCellY = (dotStageY / stageH) * ROWS - .5;
+
+                const [R, G, B] = r.rgb;
+                // wide warm pool — most of the 120 cells touch the active color
+                const radius = 5.5 + ny * 2.5;        // 5.5 .. 8.0 cells (vs ~12 wide grid)
+                const baseI  = .85;
+
+                for (let i = 0; i < CELLS; i++) {
+                    const cx = i % COLS;
+                    const cy = Math.floor(i / COLS);
+                    const dx = cx - dotCellX;
+                    const dy = cy - dotCellY;
+                    const d  = Math.sqrt(dx*dx + dy*dy);
+                    const cell = cells[i];
+
+                    cell.style.setProperty('--cell-r', R);
+                    cell.style.setProperty('--cell-g', G);
+                    cell.style.setProperty('--cell-b', B);
+
+                    if (d <= radius) {
+                        const t = 1 - (d / radius);     // 0..1, 1 at the dot
+                        // brighter near dot, lingering glow at the edge
+                        const intensity = clamp(baseI * Math.pow(t, 1.4) + .12, 0, .95);
+                        cell.style.setProperty('--cell-i', intensity.toFixed(3));
+                        cell.classList.remove('idle');
+                        if (d < 1.1) cell.classList.add('is-anchor');
+                        else         cell.classList.remove('is-anchor');
+                    } else {
+                        // far-from-dot cells: still a soft tint so the whole grid feels alive
+                        const ambient = clamp(.16 - (d - radius) * .015, .07, .16);
+                        cell.style.setProperty('--cell-i', ambient.toFixed(3));
+                        cell.classList.add('idle');
+                        cell.classList.remove('is-anchor');
+                    }
+                }
+            }
 
             // aria
             pad.setAttribute('aria-valuenow', Math.round((nx + ny) * 50));

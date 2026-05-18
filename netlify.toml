@@ -58,3 +58,11 @@
   from = "/api/listener-copilot"
   to = "/.netlify/functions/listener-copilot"
   status = 200
+
+# ──────── Team OS (React SPA built at /team-os) ────────
+# Any deep link like /team-os/tasks/4 should serve the SPA's index.html
+# so React Router can pick it up client-side.
+[[redirects]]
+  from = "/team-os/*"
+  to = "/team-os/index.html"
+  status = 200
