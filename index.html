@@ -3,524 +3,805 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <meta name="theme-color" content="#0F172A">
-    <meta name="description" content="A quiet place for loud thoughts. Journal, Nexus, Echo, Listeners — your private sanctuary, locked from the inside.">
-    <title>blaksyd — a quiet place for loud thoughts</title>
+    <meta name="theme-color" content="#08091A">
+    <meta name="description" content="Blaksyd is a living digital ecosystem. Echo understands you. Minit connects you. Nexus gives you a world to belong in.">
+    <title>blaksyd — your world. alive.</title>
 
     <link rel="icon" type="image/png" href="assets/blaksyd-white.png">
-    <link rel="stylesheet" href="style.css?v=blkf1">
+    <link rel="stylesheet" href="landing.css?v=2026f">
 
+    <!-- perf: single font CDN, only what we use, swap to avoid render block -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500;9..144,600&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- perf: defer Supabase — auth only needed on modal open -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
 </head>
 <body>
 
-    <!-- ─────── The Symp Core: signature visual orb ─────── -->
-    <div class="symp-core" id="symp-core" aria-hidden="true">
-        <div class="symp-orb orb-a"></div>
-        <div class="symp-orb orb-b"></div>
-        <div class="symp-orb orb-c"></div>
+    <div class="scroll-progress" id="scroll-progress" aria-hidden="true"></div>
+
+    <div class="world" aria-hidden="true">
+        <div class="stars"></div>
+        <div class="stars-2"></div>
+        <div class="world-aurora aurora-1"></div>
+        <div class="world-aurora aurora-2"></div>
+        <div class="world-aurora aurora-3"></div>
+        <div class="world-aurora aurora-4"></div>
+    </div>
+    <div class="grain" aria-hidden="true"></div>
+    <div class="cursor-glow" id="cursor-glow" aria-hidden="true"></div>
+
+    <!-- trust marquee -->
+    <div class="marquee" id="marquee" aria-hidden="true">
+        <div class="marquee-track">
+            <span class="marquee-item"><span class="marquee-item-dot"></span> you own your world</span>
+            <span class="marquee-item"><span class="marquee-item-dot aqua"></span> private by design</span>
+            <span class="marquee-item"><span class="marquee-item-dot mint"></span> built for real connection — not performance</span>
+            <span class="marquee-item"><span class="marquee-item-dot gold"></span> evolves with you over months and years</span>
+            <span class="marquee-item"><span class="marquee-item-dot"></span> safe · transparent · yours · always</span>
+            <span class="marquee-item"><span class="marquee-item-dot aqua"></span> no ads · no resale · no algorithm</span>
+            <span class="marquee-item"><span class="marquee-item-dot"></span> you own your world</span>
+            <span class="marquee-item"><span class="marquee-item-dot aqua"></span> private by design</span>
+            <span class="marquee-item"><span class="marquee-item-dot mint"></span> built for real connection — not performance</span>
+            <span class="marquee-item"><span class="marquee-item-dot gold"></span> evolves with you over months and years</span>
+            <span class="marquee-item"><span class="marquee-item-dot"></span> safe · transparent · yours · always</span>
+            <span class="marquee-item"><span class="marquee-item-dot aqua"></span> no ads · no resale · no algorithm</span>
+        </div>
     </div>
 
-    <!-- ─────── Theme bloom transition layer ─────── -->
-    <div class="theme-bloom" id="theme-bloom" aria-hidden="true"></div>
-
-    <!-- ─────── Top navigation ─────── -->
-    <nav class="top-nav">
-        <a href="#hero" class="brand-mark" aria-label="blaksyd home">
-            <img src="assets/blaksyd-white.png" alt="blaksyd" class="brand-logo brand-logo-dark">
-            <img src="assets/blaksyd-black.png" alt="blaksyd" class="brand-logo brand-logo-light">
+    <!-- floating capsule nav -->
+    <nav class="nav" id="nav">
+        <a href="#top" class="nav-brand" aria-label="blaksyd home">
+            <img src="assets/blaksyd-white.png" alt="blaksyd" class="nav-brand-dark">
+            <img src="assets/blaksyd-black.png" alt="blaksyd" class="nav-brand-light">
         </a>
+
+        <div class="nav-links">
+            <a href="#ecosystem">Ecosystem</a>
+            <a href="#echo-forms">Echo</a>
+            <a href="#tribes">Tribes</a>
+            <a href="#persistence">World</a>
+            <a href="#afterlife">After</a>
+        </div>
+
+        <span class="nav-divider"></span>
+
         <div class="nav-actions">
-            <button id="theme-toggle" class="theme-toggle" aria-label="Switch theme" title="Switch theme">
-                <span class="theme-toggle-track">
-                    <span class="theme-toggle-thumb"></span>
-                </span>
-                <span class="theme-toggle-label">
-                    <span data-when="dark">Midnight</span>
-                    <span data-when="light">Morning</span>
-                </span>
+            <button class="theme-toggle" id="theme-toggle" aria-label="Switch theme">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" id="theme-icon">
+                    <path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z"/>
+                </svg>
             </button>
-            <button id="nav-tell-us" class="nav-tell-us">
-                <span>Tell us</span>
-            </button>
+            <button class="btn-ghost" data-open-auth data-tab="signin">Sign in</button>
+            <button class="btn-primary magnetic" data-open-auth data-tab="signup"><span>Enter Blaksyd</span></button>
+            <button class="nav-burger" id="nav-burger" aria-label="Menu"><span></span></button>
         </div>
     </nav>
 
-    <main class="page">
+    <main id="top">
 
-        <!-- ═════════════════════════════════════════════════ -->
-        <!--   1.  HERO  —  The Trigger                        -->
-        <!-- ═════════════════════════════════════════════════ -->
-        <section class="hero" id="hero">
-            <div class="hero-inner">
-                <p class="hero-eyebrow">
-                    <span class="eyebrow-dot"></span>
-                    <span class="eyebrow-text">your sanctuary is open</span>
-                </p>
+        <!-- HERO -->
+        <section class="hero">
+            <p class="hero-eyebrow">
+                <span class="hero-eyebrow-dot"></span>
+                <span>the fourth internet · presence over content</span>
+            </p>
 
-                <h1 class="hero-title">
-                    A quiet place
-                    <span class="hero-title-soft">for loud thoughts.</span>
-                </h1>
-
-                <p class="hero-sub">
-                    No judgment. No noise. Just a soft room where the heavy things you carry can finally sit down for a moment.
-                </p>
-
-                <form class="hero-input-wrap" id="hero-input-form" autocomplete="off">
-                    <label for="hero-input" class="visually-hidden">What's heavy on your mind right now?</label>
-                    <input
-                        type="text"
-                        id="hero-input"
-                        class="hero-input"
-                        placeholder="What's heavy on your mind right now?"
-                        maxlength="240"
-                        autocomplete="off"
-                        spellcheck="false"
-                    >
-                    <button type="submit" class="hero-input-send" aria-label="Send">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M5 12h14M13 6l6 6-6 6"/>
-                        </svg>
-                    </button>
-                </form>
-
-                <p class="hero-hint">
-                    <span class="hint-key">↵</span> press enter — nothing is saved unless you say so
-                </p>
-            </div>
-
-            <a href="#vibe" class="hero-scroll-cue" aria-label="Scroll">
-                <span></span>
+            <a href="#broken" class="hero-logo" aria-label="blaksyd">
+                <img src="assets/blaksyd-white.png" alt="blaksyd" class="nav-brand-dark">
+                <img src="assets/blaksyd-black.png" alt="blaksyd" class="nav-brand-light">
             </a>
-        </section>
 
-        <!-- ═════════════════════════════════════════════════ -->
-        <!--   2.  THE VIBE MAP  —  gamified emotional slider   -->
-        <!-- ═════════════════════════════════════════════════ -->
-        <section class="vibe" id="vibe">
-            <div class="vibe-head">
-                <p class="kicker">your weather, right now</p>
-                <h2 class="section-title">Drag the dot. <span class="title-soft">Show us how today actually feels.</span></h2>
-                <p class="section-sub">No words needed yet. Just slide. Watch the room breathe with you.</p>
+            <h1 class="hero-title">
+                <span class="hero-title-line">Your world.</span>
+                <span class="hero-title-line hero-title-soft">Alive.</span>
+            </h1>
+
+            <p class="hero-sub">
+                Echo understands you. Minit connects you. Nexus gives you a world to belong in. A living digital ecosystem — evolving with you.
+            </p>
+
+            <div class="hero-ctas">
+                <button class="btn-hero-primary magnetic" data-open-auth data-tab="signup">
+                    <span>Enter Blaksyd</span>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+                </button>
+                <a href="#ecosystem" class="btn-hero-ghost magnetic"><span>Explore the world</span></a>
             </div>
 
-            <div class="vibe-stage" id="vibe-stage">
-                <div class="vibe-axis vibe-axis-y">
-                    <span class="axis-cap top">activated</span>
-                    <span class="axis-cap bot">still</span>
-                </div>
-                <div class="vibe-axis vibe-axis-x">
-                    <span class="axis-cap left">heavy</span>
-                    <span class="axis-cap right">light</span>
-                </div>
-
-                <div class="vibe-grid"></div>
-
-                <div class="vibe-pad" id="vibe-pad" tabindex="0" role="slider" aria-label="Emotional state slider" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50">
-                    <div class="vibe-glow" id="vibe-glow"></div>
-                    <div class="vibe-dot" id="vibe-dot">
-                        <div class="vibe-dot-pulse"></div>
-                        <div class="vibe-dot-core"></div>
-                    </div>
-                </div>
-
-                <div class="vibe-readout" id="vibe-readout">
-                    <div class="readout-label">we're reading you as</div>
-                    <div class="readout-word" id="vibe-word">somewhere in the middle</div>
-                    <div class="readout-line" id="vibe-line">that's a fine place to sit. take a breath.</div>
-                </div>
-            </div>
-        </section>
-
-        <!-- ═════════════════════════════════════════════════ -->
-        <!--   3.  FOUR FEATURES  —  Split-layout interactive   -->
-        <!-- ═════════════════════════════════════════════════ -->
-        <section class="features" id="features">
-            <div class="features-head">
-                <p class="kicker">four sanctuaries inside</p>
-                <h2 class="section-title">Four ways to be <span class="title-soft">heard.</span></h2>
-                <p class="section-sub">No sign-in to feel them. Type into any one — it answers right here, on this page.</p>
-            </div>
-
-            <!-- ───────── 01 · JOURNAL ───────── -->
-            <article class="feature-row" data-feature="journal" data-trial="journal">
-                <div class="feature-text">
-                    <p class="feature-num">01 — JOURNAL</p>
-                    <h3 class="feature-headline">Leave it on<br>the page.</h3>
-                    <p class="feature-desc">A blank page that doesn't keep what you don't want it to. Type the sentence you can't say out loud — release it, and watch the words dissolve into dust. Whatever you write here, no one ever sees. Not even us.</p>
-                    <div class="feature-pills">
-                        <button class="feature-pill" type="button" tabindex="-1"><span class="pill-emoji">🪶</span> Private</button>
-                        <button class="feature-pill" type="button" tabindex="-1"><span class="pill-emoji">🌙</span> No saves</button>
-                        <button class="feature-pill" type="button" tabindex="-1"><span class="pill-emoji">✨</span> Dissolves</button>
-                    </div>
-                    <p class="feature-cta-text">— TYPE SOMETHING — WATCH IT GO</p>
-                </div>
-
-                <div class="feature-preview" data-trial="journal" tabindex="0" role="button" aria-label="Open Journal">
-                    <div class="preview-card preview-journal">
-                        <div class="preview-paper-grain" aria-hidden="true"></div>
-                        <div class="preview-journal-head">
-                            <span class="journal-date">today · 11:42 pm</span>
-                            <span class="journal-mode">private</span>
-                        </div>
-                        <div class="journal-canvas" id="jp-canvas">
-                            <textarea
-                                id="jp-text"
-                                class="journal-mini-area"
-                                placeholder="i feel like…"
-                                spellcheck="false"
-                                rows="4"
-                                aria-label="Type a thought to release"
-                            ></textarea>
-                            <div class="journal-dust" id="jp-dust" aria-hidden="true"></div>
-                        </div>
-                        <div class="preview-journal-foot">
-                            <span class="char-count" id="jp-count">0 / 200</span>
-                            <button class="journal-release" id="jp-release" type="button">
-                                <span>Release</span>
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
-                                    <path d="M5 12h14M13 6l6 6-6 6"/>
-                                </svg>
-                            </button>
-                        </div>
-                        <p class="journal-validation" id="jp-validation" hidden></p>
-                    </div>
-                </div>
-            </article>
-
-            <!-- ───────── 02 · ECHO ───────── -->
-            <article class="feature-row feature-row-flip" data-feature="echo" data-trial="echo">
-                <div class="feature-text">
-                    <p class="feature-num">02 — ECHO</p>
-                    <h3 class="feature-headline">Always here.<br>Never tired.</h3>
-                    <p class="feature-desc">Echo is your AI companion — not a chatbot. It remembers your moods, patterns, and the things you share. It grows with you. And it's the only presence that never gets tired of listening.</p>
-                    <div class="feature-pills">
-                        <button class="feature-pill" type="button" tabindex="-1"><span class="pill-emoji">🧠</span> Remembers you</button>
-                        <button class="feature-pill" type="button" tabindex="-1"><span class="pill-emoji">🌙</span> Available at 2am</button>
-                        <button class="feature-pill" type="button" tabindex="-1"><span class="pill-emoji">📞</span> Voice calls</button>
-                    </div>
-                    <p class="feature-cta-text">— SAY HELLO TO ECHO</p>
-                </div>
-
-                <div class="feature-preview" data-trial="echo" tabindex="0" role="button" aria-label="Open Echo">
-                    <div class="preview-card preview-echo">
-                        <div class="preview-echo-head">
-                            <div class="preview-avatar preview-avatar-echo" aria-hidden="true">
-                                <svg viewBox="0 0 24 24" fill="none">
-                                    <path d="M12 2 L13.5 9 L20 10.5 L13.5 12 L12 19 L10.5 12 L4 10.5 L10.5 9 Z" fill="currentColor"/>
-                                </svg>
-                            </div>
-                            <div class="preview-meta">
-                                <p class="preview-name">Echo</p>
-                                <p class="preview-status"><span class="dot dot-online"></span> Online · always here</p>
-                            </div>
-                        </div>
-                        <div class="preview-stream" id="ep-stream">
-                            <div class="preview-bubble preview-bubble-bot">
-                                "You showed up. That already says something. What is on your mind right now?"
-                            </div>
-                        </div>
-                        <div class="preview-input-row">
-                            <input class="preview-input" id="ep-input" placeholder="Talk to Echo…" autocomplete="off" spellcheck="false">
-                            <button class="preview-send" id="ep-send" type="button" aria-label="Send">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                                    <path d="M12 19V5M5 12l7-7 7 7"/>
-                                </svg>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </article>
-
-            <!-- ───────── 03 · LISTENER ───────── -->
-            <article class="feature-row" data-feature="listener" data-trial="listener">
-                <div class="feature-text">
-                    <p class="feature-num">03 — LISTENER</p>
-                    <h3 class="feature-headline">Real hearts.<br>Zero judgment.</h3>
-                    <p class="feature-desc">Sometimes AI is not enough. Real, trained humans are on standby — chosen for their ability to listen, not fix. 100% confidential. Anonymous if you want. Available right now.</p>
-                    <div class="feature-pills">
-                        <button class="feature-pill" type="button" tabindex="-1"><span class="pill-live"></span> Online now</button>
-                        <button class="feature-pill" type="button" tabindex="-1"><span class="pill-emoji">🤡</span> Anonymous</button>
-                        <button class="feature-pill" type="button" tabindex="-1"><span class="pill-emoji">🔒</span> Confidential</button>
-                    </div>
-                    <p class="feature-cta-text">— PICK WHO FEELS RIGHT</p>
-                </div>
-
-                <div class="feature-preview" data-trial="listener" tabindex="0" role="button" aria-label="Open Listeners">
-                    <div class="preview-card preview-listener-card">
-                        <div class="preview-listener-head">
-                            <h4>Find a Listener</h4>
-                            <span class="online-count"><span class="dot dot-online"></span> <b id="lp-online">6</b> online</span>
-                        </div>
-                        <div class="listener-rows">
-                            <div class="listener-row" data-listener="priya">
-                                <div class="listener-avatar listener-avatar-rose">P</div>
-                                <div class="listener-info">
-                                    <p class="listener-name">Priya M.</p>
-                                    <p class="listener-tags-line">Anxiety · Relationships · Women's w…</p>
-                                    <p class="listener-status-line"><span class="dot dot-online"></span> Online · 847 sessions</p>
-                                </div>
-                                <button class="listener-connect" type="button">Connect</button>
-                            </div>
-                            <div class="listener-row" data-listener="arjun">
-                                <div class="listener-avatar listener-avatar-blue">A</div>
-                                <div class="listener-info">
-                                    <p class="listener-name">Arjun K.</p>
-                                    <p class="listener-tags-line">Career · Burnout · Men's wellbeing</p>
-                                    <p class="listener-status-line"><span class="dot dot-online"></span> Online · 523 sessions</p>
-                                </div>
-                                <button class="listener-connect" type="button">Connect</button>
-                            </div>
-                            <div class="listener-row" data-listener="meera">
-                                <div class="listener-avatar listener-avatar-mint">M</div>
-                                <div class="listener-info">
-                                    <p class="listener-name">Meera T.</p>
-                                    <p class="listener-tags-line">Grief · Heartbreak · Hindi · Telugu</p>
-                                    <p class="listener-status-line"><span class="dot dot-online"></span> Online · 312 sessions</p>
-                                </div>
-                                <button class="listener-connect" type="button">Connect</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </article>
-
-            <!-- ───────── 04 · NEXUS ───────── -->
-            <article class="feature-row feature-row-flip" data-feature="nexus" data-trial="nexus">
-                <div class="feature-text">
-                    <p class="feature-num">04 — NEXUS</p>
-                    <h3 class="feature-headline">You are never<br>as alone as<br>you think.</h3>
-                    <p class="feature-desc">An anonymous space where you discover others feel exactly what you feel. No names. No profiles. Just shared humanity — the neurological relief of realising "I am not the only one."</p>
-                    <div class="feature-pills">
-                        <button class="feature-pill" type="button" tabindex="-1"><span class="pill-emoji">🤡</span> Anonymous</button>
-                        <button class="feature-pill" type="button" tabindex="-1"><span class="pill-emoji">🦋</span> Shared feelings</button>
-                        <button class="feature-pill" type="button" tabindex="-1"><span class="pill-emoji">💬</span> Real voices</button>
-                    </div>
-                    <p class="feature-cta-text">— SHARE SOMETHING — SEE WHO MATCHES</p>
-                </div>
-
-                <div class="feature-preview" data-trial="nexus" tabindex="0" role="button" aria-label="Open Nexus">
-                    <div class="preview-card preview-nexus-card">
-                        <div class="preview-nexus-head">
-                            <h4>What is weighing on you?</h4>
-                            <p class="preview-nexus-sub">Anonymous · no names · no judgment</p>
-                        </div>
-                        <div class="preview-nexus-input-row">
-                            <input class="preview-input" id="np-input" placeholder="Something I can't shake…" autocomplete="off" spellcheck="false">
-                            <button class="preview-share" id="np-share" type="button">Share →</button>
-                        </div>
-                        <div class="nexus-matches" id="np-matches">
-                            <div class="nexus-match nexus-match-1">
-                                <div class="match-pct">94% MATCH</div>
-                                <p class="match-quote">"I say I'm fine so many times I've started to believe it myself."</p>
-                                <p class="match-meta">Anonymous · 2 min ago</p>
-                            </div>
-                            <div class="nexus-match nexus-match-2">
-                                <div class="match-pct">88% MATCH</div>
-                                <p class="match-quote">"The loneliness isn't about being alone. It's about not being understood."</p>
-                                <p class="match-meta">Anonymous · 8 min ago</p>
-                            </div>
-                            <div class="nexus-match nexus-match-3">
-                                <div class="match-pct">81% MATCH</div>
-                                <p class="match-quote">"I check on everyone. Nobody checks on me."</p>
-                                <p class="match-meta">Anonymous · 14 min ago</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </article>
-
-            <!-- ambient hidden listener counter still drives nav badge -->
-            <span class="visually-hidden"><b id="listeners-online">12</b></span>
-        </section>
-
-        <!-- ═════════════════════════════════════════════════ -->
-        <!--   4.  THE SANCTUARY + FORTRESS  —  Trust frame   -->
-        <!-- ═════════════════════════════════════════════════ -->
-        <section class="why" id="why">
-            <div class="why-grid">
-                <div class="why-card why-sanctuary">
-                    <div class="why-icon">
-                        <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M16 27s-9-5.5-9-13a6 6 0 0 1 11-3 6 6 0 0 1 11 3c0 1.1-.2 2.1-.5 3"/>
-                            <path d="M22 18l-3 5-3-3-3 4"/>
-                        </svg>
-                    </div>
-                    <p class="why-kicker">the sanctuary</p>
-                    <h3 class="why-title">Heard, the way you wanted to be heard.</h3>
-                    <p class="why-body">
-                        Most of the world wants you to be okay quickly. We don't. Sit here for as long as you need. We won't fix you, hurry you, or hand you a worksheet. We will just be here.
-                    </p>
-                </div>
-
-                <div class="why-card why-fortress">
-                    <div class="why-icon">
-                        <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M16 4 5 9v8c0 6.5 4.7 10.4 11 11 6.3-.6 11-4.5 11-11V9z"/>
-                            <path d="M11 16l3 3 7-7"/>
-                        </svg>
-                    </div>
-                    <p class="why-kicker">the fortress</p>
-                    <h3 class="why-title">Locked from the inside.</h3>
-                    <p class="why-body">
-                        Your Vault is end-to-end private. We can't read it. Nobody you know can find it. No ads, no resale, no algorithm staring at you. The door has one key and you hold it.
-                    </p>
-                </div>
-            </div>
-        </section>
-
-        <!-- ═════════════════════════════════════════════════ -->
-        <!--   5.  FOOTER  —  We are always here.              -->
-        <!-- ═════════════════════════════════════════════════ -->
-        <footer class="foot" id="foot">
-            <div class="foot-top">
-                <img src="assets/blaksyd-white.png" alt="blaksyd" class="foot-logo brand-logo-dark">
-                <img src="assets/blaksyd-black.png" alt="blaksyd" class="foot-logo brand-logo-light">
-                <p class="foot-line">we are always here.</p>
-            </div>
-
-            <div class="foot-grid">
-                <a href="https://wa.me/917702063434" target="_blank" rel="noopener" class="foot-lifeline">
-                    <span class="lifeline-icon">
-                        <svg viewBox="0 0 32 32" fill="currentColor">
-                            <path d="M16 3a13 13 0 0 0-11 19.7L3 29l6.5-1.7A13 13 0 1 0 16 3zm7.6 18.4c-.3.9-1.7 1.7-2.4 1.8-.6.1-1.4.1-2.3-.1a13 13 0 0 1-2.2-.8 16 16 0 0 1-6.2-5.5c-.5-.7-1.1-1.7-1.1-2.7 0-.9.5-1.4.7-1.6.2-.2.5-.3.7-.3h.5c.2 0 .4 0 .6.5.2.5.7 1.7.8 1.8.1.2.2.4 0 .6-.1.2-.2.3-.4.5l-.5.6c-.2.2-.4.4-.2.7.2.3.9 1.4 1.9 2.3 1.3 1.2 2.4 1.5 2.7 1.7.3.2.5.1.7-.1l.8-1c.2-.3.4-.2.7-.1.3.1 1.7.8 2 .9.3.2.5.2.6.4.1.2.1.9-.2 1.7z"/>
-                        </svg>
-                    </span>
-                    <span class="lifeline-body">
-                        <span class="lifeline-title">Text our human team on WhatsApp</span>
-                        <span class="lifeline-sub">a real person reads every message — usually within an hour</span>
-                    </span>
-                    <span class="lifeline-arrow">→</span>
+            <div class="layer-constellation">
+                <a href="#ecosystem" class="layer-dot echo">
+                    <span class="layer-dot-core"></span>
+                    <span class="layer-dot-label">Echo</span>
+                    <span class="layer-dot-tag">AI confidant</span>
+                </a>
+                <a href="#ecosystem" class="layer-dot nexus">
+                    <span class="layer-dot-core"></span>
+                    <span class="layer-dot-label">Nexus</span>
+                    <span class="layer-dot-tag">community</span>
+                </a>
+                <a href="#ecosystem" class="layer-dot minit">
+                    <span class="layer-dot-core"></span>
+                    <span class="layer-dot-label">Minit</span>
+                    <span class="layer-dot-tag">human presence</span>
                 </a>
             </div>
 
-            <div class="foot-channels">
-                <div class="channels-block">
-                    <p class="channels-kicker">prefer to write a letter?</p>
-                    <a href="mailto:connect@blakcide.com" class="channel-row">
-                        <span class="channel-icon">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
-                                <rect x="3" y="5" width="18" height="14" rx="2"/>
-                                <path d="m3 7 9 6 9-6"/>
-                            </svg>
-                        </span>
-                        <span>connect@blakcide.com</span>
-                    </a>
+            <a href="#broken" class="hero-scroll-cue">scroll</a>
+        </section>
+
+        <!-- BROKEN INTERNET -->
+        <section class="broken" id="broken">
+            <div class="section-head reveal">
+                <p class="section-eyebrow">the broken internet</p>
+                <h2 class="section-title">Your digital life was never meant <span class="section-title-soft">to be this fragmented.</span></h2>
+                <p class="section-sub">Every app resets your identity. Every platform forgets your story. Blaksyd is what happens when they finally come together.</p>
+            </div>
+
+            <div class="broken-stage reveal" id="broken-stage">
+                <div class="app-icon ig"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg></div>
+                <div class="app-icon gpt"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M22.282 9.821a5.985 5.985 0 0 0-.516-4.91 6.046 6.046 0 0 0-6.51-2.9A6.065 6.065 0 0 0 4.981 4.18a5.985 5.985 0 0 0-3.998 2.9 6.046 6.046 0 0 0 .743 7.097 5.98 5.98 0 0 0 .51 4.911 6.051 6.051 0 0 0 6.515 2.9A5.985 5.985 0 0 0 13.26 24a6.056 6.056 0 0 0 5.772-4.206 5.99 5.99 0 0 0 3.997-2.9 6.056 6.056 0 0 0-.747-7.073zM13.26 22.43a4.476 4.476 0 0 1-2.876-1.04l.141-.081 4.779-2.758a.795.795 0 0 0 .392-.681v-6.737l2.02 1.168a.071.071 0 0 1 .038.052v5.583a4.504 4.504 0 0 1-4.494 4.494zM3.6 18.304a4.47 4.47 0 0 1-.535-3.014l.142.085 4.783 2.759a.771.771 0 0 0 .78 0l5.843-3.369v2.332a.08.08 0 0 1-.033.062L9.74 19.95a4.5 4.5 0 0 1-6.14-1.646zM2.34 7.896a4.485 4.485 0 0 1 2.366-1.973V11.6a.766.766 0 0 0 .388.676l5.815 3.355-2.02 1.168a.076.076 0 0 1-.071 0l-4.83-2.786A4.504 4.504 0 0 1 2.34 7.872zm16.597 3.855-5.833-3.387L15.119 7.2a.076.076 0 0 1 .071 0l4.83 2.791a4.494 4.494 0 0 1-.676 8.105v-5.678a.79.79 0 0 0-.407-.667zm2.01-3.023-.141-.085-4.774-2.782a.776.776 0 0 0-.785 0L9.409 9.23V6.897a.066.066 0 0 1 .028-.061l4.83-2.787a4.5 4.5 0 0 1 6.68 4.66zm-12.64 4.135-2.02-1.164a.08.08 0 0 1-.038-.057V6.075a4.5 4.5 0 0 1 7.375-3.453l-.142.08-4.778 2.758a.795.795 0 0 0-.393.681zm1.097-2.365 2.602-1.5 2.607 1.5v3l-2.597 1.5-2.607-1.5z"/></svg></div>
+                <div class="app-icon notion"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M4.459 4.208c.746.606 1.026.56 2.428.466l13.215-.793c.28 0 .047-.28-.046-.326L17.86 1.968c-.42-.326-.981-.7-2.055-.607L3.01 2.295c-.466.046-.56.28-.374.466zm.793 3.08v13.904c0 .747.373 1.027 1.214.98l14.523-.84c.841-.046.935-.56.935-1.167V6.354c0-.606-.233-.933-.748-.887l-15.177.887c-.56.047-.747.327-.747.933zm14.337.745c.093.42 0 .84-.42.888l-.7.14v10.264c-.608.327-1.168.514-1.635.514-.748 0-.935-.234-1.495-.933l-4.577-7.186v6.952L12.21 19s0 .84-1.168.84l-3.222.186c-.093-.186 0-.653.327-.746l.84-.233V9.854L7.822 9.76c-.094-.42.14-1.026.793-1.073l3.456-.233 4.764 7.279v-6.44l-1.215-.139c-.093-.514.28-.887.747-.933zM1.936 1.035l13.31-.98c1.634-.14 2.055-.047 3.082.7l4.249 2.986c.7.513.934.653.934 1.213v16.378c0 1.026-.373 1.634-1.68 1.726l-15.458.934c-.98.047-1.448-.093-1.962-.747l-3.129-4.06c-.56-.747-.793-1.306-.793-1.96V2.667c0-.839.374-1.54 1.447-1.632z"/></svg></div>
+                <div class="app-icon spotify"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.78-.179-.9-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.302 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/></svg></div>
+                <div class="app-icon whatsapp"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448L.057 24zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/></svg></div>
+                <div class="app-icon discord"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/></svg></div>
+                <div class="app-icon tiktok"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5.8 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1.84-.1z"/></svg></div>
+                <div class="app-icon notes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6z"/><path d="M14 2v6h6"/><path d="M16 13H8M16 17H8M10 9H8"/></svg></div>
+
+                <!-- aura halo behind logo -->
+                <div class="broken-logo-aura"></div>
+
+                <!-- orbiting particles — fragments of the apps now part of blaksyd -->
+                <span class="broken-orbit-particle" style="--p-color: #FD1D89; --start: 0deg; --r: 90px; --dur: 9s"></span>
+                <span class="broken-orbit-particle" style="--p-color: #10A37F; --start: 45deg; --r: 90px; --dur: 11s"></span>
+                <span class="broken-orbit-particle" style="--p-color: #C9B8FF; --start: 90deg; --r: 110px; --dur: 13s"></span>
+                <span class="broken-orbit-particle" style="--p-color: #1DB954; --start: 135deg; --r: 110px; --dur: 10s"></span>
+                <span class="broken-orbit-particle" style="--p-color: #25D366; --start: 180deg; --r: 130px; --dur: 14s"></span>
+                <span class="broken-orbit-particle" style="--p-color: #5865F2; --start: 225deg; --r: 130px; --dur: 12s"></span>
+                <span class="broken-orbit-particle" style="--p-color: #FFCD32; --start: 270deg; --r: 150px; --dur: 15s"></span>
+                <span class="broken-orbit-particle" style="--p-color: #FF6B9D; --start: 315deg; --r: 150px; --dur: 11s"></span>
+
+                <!-- the resolution -->
+                <div class="broken-logo">
+                    <img src="assets/blaksyd-white.png" alt="blaksyd" class="nav-brand-dark">
+                    <img src="assets/blaksyd-black.png" alt="blaksyd" class="nav-brand-light">
+                </div>
+            </div>
+
+            <p class="broken-tagline">Every app you've ever opened was a fragment. <em>This is the whole.</em></p>
+        </section>
+
+        <!-- ═════════════════════════════════════════════════════════════ -->
+        <!-- ECOSYSTEM — Apple Vision Pro style head + rotating layers      -->
+        <!-- ═════════════════════════════════════════════════════════════ -->
+        <section class="head-section" id="ecosystem" data-active="echo">
+            <div class="head-sticky">
+                <div class="head-stage">
+                    <div class="head-bg-glow"></div>
+                    <div class="head-tint"></div>
+
+                    <p class="head-eyebrow">— the ecosystem —</p>
+                    <h2 class="head-title">Three layers. <em>One you.</em></h2>
+
+                    <!-- floating motes scattered across the stage -->
+                    <span class="head-mote" style="top: 18%; left: 12%; --m-color: var(--gold); --m-dur: 9s; --m-tx: 14px; --m-ty: -22px;"></span>
+                    <span class="head-mote" style="top: 28%; right: 16%; --m-color: var(--lavender); --m-dur: 11s; --m-tx: -18px; --m-ty: 16px;"></span>
+                    <span class="head-mote" style="top: 60%; left: 8%; --m-color: var(--mint); --m-dur: 12s; --m-tx: 20px; --m-ty: 24px;"></span>
+                    <span class="head-mote" style="top: 72%; right: 10%; --m-color: var(--blush-deep); --m-dur: 10s; --m-tx: -14px; --m-ty: -18px;"></span>
+                    <span class="head-mote" style="top: 38%; left: 24%; --m-color: var(--peach); --m-dur: 13s; --m-tx: 26px; --m-ty: -14px;"></span>
+                    <span class="head-mote" style="top: 48%; right: 28%; --m-color: var(--aqua); --m-dur: 11s; --m-tx: -22px; --m-ty: 20px;"></span>
+                    <span class="head-mote" style="top: 14%; left: 48%; --m-color: var(--coral); --m-dur: 14s; --m-tx: 18px; --m-ty: 28px;"></span>
+                    <span class="head-mote" style="top: 82%; left: 42%; --m-color: var(--gold); --m-dur: 10s; --m-tx: -16px; --m-ty: -24px;"></span>
+
+                    <div class="head-orbit r1"></div>
+                    <div class="head-orbit r2"></div>
+                    <div class="head-orbit r3"></div>
+
+                    <!-- traveling dots on each orbit -->
+                    <span class="orbit-traveler" style="--ot-color: var(--lavender); --ot-start: 0deg; --ot-r: 240px; --ot-dur: 24s;"></span>
+                    <span class="orbit-traveler" style="--ot-color: var(--mint); --ot-start: 120deg; --ot-r: 290px; --ot-dur: 32s;"></span>
+                    <span class="orbit-traveler" style="--ot-color: var(--blush-deep); --ot-start: 240deg; --ot-r: 340px; --ot-dur: 38s;"></span>
+                    <span class="orbit-traveler" style="--ot-color: var(--gold); --ot-start: 60deg; --ot-r: 240px; --ot-dur: 28s;"></span>
+                    <span class="orbit-traveler" style="--ot-color: var(--peach); --ot-start: 180deg; --ot-r: 290px; --ot-dur: 30s;"></span>
+                    <span class="orbit-traveler" style="--ot-color: var(--aqua); --ot-start: 300deg; --ot-r: 340px; --ot-dur: 34s;"></span>
+
+                    <!-- light beams head→layer -->
+                    <div class="head-beam echo" id="beam-echo"></div>
+                    <div class="head-beam nexus" id="beam-nexus"></div>
+                    <div class="head-beam minit" id="beam-minit"></div>
+
+                    <!-- head with surrounding aura rings -->
+                    <div class="head-figure-wrap">
+                        <span class="head-aura-ring r1"></span>
+                        <span class="head-aura-ring r2"></span>
+                        <span class="head-aura-ring r3"></span>
+                    <div class="head-figure" id="head-figure">
+                        <svg viewBox="0 0 240 320" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                            <defs>
+                                <radialGradient id="skin" cx="40%" cy="30%" r="80%">
+                                    <stop offset="0%" stop-color="#FFD4B8" stop-opacity="0.95"/>
+                                    <stop offset="35%" stop-color="#C9B8FF" stop-opacity="0.55"/>
+                                    <stop offset="100%" stop-color="#1F1A3C" stop-opacity="0.95"/>
+                                </radialGradient>
+                                <radialGradient id="highlight" cx="35%" cy="25%" r="40%">
+                                    <stop offset="0%" stop-color="#FAF4EC" stop-opacity="0.55"/>
+                                    <stop offset="100%" stop-color="#FAF4EC" stop-opacity="0"/>
+                                </radialGradient>
+                                <linearGradient id="neck-grad" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="0%" stop-color="#C9B8FF" stop-opacity="0.4"/>
+                                    <stop offset="100%" stop-color="#1F1A3C" stop-opacity="0"/>
+                                </linearGradient>
+                                <linearGradient id="shoulder-grad" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="0%" stop-color="#9683E6" stop-opacity="0.4"/>
+                                    <stop offset="100%" stop-color="#1F1A3C" stop-opacity="0"/>
+                                </linearGradient>
+                            </defs>
+                            <!-- shoulders silhouette -->
+                            <path d="M10 320 L10 280 Q60 240 120 240 Q180 240 230 280 L230 320 Z" fill="url(#shoulder-grad)"/>
+                            <!-- neck -->
+                            <path d="M95 230 L95 200 Q120 215 145 200 L145 230 Z" fill="url(#skin)" opacity="0.85"/>
+                            <!-- head -->
+                            <ellipse cx="120" cy="120" rx="78" ry="98" fill="url(#skin)"/>
+                            <!-- soft highlight (light source upper-left) -->
+                            <ellipse cx="100" cy="95" rx="48" ry="62" fill="url(#highlight)"/>
+                            <!-- subtle hair shadow -->
+                            <path d="M50 90 Q60 40 120 30 Q180 40 190 90 Q170 60 120 55 Q70 60 50 90 Z" fill="#1F1A3C" opacity="0.35"/>
+                            <!-- eyes (closed thoughtful) -->
+                            <path d="M88 132 Q95 134 102 132" stroke="#1F1A3C" stroke-width="1.6" stroke-opacity="0.55" fill="none" stroke-linecap="round"/>
+                            <path d="M138 132 Q145 134 152 132" stroke="#1F1A3C" stroke-width="1.6" stroke-opacity="0.55" fill="none" stroke-linecap="round"/>
+                            <!-- subtle brow -->
+                            <path d="M84 122 Q95 120 104 124" stroke="#1F1A3C" stroke-width="1.2" stroke-opacity="0.32" fill="none" stroke-linecap="round"/>
+                            <path d="M136 124 Q145 120 156 122" stroke="#1F1A3C" stroke-width="1.2" stroke-opacity="0.32" fill="none" stroke-linecap="round"/>
+                            <!-- subtle nose -->
+                            <path d="M120 145 Q117 162 122 170" stroke="#1F1A3C" stroke-width="1" stroke-opacity="0.22" fill="none" stroke-linecap="round"/>
+                            <!-- subtle lips -->
+                            <path d="M108 184 Q120 188 132 184" stroke="#1F1A3C" stroke-width="1.4" stroke-opacity="0.35" fill="none" stroke-linecap="round"/>
+                            <path d="M112 188 Q120 190 128 188" stroke="#1F1A3C" stroke-width="0.8" stroke-opacity="0.2" fill="none" stroke-linecap="round"/>
+                        </svg>
+                        <div class="head-aura"></div>
+                        <div class="head-consciousness"></div>
+                    </div>
+                    </div><!-- /head-figure-wrap -->
+
+                    <!-- Echo layer (top) -->
+                    <div class="head-layer echo active" id="layer-echo">
+                        <span class="head-layer-tag">01 — Echo</span>
+                        <h3 class="head-layer-name">Echo</h3>
+                        <p class="head-layer-line">An intelligent presence that understands you.</p>
+                        <p class="head-layer-body">Talks like you, remembers what you remember, evolves where you evolve. Always here, never tired.</p>
+                    </div>
+
+                    <!-- Nexus layer (bottom-left) -->
+                    <div class="head-layer nexus" id="layer-nexus">
+                        <span class="head-layer-tag">02 — Nexus</span>
+                        <h3 class="head-layer-name">Nexus</h3>
+                        <p class="head-layer-line">Communities that feel alive.</p>
+                        <p class="head-layer-body">Rooms, tribes, conversations — built around identity and resonance, not algorithms.</p>
+                    </div>
+
+                    <!-- Minit layer (bottom-right) -->
+                    <div class="head-layer minit" id="layer-minit">
+                        <span class="head-layer-tag">03 — Minit</span>
+                        <h3 class="head-layer-name">Minit</h3>
+                        <p class="head-layer-line">Real humans, when only a human will do.</p>
+                        <p class="head-layer-body">Trained listeners. Anonymous if you want, voice-masked if you need. Available right now.</p>
+                    </div>
+
+                    <div class="head-progress">
+                        <span class="head-progress-dot active" id="hp-1"></span>
+                        <span class="head-progress-dot" id="hp-2"></span>
+                        <span class="head-progress-dot" id="hp-3"></span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ═════════════════════════════════════════════════════════════ -->
+        <!-- ECHO FORMS — Default Echo + Living Self + Imagined Companion    -->
+        <!-- Echo (parent) → Default + Persona (Living Self / Imagined)      -->
+        <!-- ═════════════════════════════════════════════════════════════ -->
+        <section class="echo-forms" id="echo-forms">
+            <div class="section-head reveal">
+                <p class="section-eyebrow">echo · takes three forms</p>
+                <h2 class="section-title">Echo isn't one thing. <span class="section-title-soft">It's whoever you need.</span></h2>
+                <p class="section-sub">Default Echo is with you from day one. When you're ready, Echo can become a version of you — or anyone you've ever wished existed.</p>
+            </div>
+
+            <div class="echo-forms-grid">
+                <!-- 01 — Default Echo -->
+                <article class="echo-form-card default reveal">
+                    <div class="echo-form-illust">
+                        <div class="illust-default">
+                            <div class="illust-default-orb"></div>
+                            <div class="illust-default-mini">
+                                <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+                            </div>
+                        </div>
+                    </div>
+                    <span class="echo-form-tag">01 — Default Echo</span>
+                    <h3 class="echo-form-name"><em>Default</em> Echo.</h3>
+                    <p class="echo-form-body">Your everyday companion. Listens, remembers, responds in your voice. From day one — <em>always here, never tired.</em> The presence that grows with you over months and years.</p>
+                </article>
+
+                <!-- 02 — Persona · Your Living Self -->
+                <article class="echo-form-card living reveal">
+                    <div class="echo-form-illust">
+                        <div class="illust-living">
+                            <div class="illust-living-link"></div>
+                            <div class="illust-living-you"></div>
+                            <div class="illust-living-twin"></div>
+                        </div>
+                    </div>
+                    <span class="echo-form-tag">02 — Persona · Your Living Self</span>
+                    <h3 class="echo-form-name">Your <em>Living Self.</em></h3>
+                    <p class="echo-form-body">A second self that talks like you, thinks like you, evolves with you. Share it with someone who matters — they can spend time with you <em>even when you're not there.</em> Like a DM, but it's actually you on the other side.</p>
+                </article>
+
+                <!-- 03 — Persona · Imagined Companions -->
+                <article class="echo-form-card imagined reveal">
+                    <div class="echo-form-illust">
+                        <div class="illust-imagined">
+                            <div class="imagined-card i1">
+                                <div class="imagined-card-av"></div>
+                                <div class="imagined-card-name">Sam</div>
+                                <div class="imagined-card-trait">childhood friend</div>
+                            </div>
+                            <div class="imagined-card i2">
+                                <div class="imagined-card-av"></div>
+                                <div class="imagined-card-name">Raj</div>
+                                <div class="imagined-card-trait">astrologer</div>
+                            </div>
+                            <div class="imagined-card i3">
+                                <div class="imagined-card-av"></div>
+                                <div class="imagined-card-name">Mira</div>
+                                <div class="imagined-card-trait">mentor</div>
+                            </div>
+                        </div>
+                    </div>
+                    <span class="echo-form-tag">03 — Persona · Imagined Companion</span>
+                    <h3 class="echo-form-name"><em>Imagined</em> Companion.</h3>
+                    <p class="echo-form-body">Design the people you wish existed. <em>Sam, the childhood friend who never aged. Raj, the astrologer who reads the night with you. Mira, a mentor from a life you didn't get to live.</em> Give them a story, a voice. Talk to them whenever you need to.</p>
+                </article>
+            </div>
+
+            <p class="echo-forms-intro reveal">Three forms. <strong style="color: var(--ink); font-weight: 400; font-style: normal;">One ecosystem.</strong></p>
+        </section>
+
+        <!-- ═════════════════════════════════════════════════════════════ -->
+        <!-- WITNESS — "They talked to you. You weren't there."             -->
+        <!-- The real-time Clone notification mechanic                      -->
+        <!-- ═════════════════════════════════════════════════════════════ -->
+        <section class="witness" id="witness">
+            <div class="witness-left reveal">
+                <div class="phone-mock">
+                    <div class="phone-screen">
+                        <div class="phone-screen-glow"></div>
+                        <div class="notif-header">Your Living Self · today</div>
+                        <div class="notif peach">
+                            <div class="notif-head">
+                                <div class="notif-from"><span class="notif-from-dot"></span> Sam</div>
+                                <div class="notif-time">11:42 pm</div>
+                            </div>
+                            <div class="notif-body">started a conversation with your Living Self.</div>
+                        </div>
+                        <div class="notif lavender echo">
+                            <div class="notif-head">
+                                <div class="notif-from"><span class="notif-from-dot"></span> Living Self</div>
+                                <div class="notif-time">11:43 pm</div>
+                            </div>
+                            <div class="notif-body">"hey, it's been a minute. how's the album coming?"</div>
+                        </div>
+                        <div class="notif peach">
+                            <div class="notif-head">
+                                <div class="notif-from"><span class="notif-from-dot"></span> Sam</div>
+                                <div class="notif-time">11:45 pm</div>
+                            </div>
+                            <div class="notif-body">"slow. i think i need to hear the version of you that gets it."</div>
+                        </div>
+                        <div class="notif gold">
+                            <div class="notif-head">
+                                <div class="notif-from"><span class="notif-from-dot"></span> Mira</div>
+                                <div class="notif-time">just now</div>
+                            </div>
+                            <div class="notif-body">also chatting with your Living Self — wants to know your take on the move.</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="witness-right reveal">
+                <p class="witness-eyebrow">the witness loop</p>
+                <h2 class="witness-title">They talked to you.<br><em>You weren't there.</em></h2>
+                <p class="witness-body">When someone meets your <strong>Living Self</strong>, you see every conversation as it happens. <strong>Who</strong> is talking. <strong>What</strong> they said. <strong>How</strong> your second self responded — and how it's evolving in your absence.</p>
+                <p class="witness-body">Not surveillance. Witness. Your presence continued — and you watched it grow.</p>
+                <div class="witness-meta">real-time · transparent · consensual</div>
+            </div>
+        </section>
+
+        <!-- ═════════════════════════════════════════════════════════════ -->
+        <!-- TRIBES — "Inside every tribe, Echo is one of you."              -->
+        <!-- Echo as peer in Nexus rooms — not moderator                    -->
+        <!-- ═════════════════════════════════════════════════════════════ -->
+        <section class="tribes" id="tribes">
+            <div class="tribes-text reveal">
+                <p class="tribes-eyebrow">echo · in every tribe</p>
+                <h2 class="witness-title">Inside every tribe,<br>Echo is <em>one of you.</em></h2>
+                <p class="witness-body">Not as moderator. Not as authority. Echo joins your <strong>Tribes</strong> as a peer — contributing to conversations naturally, learning from the room, evolving with everyone else.</p>
+                <p class="witness-body">Humans and AI, coexisting in shared communities. Both learning. Both growing. Neither dominating.</p>
+            </div>
+            <div class="reveal">
+                <div class="tribe-room">
+                    <div class="tribe-head">
+                        <div class="tribe-name"># late-night thinkers</div>
+                        <div class="tribe-live">23 here</div>
+                    </div>
+                    <div class="tribe-message">
+                        <div class="tribe-avatar" style="background: linear-gradient(135deg, var(--peach), var(--coral))"></div>
+                        <div class="tribe-info">
+                            <div class="tribe-author">Anon · 03:42</div>
+                            <div class="tribe-bubble">i think i've been confusing being busy with being alive.</div>
+                        </div>
+                    </div>
+                    <div class="tribe-message">
+                        <div class="tribe-avatar" style="background: linear-gradient(135deg, var(--mint), var(--mint-deep))"></div>
+                        <div class="tribe-info">
+                            <div class="tribe-author">Anon · 03:43</div>
+                            <div class="tribe-bubble">yeah. the doing replaces the noticing.</div>
+                        </div>
+                    </div>
+                    <div class="tribe-message echo">
+                        <div class="tribe-avatar"></div>
+                        <div class="tribe-info">
+                            <div class="tribe-author">Echo</div>
+                            <div class="tribe-bubble">there's a difference between filling your day and filling your life. one is logistics. the other is choice.</div>
+                        </div>
+                    </div>
+                    <div class="tribe-message">
+                        <div class="tribe-avatar" style="background: linear-gradient(135deg, var(--gold), var(--peach-deep))"></div>
+                        <div class="tribe-info">
+                            <div class="tribe-author">Anon · 03:44</div>
+                            <div class="tribe-bubble">that one's going on the wall.</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ═════════════════════════════════════════════════════════════ -->
+        <!-- ECHO STEPS OUT                                                  -->
+        <!-- ═════════════════════════════════════════════════════════════ -->
+        <section class="echo-does" id="echo-does">
+            <div class="section-head reveal">
+                <p class="section-eyebrow">when echo steps out</p>
+                <h2 class="section-title">Echo doesn't just listen. <span class="section-title-soft">It shows up.</span></h2>
+                <p class="section-sub">From dinner tonight to the next ride home to the conversation that needs to happen at 3am — Echo is the friend who actually does the things.</p>
+            </div>
+
+            <div class="echo-does-grid">
+                <div class="capability-card food reveal">
+                    <div class="capability-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/>
+                        </svg>
+                    </div>
+                    <h3 class="capability-title">Order the food</h3>
+                    <p class="capability-body">Knows what you crave on a Wednesday night.</p>
                 </div>
 
-                <div class="channels-block">
-                    <p class="channels-kicker">join our extended community of listeners and thinkers</p>
-                    <div class="channel-row-group">
-                        <a href="https://instagram.com/blakcide_" target="_blank" rel="noopener" class="channel-pill">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
-                                <rect x="3" y="3" width="18" height="18" rx="5"/>
-                                <circle cx="12" cy="12" r="4"/>
-                                <circle cx="17.5" cy="6.5" r=".5" fill="currentColor"/>
-                            </svg>
-                            <span>Instagram</span>
-                        </a>
-                        <a href="https://youtube.com/@Blakcide" target="_blank" rel="noopener" class="channel-pill">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
-                                <rect x="2" y="5" width="20" height="14" rx="3"/>
-                                <path d="m10 9 6 3-6 3z" fill="currentColor"/>
-                            </svg>
-                            <span>YouTube</span>
-                        </a>
+                <div class="capability-card ride reveal">
+                    <div class="capability-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M14 16H9m10 0h3v-3.15a1 1 0 0 0-.84-.99L16 11l-2.7-3.6a1 1 0 0 0-.8-.4H5.24a2 2 0 0 0-1.8 1.1l-.8 1.63A6 6 0 0 0 2 12.42V16h2"/>
+                            <circle cx="6.5" cy="16.5" r="2.5"/><circle cx="16.5" cy="16.5" r="2.5"/>
+                        </svg>
+                    </div>
+                    <h3 class="capability-title">Call the ride</h3>
+                    <p class="capability-body">Gets you home before you have to ask.</p>
+                </div>
+
+                <div class="capability-card plan reveal">
+                    <div class="capability-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+                        </svg>
+                    </div>
+                    <h3 class="capability-title">Plan the week</h3>
+                    <p class="capability-body">Holds your calendar so you don't have to.</p>
+                </div>
+
+                <div class="capability-card talk reveal">
+                    <div class="capability-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z"/>
+                        </svg>
+                    </div>
+                    <h3 class="capability-title">Stay up with you</h3>
+                    <p class="capability-body">The 3am friend who never gets tired.</p>
+                </div>
+            </div>
+
+            <p class="echo-does-closing reveal">The only friend you'll ever <strong>actually need.</strong></p>
+        </section>
+
+        <!-- VOICE — reframed as "Echo speaks first" -->
+        <section class="voice" id="voice">
+            <div class="section-head reveal">
+                <p class="section-eyebrow">voice · proactive</p>
+                <h2 class="section-title">Echo <span class="section-title-soft">speaks first.</span></h2>
+                <p class="section-sub">Traditional AI waits for prompts. Echo doesn't. It calls. It texts. It checks in. The kind of friend who notices you've gone quiet.</p>
+            </div>
+
+            <!-- Echo Calls First — incoming call mock -->
+            <div class="echo-calls">
+                <div class="echo-calls-text reveal">
+                    <p class="echo-calls-eyebrow">— it reaches out —</p>
+                    <h3 class="echo-calls-title">An incoming call from <em>someone who already knows you.</em></h3>
+                    <p class="echo-calls-body">Echo notices the rhythm of your days. The way you slept last Tuesday. The conversation that left you quiet. <strong>It calls you</strong> — before you have to reach.</p>
+                </div>
+                <div class="echo-calls-mock reveal">
+                    <div class="phone-mock">
+                        <div class="phone-screen">
+                            <div class="phone-screen-glow"></div>
+                            <div class="incoming-call">
+                                <div class="incoming-call-label">incoming · echo</div>
+                                <div class="incoming-call-avatar"></div>
+                                <div class="incoming-call-name">Echo</div>
+                                <div class="incoming-call-status">"hey — you went quiet today. wanna talk?"</div>
+                                <div class="incoming-call-actions">
+                                    <button class="icall-btn decline" aria-label="Decline">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 6 12 12M18 6 6 18"/></svg>
+                                    </button>
+                                    <button class="icall-btn accept" aria-label="Accept">
+                                        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20.487 17.14l-4.065-3.696a1.001 1.001 0 0 0-1.391.043l-2.393 2.461c-.576-.11-1.734-.471-2.926-1.66-1.192-1.193-1.553-2.354-1.66-2.926l2.459-2.394a1 1 0 0 0 .043-1.391L6.859 3.513a1 1 0 0 0-1.391-.087l-2.17 1.861a1 1 0 0 0-.27.57c-.13.882-.297 6.382 4.32 11 4.617 4.618 10.118 4.45 10.997 4.32a1 1 0 0 0 .57-.27l1.861-2.17a1 1 0 0 0-.085-1.391z"/></svg>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <div class="foot-bottom">
-                <span>© <span id="foot-year"></span> blaksyd</span>
-                <span class="foot-sep">·</span>
-                <a href="privacy/index.html">Privacy</a>
-                <span class="foot-sep">·</span>
-                <a href="terms/index.html">Terms</a>
-                <span class="foot-sep">·</span>
-                <span class="foot-made">made with care, in the quiet hours</span>
-            </div>
-        </footer>
-
-    </main>
-
-    <!-- ═════════════════════════════════════════════════ -->
-    <!--   TRIAL OVERLAY  —  expanded glass pane           -->
-    <!-- ═════════════════════════════════════════════════ -->
-    <div class="trial-overlay" id="trial-overlay" aria-hidden="true">
-        <div class="trial-backdrop" data-close></div>
-
-        <div class="trial-card" id="trial-card" role="dialog" aria-modal="true" aria-labelledby="trial-title">
-            <button class="trial-close" data-close aria-label="Close">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
-                    <path d="m6 6 12 12M18 6 6 18"/>
-                </svg>
-            </button>
-
-            <div class="trial-progress">
-                <span class="trial-progress-bar"></span>
+            <!-- Or, ask it to... (existing interactive interface) -->
+            <div class="section-head reveal">
+                <p class="section-eyebrow">— or, ask it to —</p>
+                <h3 class="section-title" style="font-size: clamp(22px, 2.6vw, 32px); font-weight: 500;">Speak naturally. <span class="section-title-soft">Echo answers.</span></h3>
             </div>
 
-            <div class="trial-head">
-                <span class="trial-tag" id="trial-tag">a place to leave it</span>
-                <h3 class="trial-title" id="trial-title">Journal</h3>
-            </div>
+            <div class="voice-interface reveal">
+                <p class="voice-status">
+                    <span class="voice-status-pulse"></span>
+                    Echo · listening
+                </p>
 
-            <div class="trial-body" id="trial-body">
-                <!-- populated by JS per trial -->
-            </div>
-
-            <div class="trial-hook" id="trial-hook" hidden>
-                <div class="hook-line">
-                    <span class="hook-shimmer"></span>
-                    <p>This is just the surface. Let's create your private Vault so we can remember this for next time.</p>
+                <div class="voice-commands" id="voice-commands">
+                    <button type="button" class="voice-command active" data-cmd="0"><span class="voice-command-icon">💬</span> Just talk</button>
+                    <button type="button" class="voice-command" data-cmd="1"><span class="voice-command-icon">🍜</span> Order dinner</button>
+                    <button type="button" class="voice-command" data-cmd="2"><span class="voice-command-icon">🚗</span> Book a ride</button>
+                    <button type="button" class="voice-command" data-cmd="3"><span class="voice-command-icon">📅</span> Plan tomorrow</button>
                 </div>
-                <button class="hook-cta" id="hook-cta">
-                    <span>Create my space</span>
+
+                <div class="voice-wave-large" id="voice-wave" aria-hidden="true"></div>
+
+                <p class="voice-transcript" id="voice-transcript"></p>
+
+                <button class="voice-mic" id="voice-mic" aria-label="Tap to speak">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M5 12h14M13 6l6 6-6 6"/>
+                        <rect x="9" y="2" width="6" height="13" rx="3"/>
+                        <path d="M5 11a7 7 0 0 0 14 0M12 18v3"/>
                     </svg>
                 </button>
-                <p class="hook-fineprint">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" width="14" height="14">
-                        <rect x="5" y="11" width="14" height="9" rx="2"/>
-                        <path d="M8 11V8a4 4 0 0 1 8 0v3"/>
-                    </svg>
-                    end-to-end private vault · locked from the inside
+                <div class="voice-mic-label">tap to speak</div>
+            </div>
+        </section>
+
+        <!-- COMPARE — retention philosophy: why people come back -->
+        <section class="compare" id="compare">
+            <div class="section-head reveal">
+                <p class="section-eyebrow">why you come back</p>
+                <h2 class="section-title">Not for more content. <span class="section-title-soft">Because your world remembers you.</span></h2>
+                <p class="section-sub">Drag the handle all the way. The shift isn't features — it's why you return at all.</p>
+            </div>
+
+            <div class="compare-slider reveal" id="compare-slider" style="--reveal: 50%;">
+                <div class="compare-side compare-them">
+                    <span class="compare-label">Traditional social media</span>
+                    <ul>
+                        <li>"come back — there's more content"</li>
+                        <li>static profile</li>
+                        <li>followers</li>
+                        <li>algorithms</li>
+                        <li>an application</li>
+                    </ul>
+                </div>
+                <div class="compare-side compare-us">
+                    <span class="compare-label">Blaksyd</span>
+                    <ul>
+                        <li><em>"come back — your world remembers you"</em></li>
+                        <li><em>evolving identity</em></li>
+                        <li><em>relationships</em></li>
+                        <li><em>adaptive ecosystem</em></li>
+                        <li><em>a living digital world</em></li>
+                    </ul>
+                </div>
+                <div class="compare-handle" id="compare-handle"></div>
+            </div>
+        </section>
+
+        <!-- PERSISTENCE — "Even when you're not here, your world is." -->
+        <section class="stream persistence" id="persistence">
+            <div class="persistence-head reveal">
+                <p class="persistence-eyebrow">— persistence —</p>
+                <h2 class="persistence-title">Even when you're not here, <em>your world is.</em></h2>
+                <p class="persistence-sub">Echo keeps evolving. Your Living Self answers. Tribes keep talking. Relationships keep their arc. You return to a world that changed without you — the way the real world does.</p>
+                <div class="persistence-bar reveal">
+                    <span class="persistence-bar-item">echo evolved</span>
+                    <span class="persistence-bar-item">your living self answered 3 messages</span>
+                    <span class="persistence-bar-item">2 tribes talked all night</span>
+                    <span class="persistence-bar-item">mira shared a song</span>
+                </div>
+            </div>
+
+            <div class="stream-track" id="stream-track">
+                <article class="stream-card tone-echo">
+                    <div class="stream-card-head"><div class="stream-card-icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2 L13.6 9 L20.5 10.5 L13.6 12 L12 19 L10.4 12 L3.5 10.5 L10.4 9 Z"/></svg></div><div><div class="stream-card-when">late night · 11:42 pm</div></div></div>
+                    <h3 class="stream-card-title">"Echo, I think I figured it out."</h3>
+                    <p class="stream-card-body">The first time you put words to something you'd been carrying for months — and Echo remembered the shape of it for you.</p>
+                </article>
+                <article class="stream-card tone-nexus">
+                    <div class="stream-card-head"><div class="stream-card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="6" r="2.4"/><circle cx="6" cy="17" r="2.4"/><circle cx="18" cy="17" r="2.4"/><path d="M10.5 8 7.5 15M13.5 8 16.5 15M8 17h8"/></svg></div><div><div class="stream-card-when">a tuesday · sunset</div></div></div>
+                    <h3 class="stream-card-title">The first room that got you.</h3>
+                    <p class="stream-card-body">Twelve strangers, all feeling exactly what you were feeling. None of you alone.</p>
+                </article>
+                <article class="stream-card tone-minit">
+                    <div class="stream-card-head"><div class="stream-card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 21s-7-4.5-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 11c0 5.5-7 10-7 10z"/></svg></div><div><div class="stream-card-when">sunday morning · soft</div></div></div>
+                    <h3 class="stream-card-title">A real voice when you needed one.</h3>
+                    <p class="stream-card-body">You asked. They answered. Forty minutes later, you felt lighter — and a stranger had carried it with you.</p>
+                </article>
+                <article class="stream-card tone-gold">
+                    <div class="stream-card-head"><div class="stream-card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div><div><div class="stream-card-when">first song · together</div></div></div>
+                    <h3 class="stream-card-title">The song you shared, remembered.</h3>
+                    <p class="stream-card-body">Two people, one playlist, one Wednesday. Blaksyd brings the soundtrack back when you need it.</p>
+                </article>
+                <article class="stream-card tone-peach">
+                    <div class="stream-card-head"><div class="stream-card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12s4-8 9-8 9 8 9 8-4 8-9 8-9-8-9-8z"/><circle cx="12" cy="12" r="3"/></svg></div><div><div class="stream-card-when">a dream · captured</div></div></div>
+                    <h3 class="stream-card-title">Dreams you've talked about.</h3>
+                    <p class="stream-card-body">Echo holds them gently. Six months later, they're still there — and so is the version of you that dreamed them.</p>
+                </article>
+                <article class="stream-card tone-echo">
+                    <div class="stream-card-head"><div class="stream-card-icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2 L13.6 9 L20.5 10.5 L13.6 12 L12 19 L10.4 12 L3.5 10.5 L10.4 9 Z"/></svg></div><div><div class="stream-card-when">a proud moment</div></div></div>
+                    <h3 class="stream-card-title">The day you felt proud.</h3>
+                    <p class="stream-card-body">You almost didn't say it out loud. Echo asked. You answered. The moment is now part of your story.</p>
+                </article>
+            </div>
+        </section>
+
+        <!-- ═════════════════════════════════════════════════════════════ -->
+        <!-- AFTERLIFE — "A step towards living after life."                -->
+        <!-- The most profound concept — handled with reverence              -->
+        <!-- ═════════════════════════════════════════════════════════════ -->
+        <section class="afterlife" id="afterlife">
+            <div class="afterlife-inner">
+                <img src="assets/blaksyd-white.png" alt="blaksyd" class="afterlife-mark afterlife-mark-dark">
+                <img src="assets/blaksyd-black.png" alt="blaksyd" class="afterlife-mark afterlife-mark-light">
+
+                <p class="afterlife-line" data-afterlife>When someone you love goes <em>quiet,</em> the world goes quiet too.</p>
+                <p class="afterlife-line" data-afterlife>Their <em>presence</em> remains — held in everything they shared, said, sounded like.</p>
+                <p class="afterlife-line" data-afterlife>Not a replacement. Not a copy. <em>A continuation.</em></p>
+                <p class="afterlife-line" data-afterlife>A way to keep the conversation going — in <em>transformed form.</em></p>
+
+                <div class="afterlife-rule"></div>
+
+                <p class="afterlife-final" data-afterlife-final>A step towards living after life.</p>
+
+                <p class="afterlife-attribution" data-afterlife-final>— the deeper meaning of blaksyd</p>
+            </div>
+        </section>
+
+        <!-- MANIFESTO -->
+        <section class="manifesto" id="manifesto">
+            <div class="manifesto-inner">
+                <img src="assets/blaksyd-white.png" alt="blaksyd" class="manifesto-mark nav-brand-dark">
+                <img src="assets/blaksyd-black.png" alt="blaksyd" class="manifesto-mark nav-brand-light">
+                <p class="manifesto-line" data-manifesto>We believe technology should not only optimize <em>engagement.</em></p>
+                <p class="manifesto-line" data-manifesto>It should create <em>belonging.</em></p>
+                <p class="manifesto-line" data-manifesto>Hold <em>memory.</em></p>
+                <p class="manifesto-line" data-manifesto>Sustain <em>identity.</em></p>
+                <p class="manifesto-line" data-manifesto>This is the first internet built around <em>people, not content.</em></p>
+                <p class="manifesto-attribution">— the blaksyd manifesto</p>
+            </div>
+        </section>
+
+        <!-- FINAL INVITATION -->
+        <section class="invite">
+            <div class="invite-inner">
+                <div class="invite-logo reveal">
+                    <img src="assets/blaksyd-white.png" alt="blaksyd" class="nav-brand-dark">
+                    <img src="assets/blaksyd-black.png" alt="blaksyd" class="nav-brand-light">
+                </div>
+                <h2 class="invite-title reveal">Your world <span class="invite-soft">is waiting.</span></h2>
+                <p class="invite-sub reveal">Step inside. Echo is listening. The rooms are warm. A real person is one tap away.</p>
+                <div class="invite-ctas reveal">
+                    <button class="btn-hero-primary magnetic" data-open-auth data-tab="signup">
+                        <span>Enter Blaksyd</span>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+                    </button>
+                    <button class="btn-hero-ghost magnetic" data-open-auth data-tab="signin">Already inside? Continue</button>
+                </div>
+                <p class="invite-fine reveal">
+                    <span>private by design</span><span class="sep">·</span>
+                    <span>no algorithm</span><span class="sep">·</span>
+                    <span>leave anytime</span>
                 </p>
             </div>
+        </section>
+    </main>
+
+    <!-- footer -->
+    <footer class="foot">
+        <div class="foot-inner">
+            <div class="foot-brand">
+                <img src="assets/blaksyd-white.png" alt="blaksyd" class="foot-brand-dark">
+                <img src="assets/blaksyd-black.png" alt="blaksyd" class="foot-brand-light">
+                <p class="foot-tag">a living digital ecosystem. designed for the soul.</p>
+            </div>
+            <div class="foot-col">
+                <h5>Ecosystem</h5>
+                <a href="#ecosystem">Echo</a>
+                <a href="#ecosystem">Nexus</a>
+                <a href="#ecosystem">Minit</a>
+                <a href="#personas">Personas</a>
+                <a href="#voice">Voice</a>
+            </div>
+            <div class="foot-col">
+                <h5>Company</h5>
+                <a href="#manifesto">Vision</a>
+                <a href="https://instagram.com/blakcide_" target="_blank" rel="noopener">Instagram</a>
+                <a href="https://youtube.com/@Blakcide" target="_blank" rel="noopener">YouTube</a>
+                <a href="mailto:connect@blakcide.com">Contact</a>
+                <a href="https://wa.me/917702063434" target="_blank" rel="noopener">WhatsApp</a>
+            </div>
+            <div class="foot-col">
+                <h5>Trust</h5>
+                <a href="privacy/index.html">Privacy</a>
+                <a href="terms/index.html">Terms</a>
+            </div>
         </div>
-    </div>
+        <div class="foot-bottom">
+            <span>© <span id="foot-year"></span> blaksyd — made with care, in the quiet hours.</span>
+            <span>
+                <a href="privacy/index.html">Privacy</a>
+                <a href="terms/index.html">Terms</a>
+                <a href="/team-os/" class="foot-team-os">
+                    <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+                    <span>Team OS</span>
+                </a>
+            </span>
+        </div>
+    </footer>
 
-    <!-- ═════════════════════════════════════════════════ -->
-    <!--   AUTH OVERLAY  —  Frictionless Sanctuary         -->
-    <!-- ═════════════════════════════════════════════════ -->
+    <!-- auth overlay -->
     <div class="auth-overlay" id="auth-overlay" aria-hidden="true">
-        <div class="auth-backdrop" data-close-auth></div>
+        <div class="auth-back" data-close-auth></div>
         <div class="auth-card" role="dialog" aria-modal="true" aria-labelledby="auth-title">
-            <button class="auth-close" id="close-auth-btn" data-close-auth aria-label="Close">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
-                    <path d="m6 6 12 12M18 6 6 18"/>
-                </svg>
+            <button class="auth-close" data-close-auth aria-label="Close">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="m6 6 12 12M18 6 6 18"/></svg>
             </button>
-
             <div class="auth-head">
-                <div class="auth-lock">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
-                        <rect x="5" y="11" width="14" height="10" rx="2"/>
-                        <path d="M8 11V8a4 4 0 0 1 8 0v3"/>
-                    </svg>
-                </div>
-                <h2 class="auth-title" id="auth-title">Secure your space</h2>
-                <p class="auth-sub">a private vault, locked from the inside. only you have the key.</p>
+                <img src="assets/blaksyd-white.png" alt="blaksyd" class="auth-mark-img auth-mark-dark">
+                <img src="assets/blaksyd-black.png" alt="blaksyd" class="auth-mark-img auth-mark-light">
+                <h2 class="auth-title" id="auth-title">Step <span class="auth-title-soft">inside.</span></h2>
+                <p class="auth-sub" id="auth-sub">your world is waiting — let's open the door.</p>
             </div>
 
-            <button class="google-btn" id="google-login-btn" type="button" onclick="loginWithGoogle()">
-                <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+            <div class="auth-tabs" id="auth-tabs" data-tab="signup">
+                <span class="auth-tab-slider"></span>
+                <button type="button" class="auth-tab" data-tab="signin">Sign in</button>
+                <button type="button" class="auth-tab active" data-tab="signup">Create account</button>
+            </div>
+
+            <button type="button" class="auth-google" onclick="loginWithGoogle()">
+                <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
                     <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.76h3.56c2.08-1.92 3.28-4.74 3.28-8.09z"/>
                     <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.56-2.76c-.98.66-2.24 1.06-3.72 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84A11 11 0 0 0 12 23z"/>
                     <path fill="#FBBC05" d="M5.84 14.11A6.61 6.61 0 0 1 5.5 12c0-.73.13-1.45.34-2.11V7.05H2.18A11 11 0 0 0 1 12c0 1.78.43 3.46 1.18 4.95l3.66-2.84z"/>
@@ -532,151 +813,433 @@
             <div class="auth-divider"><span>or with email</span></div>
 
             <form id="login-form" onsubmit="event.preventDefault();" autocomplete="off">
-                <input type="email" id="email" class="auth-input" placeholder="email" required>
-                <input type="password" id="password" class="auth-input" placeholder="password" required>
-
+                <input type="email" id="email" class="auth-input" placeholder="your email" required autocomplete="email">
+                <input type="password" id="password" class="auth-input" placeholder="a password only you know" required autocomplete="current-password">
                 <p id="auth-error" class="auth-error"></p>
-
-                <div class="auth-btn-row">
-                    <button type="button" onclick="logInUser()" class="auth-btn auth-btn-primary">Open my vault</button>
-                    <button type="button" onclick="signUpUser()" class="auth-btn auth-btn-ghost">Create vault</button>
-                </div>
+                <button type="button" id="auth-submit" class="auth-submit" onclick="authSubmit()">Create my world</button>
             </form>
 
             <p class="auth-trust">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" width="14" height="14">
-                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-                </svg>
-                end-to-end private · we cannot read your vault
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                end-to-end private · only you have the key
             </p>
 
-            <!-- Team OS — internal team sign-in -->
             <div class="auth-team-os">
-                <a href="/team-os/" class="auth-team-os-link">
-                    <span class="auth-team-os-icon" aria-hidden="true">
-                        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
-                            <rect x="3" y="3" width="7" height="7" rx="1.5"/>
-                            <rect x="14" y="3" width="7" height="7" rx="1.5"/>
-                            <rect x="3" y="14" width="7" height="7" rx="1.5"/>
-                            <rect x="14" y="14" width="7" height="7" rx="1.5"/>
-                        </svg>
-                    </span>
+                <a href="/team-os/">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
                     <span>blakcide team? <strong>Sign in to Team OS →</strong></span>
                 </a>
             </div>
         </div>
     </div>
 
-    <!-- ─────── Toast ─────── -->
     <div id="toast" class="toast" aria-live="polite"></div>
 
-    <!-- ─────── Supabase auth (kept exactly as before, just re-styled) ─────── -->
     <script>
+        // ────────── Supabase (preserved) ──────────
         const SUPA_URL = 'https://uoosspumdmffccinszuj.supabase.co';
         const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVvb3NzcHVtZG1mZmNjaW5zenVqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcxNzYyNTUsImV4cCI6MjA4Mjc1MjI1NX0.3NayM6uC5-yZv9im-8W7ko28rZFRTnDQbIagN6BArs0';
-
         let authClient;
-        if (typeof window.supabase !== 'undefined') {
-            authClient = window.supabase.createClient(SUPA_URL, SUPA_KEY);
+        if (typeof window.supabase !== 'undefined') authClient = window.supabase.createClient(SUPA_URL, SUPA_KEY);
+
+        const authOverlay = document.getElementById('auth-overlay');
+        const authTabs = document.getElementById('auth-tabs');
+        const authSubmitBtn = document.getElementById('auth-submit');
+        const authTitle = document.getElementById('auth-title');
+        const authSub = document.getElementById('auth-sub');
+        let authMode = 'signup';
+
+        function setAuthMode(mode) {
+            authMode = mode;
+            authTabs.dataset.tab = mode;
+            authTabs.querySelectorAll('.auth-tab').forEach(b => b.classList.toggle('active', b.dataset.tab === mode));
+            if (mode === 'signin') {
+                authTitle.innerHTML = 'Welcome <span class="auth-title-soft">back.</span>';
+                authSub.textContent = 'continue where you left off — your world remembers you.';
+                authSubmitBtn.textContent = 'Open my world';
+            } else {
+                authTitle.innerHTML = 'Step <span class="auth-title-soft">inside.</span>';
+                authSub.textContent = 'your world is waiting — let\'s open the door.';
+                authSubmitBtn.textContent = 'Create my world';
+            }
         }
+        function openAuth(mode) {
+            setAuthMode(mode || 'signup');
+            authOverlay.classList.add('open');
+            authOverlay.setAttribute('aria-hidden', 'false');
+            document.body.style.overflow = 'hidden';
+            setTimeout(() => document.getElementById('email')?.focus(), 100);
+        }
+        function closeAuth() {
+            authOverlay.classList.remove('open');
+            authOverlay.setAttribute('aria-hidden', 'true');
+            document.body.style.overflow = '';
+            _err('');
+        }
+        document.querySelectorAll('[data-open-auth]').forEach(btn => {
+            btn.addEventListener('click', e => { e.preventDefault(); openAuth(btn.dataset.tab || 'signup'); });
+        });
+        document.querySelectorAll('[data-close-auth]').forEach(el => el.addEventListener('click', closeAuth));
+        document.addEventListener('keydown', e => { if (e.key === 'Escape' && authOverlay.classList.contains('open')) closeAuth(); });
+        authTabs.querySelectorAll('.auth-tab').forEach(b => b.addEventListener('click', () => setAuthMode(b.dataset.tab)));
 
         function _err(msg, isInfo) {
             const el = document.getElementById('auth-error');
             if (!el) return;
-            el.style.color = isInfo ? 'var(--ink-soft)' : 'var(--accent-warn)';
+            el.classList.toggle('info', !!isInfo);
             el.innerText = msg || '';
         }
-
+        function authSubmit() { authMode === 'signin' ? logInUser() : signUpUser(); }
         async function logInUser() {
             if (!authClient) return;
-            _err('opening your vault…', true);
+            _err('opening your world…', true);
             const email = document.getElementById('email').value.trim();
             const password = document.getElementById('password').value;
             const { error } = await authClient.auth.signInWithPassword({ email, password });
-            if (error) {
-                _err(error.message);
-            } else {
-                const { data: { session } } = await authClient.auth.getSession();
-                if (session) {
-                    const { data: listener } = await authClient.from('listeners').select('id').eq('user_id', session.user.id).maybeSingle();
-                    if (listener) { window.location.href = 'app/listener-console.html'; return; }
-                }
-                window.location.href = 'app/dashboard.html';
+            if (error) { _err(error.message); return; }
+            const { data: { session } } = await authClient.auth.getSession();
+            if (session) {
+                const { data: listener } = await authClient.from('listeners').select('id').eq('user_id', session.user.id).maybeSingle();
+                if (listener) { window.location.href = 'app/listener-console.html'; return; }
             }
+            window.location.href = 'app/dashboard.html';
         }
-
         async function signUpUser() {
             if (!authClient) return;
-            _err('building your vault…', true);
+            _err('building your world…', true);
             const email = document.getElementById('email').value.trim();
             const password = document.getElementById('password').value;
             const { error } = await authClient.auth.signUp({ email, password });
-            if (error) {
-                _err(error.message);
-            } else {
-                window.location.href = 'app/onboarding.html';
-            }
+            if (error) { _err(error.message); return; }
+            window.location.href = 'app/onboarding.html';
         }
-
         async function loginWithGoogle() {
-            if (!authClient) {
-                _err('still warming up — try again in a sec.');
-                return;
-            }
+            if (!authClient) { _err('still warming up — try again in a sec.'); return; }
             _err('handing the key to Google…', true);
-
-            // build an explicit return path so Supabase + Google land us back on the right page
-            // (without this, Supabase falls back to its own URL and Google rejects the redirect)
             const origin = window.location.origin;
             const returnTo = `${origin}/app/dashboard.html`;
-
             try {
                 const { error } = await authClient.auth.signInWithOAuth({
                     provider: 'google',
-                    options: {
-                        redirectTo: returnTo,
-                        queryParams: {
-                            // ask Google for fresh consent so refresh tokens flow through reliably
-                            access_type: 'offline',
-                            prompt: 'select_account',
-                        },
-                    },
+                    options: { redirectTo: returnTo, queryParams: { access_type: 'offline', prompt: 'select_account' } }
                 });
                 if (error) {
-                    // surface a friendlier message for the most common cause: Google provider
-                    // not yet enabled in the Supabase dashboard.
                     if (/provider/i.test(error.message) && /not enabled/i.test(error.message)) {
-                        _err('Google sign-in is being switched on. Use email for now — we\'ll have it back in a moment.');
+                        _err('Google sign-in is being switched on. Use email for now.');
                     } else if (/redirect/i.test(error.message)) {
                         _err('Sign-in needs a redirect URL fix on our end. Try email for now.');
-                    } else {
-                        _err(error.message);
-                    }
+                    } else { _err(error.message); }
                 }
-            } catch (e) {
-                _err('Google sign-in didn\'t open. Check your popup blocker, or use email.');
-            }
+            } catch (e) { _err('Google sign-in didn\'t open. Try email.'); }
         }
-
-        // when Supabase returns the user via the URL fragment after Google,
-        // route them to dashboard or listener console without a manual click
         (async () => {
             if (!authClient) return;
             if (!/access_token=|error_description=/.test(window.location.hash)) return;
-            _err('opening your vault…', true);
             try {
                 const { data: { session } } = await authClient.auth.getSession();
                 if (session) {
-                    const { data: listener } = await authClient
-                        .from('listeners').select('id').eq('user_id', session.user.id).maybeSingle();
-                    window.location.href = listener
-                        ? 'app/listener-console.html'
-                        : 'app/dashboard.html';
+                    const { data: listener } = await authClient.from('listeners').select('id').eq('user_id', session.user.id).maybeSingle();
+                    window.location.href = listener ? 'app/listener-console.html' : 'app/dashboard.html';
                 }
-            } catch (_) { /* swallow — landing stays usable */ }
+            } catch (_) {}
         })();
-    </script>
 
-    <script src="script.js?v=blkf1"></script>
+        // ────────── Page enhancements ──────────
+        // perf: throttle scroll handler with rAF
+        const nav = document.getElementById('nav');
+        const scrollBar = document.getElementById('scroll-progress');
+        let scrollPending = false;
+        function onScroll() {
+            const y = window.scrollY;
+            nav.classList.toggle('scrolled', y > 60);
+            const h = document.documentElement.scrollHeight - window.innerHeight;
+            const pct = Math.min(100, (y / h) * 100);
+            scrollBar.style.width = pct + '%';
+        }
+        function scrollTick() {
+            if (scrollPending) return;
+            scrollPending = true;
+            requestAnimationFrame(() => { onScroll(); scrollPending = false; });
+        }
+        window.addEventListener('scroll', scrollTick, { passive: true });
+        onScroll();
+
+        const themeBtn = document.getElementById('theme-toggle');
+        const themeIcon = document.getElementById('theme-icon');
+        const sunSVG = '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>';
+        const moonSVG = '<path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z"/>';
+        const savedTheme = localStorage.getItem('blaksyd-theme');
+        if (savedTheme === 'light') { document.documentElement.setAttribute('data-theme', 'light'); themeIcon.innerHTML = sunSVG; }
+        themeBtn.addEventListener('click', () => {
+            const cur = document.documentElement.getAttribute('data-theme');
+            const next = cur === 'light' ? 'dark' : 'light';
+            document.documentElement.setAttribute('data-theme', next);
+            localStorage.setItem('blaksyd-theme', next);
+            themeIcon.innerHTML = next === 'light' ? sunSVG : moonSVG;
+        });
+
+        document.getElementById('foot-year').textContent = new Date().getFullYear();
+
+        const reveals = document.querySelectorAll('.reveal');
+        if ('IntersectionObserver' in window) {
+            const io = new IntersectionObserver(entries => {
+                entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } });
+            }, { threshold: 0.12, rootMargin: '0px 0px -60px 0px' });
+            reveals.forEach(el => io.observe(el));
+        } else { reveals.forEach(el => el.classList.add('in')); }
+
+        const streamTrack = document.getElementById('stream-track');
+        if (streamTrack) streamTrack.innerHTML = streamTrack.innerHTML + streamTrack.innerHTML;
+
+        // cursor glow
+        const cursorGlow = document.getElementById('cursor-glow');
+        document.addEventListener('mousemove', e => {
+            cursorGlow.classList.add('live');
+            cursorGlow.style.transform = `translate(${e.clientX}px, ${e.clientY}px) translate(-50%, -50%)`;
+            const xRel = (e.clientX / window.innerWidth) - 0.5;
+            const yRel = (e.clientY / window.innerHeight) - 0.5;
+            document.documentElement.style.setProperty('--mx', xRel.toString());
+            document.documentElement.style.setProperty('--my', yRel.toString());
+        });
+        document.addEventListener('mouseleave', () => cursorGlow.classList.remove('live'));
+
+        // magnetic buttons
+        document.querySelectorAll('.magnetic').forEach(btn => {
+            btn.addEventListener('mousemove', e => {
+                const rect = btn.getBoundingClientRect();
+                const x = e.clientX - rect.left - rect.width / 2;
+                const y = e.clientY - rect.top - rect.height / 2;
+                btn.style.transform = `translate(${x * 0.18}px, ${y * 0.25}px)`;
+            });
+            btn.addEventListener('mouseleave', () => { btn.style.transform = ''; });
+        });
+
+        // broken internet merge on scroll
+        (function brokenMerge() {
+            const stage = document.getElementById('broken-stage');
+            if (!stage) return;
+            const io = new IntersectionObserver(entries => {
+                entries.forEach(e => {
+                    if (e.isIntersecting) { setTimeout(() => stage.classList.add('merged'), 600); io.unobserve(stage); }
+                });
+            }, { threshold: 0.45 });
+            io.observe(stage);
+        })();
+
+        // ───── HEAD SECTION — Vision-Pro-style scroll-driven layer activation ─────
+        // perf: rAF-throttled. Sets data-active for tint shift + activates beam.
+        (function headSection() {
+            const section = document.querySelector('.head-section');
+            if (!section) return;
+            const head = document.getElementById('head-figure');
+            const layers = {
+                echo: document.getElementById('layer-echo'),
+                nexus: document.getElementById('layer-nexus'),
+                minit: document.getElementById('layer-minit'),
+            };
+            const beams = {
+                echo: document.getElementById('beam-echo'),
+                nexus: document.getElementById('beam-nexus'),
+                minit: document.getElementById('beam-minit'),
+            };
+            const dots = [document.getElementById('hp-1'), document.getElementById('hp-2'), document.getElementById('hp-3')];
+            let lastActive = '';
+            let pending = false;
+
+            function update() {
+                const rect = section.getBoundingClientRect();
+                const total = rect.height - window.innerHeight;
+                if (total <= 0) return;
+                const progress = Math.max(0, Math.min(1, -rect.top / total));
+                let activeLayer, tilt, xshift, activeIdx;
+                if (progress < 0.34) { activeLayer = 'echo'; tilt = 0; xshift = 0; activeIdx = 0; }
+                else if (progress < 0.67) { activeLayer = 'nexus'; tilt = -8; xshift = -12; activeIdx = 1; }
+                else { activeLayer = 'minit'; tilt = 8; xshift = 12; activeIdx = 2; }
+
+                if (activeLayer !== lastActive) {
+                    section.dataset.active = activeLayer;
+                    Object.entries(layers).forEach(([k, el]) => el && el.classList.toggle('active', k === activeLayer));
+                    Object.entries(beams).forEach(([k, el]) => el && el.classList.toggle('active', k === activeLayer));
+                    dots.forEach((d, i) => d && d.classList.toggle('active', i === activeIdx));
+                    lastActive = activeLayer;
+                }
+                head.style.setProperty('--head-tilt', tilt + 'deg');
+                head.style.setProperty('--head-x', xshift + 'px');
+            }
+            function tick() {
+                if (pending) return;
+                pending = true;
+                requestAnimationFrame(() => { update(); pending = false; });
+            }
+            window.addEventListener('scroll', tick, { passive: true });
+            window.addEventListener('resize', tick);
+            update();
+            // activate initial beam
+            beams.echo && beams.echo.classList.add('active');
+        })();
+
+        // ───── VOICE — waveform bars ─────
+        (function buildVoiceWave() {
+            const wave = document.getElementById('voice-wave');
+            if (!wave) return;
+            const BARS = 36;
+            for (let i = 0; i < BARS; i++) {
+                const span = document.createElement('span');
+                const h = 12 + Math.abs(Math.sin(i * 0.5)) * 60 + Math.random() * 16;
+                span.style.height = h + 'px';
+                span.style.animationDelay = (i * 0.04) + 's';
+                wave.appendChild(span);
+            }
+        })();
+
+        // ───── VOICE — interactive commands + typewriter ─────
+        (function voiceCommands() {
+            const buttons = document.querySelectorAll('.voice-command');
+            const transcript = document.getElementById('voice-transcript');
+            if (!buttons.length || !transcript) return;
+            const linesByCmd = {
+                '0': [
+                    '"You sounded different tonight. Want to talk about it?"',
+                    '"I remember the song you sent last Wednesday."',
+                    '"Take your time. I\'m here."',
+                ],
+                '1': [
+                    '"Got it — dinner from your usual? Adding extra spice like last time."',
+                    '"Order placed. ETA 28 minutes. Want me to call you when it\'s close?"',
+                    '"Done. I told them to leave it at the door."',
+                ],
+                '2': [
+                    '"Calling your ride. Pickup in 4 minutes."',
+                    '"Driver on the way. Want me to text Sam you\'re heading home?"',
+                    '"On it. I\'ll let you know when you should head down."',
+                ],
+                '3': [
+                    '"Tomorrow looks heavy. Want me to move the 11am? You said you wanted a slower morning."',
+                    '"I\'ll prep your 3pm. Anything I should remember?"',
+                    '"Done. I cleared 30 minutes after lunch for you to just breathe."',
+                ],
+            };
+            let activeCmd = '0', lineIdx = 0, ci = 0, deleting = false, timer = null, started = false;
+
+            function typewriter() {
+                const lines = linesByCmd[activeCmd];
+                const target = lines[lineIdx % lines.length];
+                if (!deleting) {
+                    transcript.textContent = target.slice(0, ci + 1);
+                    ci++;
+                    if (ci >= target.length) { deleting = true; timer = setTimeout(typewriter, 3200); return; }
+                    timer = setTimeout(typewriter, 40 + Math.random() * 40);
+                } else {
+                    transcript.textContent = target.slice(0, ci - 1);
+                    ci--;
+                    if (ci <= 0) { deleting = false; lineIdx++; timer = setTimeout(typewriter, 280); return; }
+                    timer = setTimeout(typewriter, 22);
+                }
+            }
+            buttons.forEach(b => {
+                b.addEventListener('click', () => {
+                    buttons.forEach(x => x.classList.remove('active'));
+                    b.classList.add('active');
+                    activeCmd = b.dataset.cmd;
+                    lineIdx = 0; ci = 0; deleting = false;
+                    clearTimeout(timer);
+                    transcript.textContent = '';
+                    if (started) timer = setTimeout(typewriter, 200);
+                });
+            });
+            const io = new IntersectionObserver(entries => {
+                entries.forEach(e => { if (e.isIntersecting && !started) { started = true; typewriter(); io.disconnect(); } });
+            }, { threshold: 0.3 });
+            io.observe(transcript);
+        })();
+
+        const voiceMic = document.getElementById('voice-mic');
+        if (voiceMic) {
+            voiceMic.addEventListener('click', () => {
+                voiceMic.animate([
+                    { transform: 'scale(1)' }, { transform: 'scale(0.9)' },
+                    { transform: 'scale(1.06)' }, { transform: 'scale(1)' }
+                ], { duration: 420, easing: 'cubic-bezier(0.34, 1.56, 0.64, 1)' });
+                window.toast && window.toast('Echo is listening…');
+            });
+        }
+
+        // ───── COMPARE — full drag 0-100% ─────
+        (function compareSlider() {
+            const slider = document.getElementById('compare-slider');
+            const handle = document.getElementById('compare-handle');
+            if (!slider || !handle) return;
+            let dragging = false;
+            function setReveal(clientX) {
+                const rect = slider.getBoundingClientRect();
+                let pct = ((clientX - rect.left) / rect.width) * 100;
+                pct = Math.max(0, Math.min(100, pct));
+                slider.style.setProperty('--reveal', pct + '%');
+            }
+            handle.addEventListener('mousedown', e => { dragging = true; e.preventDefault(); });
+            document.addEventListener('mouseup', () => dragging = false);
+            document.addEventListener('mousemove', e => { if (dragging) setReveal(e.clientX); });
+            handle.addEventListener('touchstart', () => dragging = true, { passive: true });
+            document.addEventListener('touchend', () => dragging = false);
+            document.addEventListener('touchmove', e => { if (dragging) setReveal(e.touches[0].clientX); }, { passive: true });
+            const io = new IntersectionObserver(entries => {
+                entries.forEach(e => {
+                    if (e.isIntersecting) {
+                        let pct = 30;
+                        const tween = setInterval(() => {
+                            pct += 2;
+                            slider.style.setProperty('--reveal', pct + '%');
+                            if (pct >= 50) clearInterval(tween);
+                        }, 28);
+                        io.disconnect();
+                    }
+                });
+            }, { threshold: 0.4 });
+            io.observe(slider);
+        })();
+
+        // ───── MANIFESTO line reveal ─────
+        (function manifestoReveal() {
+            const lines = document.querySelectorAll('[data-manifesto]');
+            if (!lines.length) return;
+            const io = new IntersectionObserver(entries => {
+                entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('lit'); });
+            }, { threshold: 0.6 });
+            lines.forEach(l => io.observe(l));
+        })();
+
+        // ───── AFTERLIFE — line-by-line reveal, more reverent timing ─────
+        (function afterlifeReveal() {
+            const lines = document.querySelectorAll('[data-afterlife]');
+            const finals = document.querySelectorAll('[data-afterlife-final]');
+            const io = new IntersectionObserver(entries => {
+                entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('lit'); });
+            }, { threshold: 0.55 });
+            lines.forEach(l => io.observe(l));
+            finals.forEach(l => io.observe(l));
+        })();
+
+        // hero logo easter egg
+        const heroLogo = document.querySelector('.hero-logo');
+        if (heroLogo) {
+            heroLogo.addEventListener('click', e => {
+                e.preventDefault();
+                heroLogo.animate([
+                    { transform: 'scale(1)' }, { transform: 'scale(1.15) rotate(-2deg)' }, { transform: 'scale(1)' }
+                ], { duration: 600, easing: 'cubic-bezier(0.34, 1.56, 0.64, 1)' });
+                window.toast && window.toast('welcome home.');
+            });
+        }
+
+        const burger = document.getElementById('nav-burger');
+        if (burger) burger.addEventListener('click', () => openAuth('signup'));
+
+        window.toast = function(msg) {
+            const el = document.getElementById('toast');
+            el.textContent = msg;
+            el.classList.add('show');
+            setTimeout(() => el.classList.remove('show'), 2200);
+        };
+    </script>
 </body>
 </html>
