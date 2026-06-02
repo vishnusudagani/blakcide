@@ -1,0 +1,381 @@
+---
+// AI-side locator + Blak — the first product scene.
+// Hybrid reveal: a quiet "the AI that knows you" locator orients the visitor on
+// the AI side, then Blak proves itself show-don't-tell: an unprompted, living
+// conversation where each message demonstrates one capability (anticipates a
+// need / understands your state / acts on your behalf). A visible privacy line
+// carries the trust the hero promised. Messages surface on scroll with a calm
+// "typing → message" cadence.
+---
+
+<section class="locator" id="ai" aria-label="The AI side">
+  <div class="u-wrap locator-inner">
+    <p class="eyebrow" data-reveal>
+      <span class="eyebrow-dot"></span>
+      the ai that knows you
+    </p>
+    <h2 class="locator-title" data-reveal>
+      Two minds on your side.<br />
+      <span class="accent">Always learning you.</span>
+    </h2>
+    <p class="locator-sub" data-reveal>
+      One understands you. One carries you. Together they grow with every day —
+      and answer to no one but you.
+    </p>
+  </div>
+</section>
+
+<section class="blak" id="blak">
+  <div class="u-wrap blak-inner">
+    <div class="blak-copy">
+      <p class="kicker" data-reveal><span class="kicker-orb"></span>Blak · your inner AI</p>
+
+      <h3 class="blak-title" data-reveal>
+        Blak knows you.<br />
+        <span class="accent">And moves first.</span>
+      </h3>
+
+      <p class="blak-sub" data-reveal>
+        Not a chatbot you prompt. A presence that pays attention to your day —
+        then quietly handles the rest, from the small stuff to almost anything
+        you'd ask of a friend.
+      </p>
+
+      <ul class="blak-points" data-reveal>
+        <li><span class="pt-dot pt-1"></span><b>Anticipates</b> what you'll need next.</li>
+        <li><span class="pt-dot pt-2"></span><b>Understands</b> how you actually feel.</li>
+        <li><span class="pt-dot pt-3"></span><b>Acts</b> for you — food, rides, plans, music, the small stuff.</li>
+      </ul>
+
+      <p class="blak-trust" data-reveal>
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <rect x="5" y="11" width="14" height="9" rx="2" />
+          <path d="M8 11V8a4 4 0 0 1 8 0v3" />
+        </svg>
+        Everything Blak learns stays yours. Always.
+      </p>
+    </div>
+
+    <div class="blak-stage" id="blak-stage" aria-hidden="true">
+      <div class="glow" aria-hidden="true"></div>
+      <div class="chat">
+        <div class="chat-head">
+          <span class="avatar"></span>
+          <span class="who">
+            <b>Blak</b>
+            <i class="status"><span class="live-dot"></span>present</i>
+          </span>
+          <span class="unprompted">unprompted</span>
+        </div>
+
+        <div class="msgs">
+          <div class="msg">
+            <span class="msg-tag tag-1">anticipates</span>
+            <p class="msg-body">Back-to-back till 2 today — your usual from Sienna's will be at your desk by 1:45.</p>
+          </div>
+
+          <div class="msg">
+            <span class="msg-tag tag-2">understands</span>
+            <p class="msg-body">You sounded drained last night, so I pushed today's reminders and told Maya you'll call her in the morning.</p>
+          </div>
+
+          <div class="msg">
+            <span class="msg-tag tag-4">guides</span>
+            <p class="msg-body">Big pitch tomorrow — I blocked your morning to prep, pulled three talking points, and queued a calm playlist for the drive in.</p>
+          </div>
+
+          <div class="msg">
+            <span class="msg-tag tag-3">acts</span>
+            <p class="msg-body">Flight's delayed 40 minutes — cab's rebooked for 6:10, and I let your dad know you'll be late.</p>
+          </div>
+
+          <div class="typing" aria-hidden="true"><span></span><span></span><span></span></div>
+        </div>
+      </div>
+
+      <p class="cap-rail">
+        <span class="cap-lead">also</span>
+        <span>calls to check in</span>
+        <span>drafts the hard text</span>
+        <span>tracks your day</span>
+        <span>speaks your languages</span>
+        <span class="cap-more">&amp; almost anything</span>
+      </p>
+    </div>
+  </div>
+</section>
+
+<style>
+  /* ───────── shared locator ───────── */
+  .locator {
+    position: relative; z-index: 1;
+    scroll-margin-top: 120px;
+    padding-block: clamp(5.5rem, 14vh, 9rem) clamp(1rem, 3vh, 2rem);
+  }
+  .locator-inner { text-align: center; max-width: 60ch; }
+  .locator .eyebrow {
+    display: inline-flex; align-items: center; gap: .7rem;
+    font-family: var(--font-mono);
+    font-size: var(--t-eyebrow); text-transform: uppercase; letter-spacing: .28em;
+    color: var(--lavender-deep);
+    margin-bottom: 1.4rem;
+  }
+  html[data-theme="dark"] .locator .eyebrow { color: var(--lavender); }
+  .locator .eyebrow-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--lavender); box-shadow: 0 0 12px var(--lavender);
+  }
+  .locator-title {
+    font-family: var(--font-display); font-weight: 600;
+    font-size: clamp(1.9rem, 1.3rem + 2.6vw, 3.25rem);
+    line-height: 1.04; letter-spacing: -.03em; color: var(--ink);
+  }
+  .locator-title .accent {
+    font-family: var(--font-serif); font-weight: 400; font-style: italic;
+    font-size: 1.08em; letter-spacing: -.02em;
+    background: var(--accent-grad);
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent; color: transparent;
+  }
+  .locator-sub {
+    margin: 1.3rem auto 0; max-width: 52ch;
+    font-size: var(--t-lead); color: var(--ink-soft); line-height: 1.6;
+  }
+
+  /* ───────── Blak scene ───────── */
+  .blak {
+    position: relative; z-index: 1;
+    scroll-margin-top: 110px;
+    padding-block: clamp(3rem, 8vh, 5.5rem) clamp(5rem, 12vh, 8rem);
+  }
+  .blak-inner {
+    display: grid; grid-template-columns: 1fr 1.05fr;
+    gap: clamp(2rem, 5vw, 5rem); align-items: center;
+  }
+
+  .kicker {
+    display: inline-flex; align-items: center; gap: .55rem;
+    font-family: var(--font-mono); font-size: .72rem;
+    text-transform: uppercase; letter-spacing: .2em; color: var(--coral);
+    margin-bottom: 1.2rem;
+  }
+  .kicker-orb {
+    width: 14px; height: 14px; border-radius: 50%;
+    background: var(--cta-grad); box-shadow: 0 0 16px rgba(255, 184, 122, .5);
+  }
+  .blak-title {
+    font-family: var(--font-display); font-weight: 600;
+    font-size: var(--t-h2); line-height: 1.0; letter-spacing: -.03em; color: var(--ink);
+  }
+  .blak-title .accent {
+    font-family: var(--font-serif); font-weight: 400; font-style: italic;
+    font-size: 1.1em; letter-spacing: -.02em;
+    background: var(--accent-grad);
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent; color: transparent;
+  }
+  .blak-sub {
+    margin-top: 1.3rem; max-width: 44ch;
+    font-size: var(--t-lead); color: var(--ink-soft); line-height: 1.6;
+  }
+
+  .blak-points { list-style: none; margin-top: 1.6rem; display: grid; gap: .7rem; }
+  .blak-points li {
+    display: flex; align-items: center; gap: .7rem;
+    font-size: 1rem; color: var(--ink-soft);
+  }
+  .blak-points b { color: var(--ink); font-weight: 600; }
+  .pt-dot { width: 9px; height: 9px; border-radius: 50%; flex: none; }
+  .pt-1 { background: var(--coral); box-shadow: 0 0 10px var(--coral); }
+  .pt-2 { background: var(--lavender); box-shadow: 0 0 10px var(--lavender); }
+  .pt-3 { background: var(--mint); box-shadow: 0 0 10px var(--mint); }
+
+  .blak-trust {
+    display: inline-flex; align-items: center; gap: .55rem;
+    margin-top: 1.9rem;
+    font-size: .9rem; color: var(--ink-faint);
+  }
+  .blak-trust svg {
+    width: 16px; height: 16px; flex: none;
+    fill: none; stroke: var(--mint-deep); stroke-width: 1.8;
+    stroke-linecap: round; stroke-linejoin: round;
+  }
+
+  /* ───────── chat stage ───────── */
+  .blak-stage { position: relative; }
+  .blak-stage .glow {
+    position: absolute; inset: -8% -6% -10% -6%; z-index: 0; pointer-events: none;
+    background:
+      radial-gradient(60% 50% at 30% 18%, rgba(255, 107, 157, .26), transparent 70%),
+      radial-gradient(60% 55% at 80% 80%, rgba(201, 184, 255, .24), transparent 72%);
+    filter: blur(36px);
+  }
+  .chat {
+    position: relative; z-index: 1;
+    border-radius: var(--r-lg);
+    background: var(--glass-strong);
+    backdrop-filter: blur(20px) saturate(150%);
+    -webkit-backdrop-filter: blur(20px) saturate(150%);
+    border: 1px solid var(--line-strong);
+    box-shadow: var(--shadow-soft);
+    padding: 1.1rem 1.1rem 1.3rem;
+  }
+
+  .chat-head {
+    display: flex; align-items: center; gap: .7rem;
+    padding: .2rem .3rem 1rem;
+    border-bottom: 1px solid var(--line);
+  }
+  .avatar {
+    width: 38px; height: 38px; border-radius: 50%; flex: none;
+    background: var(--cta-grad);
+    box-shadow: 0 0 18px rgba(255, 107, 157, .5), inset 0 1px 2px rgba(255,255,255,.4);
+    animation: avatar-breathe 5s ease-in-out infinite;
+  }
+  @keyframes avatar-breathe { 0%,100% { transform: scale(1); } 50% { transform: scale(1.06); } }
+  .who { display: flex; flex-direction: column; line-height: 1.2; }
+  .who b { font-size: .98rem; color: var(--ink); font-weight: 600; }
+  .who .status {
+    display: inline-flex; align-items: center; gap: .35rem;
+    font-style: normal; font-size: .72rem; color: var(--ink-faint);
+    text-transform: lowercase; letter-spacing: .02em;
+  }
+  .live-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--mint-deep); box-shadow: 0 0 8px var(--mint-deep);
+    animation: pulse-live 2.4s ease-in-out infinite;
+  }
+  @keyframes pulse-live { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: .5; transform: scale(.7); } }
+  .unprompted {
+    margin-left: auto;
+    font-family: var(--font-mono); font-size: .6rem;
+    text-transform: uppercase; letter-spacing: .18em; color: var(--ink-faint);
+    padding: .25rem .5rem; border-radius: var(--r-pill);
+    border: 1px solid var(--line-strong);
+  }
+
+  .msgs { padding-top: 1rem; display: flex; flex-direction: column; gap: .9rem; min-height: 340px; }
+
+  .msg {
+    position: relative; align-self: flex-start; max-width: 84%;
+    padding: .85rem 1rem; border-radius: 6px 18px 18px 18px;
+    background: var(--surface-strong);
+    border: 1px solid var(--line);
+  }
+  :global(html.js) .msg { opacity: 0; transform: translateY(12px); transition: opacity 460ms var(--ease-out), transform 460ms var(--ease-out); }
+  :global(html.js) .msg.in { opacity: 1; transform: none; }
+  .msg-body { font-size: .95rem; line-height: 1.5; color: var(--ink); }
+  .msg-tag {
+    display: inline-block; margin-bottom: .45rem;
+    font-family: var(--font-mono); font-size: .58rem;
+    text-transform: uppercase; letter-spacing: .16em;
+    padding: .2rem .5rem; border-radius: var(--r-pill);
+  }
+  .tag-1 { color: var(--coral-deep);    background: rgba(255, 107, 157, .14); }
+  .tag-2 { color: var(--lavender-deep); background: rgba(201, 184, 255, .18); }
+  .tag-3 { color: var(--mint-deep);     background: rgba(106, 211, 184, .18); }
+  .tag-4 { color: #B9892F;              background: rgba(255, 210, 122, .20); }
+  html[data-theme="dark"] .tag-4 { color: var(--gold); background: rgba(255, 210, 122, .13); }
+
+  .typing {
+    align-self: flex-start; display: none; gap: .3rem;
+    padding: .8rem 1rem; border-radius: 6px 18px 18px 18px;
+    background: var(--surface-strong); border: 1px solid var(--line);
+  }
+  .typing.on { display: inline-flex; }
+  .typing span {
+    width: 7px; height: 7px; border-radius: 50%; background: var(--ink-faint);
+    animation: typing-bounce 1.2s ease-in-out infinite;
+  }
+  .typing span:nth-child(2) { animation-delay: .18s; }
+  .typing span:nth-child(3) { animation-delay: .36s; }
+  @keyframes typing-bounce {
+    0%, 60%, 100% { transform: translateY(0); opacity: .5; }
+    30% { transform: translateY(-5px); opacity: 1; }
+  }
+
+  /* ── capability rail — the long tail, scannable; "and so much more" ── */
+  .cap-rail {
+    position: relative; z-index: 1;
+    margin-top: 1.1rem;
+    display: flex; flex-wrap: wrap; gap: .4rem;
+  }
+  .cap-rail span {
+    font-family: var(--font-mono); font-size: .6rem;
+    text-transform: lowercase; letter-spacing: .04em; color: var(--ink-faint);
+    padding: .26rem .58rem; border-radius: var(--r-pill);
+    border: 1px solid var(--line); background: var(--surface);
+  }
+  .cap-rail .cap-lead {
+    color: var(--coral); border-color: rgba(255, 107, 157, .28);
+    text-transform: uppercase; letter-spacing: .14em;
+  }
+  .cap-rail .cap-more { color: var(--ink-soft); border-style: dashed; }
+
+  /* light theme — deepen accent TEXT to clear WCAG AA on cream (dots/glows stay vivid) */
+  html[data-theme="light"] .kicker { color: var(--coral-ink); }
+  html[data-theme="light"] .locator .eyebrow { color: var(--lavender-ink); }
+  html[data-theme="light"] .tag-1 { color: var(--coral-ink); }
+  html[data-theme="light"] .tag-2 { color: var(--lavender-ink); }
+  html[data-theme="light"] .tag-3 { color: var(--mint-ink); }
+  html[data-theme="light"] .tag-4 { color: var(--gold-ink); }
+  html[data-theme="light"] .cap-rail .cap-lead { color: var(--coral-ink); }
+
+  /* ───────── responsive ───────── */
+  @media (max-width: 900px) {
+    .blak-inner { grid-template-columns: 1fr; gap: 2.5rem; }
+    .blak-copy { text-align: left; }
+    .blak-stage { max-width: 460px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    :global(html.js) .msg { opacity: 1 !important; transform: none !important; }
+  }
+</style>
+
+<script is:inline>
+  // Blak conversation — calm "typing → message" cadence, once, when scrolled into view.
+  // (Copy reveals are handled globally by Base's reveal script.)
+  (function () {
+    var stage = document.getElementById('blak-stage');
+    if (!stage) return;
+    var reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    var msgs = [].slice.call(stage.querySelectorAll('.msg'));
+    var typing = stage.querySelector('.typing');
+    var started = false;
+
+    function visibleFrac(el) {
+      var r = el.getBoundingClientRect();
+      var h = window.innerHeight || document.documentElement.clientHeight;
+      if (r.height === 0) return (r.top < h && r.bottom > 0) ? 1 : 0;
+      return Math.max(0, Math.min(r.bottom, h) - Math.max(r.top, 0)) / Math.min(r.height, h);
+    }
+
+    function runConvo() {
+      if (started) return;
+      started = true;
+      if (reduced) { msgs.forEach(function (m) { m.classList.add('in'); }); return; }
+      var i = 0;
+      (function step() {
+        if (i >= msgs.length) { if (typing) typing.classList.remove('on'); return; }
+        if (typing) typing.classList.add('on');
+        setTimeout(function () {
+          if (typing) typing.classList.remove('on');
+          msgs[i].classList.add('in');
+          i++;
+          setTimeout(step, 820);
+        }, 720);
+      })();
+    }
+
+    function check() {
+      if (visibleFrac(stage) >= 0.3) {
+        runConvo();
+        window.removeEventListener('scroll', check);
+        window.removeEventListener('resize', check);
+      }
+    }
+    requestAnimationFrame(function () { requestAnimationFrame(check); });
+    window.addEventListener('scroll', check, { passive: true });
+    window.addEventListener('resize', check);
+  })();
+</script>

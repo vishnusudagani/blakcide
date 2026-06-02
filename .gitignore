@@ -2,3 +2,8 @@
 
 # Local Netlify folder
 .netlify
+
+# Astro / Node build
+node_modules
+dist
+.astro

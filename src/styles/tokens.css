@@ -1,0 +1,197 @@
+/* =====================================================================
+   Blaksyd — design tokens
+   Adopts the proven blakcide.com palette: a deep cinematic "void" base with
+   warm cream ink and a rich-but-tasteful accent set (peach → coral → lavender,
+   plus gold / mint / aqua). Dark is the default; light is a warm cream theme.
+   Both ship — the nav carries a real toggle. The vivid colour reads as premium
+   because it sits on a deep base (not as pastels on white).
+   ===================================================================== */
+
+:root {
+  /* ---- base scaffolding (deep "void") ---- */
+  --void:      #08091A;
+  --midnight:  #11132E;
+  --velvet:    #1F1A3C;
+  --cream:     #FAF4EC;
+  --cream-warm:#F2E9D5;
+
+  /* ---- accent set · warm → cool living spectrum ---- */
+  --peach:        #FFD4B8;
+  --peach-deep:   #FFB68A;
+  --gold:         #FFD27A;
+  --coral:        #FF6B9D;
+  --coral-deep:   #F4458C;
+  --lavender:     #C9B8FF;
+  --lavender-deep:#9683E6;
+  --mint:         #B4F0DE;
+  --mint-deep:    #6AD3B8;
+  --blush:        #FFCFD8;
+  --blush-deep:   #FF8FA8;
+  --aqua:         #5BC0FF;
+
+  /* ---- semantic surfaces / text (DARK default) ---- */
+  --bg:        var(--void);
+  --bg-mid:    var(--midnight);
+  --bg-warm:   var(--velvet);
+  --ink:       #F8F4EA;
+  --ink-soft:  rgba(248, 244, 234, 0.74);
+  --ink-faint: rgba(248, 244, 234, 0.50);
+  --ink-ghost: rgba(248, 244, 234, 0.18);
+  --line:        rgba(248, 244, 234, 0.08);
+  --line-strong: rgba(248, 244, 234, 0.16);
+  --surface:        rgba(255, 255, 255, 0.035);
+  --surface-strong: rgba(255, 255, 255, 0.07);
+  --glass:        rgba(8, 9, 26, 0.55);
+  --glass-strong: rgba(8, 9, 26, 0.85);
+
+  /* ---- signature gradients ---- */
+  /* gold leads the warm signature now (optimism / "the better future" / the
+     synthesis-engine hue); coral stays a vivid accent rather than the lead. */
+  --accent-grad: linear-gradient(110deg, var(--gold) 0%, var(--coral) 48%, var(--lavender) 92%);
+  --cta-grad:    linear-gradient(135deg, var(--gold) 0%, var(--peach-deep) 45%, var(--coral) 100%);
+  --line-grad:   linear-gradient(90deg, var(--gold), var(--coral), var(--lavender));
+
+  /* ---- type ---- */
+  --font-display: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-body:    'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-serif:   'Instrument Serif', 'Fraunces', Georgia, 'Times New Roman', serif;
+  --font-mono:    'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* fluid type scale */
+  --t-eyebrow: 0.6875rem;                                   /* 11px mono eyebrow */
+  --t-body:    clamp(0.95rem, 0.9rem + 0.25vw, 1.0625rem);
+  --t-lead:    clamp(1rem, 0.92rem + 0.45vw, 1.1875rem);
+  --t-h3:      clamp(1.25rem, 1.05rem + 1vw, 1.75rem);
+  --t-h2:      clamp(2rem, 1.4rem + 3vw, 3.75rem);
+  --t-h1:      clamp(3.25rem, 1.9rem + 6.4vw, 7.25rem);
+
+  /* ---- space & shape ---- */
+  --r-sm: 12px; --r-md: 18px; --r-lg: 26px; --r-xl: 38px; --r-pill: 999px;
+  --maxw: 1200px;
+  --gutter: clamp(1.25rem, 5vw, 4rem);
+
+  /* ---- motion (live eases + cinematic timings) ---- */
+  --ease-out:    cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-soft:   cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-magnet: cubic-bezier(0.25, 1, 0.5, 1);
+  --t-fast: 200ms; --t-base: 340ms; --t-slow: 620ms; --t-cinema: 1000ms;
+
+  /* ---- elevation ---- */
+  --shadow-soft: 0 18px 60px rgba(0, 0, 0, 0.4);
+  --shadow-cta:  0 16px 50px rgba(255, 184, 122, 0.45);
+  --shadow-glow: 0 0 60px rgba(255, 182, 138, 0.35);
+
+  color-scheme: dark;
+}
+
+/* ---- LIGHT theme · warm cream, same living accents ---- */
+html[data-theme="light"] {
+  --bg:        var(--cream);
+  --bg-mid:    #F0E5CC;
+  --bg-warm:   #FFFCF4;
+  --ink:       #14122A;
+  --ink-soft:  rgba(20, 18, 42, 0.74);
+  --ink-faint: rgba(20, 18, 42, 0.60);
+  --ink-ghost: rgba(20, 18, 42, 0.18);
+
+  /* accent INK — deepened accent tones for small TEXT on cream (light only).
+     Keeps each hue's identity while clearing WCAG AA 4.5:1. Decorative fills,
+     dots, glows and the big gradient headlines keep the bright base accents. */
+  --coral-ink:    #C71F66;
+  --lavender-ink: #7459CE;
+  --mint-ink:     #1E7D62;
+  --aqua-ink:     #1872B0;
+  --gold-ink:     #8A6410;
+
+  --line:        rgba(20, 18, 42, 0.08);
+  --line-strong: rgba(20, 18, 42, 0.16);
+  --surface:        rgba(255, 255, 255, 0.55);
+  --surface-strong: rgba(255, 255, 255, 0.85);
+  --glass:        rgba(250, 244, 236, 0.70);
+  --glass-strong: rgba(250, 244, 236, 0.92);
+  --shadow-soft: 0 18px 60px rgba(60, 40, 20, 0.14);
+
+  color-scheme: light;
+}
+
+/* ---- Reset ---- */
+*, *::before, *::after { box-sizing: border-box; }
+* { margin: 0; }
+/* overflow-x: clip stops fixed full-bleed layers (.world, section glows) from
+   adding a sub-pixel of horizontal scroll on fractional-DPR devices (e.g. Pixel
+   at 2.625×). clip — unlike hidden — doesn't create a scroll container, so it
+   leaves overflow-y visible and CSS smooth-scroll/anchor jumps untouched. */
+html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; overflow-x: clip; }
+body {
+  font-family: var(--font-body);
+  font-size: var(--t-body);
+  line-height: 1.6;
+  letter-spacing: -0.005em;
+  color: var(--ink);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  overflow-x: hidden;
+  transition: background 260ms var(--ease-soft), color 260ms var(--ease-soft);
+}
+img, svg, video, canvas { display: block; max-width: 100%; }
+button, input, textarea, select { font: inherit; color: inherit; }
+button { cursor: pointer; border: 0; background: none; }
+a { color: inherit; text-decoration: none; }
+h1, h2, h3 { line-height: 1.04; font-weight: 700; letter-spacing: -0.02em; }
+:focus-visible { outline: 2px solid var(--coral); outline-offset: 3px; border-radius: 4px; }
+html[data-theme="light"] :focus-visible { outline-color: var(--coral-ink); }
+
+/* ---- Ambient living world — fixed wash behind every section ---- */
+.world {
+  position: fixed; inset: 0; z-index: -2; overflow: hidden; pointer-events: none;
+  /* gold crown + matcha on the prominent right; lavender supports; coral is now
+     just a faint warm whisper at the bottom — temperature shifts off pink. */
+  background:
+    radial-gradient(ellipse at 50% -10%,  rgba(255, 210, 122, 0.22), transparent 55%),
+    radial-gradient(ellipse at 110% 40%,  rgba(180, 240, 222, 0.16), transparent 55%),
+    radial-gradient(ellipse at -10% 70%,  rgba(201, 184, 255, 0.14), transparent 52%),
+    radial-gradient(ellipse at 50% 110%,  rgba(255, 107, 157, 0.10), transparent 50%),
+    var(--bg);
+  transition: background 260ms var(--ease-soft);
+}
+html[data-theme="light"] .world {
+  background:
+    radial-gradient(ellipse at 50% -10%,  rgba(255, 210, 122, 0.42), transparent 55%),
+    radial-gradient(ellipse at 110% 40%,  rgba(180, 240, 222, 0.34), transparent 55%),
+    radial-gradient(ellipse at -10% 70%,  rgba(201, 184, 255, 0.28), transparent 52%),
+    radial-gradient(ellipse at 50% 110%,  rgba(255, 107, 157, 0.16), transparent 50%),
+    var(--bg);
+}
+
+/* ---- Reduced motion ---- */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after {
+    animation-duration: .001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .001ms !important;
+  }
+}
+
+/* ---- Utilities ---- */
+.u-wrap { width: 100%; max-width: var(--maxw); margin-inline: auto; padding-inline: var(--gutter); }
+.u-accent-text {
+  font-family: var(--font-serif); font-style: italic;
+  background: var(--accent-grad);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent; color: transparent;
+}
+
+/* ---- Scroll reveal — site-wide. Only hidden while JS is active, so content is
+        never stuck invisible if JS fails. Revealed by Base's reveal script. ---- */
+html.js [data-reveal] { opacity: 0; transform: translateY(22px); }
+html.js [data-reveal].seen {
+  opacity: 1; transform: none;
+  transition: opacity 800ms var(--ease-out), transform 800ms var(--ease-out);
+}
+@media (prefers-reduced-motion: reduce) {
+  html.js [data-reveal] { opacity: 1 !important; transform: none !important; }
+}

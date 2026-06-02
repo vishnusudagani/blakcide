@@ -1,0 +1,121 @@
+---
+import '../styles/fonts.css';
+import '../styles/tokens.css';
+import '../styles/sections.css';
+import Auth from '../components/Auth.astro';
+
+interface Props {
+  title?: string;
+  description?: string;
+  image?: string;
+}
+
+const {
+  title = 'Blaksyd — Human + AI, revolving around you.',
+  description = 'Human + AI, together, revolving around you. Blak knows you and acts for you, Persona is your digital self, Minit brings real listeners close, and Nexus is where you belong — one world, always learning you.',
+  image = '/assets/og-cover.png',
+} = Astro.props;
+
+// Absolute URLs for canonical + link-preview cards (Astro.site = https://blakcide.com).
+const canonicalURL = new URL(Astro.url.pathname, Astro.site).href;
+const ogImageURL = new URL(image, Astro.site).href;
+
+// Inline gradient-dot favicon — a tiny "living presence" in the brand accents.
+const favicon =
+  'data:image/svg+xml,' +
+  encodeURIComponent(
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><defs><radialGradient id="g" cx="50%" cy="38%" r="70%"><stop offset="0%" stop-color="#FFD4B8"/><stop offset="45%" stop-color="#FF6B9D"/><stop offset="100%" stop-color="#C9B8FF"/></radialGradient></defs><circle cx="16" cy="16" r="13" fill="url(#g)"/></svg>',
+  );
+---
+
+<!doctype html>
+<html lang="en" data-theme="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#08091A" />
+    <meta name="description" content={description} />
+    <title>{title}</title>
+    <link rel="icon" href={favicon} />
+    <link rel="canonical" href={canonicalURL} />
+
+    {/* Open Graph — link previews (iMessage, Slack, LinkedIn, Facebook…) */}
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Blaksyd" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonicalURL} />
+    <meta property="og:image" content={ogImageURL} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Blaksyd — Human + AI, revolving around you." />
+
+    {/* Twitter / X large-image card */}
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={ogImageURL} />
+
+    {/* Set theme before paint to avoid a flash of the wrong mode.
+        Priority: explicit toggle choice → OS preference → dark fallback. */}
+    <script is:inline>
+      (function () {
+        document.documentElement.classList.add('js');
+        try {
+          var t = localStorage.getItem('theme');
+          if (t !== 'light' && t !== 'dark') {
+            t = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+          }
+          document.documentElement.setAttribute('data-theme', t);
+          var meta = document.querySelector('meta[name="theme-color"]');
+          if (meta) meta.setAttribute('content', t === 'light' ? '#FAF4EC' : '#08091A');
+        } catch (e) {
+          document.documentElement.setAttribute('data-theme', 'dark');
+        }
+      })();
+    </script>
+
+    {/* Self-hosted fonts (src/styles/fonts.css) — no third-party render-blocking
+        request. Preload the two faces that paint above the fold (Inter for body +
+        headings, Instrument Serif italic for the hero accent) so glyphs don't wait
+        on the stylesheet. */}
+    <link rel="preload" href="/fonts/inter.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/fonts/instrument-serif-400-italic.woff2" as="font" type="font/woff2" crossorigin />
+  </head>
+  <body>
+    <div class="world" aria-hidden="true"></div>
+    <slot />
+    <Auth />
+
+    {/* Site-wide scroll reveal — position-based so it fires on load + scroll + resize
+        (robust across browsers; no IntersectionObserver dependency). */}
+    <script is:inline>
+      (function () {
+        var reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        var pending = [].slice.call(document.querySelectorAll('[data-reveal]'));
+        if (!pending.length) return;
+        if (reduced) { pending.forEach(function (el) { el.classList.add('seen'); }); return; }
+
+        function visibleFrac(el) {
+          var r = el.getBoundingClientRect();
+          var h = window.innerHeight || document.documentElement.clientHeight;
+          if (r.height === 0) return (r.top < h && r.bottom > 0) ? 1 : 0;
+          return Math.max(0, Math.min(r.bottom, h) - Math.max(r.top, 0)) / Math.min(r.height, h);
+        }
+        function check() {
+          pending = pending.filter(function (el) {
+            if (visibleFrac(el) >= 0.12) { el.classList.add('seen'); return false; }
+            return true;
+          });
+          if (!pending.length) {
+            window.removeEventListener('scroll', check);
+            window.removeEventListener('resize', check);
+          }
+        }
+        requestAnimationFrame(function () { requestAnimationFrame(check); });
+        window.addEventListener('scroll', check, { passive: true });
+        window.addEventListener('resize', check);
+      })();
+    </script>
+  </body>
+</html>

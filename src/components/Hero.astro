@@ -1,0 +1,310 @@
+---
+// Hero — the live site's classy register, rebuilt.
+// Mono eyebrow → breathing wordmark → "Your world." (Inter) + "Built _ you."
+// where the middle word cycles by → around → for (serif-italic accent gradient;
+// each word blur-rises in as the last blur-rises out, and "you." glides as the
+// word changes width) → sub → two CTAs. Slow accent orbs drift over the world wash.
+---
+
+<section class="hero" id="top">
+  <div class="orbs" aria-hidden="true">
+    <span class="orb orb-1"></span>
+    <span class="orb orb-2"></span>
+    <span class="orb orb-3"></span>
+  </div>
+
+  <div class="hero-inner u-wrap">
+    <p class="eyebrow">
+      <span class="eyebrow-dot"></span>
+      the next era of the internet
+    </p>
+
+    <a href="#top" class="hero-logo" aria-label="Blaksyd">
+      <span class="brand-mark" aria-hidden="true"></span>
+    </a>
+
+    <h1 class="title">
+      <span class="line">Your world.</span>
+      <span class="line line-2" aria-label="Built around you.">Built <span class="rotator" id="hero-rotator" aria-hidden="true"><span class="rotator-word is-active">by</span><span class="rotator-word">around</span><span class="rotator-word">for</span></span> you.</span>
+    </h1>
+
+    <p class="sub">
+      AI that knows you. People who show up.
+      A world that's yours, and only yours.
+    </p>
+
+    <div class="ctas">
+      <button type="button" class="btn btn-primary" data-open-auth data-tab="signup">
+        <span>Begin</span>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
+      </button>
+    </div>
+  </div>
+
+  <a href="#ai" class="scroll-cue" aria-label="Scroll to explore">
+    <span>scroll</span>
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M6 13l6 6 6-6" /></svg>
+  </a>
+</section>
+
+<style>
+  .hero {
+    position: relative;
+    min-height: 100svh;
+    display: flex; flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* ---------- drifting accent orbs (over the ambient world wash) ---------- */
+  .orbs { position: absolute; inset: 0; z-index: 0; pointer-events: none; }
+  .orb { position: absolute; border-radius: 50%; filter: blur(80px); opacity: .5; will-change: transform; }
+  .orb-1 {
+    width: 50vw; height: 50vw; left: 2%; top: 6%;
+    background: radial-gradient(circle at 40% 40%, var(--coral), transparent 68%);
+    animation: drift-a 20s var(--ease-soft) infinite alternate;
+  }
+  .orb-2 {
+    width: 48vw; height: 48vw; right: 0%; top: 12%;
+    background: radial-gradient(circle at 60% 40%, var(--lavender), transparent 68%);
+    animation: drift-b 24s var(--ease-soft) infinite alternate;
+  }
+  .orb-3 {
+    width: 40vw; height: 40vw; left: 28%; top: 34%;
+    opacity: .42;
+    background: radial-gradient(circle at 50% 50%, var(--mint), transparent 70%);
+    animation: drift-c 28s var(--ease-soft) infinite alternate;
+  }
+  html[data-theme="light"] .orb { opacity: .55; mix-blend-mode: multiply; }
+  html[data-theme="light"] .orb-3 { opacity: .45; }
+  @keyframes drift-a { from { transform: translate3d(0,0,0) scale(1); } to { transform: translate3d(6%,4%,0) scale(1.12); } }
+  @keyframes drift-b { from { transform: translate3d(0,0,0) scale(1.05); } to { transform: translate3d(-5%,6%,0) scale(.92); } }
+  @keyframes drift-c { from { transform: translate3d(0,0,0) scale(.95); } to { transform: translate3d(4%,-5%,0) scale(1.15); } }
+
+  /* ---------- content ---------- */
+  .hero-inner {
+    position: relative; z-index: 2;
+    flex: 1;
+    display: flex; flex-direction: column; justify-content: center; align-items: center;
+    text-align: center;
+    padding-block: clamp(7rem, 16vh, 10rem) clamp(3rem, 8vh, 5rem);
+  }
+
+  .eyebrow {
+    display: inline-flex; align-items: center; gap: .75rem;
+    font-family: var(--font-mono);
+    font-size: var(--t-eyebrow); text-transform: uppercase; letter-spacing: .28em;
+    color: var(--coral);
+    margin-bottom: 2.2rem;
+    opacity: 0; transform: translateY(20px);
+    animation: rise 1000ms var(--ease-out) 150ms forwards;
+  }
+  .eyebrow-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--coral); box-shadow: 0 0 12px var(--coral);
+    animation: pulse-glow 2.4s ease-in-out infinite;
+  }
+  @keyframes pulse-glow {
+    0%,100% { opacity: 1; transform: scale(1); box-shadow: 0 0 12px var(--coral); }
+    50%     { opacity: .55; transform: scale(.82); box-shadow: 0 0 20px var(--coral); }
+  }
+
+  .hero-logo {
+    position: relative;
+    margin-bottom: 2rem;
+    opacity: 0; transform: translateY(28px) scale(.96);
+    animation: rise-logo 1300ms var(--ease-out) 350ms forwards;
+  }
+  /* single wordmark fetched per theme (see Nav) — background-image keyed to theme.
+     aspect-ratio + fluid height keep the reserved box correct with no layout shift. */
+  .hero-logo .brand-mark {
+    display: block; height: clamp(52px, 7vw, 80px); width: auto; aspect-ratio: 737 / 338;
+    background: url('/assets/blaksyd-white.webp') center / contain no-repeat;
+    filter: drop-shadow(0 8px 44px rgba(255, 182, 138, 0.45));
+    animation: breathe 5s ease-in-out infinite;
+  }
+  html[data-theme="light"] .hero-logo .brand-mark {
+    aspect-ratio: 758 / 329;
+    background-image: url('/assets/blaksyd-black.webp');
+    filter: drop-shadow(0 8px 40px rgba(255, 184, 122, 0.32));
+  }
+  html[data-theme="light"] .eyebrow { color: var(--coral-ink); }
+  /* glow halos behind the wordmark */
+  .hero-logo::before, .hero-logo::after {
+    content: ''; position: absolute; top: 50%; left: 50%;
+    transform: translate(-50%, -50%); border-radius: 50%; pointer-events: none; z-index: -1;
+  }
+  .hero-logo::before { width: 260px; height: 260px; background: radial-gradient(circle, rgba(255,210,122,.24), transparent 70%); filter: blur(22px); animation: glow-pulse 4s ease-in-out infinite; }
+  .hero-logo::after  { width: 170px; height: 170px; background: radial-gradient(circle, rgba(201,184,255,.20), transparent 70%); filter: blur(16px); animation: glow-pulse 4s ease-in-out infinite 2s; }
+  @keyframes breathe { 0%,100% { transform: scale(1); } 50% { transform: scale(1.015); } }
+  @keyframes glow-pulse { 0%,100% { opacity: .5; transform: translate(-50%,-50%) scale(1); } 50% { opacity: 1; transform: translate(-50%,-50%) scale(1.18); } }
+
+  .title {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: var(--t-h1);
+    line-height: .94;
+    letter-spacing: -.04em;
+    color: var(--ink);
+  }
+  .title .line { display: block; opacity: 0; transform: translateY(36px); animation: rise 1100ms var(--ease-out) 600ms forwards; }
+  .title .line:nth-child(2) { animation-delay: 780ms; }
+  /* line 2 stays on one line on desktop; the cinematic word does the moving */
+  .title .line-2 { white-space: nowrap; }
+
+  /* the cycling word — serif-italic gradient that swaps by → around → for.
+     all three stack in one inline-grid cell; JS slides the cell width so "you."
+     glides as the word changes, crossfading active/leaving with a soft blur-rise. */
+  .rotator {
+    display: inline-grid; grid-template-columns: minmax(0, 1fr);
+    align-items: baseline; justify-items: center;
+    vertical-align: baseline; transition: width 560ms var(--ease-out);
+  }
+  .rotator-word {
+    grid-area: 1 / 1; width: max-content; justify-self: center;
+    /* vertical padding extends the gradient paint-box so the italic descender (y)
+       isn't clipped to transparent by background-clip:text; negative margins cancel
+       the added height so the headline's tight line rhythm is unchanged. */
+    padding: .3em .42em .5em; margin: -.3em 0 -.5em;
+    font-family: var(--font-serif); font-weight: 400; font-style: italic;
+    font-size: 1.06em; letter-spacing: -.03em;
+    background: var(--accent-grad); background-size: 220% 100%;
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent; color: transparent;
+    opacity: 0; transform: translateY(.5em) scale(.94); filter: blur(12px);
+    transition: opacity 540ms var(--ease-out), transform 540ms var(--ease-out), filter 540ms var(--ease-out);
+    will-change: opacity, transform, filter;
+  }
+  .rotator-word.is-active {
+    opacity: 1; transform: translateY(0) scale(1); filter: blur(0);
+    animation: rotator-shimmer 7s ease-in-out infinite;
+  }
+  .rotator-word.is-leaving {
+    opacity: 0; transform: translateY(-.5em) scale(1.04); filter: blur(12px);
+  }
+  @keyframes rotator-shimmer { 0%,100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
+
+  .sub {
+    margin: 1.7rem auto 0;
+    max-width: 56ch;
+    font-size: var(--t-lead);
+    color: var(--ink-soft);
+    line-height: 1.6;
+    opacity: 0; animation: rise 1000ms var(--ease-out) 1050ms forwards;
+  }
+
+  .ctas {
+    display: flex; flex-wrap: wrap; justify-content: center; gap: .9rem;
+    margin-top: 2.6rem;
+    opacity: 0; animation: rise 1000ms var(--ease-out) 1200ms forwards;
+  }
+
+  .btn {
+    display: inline-flex; align-items: center; gap: .6rem;
+    font-weight: 600; font-size: 1rem;
+    padding: 1rem 1.6rem; border-radius: var(--r-pill);
+    transition: transform 300ms var(--ease-magnet), box-shadow var(--t-base) var(--ease-out), background-position var(--t-slow) var(--ease-out), background var(--t-fast) var(--ease-out), border-color var(--t-fast) var(--ease-out);
+  }
+  .btn svg { width: 1.1em; height: 1.1em; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; transition: transform var(--t-base) var(--ease-out); }
+
+  .btn-primary {
+    /* dark label on the bright gradient — keeps the gradient vivid and clears AA */
+    color: #2A0E1E;
+    background: var(--cta-grad);
+    background-size: 200% 200%; background-position: 0% 50%;
+    box-shadow: var(--shadow-cta);
+  }
+  .btn-primary:hover { background-position: 100% 50%; transform: translateY(-2px); box-shadow: 0 22px 60px rgba(255,184,122,.55); }
+  .btn-primary:hover svg { transform: translateX(5px); }
+
+  .btn-ghost { color: var(--ink); background: var(--surface); border: 1px solid var(--line-strong); }
+  .btn-ghost:hover { background: var(--surface-strong); border-color: var(--ink-faint); transform: translateY(-2px); }
+
+  .scroll-cue {
+    position: absolute; left: 50%; bottom: clamp(1.1rem, 3vh, 2rem);
+    transform: translateX(-50%);
+    z-index: 2;
+    display: inline-flex; flex-direction: column; align-items: center; gap: .35rem;
+    font-family: var(--font-mono);
+    font-size: .65rem; letter-spacing: .24em; text-transform: uppercase;
+    color: var(--ink-faint);
+    opacity: 0; animation: rise 1000ms var(--ease-out) 1450ms forwards;
+  }
+  .scroll-cue svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; animation: bob 2.2s var(--ease-soft) infinite; }
+  @keyframes bob { 0%,100% { transform: translateY(0); opacity: .6; } 50% { transform: translateY(5px); opacity: 1; } }
+
+  @keyframes rise { to { opacity: 1; transform: translateY(0); } }
+  @keyframes rise-logo { to { opacity: 1; transform: translateY(0) scale(1); } }
+
+  @media (max-width: 600px) {
+    .sub { padding-inline: .5rem; }
+    .btn { width: 100%; justify-content: center; }
+    .ctas { width: 100%; max-width: 360px; }
+    .title .line-2 { white-space: normal; }   /* allow wrap; JS pins a fixed slot so the swap never jumps */
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .rotator { transition: none; }
+    .rotator-word { transition: none; }
+    .rotator-word.is-active { animation: none; }
+  }
+</style>
+
+<script is:inline>
+  /* Hero word-cycler — "Built by → around → for you." Each word blur-rises in as
+     the previous blur-rises out; on desktop the inline-grid cell width animates so
+     "you." glides. Mobile pins a fixed slot (widest word) so wrapping never jumps.
+     offsetWidth ignores transforms, so measurements stay correct; waits on fonts;
+     respects reduced-motion (freezes on "around"). */
+  (function () {
+    var rot = document.getElementById('hero-rotator');
+    if (!rot) return;
+    var words = [].slice.call(rot.querySelectorAll('.rotator-word'));
+    if (words.length < 2) return;
+    var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    var widths = [], maxW = 0, mobile = false, i = 0;
+
+    function measure() {
+      widths = words.map(function (w) { return w.offsetWidth; });
+      maxW = Math.max.apply(null, widths);
+      mobile = window.matchMedia('(max-width: 600px)').matches;
+    }
+    function applyWidth() { rot.style.width = (mobile ? maxW : widths[i]) + 'px'; }
+
+    function start() {
+      measure();
+      words.forEach(function (w) { w.classList.remove('is-active', 'is-leaving'); });
+
+      if (reduce) {
+        i = 1;                                           // freeze on "around"
+        words[1].classList.add('is-active');
+        applyWidth();
+      } else {
+        i = 0;
+        words[0].classList.add('is-active');
+        applyWidth();
+        setInterval(function () {
+          var cur = words[i];
+          var nextI = (i + 1) % words.length;
+          cur.classList.remove('is-active');
+          cur.classList.add('is-leaving');
+          words[nextI].classList.add('is-active');
+          i = nextI;
+          applyWidth();
+          (function (leaving) {
+            setTimeout(function () { leaving.classList.remove('is-leaving'); }, 640);
+          })(cur);
+        }, 2400);
+      }
+
+      // the headline is fluid (vw-sized) — re-measure the slot when the window resizes
+      var rt;
+      window.addEventListener('resize', function () {
+        clearTimeout(rt);
+        rt = setTimeout(function () { measure(); applyWidth(); }, 150);
+      }, { passive: true });
+    }
+
+    if (document.fonts && document.fonts.ready) { document.fonts.ready.then(start); }
+    else { setTimeout(start, 300); }
+  })();
+</script>

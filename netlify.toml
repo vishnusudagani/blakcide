@@ -1,4 +1,11 @@
+# Builds the Astro landing and assembles dist/ (npm run build runs
+# `astro build` then scripts/copy-subapps.mjs, which copies the static sub-apps
+# app/, team-os/, symp-core/ into dist/). Publishing dist/ means the legacy root
+# index.html/landing.css/script.js/style.css are no longer served — the Astro
+# landing replaces them. Functions stay in netlify/functions, separate from dist.
 [build]
+  command = "npm run build"
+  publish = "dist"
   functions = "netlify/functions"
 
 [functions]
