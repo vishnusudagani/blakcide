@@ -31,7 +31,8 @@
       </button>
     </div>
 
-    <div class="constellation" data-reveal aria-hidden="true">
+    <div class="constellation" id="finale-constellation" data-reveal aria-hidden="true">
+      <span class="con-wire" aria-hidden="true"></span>
       <span class="cdot c-coral"></span>
       <span class="cdot c-lav"></span>
       <span class="cdot c-gold"></span>
@@ -113,15 +114,36 @@
     background: linear-gradient(90deg, transparent, var(--line-strong) 18%, var(--line-strong) 82%, transparent);
     z-index: 0;
   }
+  /* the bright connective wire that draws across on scroll-in (over the faint track) */
+  .con-wire {
+    position: absolute; left: 0; top: 50%; height: 2px; width: 0; z-index: 0;
+    transform: translateY(-50%); border-radius: 2px;
+    background: linear-gradient(90deg,
+      var(--coral) 0%, var(--lavender) 30%, var(--gold) 52%, var(--mint-deep) 76%, var(--aqua) 100%);
+    box-shadow: 0 0 10px rgba(255, 210, 122, .35);
+    transition: width 1000ms var(--ease-out);
+  }
+  .constellation.drawn .con-wire { width: 100%; }
+
   .cdot {
     position: relative; z-index: 1; width: 11px; height: 11px; border-radius: 50%;
+    transform: scale(0);
+    transition: transform 560ms var(--ease-spring);
     animation: finale-twinkle 3.4s ease-in-out infinite;
   }
   .c-coral { background: var(--coral);    box-shadow: 0 0 12px var(--coral); }
   .c-lav   { background: var(--lavender); box-shadow: 0 0 12px var(--lavender); animation-delay: .4s; }
-  .c-gold  { background: var(--gold);     box-shadow: 0 0 14px var(--gold); transform: scale(1.18); animation-delay: .8s; }
+  .c-gold  { background: var(--gold);     box-shadow: 0 0 14px var(--gold); animation-delay: .8s; }
   .c-mint  { background: var(--mint);     box-shadow: 0 0 12px var(--mint); animation-delay: 1.2s; }
   .c-aqua  { background: var(--aqua);     box-shadow: 0 0 12px var(--aqua); animation-delay: 1.6s; }
+
+  /* dots pop in sequence as the wire reaches them — the system assembles itself */
+  .constellation.drawn .cdot   { transform: scale(1); }
+  .constellation.drawn .c-coral { transition-delay: 0ms; }
+  .constellation.drawn .c-lav   { transition-delay: 200ms; }
+  .constellation.drawn .c-gold  { transition-delay: 400ms; transform: scale(1.18); }
+  .constellation.drawn .c-mint  { transition-delay: 600ms; }
+  .constellation.drawn .c-aqua  { transition-delay: 800ms; }
   @keyframes finale-twinkle { 0%,100% { opacity: 1; } 50% { opacity: .5; } }
 
   .cnames {
@@ -174,6 +196,39 @@
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .cdot { animation: none !important; }
+    .cdot { animation: none !important; transform: none !important; transition: none !important; }
+    .c-gold { transform: scale(1.18) !important; }
+    .con-wire { width: 100% !important; transition: none !important; }
   }
 </style>
+
+<script is:inline>
+  // Finale constellation — draw the connective wire and pop the five pillars in
+  // sequence once it scrolls into view (the peak-end note the page closes on).
+  (function () {
+    var con = document.getElementById('finale-constellation');
+    if (!con) return;
+    var reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reduced) return;                              // CSS shows it fully assembled
+    var done = false;
+
+    function visibleFrac(el) {
+      var r = el.getBoundingClientRect();
+      var h = window.innerHeight || document.documentElement.clientHeight;
+      if (r.height === 0) return 0;
+      return Math.max(0, Math.min(r.bottom, h) - Math.max(r.top, 0)) / Math.min(r.height, h);
+    }
+    function check() {
+      if (done) return;
+      if (visibleFrac(con) >= 0.6) {
+        done = true;
+        con.classList.add('drawn');
+        window.removeEventListener('scroll', check);
+        window.removeEventListener('resize', check);
+      }
+    }
+    requestAnimationFrame(function () { requestAnimationFrame(check); });
+    window.addEventListener('scroll', check, { passive: true });
+    window.addEventListener('resize', check);
+  })();
+</script>

@@ -1,32 +1,33 @@
 ---
-// Persona — AI side, second scene. Your living clone: a presence that speaks as
-// you and carries you forward. Show-don't-tell via an activity feed of the clone
-// acting on your behalf — keeping the people you love close, and (gently) keeping
-// the story of you for those who'll want it later. The trust line gives explicit
-// control over memory and what is never repeated — essential, because letting a
-// clone speak *as* you is the deepest disclosure on the page.
-// Layout mirrors Blak: device LEFT, copy RIGHT, for an alternating scroll rhythm.
+// Persona — AI side, second scene, now a *playable* selves-switcher.
+// The left card is your Persona, live: a row of selves (your clone + the
+// characters you build) sits under a feed. Tap a self and the Persona "becomes"
+// it — the avatar morphs, and that self speaks in its own voice with a little
+// in-character artifact (your clone keeping people close, a hype meter, a
+// critic's ranked notes, a study set). Show-don't-tell of "talk to yourself, or
+// anyone you imagine." Auto-plays one switch on scroll-in. Reduced-motion safe.
+// Layout mirrors the alternating rhythm: device LEFT, copy RIGHT on desktop.
 ---
 
 <section class="s-section persona" id="persona">
   <div class="u-wrap s-two persona-two">
     <div class="persona-copy">
-      <p class="s-kicker k-lav" data-reveal><span class="orb"></span>Persona · your living clone</p>
+      <p class="s-kicker k-lav" data-reveal><span class="orb"></span>Persona · your digital selves</p>
 
       <h3 class="s-title" data-reveal>
-        Persona carries you.<br />
-        <span class="accent">Even when you can't.</span>
+        Talk to yourself.<br />
+        <span class="accent">Or anyone you imagine.</span>
       </h3>
 
       <p class="s-sub" data-reveal>
-        A second you that's always available — to your people the moment they reach
-        out, and to you when you need to think out loud. It sounds like you,
-        remembers what matters, and keeps showing up.
+        A living version of you — and any character you dream up. Think out loud
+        with your own clone, spar with a critic you built, and let your Persona
+        keep your people close when you can't be there.
       </p>
 
       <ul class="s-points" data-reveal>
-        <li><span class="pt-dot pt-2"></span><b>Always available</b> — talk to yours, or anyone's, any hour.</li>
-        <li><span class="pt-dot pt-1"></span><b>Looks and speaks as you</b> — your avatar, your voice, on chat or video.</li>
+        <li><span class="pt-dot pt-1"></span><b>Your clone</b> — looks and speaks as you, for the people you love.</li>
+        <li><span class="pt-dot pt-2"></span><b>Your characters</b> — a critic, a study-buddy, a hype friend; whoever you need.</li>
         <li><span class="pt-dot pt-gold"></span><b>Carries forward</b> — shared memory now; your story, always.</li>
       </ul>
 
@@ -39,59 +40,49 @@
       </p>
     </div>
 
-    <div class="s-stage persona-stage" id="persona-stage" aria-hidden="true">
-      <div class="s-glow" aria-hidden="true"></div>
-      <div class="s-card">
-        <div class="s-card-head">
-          <span class="s-orb">
-            <span class="core"></span>
-            <span class="echo"></span>
-            <span class="echo e2"></span>
+    <div class="s-stage persona-stage" id="persona-stage" data-reveal="left" role="group" aria-label="Persona, live — switch between your selves">
+      <div class="pp-glow" aria-hidden="true"></div>
+
+      <div class="pp-card">
+        <div class="pp-head">
+          <span class="pp-avatar" id="pp-avatar" data-self="clone" aria-hidden="true">
+            <i class="pp-echo"></i><i class="pp-echo e2"></i>
           </span>
-          <span class="who">
-            <b>Your Persona</b>
-            <i class="s-live"><span class="s-live-dot"></span>living as you</i>
+          <span class="pp-who">
+            <b id="pp-name">Your clone</b>
+            <i class="pp-status"><span class="pp-live"></span><span id="pp-mode">living as you</span></i>
           </span>
-          <span class="s-badge">clone</span>
-          <span class="pcall" aria-hidden="true">
-            <span class="pcall-btn"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.62 10.79a15.15 15.15 0 0 0 6.59 6.59l2.2-2.2a1 1 0 0 1 1.02-.24 11.36 11.36 0 0 0 3.57.57 1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1 11.36 11.36 0 0 0 .57 3.57 1 1 0 0 1-.25 1.02z"/></svg></span>
-            <span class="pcall-btn pcall-video"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="6.5" width="12" height="11" rx="2.5"/><path d="M15.5 10.4 21 7.2v9.6l-5.5-3.2z"/></svg></span>
-          </span>
+          <span class="pp-badge" id="pp-badge" data-self="clone">clone</span>
         </div>
 
-        <div class="presence">
-          <span class="presence-lead">always on</span>
-          <span class="pavatars">
-            <span class="pav pav-you"></span>
-            <span class="pav pav-a"></span>
-            <span class="pav pav-b"></span>
-            <span class="pav pav-c"></span>
-            <span class="pav pav-more">+</span>
-          </span>
-          <span class="presence-note">talk to yours, or theirs</span>
+        <div class="pp-feed" id="pp-feed" aria-hidden="true">
+          <div class="pp-row">
+            <div class="pp-bubble" data-self="clone">
+              <span class="pp-cap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8.5" r="3"/><path d="M3.6 19c0-3 2.4-4.8 5.4-4.8s5.4 1.8 5.4 4.8"/><path d="M16.2 6.4a3 3 0 0 1 0 5.5"/><path d="M18.8 19c0-2-1-3.5-2.6-4.3"/></svg></span>I kept your people close today. Replied to Maya in your voice, locked your July window seat, and saved the story for later.
+            </div>
+          </div>
+          <div class="pp-art clone">
+            <div class="pp-art-head">kept close today<span class="pp-art-eta">in your voice</span></div>
+            <div class="pp-keep">
+              <span class="pp-face">M</span><span class="pp-face f2">मां</span>
+              <span class="pp-keep-txt">2 people, held — without you lifting a finger</span>
+            </div>
+          </div>
         </div>
 
-        <ul class="feed">
-          <li class="feed-row">
-            <span class="feed-when">now</span>
-            <p class="feed-body">Sorted July with <b>Maya</b> — locked your window seat and dropped it on your calendar.</p>
-          </li>
-          <li class="feed-row">
-            <span class="feed-when">2:15 PM</span>
-            <p class="feed-body">Your <b>mum</b> video-called while you were in a meeting — your Persona picked up in your face and voice, and told her you're okay.</p>
-          </li>
-          <li class="feed-row legacy">
-            <span class="feed-when">always</span>
-            <p class="feed-body">Keeping the story of you — for the people who'll want to hear it.</p>
-          </li>
-        </ul>
+        <div class="pp-selves" id="pp-selves" role="group" aria-label="Switch between your selves">
+          <button type="button" class="pp-self is-active" data-self="clone"><i class="pp-sd"></i>You · clone</button>
+          <button type="button" class="pp-self" data-self="hype"><i class="pp-sd"></i>Hype</button>
+          <button type="button" class="pp-self" data-self="critic"><i class="pp-sd"></i>Critic</button>
+          <button type="button" class="pp-self" data-self="study"><i class="pp-sd"></i>Study-buddy</button>
+        </div>
       </div>
 
-      <p class="cap-rail">
+      <p class="cap-rail" aria-hidden="true">
         <span class="cap-lead">also</span>
+        <span>see yourself anew</span>
         <span>meet other Personas</span>
-        <span>plans without you</span>
-        <span>shared memory</span>
+        <span>build your own</span>
         <span class="cap-more">&amp; a lot more</span>
       </p>
     </div>
@@ -100,7 +91,7 @@
 
 <style>
   /* device LEFT / copy RIGHT on desktop; copy leads the source so mobile reads
-     the pitch first, then sees the clone in action. */
+     the pitch first, then meets the selves. */
   @media (min-width: 901px) {
     .persona-stage { order: -1; }
   }
@@ -108,149 +99,313 @@
     .persona-stage { max-width: 460px; margin-inline: auto; width: 100%; }
   }
 
-  /* ── activity feed ── */
-  .feed { list-style: none; padding-top: 1rem; display: flex; flex-direction: column; gap: .35rem; min-height: 300px; }
-  .feed-row {
-    display: grid; grid-template-columns: 4.2rem 1fr; gap: .8rem; align-items: start;
-    padding: .85rem .6rem; border-radius: var(--r-md);
-    border: 1px solid transparent;
+  /* ───────── Persona — live, playable selves card ───────── */
+  .persona-stage { position: relative; }
+  .pp-glow {
+    position: absolute; inset: -8% -6% -10% -6%; z-index: 0; pointer-events: none;
+    background:
+      radial-gradient(58% 50% at 26% 16%, rgba(201, 184, 255, .28), transparent 70%),
+      radial-gradient(58% 55% at 82% 84%, rgba(255, 210, 122, .18), transparent 72%);
+    filter: blur(36px);
   }
-  .feed-row + .feed-row { border-top: 1px solid var(--line); border-radius: 0; }
-  .feed-when {
-    font-family: var(--font-mono); font-size: .64rem; line-height: 1.7;
-    text-transform: uppercase; letter-spacing: .12em; color: var(--ink-faint);
-    text-align: right; padding-top: .1rem;
-  }
-  .feed-body { font-size: .95rem; line-height: 1.5; color: var(--ink-soft); }
-  .feed-body b { color: var(--ink); font-weight: 600; }
-
-  /* ── presence strip — "an Instagram of clones": everyone's, always available.
-     Overlapping avatars + live dots are the highest-salience social cue there is,
-     so the idea lands wordlessly. ── */
-  .presence {
-    display: flex; align-items: center; gap: .6rem; flex-wrap: wrap;
-    padding: .9rem 0 .2rem;
-  }
-  .presence-lead {
-    font-family: var(--font-mono); font-size: .58rem;
-    text-transform: uppercase; letter-spacing: .16em; color: var(--lavender-deep);
-  }
-  html[data-theme="dark"] .presence-lead { color: var(--lavender); }
-  .pavatars { display: inline-flex; }
-  .pav {
-    width: 26px; height: 26px; border-radius: 50%; position: relative;
-    margin-left: -7px; box-shadow: 0 0 0 2px var(--glass-strong);
-  }
-  .pav:first-child { margin-left: 0; }
-  .pav-you { background: var(--cta-grad); }
-  .pav-a   { background: linear-gradient(135deg, var(--lavender), var(--lavender-deep)); }
-  .pav-b   { background: linear-gradient(135deg, var(--mint), var(--aqua)); }
-  .pav-c   { background: linear-gradient(135deg, var(--gold), var(--peach-deep)); }
-  .pav-more {
-    background: var(--surface-strong); color: var(--ink-faint);
-    display: inline-flex; align-items: center; justify-content: center;
-    font-size: .8rem; font-weight: 600; box-shadow: 0 0 0 2px var(--glass-strong);
-  }
-  .pav:not(.pav-more)::after {
-    content: ''; position: absolute; right: -1px; bottom: -1px;
-    width: 8px; height: 8px; border-radius: 50%;
-    background: var(--mint-deep); box-shadow: 0 0 0 2px var(--glass-strong), 0 0 7px var(--mint-deep);
-  }
-  .presence-note { margin-left: auto; font-size: .78rem; color: var(--ink-faint); }
-
-  /* avatar silhouettes — Bitmoji-style faces stamped on each presence dot, so
-     "everyone has a clone that looks like them" reads at a glance. */
-  .pav:not(.pav-more)::before {
-    content: ''; position: absolute; inset: 0; border-radius: 50%;
-    background: rgba(255, 255, 255, .92);
-    -webkit-mask: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2024%2024'%3E%3Ccircle%20cx='12'%20cy='9'%20r='3.6'/%3E%3Cpath%20d='M5%2020c0-4.2%203.3-6.7%207-6.7s7%202.5%207%206.7z'/%3E%3C/svg%3E") center / 16px 16px no-repeat;
-            mask: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2024%2024'%3E%3Ccircle%20cx='12'%20cy='9'%20r='3.6'/%3E%3Cpath%20d='M5%2020c0-4.2%203.3-6.7%207-6.7s7%202.5%207%206.7z'/%3E%3C/svg%3E") center / 16px 16px no-repeat;
-  }
-
-  /* call controls in the card head — the Persona is a living presence you can
-     ring or video, exactly like a person. */
-  .pcall { display: inline-flex; align-items: center; gap: .35rem; }
-  .pcall-btn {
-    width: 27px; height: 27px; border-radius: 50%; flex: none;
-    display: inline-flex; align-items: center; justify-content: center;
-    color: var(--ink-soft); border: 1px solid var(--line-strong); background: var(--surface);
-  }
-  .pcall-btn svg { width: 14px; height: 14px; fill: currentColor; }
-  .pcall-video {
-    color: #fff; border: 0;
-    background: linear-gradient(135deg, var(--lavender), var(--lavender-deep));
-    box-shadow: 0 0 14px rgba(201, 184, 255, .45);
-  }
-
-  /* ── capability rail — the long tail, scannable; "and a lot more" ── */
-  .cap-rail {
+  .pp-card {
     position: relative; z-index: 1;
-    margin-top: 1.1rem;
-    display: flex; flex-wrap: wrap; gap: .4rem;
+    border-radius: var(--r-lg);
+    background: var(--glass-strong);
+    backdrop-filter: blur(20px) saturate(150%);
+    -webkit-backdrop-filter: blur(20px) saturate(150%);
+    border: 1px solid var(--line-strong);
+    box-shadow: var(--shadow-soft), inset 0 1px 0 rgba(255, 255, 255, .45);
+    padding: 1.1rem 1.1rem 1.2rem;
   }
+  .pp-card::after {
+    content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+    padding: 1px; opacity: .55;
+    background: linear-gradient(150deg, rgba(201, 184, 255, .6), transparent 55%);
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+            mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+            mask-composite: exclude;
+  }
+
+  /* head — avatar morphs to the active self */
+  .pp-head { display: flex; align-items: center; gap: .7rem; padding: .2rem .3rem 1rem; border-bottom: 1px solid var(--line); }
+  .pp-avatar {
+    position: relative; width: 40px; height: 40px; border-radius: 50%; flex: none;
+    background: linear-gradient(135deg, var(--lavender), var(--lavender-deep));
+    box-shadow: 0 0 18px rgba(201, 184, 255, .5), inset 0 1px 2px rgba(255, 255, 255, .4);
+    transition: background 420ms var(--ease-out), box-shadow 420ms var(--ease-out);
+  }
+  .pp-avatar[data-self="hype"]   { background: linear-gradient(135deg, var(--gold), var(--peach-deep)); box-shadow: 0 0 18px rgba(255, 210, 122, .55), inset 0 1px 2px rgba(255,255,255,.4); }
+  .pp-avatar[data-self="critic"] { background: linear-gradient(135deg, var(--coral), var(--coral-deep)); box-shadow: 0 0 18px rgba(255, 107, 157, .5), inset 0 1px 2px rgba(255,255,255,.4); }
+  .pp-avatar[data-self="study"]  { background: linear-gradient(135deg, var(--mint), var(--aqua)); box-shadow: 0 0 18px rgba(91, 192, 255, .45), inset 0 1px 2px rgba(255,255,255,.4); }
+  .pp-echo {
+    position: absolute; inset: 0; border-radius: 50%;
+    border: 1px solid rgba(201, 184, 255, .5);
+    animation: pp-echo 3.6s ease-out infinite;
+  }
+  .pp-echo.e2 { animation-delay: 1.8s; }
+  @keyframes pp-echo { 0% { transform: scale(1); opacity: .7; } 100% { transform: scale(1.7); opacity: 0; } }
+  .pp-who { display: flex; flex-direction: column; line-height: 1.2; }
+  .pp-who b { font-size: .98rem; color: var(--ink); font-weight: 600; }
+  .pp-status { display: inline-flex; align-items: center; gap: .35rem; font-style: normal; font-size: .72rem; color: var(--ink-faint); letter-spacing: .02em; }
+  .pp-live {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--lavender-deep); box-shadow: 0 0 8px var(--lavender-deep);
+    animation: pp-pulse 2.4s ease-in-out infinite;
+  }
+  @keyframes pp-pulse { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: .5; transform: scale(.7); } }
+  .pp-badge {
+    margin-left: auto;
+    font-family: var(--font-mono); font-size: .6rem;
+    text-transform: uppercase; letter-spacing: .16em; color: var(--lavender-deep);
+    padding: .25rem .55rem; border-radius: var(--r-pill);
+    border: 1px solid rgba(201, 184, 255, .35);
+    transition: color 420ms var(--ease-out), border-color 420ms var(--ease-out);
+  }
+  html[data-theme="light"] .pp-badge { color: var(--lavender-ink); }
+  .pp-badge[data-self="hype"]   { color: var(--gold-ink); border-color: rgba(255, 210, 122, .5); }
+  html[data-theme="dark"] .pp-badge[data-self="hype"] { color: var(--gold); }
+  .pp-badge[data-self="critic"] { color: var(--coral); border-color: rgba(255, 107, 157, .4); }
+  html[data-theme="light"] .pp-badge[data-self="critic"] { color: var(--coral-ink); }
+  .pp-badge[data-self="study"]  { color: var(--aqua-ink); border-color: rgba(91, 192, 255, .4); }
+  html[data-theme="dark"] .pp-badge[data-self="study"] { color: var(--aqua); }
+
+  /* feed — one self at a time (switch replaces) */
+  .pp-feed { min-height: clamp(238px, 33vh, 300px); margin-top: 1rem; padding: .1rem; }
+  .pp-row { display: flex; }
+
+  .pp-bubble {
+    max-width: 92%; padding: .8rem .95rem;
+    font-size: .94rem; line-height: 1.5; color: var(--ink);
+    border-radius: 6px 18px 18px 18px;
+    background: linear-gradient(135deg, rgba(201, 184, 255, .16), rgba(150, 131, 230, .07));
+    border: 1px solid rgba(201, 184, 255, .22);
+    animation: pp-in 360ms var(--ease-spring) both;
+  }
+  .pp-bubble[data-self="hype"]   { background: linear-gradient(135deg, rgba(255, 210, 122, .18), rgba(255, 182, 138, .08)); border-color: rgba(255, 210, 122, .3); }
+  .pp-bubble[data-self="critic"] { background: linear-gradient(135deg, rgba(255, 107, 157, .15), rgba(244, 69, 140, .07)); border-color: rgba(255, 107, 157, .24); }
+  .pp-bubble[data-self="study"]  { background: linear-gradient(135deg, rgba(91, 192, 255, .15), rgba(106, 211, 184, .08)); border-color: rgba(91, 192, 255, .24); }
+  @keyframes pp-in { from { opacity: 0; transform: translateY(10px) scale(.98); } to { opacity: 1; transform: none; } }
+  .pp-cap { display: inline-flex; vertical-align: -3px; margin-right: .4rem; color: var(--lavender-deep); }
+  .pp-cap svg { width: 15px; height: 15px; }
+  html[data-theme="light"] .pp-cap { color: var(--lavender-ink); }
+  .pp-bubble[data-self="hype"] .pp-cap   { color: var(--gold-ink); } html[data-theme="dark"] .pp-bubble[data-self="hype"] .pp-cap { color: var(--gold); }
+  .pp-bubble[data-self="critic"] .pp-cap { color: var(--coral); } html[data-theme="light"] .pp-bubble[data-self="critic"] .pp-cap { color: var(--coral-ink); }
+  .pp-bubble[data-self="study"] .pp-cap  { color: var(--aqua-ink); } html[data-theme="dark"] .pp-bubble[data-self="study"] .pp-cap { color: var(--aqua); }
+
+  /* "becoming…" — morph shimmer between selves */
+  .pp-think { display: inline-flex; gap: .3rem; padding: .8rem .95rem; }
+  .pp-think span { width: 7px; height: 7px; border-radius: 50%; background: var(--lavender-deep); animation: pp-bounce 1.2s ease-in-out infinite; }
+  .pp-think span:nth-child(2) { animation-delay: .18s; }
+  .pp-think span:nth-child(3) { animation-delay: .36s; }
+  @keyframes pp-bounce { 0%,60%,100% { transform: translateY(0); opacity: .5; } 30% { transform: translateY(-5px); opacity: 1; } }
+
+  /* in-character artifact */
+  .pp-art {
+    margin-top: .55rem; padding: .7rem .8rem .8rem;
+    border-radius: 14px; background: var(--surface); border: 1px solid var(--line-strong);
+    animation: pp-art-in 440ms var(--ease-spring) both;
+  }
+  @keyframes pp-art-in { from { opacity: 0; transform: translateY(8px) scale(.98); } to { opacity: 1; transform: none; } }
+  .pp-art-head { display: flex; align-items: center; gap: .5rem; font-size: .82rem; font-weight: 600; color: var(--ink); }
+  .pp-art-eta { margin-left: auto; font-family: var(--font-mono); font-size: .58rem; font-weight: 400; letter-spacing: .06em; color: var(--ink-faint); text-transform: lowercase; }
+
+  /* clone — people kept close */
+  .pp-keep { display: flex; align-items: center; gap: .4rem; flex-wrap: wrap; margin-top: .6rem; }
+  .pp-face {
+    width: 24px; height: 24px; border-radius: 50%; flex: none;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: .62rem; font-weight: 700; color: #fff;
+    background: linear-gradient(135deg, var(--lavender), var(--lavender-deep));
+    box-shadow: inset 0 1px 2px rgba(255,255,255,.4);
+  }
+  .pp-face.f2 { background: linear-gradient(135deg, var(--coral), var(--peach-deep)); font-size: .56rem; }
+  .pp-keep-txt { font-size: .8rem; color: var(--ink-soft); }
+
+  /* hype + study — a filling meter */
+  .pp-meter { height: 7px; margin-top: .6rem; border-radius: 999px; background: var(--line); overflow: hidden; }
+  .pp-meter span { display: block; height: 100%; width: 8%; border-radius: 999px; background: linear-gradient(90deg, var(--gold), var(--peach-deep)); }
+  .pp-art.study .pp-meter span { background: linear-gradient(90deg, var(--aqua), var(--mint-deep)); }
+  .pp-art.run .pp-meter span { animation: pp-fill 1.5s var(--ease-out) forwards; }
+  .pp-art.study.run .pp-meter span { animation: pp-fill-study 1.5s var(--ease-out) forwards; }
+  @keyframes pp-fill { from { width: 8%; } to { width: 94%; } }
+  @keyframes pp-fill-study { from { width: 8%; } to { width: 58%; } }
+
+  /* critic — ranked weak spots */
+  .pp-crit { list-style: none; margin-top: .5rem; display: grid; gap: .34rem; counter-reset: c; }
+  .pp-crit li {
+    position: relative; padding-left: 1.5rem; font-size: .82rem; color: var(--ink-soft);
+    opacity: 0; transform: translateY(4px);
+  }
+  .pp-crit li::before {
+    counter-increment: c; content: counter(c);
+    position: absolute; left: 0; top: .05em; width: 16px; height: 16px;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-family: var(--font-mono); font-size: .56rem; font-weight: 700; color: var(--coral);
+    border-radius: 50%; background: rgba(255, 107, 157, .14); border: 1px solid rgba(255, 107, 157, .35);
+  }
+  html[data-theme="light"] .pp-crit li::before { color: var(--coral-ink); }
+  .pp-art.run .pp-crit li { animation: pp-tick 400ms var(--ease-out) both; }
+  .pp-art.run .pp-crit li:nth-child(2) { animation-delay: .14s; }
+  .pp-art.run .pp-crit li:nth-child(3) { animation-delay: .28s; }
+  @keyframes pp-tick { to { opacity: 1; transform: none; } }
+
+  /* selves selector — the interactive control */
+  .pp-selves { display: flex; flex-wrap: wrap; gap: .45rem; margin-top: 1rem; }
+  .pp-self {
+    display: inline-flex; align-items: center; gap: .45rem;
+    font-family: inherit; font-size: .82rem; font-weight: 500; color: var(--ink-soft);
+    padding: .5rem .8rem; border-radius: var(--r-pill);
+    background: var(--surface); border: 1px solid var(--line-strong); cursor: pointer;
+    transition: transform 200ms var(--ease-spring), border-color 200ms var(--ease-out),
+                color 200ms var(--ease-out), background 200ms var(--ease-out);
+  }
+  .pp-self .pp-sd { width: 9px; height: 9px; border-radius: 50%; flex: none; }
+  .pp-self[data-self="clone"]  .pp-sd { background: linear-gradient(135deg, var(--lavender), var(--lavender-deep)); }
+  .pp-self[data-self="hype"]   .pp-sd { background: linear-gradient(135deg, var(--gold), var(--peach-deep)); }
+  .pp-self[data-self="critic"] .pp-sd { background: linear-gradient(135deg, var(--coral), var(--coral-deep)); }
+  .pp-self[data-self="study"]  .pp-sd { background: linear-gradient(135deg, var(--mint), var(--aqua)); }
+  .pp-self:hover { transform: translateY(-2px); color: var(--ink); border-color: rgba(201, 184, 255, .5); }
+  .pp-self:active { transform: translateY(0) scale(.97); }
+  .pp-self:focus-visible { outline: 2px solid var(--lavender-deep); outline-offset: 2px; }
+  .pp-self.is-active {
+    color: var(--ink); border-color: rgba(201, 184, 255, .6);
+    background: linear-gradient(135deg, rgba(201, 184, 255, .16), rgba(150, 131, 230, .08));
+  }
+  .pp-self.is-active[data-self="hype"]   { border-color: rgba(255, 210, 122, .6); background: linear-gradient(135deg, rgba(255, 210, 122, .18), rgba(255, 182, 138, .08)); }
+  .pp-self.is-active[data-self="critic"] { border-color: rgba(255, 107, 157, .55); background: linear-gradient(135deg, rgba(255, 107, 157, .15), rgba(244, 69, 140, .07)); }
+  .pp-self.is-active[data-self="study"]  { border-color: rgba(91, 192, 255, .55); background: linear-gradient(135deg, rgba(91, 192, 255, .15), rgba(106, 211, 184, .08)); }
+
+  /* ── capability rail ── */
+  .cap-rail { position: relative; z-index: 1; margin-top: 1.1rem; display: flex; flex-wrap: wrap; gap: .4rem; }
   .cap-rail span {
     font-family: var(--font-mono); font-size: .6rem;
     text-transform: lowercase; letter-spacing: .04em; color: var(--ink-faint);
     padding: .26rem .58rem; border-radius: var(--r-pill);
     border: 1px solid var(--line); background: var(--surface);
   }
-  .cap-rail .cap-lead {
-    color: var(--lavender-deep); border-color: rgba(201, 184, 255, .3);
-    text-transform: uppercase; letter-spacing: .14em;
-  }
+  .cap-rail .cap-lead { color: var(--lavender-deep); border-color: rgba(201, 184, 255, .3); text-transform: uppercase; letter-spacing: .14em; }
   html[data-theme="dark"] .cap-rail .cap-lead { color: var(--lavender); }
+  html[data-theme="light"] .cap-rail .cap-lead { color: var(--lavender-ink); }
   .cap-rail .cap-more { color: var(--ink-soft); border-style: dashed; }
 
-  /* light theme — deepen accent TEXT to clear WCAG AA on cream */
-  html[data-theme="light"] .presence-lead { color: var(--lavender-ink); }
-  html[data-theme="light"] .cap-rail .cap-lead { color: var(--lavender-ink); }
-  html[data-theme="light"] .feed-row.legacy .feed-when { color: var(--gold-ink); }
-
-  /* legacy beat — warm gold tint, never morbid; this is "carries forward". */
-  .feed-row.legacy {
-    margin-top: .4rem; border-top: 1px solid var(--line);
-    background: linear-gradient(180deg, rgba(255, 210, 122, .07), transparent);
-    border-radius: 0 0 var(--r-md) var(--r-md);
-  }
-  .feed-row.legacy .feed-when { color: var(--gold); }
-  .feed-row.legacy .feed-body { color: var(--ink); }
-
-  /* staggered reveal — the clone "doing things", one beat at a time */
-  :global(html.js) .feed-row { opacity: 0; transform: translateY(10px); transition: opacity 520ms var(--ease-out), transform 520ms var(--ease-out); }
-  :global(html.js) .feed-row.in { opacity: 1; transform: none; }
-
   @media (prefers-reduced-motion: reduce) {
-    :global(html.js) .feed-row { opacity: 1 !important; transform: none !important; }
+    .pp-avatar, .pp-echo, .pp-live { animation: none !important; }
+    .pp-bubble, .pp-art { animation: none !important; }
+    .pp-think span { animation: none !important; }
+    .pp-meter span { animation: none !important; width: 94% !important; }
+    .pp-art.study .pp-meter span { width: 58% !important; }
+    .pp-crit li { animation: none !important; opacity: 1 !important; transform: none !important; }
   }
 </style>
 
 <script is:inline>
-  // Persona feed — gentle sequential reveal when scrolled into view (the clone
-  // catching you up, one item at a time). Copy reveals handled globally.
+  // Persona — live, playable. Tap a self → the Persona "becomes" it: avatar morphs,
+  // a brief shimmer, then that self speaks in its own voice with an in-character
+  // artifact. Auto-switches once on scroll-in so the range is felt, not told.
   (function () {
     var stage = document.getElementById('persona-stage');
     if (!stage) return;
+    var feed = document.getElementById('pp-feed');
+    var selves = [].slice.call(stage.querySelectorAll('.pp-self'));
+    var avatar = document.getElementById('pp-avatar');
+    var badge = document.getElementById('pp-badge');
+    var nameEl = document.getElementById('pp-name');
+    var modeEl = document.getElementById('pp-mode');
+    if (!feed) return;
     var reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    var rows = [].slice.call(stage.querySelectorAll('.feed-row'));
-    var started = false;
+    var busy = false, interacted = false, autoTimer = 0, armed = false, current = 'clone';
 
+    // Mirror Astro's scope attribute onto JS-built nodes so component styles apply.
+    var CID = null;
+    (function () { var a = stage.attributes; for (var i = 0; i < a.length; i++) { if (a[i].name.indexOf('data-astro-cid-') === 0) { CID = a[i].name; break; } } })();
+    function tag(el) { if (!CID || !el) return el; el.setAttribute(CID, ''); var k = el.querySelectorAll('*'); for (var i = 0; i < k.length; i++) k[i].setAttribute(CID, ''); return el; }
+
+    function icon(name) {
+      var p = {
+        clone:  '<circle cx="9" cy="8.5" r="3"/><path d="M3.6 19c0-3 2.4-4.8 5.4-4.8s5.4 1.8 5.4 4.8"/><path d="M16.2 6.4a3 3 0 0 1 0 5.5"/><path d="M18.8 19c0-2-1-3.5-2.6-4.3"/>',
+        hype:   '<path d="M12 3l2.2 5.2L20 9l-4.5 3.6L17 19l-5-3-5 3 1.5-6.4L4 9l5.8-.8z"/>',
+        critic: '<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3.4"/>',
+        study:  '<path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H12v15.5H6.5A2.5 2.5 0 0 0 4 21z"/><path d="M20 5.5A2.5 2.5 0 0 0 17.5 3H12v15.5h5.5A2.5 2.5 0 0 1 20 21z"/>'
+      }[name] || '';
+      return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + p + '</svg>';
+    }
+
+    var DATA = {
+      clone:  { name: 'Your clone', mode: 'living as you', badge: 'clone',
+                msg: 'I kept your people close today. Replied to Maya in your voice, locked your July window seat, and saved the story for later.',
+                art: '<div class="pp-art clone"><div class="pp-art-head">kept close today<span class="pp-art-eta">in your voice</span></div><div class="pp-keep"><span class="pp-face">M</span><span class="pp-face f2">मां</span><span class="pp-keep-txt">2 people, held — without you lifting a finger</span></div></div>' },
+      hype:   { name: 'Hype', mode: 'in your corner', badge: 'character',
+                msg: "You've got this. You've done harder things half-asleep. Walk in like the room's already yours — because today, it is.",
+                art: '<div class="pp-art hype"><div class="pp-art-head">confidence<span class="pp-art-eta">+ you</span></div><div class="pp-meter"><span></span></div></div>' },
+      critic: { name: 'Critic', mode: 'honest, on purpose', badge: 'character',
+                msg: "Your deck's strong, but slide 4 buries the ask and the close is soft. Want the three weak spots, ranked?",
+                art: '<div class="pp-art critic"><div class="pp-art-head">weak spots · ranked<span class="pp-art-eta">be honest</span></div><ul class="pp-crit"><li>slide 4 buries the ask</li><li>no proof for the $4M line</li><li>the close is soft</li></ul></div>' },
+      study:  { name: 'Study-buddy', mode: 'where we left off', badge: 'character',
+                msg: "Picking up where we left off — 12 cards due and your weak set is the Krebs cycle. Give me five minutes?",
+                art: '<div class="pp-art study"><div class="pp-art-head">12 cards due · 7 done<span class="pp-art-eta">5 min</span></div><div class="pp-meter study"><span></span></div></div>' }
+    };
+
+    function render(key) {
+      var d = DATA[key]; if (!d) return;
+      feed.innerHTML = '';
+      var row = document.createElement('div'); row.className = 'pp-row';
+      var safe = String(d.msg).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      row.innerHTML = '<div class="pp-bubble" data-self="' + key + '"><span class="pp-cap">' + icon(key) + '</span>' + safe + '</div>';
+      tag(row); feed.appendChild(row);
+      var wrap = document.createElement('div'); wrap.innerHTML = d.art;
+      var art = wrap.firstChild; tag(art); feed.appendChild(art);
+      requestAnimationFrame(function () { art.classList.add('run'); });
+    }
+
+    function setActive(el) {
+      selves.forEach(function (s) { s.classList.remove('is-active'); });
+      el.classList.add('is-active');
+    }
+
+    function become(key) {
+      if (busy || key === current) return;
+      interacted = true;
+      if (autoTimer) { clearTimeout(autoTimer); autoTimer = 0; }
+      busy = true; current = key;
+      var d = DATA[key];
+
+      // morph the head immediately
+      avatar.setAttribute('data-self', key);
+      badge.setAttribute('data-self', key); badge.textContent = d.badge;
+      nameEl.textContent = d.name; modeEl.textContent = d.mode;
+
+      if (reduced) { render(key); busy = false; return; }
+
+      // brief "becoming…" shimmer, then the new self speaks
+      feed.innerHTML = '';
+      var t = document.createElement('div'); t.className = 'pp-row';
+      t.innerHTML = '<div class="pp-think"><span></span><span></span><span></span></div>';
+      tag(t); feed.appendChild(t);
+      setTimeout(function () { render(key); busy = false; }, 620);
+    }
+
+    selves.forEach(function (s) {
+      s.addEventListener('click', function () { setActive(s); become(s.getAttribute('data-self')); });
+    });
+
+    // auto-play one switch on scroll-in (feel the range without being told)
     function visibleFrac(el) {
       var r = el.getBoundingClientRect();
       var h = window.innerHeight || document.documentElement.clientHeight;
       if (r.height === 0) return (r.top < h && r.bottom > 0) ? 1 : 0;
       return Math.max(0, Math.min(r.bottom, h) - Math.max(r.top, 0)) / Math.min(r.height, h);
     }
-    function run() {
-      if (started) return;
-      started = true;
-      if (reduced) { rows.forEach(function (r) { r.classList.add('in'); }); return; }
-      rows.forEach(function (r, i) { setTimeout(function () { r.classList.add('in'); }, 260 + i * 540); });
-    }
     function check() {
-      if (visibleFrac(stage) >= 0.3) {
-        run();
+      if (armed) return;
+      if (visibleFrac(stage) >= 0.35) {
+        armed = true;
         window.removeEventListener('scroll', check);
         window.removeEventListener('resize', check);
+        if (!reduced) { autoTimer = setTimeout(function () {
+          if (!interacted) { var el = selves.filter(function (s) { return s.getAttribute('data-self') === 'hype'; })[0]; if (el) { setActive(el); become('hype'); } }
+        }, 1800); }
       }
     }
     requestAnimationFrame(function () { requestAnimationFrame(check); });

@@ -1,0 +1,201 @@
+---
+// Spine — the connective thread that turns the page into one journey. A slim
+// fixed rail (desktop) charts the five pillars in order; its fill grows and warms
+// → cools (coral → lavender → gold → mint → aqua) as you descend, the current
+// pillar's node glows, and a faint world-atmosphere wash behind everything
+// recolours to wherever you are — so the world quietly evolves around you.
+// Echoes the hero's memory thread; reduced-motion safe; hidden below 1080px.
+---
+
+{/* world-atmosphere — a soft left-anchored bloom that recolours per active pillar */}
+<div class="spine-atmos" id="spine-atmos" aria-hidden="true"></div>
+
+{/* progress rail — five jump nodes, warm→cool fill, active glow */}
+<nav class="spine-rail" id="spine-rail" aria-label="Page progress">
+  <span class="spine-line" aria-hidden="true"><span class="spine-fill" id="spine-fill"></span></span>
+
+  <a class="spine-node sn-blak"     href="#blak"     data-spine="blak"><span class="sn-dot"></span><span class="sn-label">Blak</span></a>
+  <a class="spine-node sn-persona"  href="#persona"  data-spine="persona"><span class="sn-dot"></span><span class="sn-label">Persona</span></a>
+  <a class="spine-node sn-learning" href="#learning" data-spine="learning"><span class="sn-dot"></span><span class="sn-label">Learning</span></a>
+  <a class="spine-node sn-minit"    href="#minit"    data-spine="minit"><span class="sn-dot"></span><span class="sn-label">Minit</span></a>
+  <a class="spine-node sn-nexus"    href="#nexus"    data-spine="nexus"><span class="sn-dot"></span><span class="sn-label">Nexus</span></a>
+</nav>
+
+<style>
+  /* ═══════════ world-atmosphere wash ═══════════ */
+  /* behind all content (above the base .world), a colour that tracks where you are.
+     background-color transitions smoothly; a radial mask shapes it into a calm bloom. */
+  .spine-atmos {
+    position: fixed; inset: -12% 0; z-index: -1; pointer-events: none;
+    background-color: transparent;
+    -webkit-mask: radial-gradient(74% 60% at 15% 50%, #000, transparent 76%);
+            mask: radial-gradient(74% 60% at 15% 50%, #000, transparent 76%);
+    opacity: .24; will-change: transform;
+    transition: background-color 900ms var(--ease-soft), opacity 900ms var(--ease-soft);
+  }
+  .spine-atmos.at-blak     { background-color: var(--coral); }
+  .spine-atmos.at-persona  { background-color: var(--lavender); }
+  .spine-atmos.at-learning { background-color: var(--gold); }
+  .spine-atmos.at-minit    { background-color: var(--mint); }
+  .spine-atmos.at-nexus    { background-color: var(--aqua); }
+  html[data-theme="light"] .spine-atmos { opacity: .17; mix-blend-mode: multiply; }
+
+  /* ═══════════ progress rail ═══════════ */
+  .spine-rail {
+    position: fixed; left: 26px; top: 50%; z-index: 40;
+    transform: translate(-8px, -50%);
+    display: flex; flex-direction: column; align-items: center; gap: 20px;
+    opacity: 0; pointer-events: none;
+    transition: opacity 600ms var(--ease-out), transform 600ms var(--ease-out);
+  }
+  .spine-rail.show { opacity: 1; transform: translate(0, -50%); pointer-events: auto; }
+
+  /* the track + warm→cool fill (revealed top-down via clip-path, no distortion) */
+  .spine-line {
+    position: absolute; left: 50%; top: 13px; bottom: 13px; width: 2px;
+    transform: translateX(-50%); border-radius: 2px;
+    background: var(--line-strong); overflow: hidden;
+  }
+  .spine-fill {
+    position: absolute; inset: 0; border-radius: 2px;
+    background: linear-gradient(180deg,
+      var(--coral) 0%, var(--lavender) 28%, var(--gold) 52%, var(--mint-deep) 76%, var(--aqua) 100%);
+    clip-path: inset(0 0 calc((1 - var(--fill, 0)) * 100%) 0);
+    transition: clip-path 180ms linear;
+  }
+
+  /* nodes — a dot per pillar, currentColor carries the pillar tint */
+  .spine-node {
+    position: relative; z-index: 1;
+    display: grid; place-items: center; width: 26px; height: 26px;
+  }
+  .sn-blak     { color: var(--coral); }
+  .sn-persona  { color: var(--lavender); }
+  .sn-learning { color: var(--gold); }
+  .sn-minit    { color: var(--mint-deep); }
+  .sn-nexus    { color: var(--aqua); }
+
+  .sn-dot {
+    width: 11px; height: 11px; border-radius: 50%;
+    background: var(--surface-strong); border: 1.5px solid var(--line-strong);
+    transition: transform 320ms var(--ease-spring), background 280ms var(--ease-out),
+                border-color 280ms var(--ease-out), box-shadow 280ms var(--ease-out);
+  }
+  .spine-node:hover .sn-dot { border-color: currentColor; }
+  .spine-node.is-done .sn-dot { background: currentColor; border-color: currentColor; }
+  .spine-node.is-active .sn-dot {
+    transform: scale(1.55); background: currentColor; border-color: currentColor;
+    box-shadow: 0 0 4px currentColor, 0 0 14px currentColor;
+  }
+
+  /* label — quiet, appears on the active node or hover */
+  .sn-label {
+    position: absolute; left: 24px; top: 50%;
+    transform: translateY(-50%) translateX(-5px);
+    font-family: var(--font-mono); font-size: .58rem;
+    text-transform: uppercase; letter-spacing: .15em; color: currentColor;
+    white-space: nowrap; pointer-events: none;
+    opacity: 0; transition: opacity 240ms var(--ease-out), transform 240ms var(--ease-out);
+  }
+  .spine-node:hover .sn-label,
+  .spine-node.is-active .sn-label { opacity: .92; transform: translateY(-50%) translateX(0); }
+
+  /* light theme — deepen label text so it clears AA on cream (dots stay vivid) */
+  html[data-theme="light"] .sn-blak     .sn-label { color: var(--coral-ink); }
+  html[data-theme="light"] .sn-persona  .sn-label { color: var(--lavender-ink); }
+  html[data-theme="light"] .sn-learning .sn-label { color: var(--gold-ink); }
+  html[data-theme="light"] .sn-minit    .sn-label { color: var(--mint-ink); }
+  html[data-theme="light"] .sn-nexus    .sn-label { color: var(--aqua-ink); }
+
+  /* tablet & down — the rail would crowd the content; drop it (atmosphere stays) */
+  @media (max-width: 1080px) {
+    .spine-rail { display: none; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .spine-atmos { transition: none; }
+    .spine-fill { transition: none; }
+    .sn-dot, .sn-label { transition: none; }
+  }
+</style>
+
+<script is:inline>
+  /* Spine — maps scroll position to (1) a warm→cool fill, (2) the active pillar
+     node, (3) a recolouring atmosphere wash. rAF-throttled, transform/clip only.
+     The rail fades in once you leave the hero, so the opening stays pristine. */
+  (function () {
+    var rail  = document.getElementById('spine-rail');
+    var fill  = document.getElementById('spine-fill');
+    var atmos = document.getElementById('spine-atmos');
+    if (!fill || !atmos) return;
+
+    var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    var ids = ['blak', 'persona', 'learning', 'minit', 'nexus'];
+    var nodes = {};
+    ids.forEach(function (id) { nodes[id] = rail ? rail.querySelector('[data-spine="' + id + '"]') : null; });
+
+    var secs = [];
+    function measure() {
+      secs = ids.map(function (id) {
+        var el = document.getElementById(id);
+        if (!el) return null;
+        var r = el.getBoundingClientRect();
+        var top = r.top + window.scrollY;
+        return { id: id, top: top, bottom: top + r.height };
+      }).filter(Boolean);
+    }
+
+    var raf = 0;
+    function update() {
+      raf = 0;
+      if (!secs.length) measure();        // sections may not have existed at init
+      if (!secs.length) return;
+      var vh = window.innerHeight || document.documentElement.clientHeight;
+      var ref = window.scrollY + vh * 0.42;
+      var first = secs[0], last = secs[secs.length - 1];
+
+      // fill — overall journey progress, first pillar → last pillar's end
+      var p = (ref - first.top) / Math.max(1, (last.bottom - first.top));
+      p = p < 0 ? 0 : p > 1 ? 1 : p;
+      fill.style.setProperty('--fill', p.toFixed(3));
+
+      // active pillar — the last one whose top we've passed
+      var active = null;
+      for (var i = 0; i < secs.length; i++) { if (ref >= secs[i].top) active = secs[i].id; }
+
+      if (rail) {
+        var aidx = active ? ids.indexOf(active) : -1;
+        ids.forEach(function (id, idx) {
+          var n = nodes[id]; if (!n) return;
+          n.classList.toggle('is-active', id === active);
+          n.classList.toggle('is-done', aidx > idx);
+        });
+        rail.classList.toggle('show', window.scrollY > vh * 0.6);
+      }
+
+      // a gentle vertical drift as you descend, so the wash feels alive, not pinned
+      if (!reduce) atmos.style.transform = 'translate3d(0,' + ((0.5 - p) * vh * 0.12).toFixed(1) + 'px,0)';
+      atmos.className = 'spine-atmos' + (active ? ' at-' + active : '');
+    }
+    function schedule() { if (!raf) raf = requestAnimationFrame(update); }
+
+    // the sections live in <main>, parsed after this inline script — wait for them
+    function init() { measure(); update(); }
+    if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', init); }
+    else { init(); }
+    window.addEventListener('scroll', schedule, { passive: true });
+    window.addEventListener('resize', function () { measure(); schedule(); }, { passive: true });
+    window.addEventListener('load', function () { measure(); update(); });
+    if (document.fonts && document.fonts.ready) { document.fonts.ready.then(function () { measure(); update(); }); }
+
+    // smooth jump from a node (honours reduced-motion)
+    ids.forEach(function (id) {
+      var n = nodes[id]; if (!n) return;
+      n.addEventListener('click', function (e) {
+        var t = document.getElementById(id); if (!t) return;
+        e.preventDefault();
+        t.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' });
+      });
+    });
+  })();
+</script>

@@ -1,10 +1,11 @@
 ---
-// Nexus — Human side, second scene and the "somewhere to belong" beat. Cool
-// palette (aqua). Show-don't-tell via a rooms panel: living discussion rooms you
-// can join anonymously, plus a Resonance match that surfaces people who genuinely
-// resonate with you — belonging by quality, not vanity metrics (the ethical
-// alternative to follower-count validation). Anonymity is the default, which is
-// what makes honest rooms safe. Device LEFT, copy RIGHT — alternating rhythm.
+// Nexus — Human side, second scene and the "somewhere to belong" beat, now a
+// *playable* tribe explorer. Cool palette (aqua). Tap a tribe and step into a
+// living, anonymous room — a couple of honest, non-performative lines and who's
+// here right now; or run a Resonance match and watch Blaksyd surface the few
+// people who genuinely resonate with you (belonging by quality, not vanity
+// metrics — the ethical alternative to follower counts). Anonymity is the
+// default, which is what makes honest rooms safe. Device LEFT, copy RIGHT.
 ---
 
 <section class="s-section nexus" id="nexus">
@@ -18,14 +19,14 @@
       </h3>
 
       <p class="s-sub" data-reveal>
-        Not a feed to perform for. Quiet rooms for what's actually on your mind —
-        and a way to find the few people who truly get it.
+        Not a feed to perform for. Find your tribe and settle in, drop into a live
+        room when something's on your mind, and meet the few people who truly get it.
       </p>
 
       <ul class="s-points" data-reveal>
-        <li><span class="pt-dot pt-aqua"></span><b>Anonymous chat</b> — speak freely, no mask to keep up.</li>
-        <li><span class="pt-dot pt-3"></span><b>Discussion rooms</b> — for whatever's moving you tonight.</li>
-        <li><span class="pt-dot pt-aqua"></span><b>Resonance match</b> — meet people who actually resonate.</li>
+        <li><span class="pt-dot pt-aqua"></span><b>Tribes</b> — persistent communities for your people and your passions.</li>
+        <li><span class="pt-dot pt-3"></span><b>Discussion rooms</b> — live moments that spark, then fade.</li>
+        <li><span class="pt-dot pt-aqua"></span><b>Resonance match</b> — meet the few who actually resonate.</li>
       </ul>
 
       <p class="s-trust" data-reveal>
@@ -37,49 +38,42 @@
       </p>
     </div>
 
-    <div class="s-stage nexus-stage" id="nexus-stage" aria-hidden="true">
-      <div class="s-glow g-cool" aria-hidden="true"></div>
-      <div class="s-card">
-        <div class="s-card-head">
-          <span class="s-orb cool"><span class="core"></span><span class="echo"></span></span>
-          <span class="who">
-            <b>Nexus</b>
-            <i class="s-live"><span class="s-live-dot"></span>you're anonymous here</i>
+    <div class="s-stage nexus-stage" id="nexus-stage" data-reveal="left" role="group" aria-label="Nexus, live — step into a tribe or find your resonance">
+      <div class="nx-glow" aria-hidden="true"></div>
+
+      <div class="nx-card">
+        <div class="nx-head">
+          <span class="nx-avatar" aria-hidden="true"><i class="nx-echo"></i></span>
+          <span class="nx-who">
+            <b id="nx-name">Nexus</b>
+            <i class="nx-status"><span class="nx-live"></span>you're anonymous here</i>
           </span>
-          <span class="s-badge">rooms</span>
+          <span class="nx-badge" id="nx-badge">tribes</span>
         </div>
 
-        <ul class="rooms" id="nexus-rooms">
-          <li class="room">
-            <span class="room-name"># late-night thoughts</span>
-            <span class="room-here"><span class="here-dot"></span>84 here</span>
-          </li>
-          <li class="room">
-            <span class="room-name"># starting over</span>
-            <span class="room-here"><span class="here-dot"></span>39 here</span>
-          </li>
-          <li class="room">
-            <span class="room-name"># made it through today</span>
-            <span class="room-here"><span class="here-dot"></span>122 here</span>
-          </li>
-          <li class="room room-more"><span>+ 240 more rooms live tonight</span></li>
-        </ul>
-
-        <div class="reso" id="nexus-reso">
-          <div class="reso-head">
-            <span class="reso-spark"></span>
-            <b>Resonance match</b>
+        <div class="nx-feed" id="nx-feed" aria-hidden="true">
+          <div class="nx-room">
+            <div class="nx-room-head"><b>Founders Who Overthink</b><span class="nx-here"><i class="nx-here-dot"></i>1.2k here</span></div>
+            <ul class="nx-msgs">
+              <li><span class="nx-anon a1"></span><div class="nx-m"><span class="nx-handle">3am brain</span><p>shipped the thing. immediately found nine problems with it.</p></div></li>
+              <li><span class="nx-anon a2"></span><div class="nx-m"><span class="nx-handle">still building</span><p>anyone else rehearse conversations that'll never happen?</p></div></li>
+            </ul>
+            <button type="button" class="nx-join">Join quietly</button>
           </div>
-          <p class="reso-body">3 people in <b>#starting over</b> feel a lot like you right now.</p>
-          <span class="reso-btn">Join quietly</span>
+        </div>
+
+        <div class="nx-tribes" id="nx-tribes" role="group" aria-label="Step into a tribe">
+          <button type="button" class="nx-tribe is-active" data-tribe="founders"><i class="nx-td"></i>Founders Who Overthink</button>
+          <button type="button" class="nx-tribe" data-tribe="starting"><i class="nx-td"></i>Starting Over</button>
+          <button type="button" class="nx-tribe live" data-tribe="today"><i class="nx-td"></i>Made It Through Today<span class="nx-livetag">live</span></button>
+          <button type="button" class="nx-tribe reso" data-tribe="reso"><span class="nx-reso-spark"></span>Resonance match</button>
         </div>
       </div>
 
-      <p class="cap-rail">
+      <p class="cap-rail" aria-hidden="true">
         <span class="cap-lead">also</span>
+        <span>start a tribe</span>
         <span>voice rooms</span>
-        <span>start a room</span>
-        <span>1:1 when you're ready</span>
         <span>no likes, no counts</span>
         <span class="cap-more">&amp; more</span>
       </p>
@@ -96,123 +90,288 @@
     .nexus-stage { max-width: 460px; margin-inline: auto; width: 100%; }
   }
 
-  /* ── rooms ── */
-  .rooms { list-style: none; padding-top: 1.1rem; display: flex; flex-direction: column; }
-  .room {
-    display: flex; align-items: center; justify-content: space-between; gap: 1rem;
-    padding: .9rem .4rem; border-bottom: 1px solid var(--line);
+  /* ───────── Nexus — live, playable tribe explorer ───────── */
+  .nexus-stage { position: relative; }
+  .nx-glow {
+    position: absolute; inset: -8% -6% -10% -6%; z-index: 0; pointer-events: none;
+    background:
+      radial-gradient(58% 50% at 28% 16%, rgba(91, 192, 255, .26), transparent 70%),
+      radial-gradient(58% 55% at 82% 84%, rgba(106, 211, 184, .2), transparent 72%);
+    filter: blur(36px);
   }
-  .room-name { font-size: .98rem; color: var(--ink); font-weight: 500; }
-  .room-here {
-    display: inline-flex; align-items: center; gap: .45rem; flex: none;
-    font-family: var(--font-mono); font-size: .68rem; letter-spacing: .04em; color: var(--ink-faint);
+  .nx-card {
+    position: relative; z-index: 1;
+    border-radius: var(--r-lg);
+    background: var(--glass-strong);
+    backdrop-filter: blur(20px) saturate(150%);
+    -webkit-backdrop-filter: blur(20px) saturate(150%);
+    border: 1px solid var(--line-strong);
+    box-shadow: var(--shadow-soft), inset 0 1px 0 rgba(255, 255, 255, .45);
+    padding: 1.1rem 1.1rem 1.2rem;
   }
-  .here-dot {
+  .nx-card::after {
+    content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+    padding: 1px; opacity: .55;
+    background: linear-gradient(150deg, rgba(91, 192, 255, .55), transparent 55%);
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+            mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+            mask-composite: exclude;
+  }
+
+  /* head */
+  .nx-head { display: flex; align-items: center; gap: .7rem; padding: .2rem .3rem 1rem; border-bottom: 1px solid var(--line); }
+  .nx-avatar {
+    position: relative; width: 40px; height: 40px; border-radius: 50%; flex: none;
+    background: linear-gradient(135deg, var(--aqua), var(--aqua-ink) 130%);
+    box-shadow: 0 0 18px rgba(91, 192, 255, .5), inset 0 1px 2px rgba(255, 255, 255, .4);
+  }
+  .nx-echo {
+    position: absolute; inset: 0; border-radius: 50%;
+    border: 1px solid rgba(91, 192, 255, .5);
+    animation: nx-echo 3.4s ease-out infinite;
+  }
+  @keyframes nx-echo { 0% { transform: scale(1); opacity: .7; } 100% { transform: scale(1.7); opacity: 0; } }
+  .nx-who { display: flex; flex-direction: column; line-height: 1.2; }
+  .nx-who b { font-size: .98rem; color: var(--ink); font-weight: 600; }
+  .nx-status { display: inline-flex; align-items: center; gap: .35rem; font-style: normal; font-size: .72rem; color: var(--ink-faint); letter-spacing: .02em; }
+  .nx-live {
     width: 6px; height: 6px; border-radius: 50%;
     background: var(--aqua); box-shadow: 0 0 8px var(--aqua);
-    animation: nexus-pulse 2.2s ease-in-out infinite;
+    animation: nx-pulse 2.4s ease-in-out infinite;
   }
-  .room:nth-child(2) .here-dot { animation-delay: .5s; }
-  .room:nth-child(3) .here-dot { animation-delay: 1s; }
-  @keyframes nexus-pulse { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: .4; transform: scale(.7); } }
+  @keyframes nx-pulse { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: .4; transform: scale(.7); } }
+  .nx-badge {
+    margin-left: auto;
+    font-family: var(--font-mono); font-size: .6rem;
+    text-transform: uppercase; letter-spacing: .16em; color: var(--aqua-ink);
+    padding: .25rem .55rem; border-radius: var(--r-pill);
+    border: 1px solid rgba(91, 192, 255, .35);
+  }
+  html[data-theme="dark"] .nx-badge { color: var(--aqua); }
 
-  /* ── resonance match highlight ── */
-  .reso {
-    margin-top: 1.1rem; padding: 1rem 1.1rem; border-radius: var(--r-md);
-    background: linear-gradient(160deg, rgba(91, 192, 255, .12), rgba(106, 211, 184, .08));
-    border: 1px solid rgba(91, 192, 255, .24);
+  /* feed (the room you've stepped into) */
+  .nx-feed { min-height: clamp(248px, 35vh, 312px); margin-top: 1rem; padding: .1rem; }
+
+  .nx-room, .nx-reso, .nx-scan { animation: nx-in 420ms var(--ease-spring) both; }
+  @keyframes nx-in { from { opacity: 0; transform: translateY(10px) scale(.99); } to { opacity: 1; transform: none; } }
+
+  .nx-room-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+  .nx-room-head b { font-size: .98rem; color: var(--ink); font-weight: 600; }
+  .nx-here { display: inline-flex; align-items: center; gap: .4rem; flex: none; font-family: var(--font-mono); font-size: .66rem; letter-spacing: .04em; color: var(--ink-faint); }
+  .nx-here-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--aqua); box-shadow: 0 0 8px var(--aqua); animation: nx-pulse 2.2s ease-in-out infinite; }
+
+  .nx-msgs { list-style: none; margin-top: .9rem; display: grid; gap: .7rem; }
+  .nx-msgs li { display: flex; gap: .6rem; align-items: flex-start; }
+  .nx-anon {
+    width: 28px; height: 28px; border-radius: 50%; flex: none; margin-top: .1rem;
+    box-shadow: inset 0 1px 2px rgba(255, 255, 255, .4);
   }
-  .reso-head { display: flex; align-items: center; gap: .55rem; }
-  .reso-head b {
-    font-family: var(--font-mono); font-size: .64rem; text-transform: uppercase;
-    letter-spacing: .16em; color: var(--aqua); font-weight: 500;
-  }
-  .reso-spark {
-    width: 14px; height: 14px; border-radius: 50%; flex: none;
-    background: radial-gradient(circle at 40% 40%, #BFE9FF, var(--aqua));
-    box-shadow: 0 0 14px rgba(91, 192, 255, .6);
-    animation: reso-glow 3s ease-in-out infinite;
-  }
-  @keyframes reso-glow { 0%,100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.18); opacity: .8; } }
-  .reso-body { margin-top: .6rem; font-size: .95rem; line-height: 1.5; color: var(--ink); }
-  .reso-body b { color: var(--aqua); font-weight: 600; }
-  .reso-btn {
-    display: inline-block; margin-top: .9rem; padding: .55rem 1.1rem;
-    border-radius: var(--r-pill); font-size: .86rem; font-weight: 600; color: var(--ink);
+  .nx-anon.a1 { background: linear-gradient(135deg, var(--aqua), var(--aqua-ink)); }
+  .nx-anon.a2 { background: linear-gradient(135deg, var(--mint), var(--mint-deep)); }
+  .nx-anon.a3 { background: linear-gradient(135deg, var(--lavender), var(--lavender-deep)); }
+  .nx-anon.a4 { background: linear-gradient(135deg, var(--peach-deep), var(--gold)); }
+  .nx-m { display: flex; flex-direction: column; gap: .1rem; }
+  .nx-handle { font-family: var(--font-mono); font-size: .6rem; text-transform: lowercase; letter-spacing: .06em; color: var(--aqua-ink); }
+  html[data-theme="dark"] .nx-handle { color: var(--aqua); }
+  .nx-m p { font-size: .9rem; line-height: 1.45; color: var(--ink-soft); }
+
+  .nx-join {
+    display: inline-block; margin-top: 1rem; padding: .55rem 1.1rem;
+    border-radius: var(--r-pill); font-family: inherit; font-size: .86rem; font-weight: 600;
+    color: var(--ink); cursor: pointer;
     background: var(--surface-strong); border: 1px solid rgba(91, 192, 255, .35);
+    transition: transform 180ms var(--ease-spring), border-color 180ms var(--ease-out);
   }
+  .nx-join:hover { transform: translateY(-1px); border-color: rgba(91, 192, 255, .6); }
+  .nx-join:active { transform: scale(.98); }
+  .nx-join:focus-visible { outline: 2px solid var(--aqua-ink); outline-offset: 2px; }
 
-  /* "+ more rooms" — the three rooms are just the surface; hundreds are live */
-  .room-more { justify-content: center; border-bottom: 0; padding-top: .8rem; }
-  .room-more span {
-    font-family: var(--font-mono); font-size: .66rem; letter-spacing: .05em;
-    text-transform: lowercase; color: var(--ink-faint);
-  }
+  /* resonance scan — "finding the few who resonate" */
+  .nx-scan { display: flex; align-items: center; gap: .9rem; padding: 1rem .3rem; }
+  .nx-radar { position: relative; width: 40px; height: 40px; flex: none; border-radius: 50%; border: 1px solid rgba(91,192,255,.3); }
+  .nx-radar i { position: absolute; inset: 0; border-radius: 50%; border: 1.5px solid var(--aqua); animation: nx-rip 1.7s ease-out infinite; }
+  .nx-radar i:nth-child(2) { animation-delay: .55s; }
+  .nx-radar i:nth-child(3) { animation-delay: 1.1s; }
+  .nx-radar::after { content: ''; position: absolute; inset: 14px; border-radius: 50%; background: radial-gradient(circle at 40% 40%, #BFE9FF, var(--aqua)); box-shadow: 0 0 12px rgba(91,192,255,.6); }
+  @keyframes nx-rip { 0% { transform: scale(.35); opacity: .9; } 100% { transform: scale(1); opacity: 0; } }
+  .nx-scan-txt { font-size: .9rem; color: var(--ink-soft); }
 
-  /* capability rail — the long tail of Nexus, scannable */
-  .cap-rail {
-    position: relative; z-index: 1;
-    margin-top: 1.1rem;
-    display: flex; flex-wrap: wrap; gap: .4rem;
+  /* resonance result */
+  .nx-reso-head { display: flex; align-items: center; gap: .55rem; }
+  .nx-reso-head b { font-family: var(--font-mono); font-size: .64rem; text-transform: uppercase; letter-spacing: .16em; color: var(--aqua-ink); font-weight: 500; }
+  html[data-theme="dark"] .nx-reso-head b { color: var(--aqua); }
+  .nx-reso-spark, .nx-tribe.reso .nx-reso-spark {
+    width: 13px; height: 13px; border-radius: 50%; flex: none;
+    background: radial-gradient(circle at 40% 40%, #BFE9FF, var(--aqua));
+    box-shadow: 0 0 12px rgba(91, 192, 255, .6);
+    animation: nx-glow 3s ease-in-out infinite;
   }
+  @keyframes nx-glow { 0%,100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.18); opacity: .8; } }
+  .nx-reso-body { margin-top: .7rem; font-size: .95rem; line-height: 1.5; color: var(--ink); }
+  .nx-reso-body b { color: var(--aqua-ink); font-weight: 600; }
+  html[data-theme="dark"] .nx-reso-body b { color: var(--aqua); }
+  .nx-reso-list { list-style: none; margin-top: .8rem; display: grid; gap: .5rem; }
+  .nx-reso-list li {
+    display: flex; align-items: center; gap: .6rem;
+    padding: .5rem .6rem; border-radius: 12px; background: var(--surface); border: 1px solid var(--line);
+    opacity: 0; transform: translateY(5px);
+  }
+  .nx-reso.run .nx-reso-list li { animation: nx-tick 420ms var(--ease-out) both; }
+  .nx-reso.run .nx-reso-list li:nth-child(2) { animation-delay: .14s; }
+  .nx-reso.run .nx-reso-list li:nth-child(3) { animation-delay: .28s; }
+  @keyframes nx-tick { to { opacity: 1; transform: none; } }
+  .nx-reso-list .nx-handle { flex: 1; color: var(--ink-soft); text-transform: none; font-family: inherit; font-size: .86rem; letter-spacing: 0; }
+  .nx-feels {
+    font-family: var(--font-mono); font-size: .56rem; text-transform: lowercase; letter-spacing: .04em;
+    color: var(--aqua-ink); background: rgba(91, 192, 255, .12);
+    border: 1px solid rgba(91, 192, 255, .24); padding: .2rem .5rem; border-radius: var(--r-pill); white-space: nowrap;
+  }
+  html[data-theme="dark"] .nx-feels { color: var(--aqua); }
+
+  /* tribe selector — the interactive control */
+  .nx-tribes { display: flex; flex-wrap: wrap; gap: .45rem; margin-top: 1rem; }
+  .nx-tribe {
+    display: inline-flex; align-items: center; gap: .45rem;
+    font-family: inherit; font-size: .82rem; font-weight: 500; color: var(--ink-soft);
+    padding: .5rem .8rem; border-radius: var(--r-pill);
+    background: var(--surface); border: 1px solid var(--line-strong); cursor: pointer;
+    transition: transform 200ms var(--ease-spring), border-color 200ms var(--ease-out),
+                color 200ms var(--ease-out), background 200ms var(--ease-out);
+  }
+  .nx-tribe .nx-td { width: 8px; height: 8px; border-radius: 50%; flex: none; background: linear-gradient(135deg, var(--aqua), var(--mint-deep)); }
+  .nx-tribe:hover { transform: translateY(-2px); color: var(--ink); border-color: rgba(91, 192, 255, .5); }
+  .nx-tribe:active { transform: translateY(0) scale(.97); }
+  .nx-tribe:focus-visible { outline: 2px solid var(--aqua-ink); outline-offset: 2px; }
+  .nx-tribe.is-active { color: var(--ink); border-color: rgba(91, 192, 255, .6); background: linear-gradient(135deg, rgba(91, 192, 255, .15), rgba(106, 211, 184, .08)); }
+  .nx-livetag {
+    margin-left: .1rem; font-family: var(--font-mono); font-size: .5rem; text-transform: uppercase;
+    letter-spacing: .12em; color: var(--aqua-ink); padding: .1rem .35rem; border-radius: var(--r-pill);
+    border: 1px solid rgba(91, 192, 255, .4);
+  }
+  html[data-theme="dark"] .nx-livetag { color: var(--aqua); }
+  .nx-tribe.reso { border-color: rgba(91, 192, 255, .4); }
+  .nx-tribe.reso.is-active { background: linear-gradient(135deg, rgba(91, 192, 255, .18), rgba(106, 211, 184, .1)); }
+
+  /* ── capability rail ── */
+  .cap-rail { position: relative; z-index: 1; margin-top: 1.1rem; display: flex; flex-wrap: wrap; gap: .4rem; }
   .cap-rail span {
     font-family: var(--font-mono); font-size: .6rem;
     text-transform: lowercase; letter-spacing: .04em; color: var(--ink-faint);
     padding: .26rem .58rem; border-radius: var(--r-pill);
     border: 1px solid var(--line); background: var(--surface);
   }
-  .cap-rail .cap-lead {
-    color: var(--aqua); border-color: rgba(91, 192, 255, .3);
-    text-transform: uppercase; letter-spacing: .14em;
-  }
+  .cap-rail .cap-lead { color: var(--aqua-ink); border-color: rgba(91, 192, 255, .3); text-transform: uppercase; letter-spacing: .14em; }
+  html[data-theme="dark"] .cap-rail .cap-lead { color: var(--aqua); }
   .cap-rail .cap-more { color: var(--ink-soft); border-style: dashed; }
 
-  /* light theme — deepen accent TEXT to clear WCAG AA on cream */
-  html[data-theme="light"] .reso-head b { color: var(--aqua-ink); }
-  html[data-theme="light"] .reso-body b { color: var(--aqua-ink); }
-  html[data-theme="light"] .cap-rail .cap-lead { color: var(--aqua-ink); }
-
-  /* staggered reveal — rooms fill in, then the resonance match lands */
-  :global(html.js) .room, :global(html.js) .reso { opacity: 0; transform: translateY(10px); transition: opacity 520ms var(--ease-out), transform 520ms var(--ease-out); }
-  :global(html.js) .room.in, :global(html.js) .reso.in { opacity: 1; transform: none; }
-
   @media (prefers-reduced-motion: reduce) {
-    :global(html.js) .room, :global(html.js) .reso { opacity: 1 !important; transform: none !important; }
+    .nx-avatar, .nx-echo, .nx-live, .nx-here-dot, .nx-reso-spark { animation: none !important; }
+    .nx-room, .nx-reso, .nx-scan { animation: none !important; }
+    .nx-radar i { animation: none !important; opacity: .25 !important; }
+    .nx-reso-list li { animation: none !important; opacity: 1 !important; transform: none !important; }
   }
 </style>
 
 <script is:inline>
-  // Nexus rooms — rooms reveal in sequence, then the resonance match, on scroll-in.
+  // Nexus — live, playable. Tap a tribe → step into a living, anonymous room
+  // (honest lines, who's here). Tap Resonance match → a brief scan → the few who
+  // genuinely resonate with you (resonance, never follower counts). Auto-runs a
+  // resonance match on scroll-in so belonging-by-quality is shown, not told.
   (function () {
     var stage = document.getElementById('nexus-stage');
     if (!stage) return;
+    var feed = document.getElementById('nx-feed');
+    var tribes = [].slice.call(stage.querySelectorAll('.nx-tribe'));
+    var nameEl = document.getElementById('nx-name');
+    var badge = document.getElementById('nx-badge');
+    if (!feed) return;
     var reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    var rooms = [].slice.call(stage.querySelectorAll('.room'));
-    var reso = document.getElementById('nexus-reso');
-    var started = false;
+    var busy = false, interacted = false, autoTimer = 0, armed = false, current = 'founders';
 
+    // Mirror Astro's scope attribute onto JS-built nodes so component styles apply.
+    var CID = null;
+    (function () { var a = stage.attributes; for (var i = 0; i < a.length; i++) { if (a[i].name.indexOf('data-astro-cid-') === 0) { CID = a[i].name; break; } } })();
+    function tag(el) { if (!CID || !el) return el; el.setAttribute(CID, ''); var k = el.querySelectorAll('*'); for (var i = 0; i < k.length; i++) k[i].setAttribute(CID, ''); return el; }
+
+    function room(name, here, msgs) {
+      var lis = msgs.map(function (m) {
+        return '<li><span class="nx-anon ' + m[0] + '"></span><div class="nx-m"><span class="nx-handle">' + m[1] + '</span><p>' + m[2] + '</p></div></li>';
+      }).join('');
+      return '<div class="nx-room"><div class="nx-room-head"><b>' + name + '</b><span class="nx-here"><i class="nx-here-dot"></i>' + here + '</span></div><ul class="nx-msgs">' + lis + '</ul><button type="button" class="nx-join">Join quietly</button></div>';
+    }
+
+    var DATA = {
+      founders: { name: 'Nexus', badge: 'tribes', html: room('Founders Who Overthink', '1.2k here', [
+        ['a1', '3am brain', "shipped the thing. immediately found nine problems with it."],
+        ['a2', 'still building', "anyone else rehearse conversations that'll never happen?"] ]) },
+      starting: { name: 'Nexus', badge: 'tribes', html: room('Starting Over', '840 here', [
+        ['a3', 'first week', "day 1 of the rest of it. terrified. here anyway."],
+        ['a1', 'been there', "you showed up. that's the whole job today."] ]) },
+      today: { name: 'Nexus', badge: 'room live', html: room('Made It Through Today', '122 here', [
+        ['a4', 'rough one', "barely. but I'm here and that counts for something."],
+        ['a2', 'night shift', "genuinely proud of you. no notes."] ]) },
+      reso: { name: 'Nexus', badge: 'resonance', html:
+        '<div class="nx-reso"><div class="nx-reso-head"><span class="nx-reso-spark"></span><b>Resonance match</b></div>'
+        + '<p class="nx-reso-body">3 people in <b>Starting Over</b> feel a lot like you right now.</p>'
+        + '<ul class="nx-reso-list">'
+        + '<li><span class="nx-anon a3"></span><span class="nx-handle">also starting over</span><span class="nx-feels">resonates</span></li>'
+        + '<li><span class="nx-anon a1"></span><span class="nx-handle">quiet, like you</span><span class="nx-feels">resonates</span></li>'
+        + '<li><span class="nx-anon a2"></span><span class="nx-handle">one step ahead</span><span class="nx-feels">resonates</span></li>'
+        + '</ul><button type="button" class="nx-join">Say hi, quietly</button></div>' }
+    };
+
+    function render(key) {
+      var d = DATA[key]; if (!d) return;
+      nameEl.textContent = d.name; badge.textContent = d.badge;
+      feed.innerHTML = '';
+      var wrap = document.createElement('div'); wrap.innerHTML = d.html;
+      var node = wrap.firstChild; tag(node); feed.appendChild(node);
+      if (key === 'reso') requestAnimationFrame(function () { node.classList.add('run'); });
+    }
+
+    function setActive(el) { tribes.forEach(function (t) { t.classList.remove('is-active'); }); el.classList.add('is-active'); }
+
+    function enter(key) {
+      if (busy || key === current) return;
+      interacted = true;
+      if (autoTimer) { clearTimeout(autoTimer); autoTimer = 0; }
+      busy = true; current = key;
+
+      if (reduced) { render(key); busy = false; return; }
+
+      if (key === 'reso') {
+        // resonance gets a brief scan before the reveal
+        feed.innerHTML = '';
+        var s = document.createElement('div'); s.className = 'nx-scan';
+        s.innerHTML = '<span class="nx-radar"><i></i><i></i><i></i></span><span class="nx-scan-txt">Finding the few who <b>resonate</b>…</span>';
+        tag(s); feed.appendChild(s);
+        setTimeout(function () { render(key); busy = false; }, 1150);
+      } else {
+        render(key); busy = false;
+      }
+    }
+
+    tribes.forEach(function (t) {
+      t.addEventListener('click', function () { setActive(t); enter(t.getAttribute('data-tribe')); });
+    });
+
+    // auto-run a resonance match on scroll-in (belonging by quality, shown)
     function visibleFrac(el) {
       var r = el.getBoundingClientRect();
       var h = window.innerHeight || document.documentElement.clientHeight;
       if (r.height === 0) return (r.top < h && r.bottom > 0) ? 1 : 0;
       return Math.max(0, Math.min(r.bottom, h) - Math.max(r.top, 0)) / Math.min(r.height, h);
     }
-    function run() {
-      if (started) return;
-      started = true;
-      if (reduced) {
-        rooms.forEach(function (r) { r.classList.add('in'); });
-        if (reso) reso.classList.add('in');
-        return;
-      }
-      rooms.forEach(function (r, i) { setTimeout(function () { r.classList.add('in'); }, 200 + i * 380); });
-      if (reso) setTimeout(function () { reso.classList.add('in'); }, 200 + rooms.length * 380 + 220);
-    }
     function check() {
-      if (visibleFrac(stage) >= 0.3) {
-        run();
+      if (armed) return;
+      if (visibleFrac(stage) >= 0.35) {
+        armed = true;
         window.removeEventListener('scroll', check);
         window.removeEventListener('resize', check);
+        if (!reduced) { autoTimer = setTimeout(function () {
+          if (!interacted) { var el = tribes.filter(function (t) { return t.getAttribute('data-tribe') === 'reso'; })[0]; if (el) { setActive(el); enter('reso'); } }
+        }, 1900); }
       }
     }
     requestAnimationFrame(function () { requestAnimationFrame(check); });

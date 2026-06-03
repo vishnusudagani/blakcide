@@ -21,6 +21,41 @@
   .s-two { grid-template-columns: 1fr; gap: 2.5rem; }
 }
 
+/* ---- Acts — the two scenes (AI pair · Human pair) each get a HELD stage: a
+   colored aura + a giant faint watermark that sticks behind the cards while you
+   scroll through the pair, then releases at the act boundary. Pure CSS sticky,
+   so the scroll is never hijacked. Cards (z-index 1) ride above the stage
+   (z-index 0); the cards' glass blur keeps the watermark to the negative space,
+   never bleeding through a card. .act stays plain position:relative — no
+   transform/overflow — so the inner sticky isn't trapped. ---- */
+.act { position: relative; }
+/* The stage is a normal-flow FIRST child that sticks at the top of the act; the
+   negative margin removes its 100vh footprint so the cards start at the act's top
+   and ride up over it. (A sticky element inside an absolutely-positioned wrapper
+   does NOT pin — it must be a flow child of the tall container.) */
+.act-stage {
+  position: sticky; top: 0;
+  height: 100vh; height: 100svh;
+  margin-bottom: -100vh; margin-bottom: -100svh;
+  z-index: 0; pointer-events: none; overflow: hidden;
+  display: grid; place-items: center;
+}
+.act-aura {
+  position: absolute; left: 50%; top: 44%;
+  width: 124vw; height: 88vh; transform: translate(-50%, -50%);
+  border-radius: 50%; filter: blur(16px);
+  animation: act-aura-breathe 19s var(--ease-soft) infinite;
+}
+.act-ai    .act-aura { background: radial-gradient(closest-side, rgba(255, 150, 120, .22), rgba(201, 184, 255, .13) 56%, transparent 78%); }
+.act-human .act-aura { background: radial-gradient(closest-side, rgba(120, 205, 210, .22), rgba(91, 192, 255, .13) 56%, transparent 78%); }
+html[data-theme="light"] .act-ai    .act-aura { background: radial-gradient(closest-side, rgba(255, 138, 108, .24), rgba(201, 184, 255, .14) 56%, transparent 78%); }
+html[data-theme="light"] .act-human .act-aura { background: radial-gradient(closest-side, rgba(70, 180, 192, .24), rgba(91, 192, 255, .14) 56%, transparent 78%); }
+@keyframes act-aura-breathe {
+  0%, 100% { transform: translate(-50%, -50%) scale(1);    opacity: .85; }
+  50%      { transform: translate(-50%, -53%) scale(1.07); opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) { .act-aura { animation: none; } }
+
 /* ---- kicker (mono eyebrow with a glowing orb) ---- */
 .s-kicker {
   display: inline-flex; align-items: center; gap: .55rem;
@@ -111,9 +146,25 @@ html[data-theme="light"] .s-kicker.k-gold { color: var(--gold-ink); }
   backdrop-filter: blur(20px) saturate(150%);
   -webkit-backdrop-filter: blur(20px) saturate(150%);
   border: 1px solid var(--line-strong);
-  box-shadow: var(--shadow-soft);
+  /* hero-surface material: soft drop + an inner top highlight (lit from above) */
+  box-shadow: var(--shadow-soft), inset 0 1px 0 rgba(255, 255, 255, .45);
   padding: 1.1rem 1.1rem 1.3rem;
 }
+/* a faint pillar-tinted edge ring so each device reads as part of its world —
+   the same masked 1px border the hero's floating surfaces wear. --card-edge is
+   set per section below (warm default for the AI side). */
+.s-card::after {
+  content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+  padding: 1px; opacity: .55;
+  background: var(--card-edge, linear-gradient(150deg, rgba(255, 210, 122, .55), transparent 55%));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+          mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+          mask-composite: exclude;
+}
+.persona .s-card { --card-edge: linear-gradient(150deg, rgba(201, 184, 255, .60), transparent 55%); }
+.minit   .s-card { --card-edge: linear-gradient(150deg, rgba(106, 211, 184, .60), transparent 55%); }
+.nexus   .s-card { --card-edge: linear-gradient(150deg, rgba(91, 192, 255, .55), transparent 55%); }
 .s-card-head {
   display: flex; align-items: center; gap: .7rem;
   padding: .2rem .3rem 1rem; border-bottom: 1px solid var(--line);

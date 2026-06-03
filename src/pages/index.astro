@@ -1,6 +1,7 @@
 ---
 import Base from '../layouts/Base.astro';
 import Nav from '../components/Nav.astro';
+import Spine from '../components/Spine.astro';
 import Hero from '../components/Hero.astro';
 import Blak from '../components/Blak.astro';
 import Persona from '../components/Persona.astro';
@@ -17,16 +18,27 @@ const description =
 
 <Base title={title} description={description}>
   <Nav />
+  <Spine />
   <main>
     <Hero />
-    {/* AI side — the minds that know you */}
-    <Blak />
-    <Persona />
+    {/* AI side — the minds that know you. A held warm stage carries both cards. */}
+    <div class="act act-ai">
+      <div class="act-stage" aria-hidden="true">
+        <span class="act-aura"></span>
+      </div>
+      <Blak />
+      <Persona />
+    </div>
     {/* keystone — the engine that ties both sides */}
     <Learning />
-    {/* Human side — the people who show up */}
-    <Minit />
-    <Nexus />
+    {/* Human side — the people who show up. A held cool stage carries both cards. */}
+    <div class="act act-human">
+      <div class="act-stage" aria-hidden="true">
+        <span class="act-aura"></span>
+      </div>
+      <Minit />
+      <Nexus />
+    </div>
     {/* payoff + the two real CTAs */}
     <Finale />
   </main>

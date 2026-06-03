@@ -16,7 +16,7 @@ const {
   image = '/assets/og-cover.png',
 } = Astro.props;
 
-// Absolute URLs for canonical + link-preview cards (Astro.site = https://blakcide.com).
+// Absolute URLs for canonical + link-preview cards (Astro.site = https://blaksyd.com).
 const canonicalURL = new URL(Astro.url.pathname, Astro.site).href;
 const ogImageURL = new URL(image, Astro.site).href;
 
@@ -83,7 +83,10 @@ const favicon =
     <link rel="preload" href="/fonts/instrument-serif-400-italic.woff2" as="font" type="font/woff2" crossorigin />
   </head>
   <body>
-    <div class="world" aria-hidden="true"></div>
+    <div class="world" aria-hidden="true">
+      <div class="wl wl-far"  data-bg="0.020"><div class="wl-inner"></div></div>
+      <div class="wl wl-near" data-bg="0.055"><div class="wl-inner"></div></div>
+    </div>
     <slot />
     <Auth />
 
@@ -115,6 +118,59 @@ const favicon =
         requestAnimationFrame(function () { requestAnimationFrame(check); });
         window.addEventListener('scroll', check, { passive: true });
         window.addEventListener('resize', check);
+      })();
+    </script>
+
+    {/* Scroll engine — one rAF-throttled, passive handler drives (1) the moving
+        background: two depth layers (.wl) trail scroll at different rates so the
+        world parallaxes; (2) decorative layers (section glows + any [data-parallax])
+        easing past their own resting position at their own speed. Transform-only
+        (GPU); reduced-motion opts out entirely. Base centres are read via an
+        offsetTop walk (transform-independent) so the parallax never feeds back. */}
+    <script is:inline>
+      (function () {
+        var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        if (reduce) return;
+
+        var bg = [].slice.call(document.querySelectorAll('.world .wl')).map(function (el) {
+          return { el: el, k: parseFloat(el.getAttribute('data-bg')) || 0 };
+        });
+        var px = [];
+        [].slice.call(document.querySelectorAll('[data-parallax]')).forEach(function (el) {
+          px.push({ el: el, k: parseFloat(el.getAttribute('data-parallax')) || 0, c: 0 });
+        });
+        [].slice.call(document.querySelectorAll('.bk-glow, .pp-glow, .mn-glow, .nx-glow, .s-glow')).forEach(function (el) {
+          px.push({ el: el, k: 0.09, c: 0 });
+        });
+        if (!bg.length && !px.length) return;
+
+        var vh = window.innerHeight || document.documentElement.clientHeight;
+        function docTop(el) { var t = 0; while (el) { t += el.offsetTop; el = el.offsetParent; } return t; }
+        function measure() {
+          vh = window.innerHeight || document.documentElement.clientHeight;
+          for (var i = 0; i < px.length; i++) { px[i].c = docTop(px[i].el) + px[i].el.offsetHeight / 2; }
+        }
+
+        var raf = 0;
+        function frame() {
+          raf = 0;
+          var y = window.scrollY || window.pageYOffset || 0;
+          var mid = y + vh / 2;
+          for (var i = 0; i < bg.length; i++) {
+            bg[i].el.style.transform = 'translate3d(0,' + (-(y * bg[i].k)).toFixed(1) + 'px,0)';
+          }
+          for (var j = 0; j < px.length; j++) {
+            px[j].el.style.transform = 'translate3d(0,' + ((mid - px[j].c) * px[j].k).toFixed(1) + 'px,0)';
+          }
+        }
+        function schedule() { if (!raf) raf = requestAnimationFrame(frame); }
+
+        measure();
+        requestAnimationFrame(frame);
+        window.addEventListener('scroll', schedule, { passive: true });
+        window.addEventListener('resize', function () { measure(); schedule(); }, { passive: true });
+        window.addEventListener('load', function () { measure(); schedule(); });
+        if (document.fonts && document.fonts.ready) { document.fonts.ready.then(function () { measure(); schedule(); }); }
       })();
     </script>
   </body>

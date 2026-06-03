@@ -1,11 +1,9 @@
 ---
 // Learning engine — the structural keystone between the AI side (Blak, Persona)
-// and the Human side (Minit, Nexus). Compact, centered, distinct from the
-// two-column scenes. A small architecture diagram makes the product legible in
-// one glance: two AI minds and two ways to people both feed one living engine.
-// Warm signals (coral) and cool signals (mint) flow inward and synthesise into a
-// gold core — "the more you live, the more it becomes yours." Ownership line ties
-// back to the privacy spine the AI scenes established.
+// and the Human side (Minit, Nexus). A centered typographic beat: one statement
+// that everything the user lives feeds a single living engine that keeps becoming
+// them. Deliberately quiet — a breath between the two scenes. The ownership line
+// ties back to the privacy spine the AI scenes established.
 ---
 
 <section class="s-section learning" id="learning">
@@ -13,42 +11,14 @@
     <p class="s-kicker k-gold center" data-reveal><span class="orb"></span>the engine underneath</p>
 
     <h2 class="s-title learn-title" data-reveal>
-      Two minds. Real people.<br />
-      <span class="accent">One engine, learning you.</span>
+      It all flows inward.<br />
+      <span class="accent">Always becoming you.</span>
     </h2>
 
     <p class="s-sub learn-sub" data-reveal>
       Blak and Persona understand you. Minit and Nexus bring people close. Every
       signal feeds one living engine — so the more you live, the more it becomes yours.
     </p>
-
-    <div class="diagram" data-reveal aria-hidden="true">
-      <div class="cluster">
-        <span class="cluster-label">AI · knows you</span>
-        <div class="chips">
-          <span class="chip"><i class="chip-dot d-coral"></i>Blak</span>
-          <span class="chip"><i class="chip-dot d-lav"></i>Persona</span>
-        </div>
-      </div>
-
-      <div class="wire wire-l"><span class="pulse"></span></div>
-
-      <div class="core">
-        <span class="core-ring"></span>
-        <span class="core-orb"></span>
-        <span class="core-label">Learning</span>
-      </div>
-
-      <div class="wire wire-r"><span class="pulse"></span></div>
-
-      <div class="cluster">
-        <span class="cluster-label">People · show up</span>
-        <div class="chips">
-          <span class="chip"><i class="chip-dot d-mint"></i>Minit</span>
-          <span class="chip"><i class="chip-dot d-aqua"></i>Nexus</span>
-        </div>
-      </div>
-    </div>
 
     <p class="learn-foot" data-reveal>One engine. Always yours — never sold.</p>
   </div>
@@ -68,76 +38,5 @@
     margin-top: clamp(2.4rem, 5vh, 3.4rem);
     font-family: var(--font-mono); font-size: .72rem;
     text-transform: uppercase; letter-spacing: .16em; color: var(--ink-faint);
-  }
-
-  /* ── architecture diagram ── */
-  .diagram {
-    margin-top: clamp(2.6rem, 6vh, 4rem);
-    display: flex; align-items: center; justify-content: center;
-    gap: clamp(.5rem, 2vw, 1.4rem);
-  }
-  .cluster { display: flex; flex-direction: column; align-items: center; gap: .7rem; flex: none; }
-  .cluster-label {
-    font-family: var(--font-mono); font-size: .6rem; letter-spacing: .16em;
-    text-transform: uppercase; color: var(--ink-faint);
-  }
-  .chips { display: flex; flex-direction: column; gap: .5rem; }
-  .chip {
-    display: inline-flex; align-items: center; gap: .5rem;
-    padding: .5rem .9rem; border-radius: var(--r-pill);
-    background: var(--surface-strong); border: 1px solid var(--line-strong);
-    font-size: .92rem; font-weight: 500; color: var(--ink); white-space: nowrap;
-  }
-  .chip-dot { width: 8px; height: 8px; border-radius: 50%; flex: none; }
-  .d-coral { background: var(--coral);    box-shadow: 0 0 8px var(--coral); }
-  .d-lav   { background: var(--lavender); box-shadow: 0 0 8px var(--lavender); }
-  .d-mint  { background: var(--mint);     box-shadow: 0 0 8px var(--mint); }
-  .d-aqua  { background: var(--aqua);     box-shadow: 0 0 8px var(--aqua); }
-
-  /* core — the gold learning nucleus everything feeds */
-  .core { position: relative; width: clamp(92px, 11vw, 124px); height: clamp(92px, 11vw, 124px); display: grid; place-items: center; flex: none; }
-  .core-orb {
-    width: 62%; height: 62%; border-radius: 50%;
-    background: radial-gradient(circle at 40% 35%, var(--peach), var(--gold) 52%, var(--coral) 125%);
-    box-shadow: 0 0 42px rgba(255, 210, 122, .5), inset 0 2px 6px rgba(255, 255, 255, .45);
-    animation: core-breathe 4.2s ease-in-out infinite;
-  }
-  .core-ring {
-    position: absolute; inset: 8%; border-radius: 50%;
-    border: 1px solid rgba(255, 210, 122, .4);
-    box-shadow: inset 0 0 22px rgba(255, 210, 122, .25);
-  }
-  .core-label {
-    position: absolute; bottom: -1.7rem; left: 50%; transform: translateX(-50%);
-    font-family: var(--font-mono); font-size: .62rem; letter-spacing: .18em;
-    text-transform: uppercase; color: var(--gold); white-space: nowrap;
-  }
-  html[data-theme="light"] .core-label { color: var(--gold-ink); }
-  @keyframes core-breathe { 0%,100% { transform: scale(1); } 50% { transform: scale(1.07); } }
-
-  /* wires — signals flowing INTO the core; warm from AI, cool from People */
-  .wire {
-    position: relative; flex: 1 1 auto; max-width: 92px; min-width: 26px;
-    height: 2px; border-radius: 2px; background: var(--line-strong);
-  }
-  .pulse {
-    position: absolute; top: 50%; width: 7px; height: 7px; border-radius: 50%;
-    transform: translateY(-50%);
-  }
-  .wire-l .pulse { background: var(--coral);     box-shadow: 0 0 10px var(--coral);     animation: flow-r 2.4s var(--ease-soft) infinite; }
-  .wire-r .pulse { background: var(--mint-deep); box-shadow: 0 0 10px var(--mint-deep); animation: flow-l 2.4s var(--ease-soft) infinite; animation-delay: 1.2s; }
-  @keyframes flow-r { 0% { left: -3px; opacity: 0; } 15% { opacity: 1; } 85% { opacity: 1; } 100% { left: 100%; opacity: 0; } }
-  @keyframes flow-l { 0% { right: -3px; opacity: 0; } 15% { opacity: 1; } 85% { opacity: 1; } 100% { right: 100%; opacity: 0; } }
-
-  /* stack vertically on small screens — AI above, engine middle, People below */
-  @media (max-width: 760px) {
-    .diagram { flex-direction: column; gap: 1.1rem; }
-    .wire { width: 2px; height: clamp(26px, 5vh, 44px); max-width: none; min-width: 0; flex: none; }
-    .pulse { display: none; }
-    .core { margin-block: .4rem 1.6rem; }
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .core-orb, .pulse { animation: none !important; }
   }
 </style>

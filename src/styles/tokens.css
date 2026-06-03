@@ -133,7 +133,10 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
-  overflow-x: hidden;
+  /* clip (not hidden) — hidden makes body a scroll container (overflow-y resolves
+     to auto), which breaks position:sticky for every descendant (the .act-stage
+     holds). clip suppresses the same horizontal overflow without that side effect. */
+  overflow-x: clip;
   transition: background 260ms var(--ease-soft), color 260ms var(--ease-soft);
 }
 img, svg, video, canvas { display: block; max-width: 100%; }
@@ -144,26 +147,53 @@ h1, h2, h3 { line-height: 1.04; font-weight: 700; letter-spacing: -0.02em; }
 :focus-visible { outline: 2px solid var(--coral); outline-offset: 3px; border-radius: 4px; }
 html[data-theme="light"] :focus-visible { outline-color: var(--coral-ink); }
 
-/* ---- Ambient living world — fixed wash behind every section ---- */
+/* ---- Ambient living world — a drifting, scroll-reactive wash behind every
+   section. Two depth layers (far/near) parallax at different rates: the scroll
+   engine (Base.astro) sets a translate on each .wl; each .wl-inner also drifts
+   slowly on its own, so the world breathes even at rest. Inner overscans 40% so
+   neither the drift nor the scroll-parallax ever reveals an edge. Reduced-motion
+   freezes the drift (the scroll engine also no-ops). ---- */
 .world {
   position: fixed; inset: 0; z-index: -2; overflow: hidden; pointer-events: none;
-  /* gold crown + matcha on the prominent right; lavender supports; coral is now
-     just a faint warm whisper at the bottom — temperature shifts off pink. */
-  background:
-    radial-gradient(ellipse at 50% -10%,  rgba(255, 210, 122, 0.22), transparent 55%),
-    radial-gradient(ellipse at 110% 40%,  rgba(180, 240, 222, 0.16), transparent 55%),
-    radial-gradient(ellipse at -10% 70%,  rgba(201, 184, 255, 0.14), transparent 52%),
-    radial-gradient(ellipse at 50% 110%,  rgba(255, 107, 157, 0.10), transparent 50%),
-    var(--bg);
+  background: var(--bg);
   transition: background 260ms var(--ease-soft);
 }
-html[data-theme="light"] .world {
+.wl { position: absolute; inset: 0; will-change: transform; }
+.wl-inner { position: absolute; inset: -40%; }
+/* far — the big gold crown + lavender support; slow, subtle parallax */
+.wl-far .wl-inner {
   background:
-    radial-gradient(ellipse at 50% -10%,  rgba(255, 210, 122, 0.42), transparent 55%),
-    radial-gradient(ellipse at 110% 40%,  rgba(180, 240, 222, 0.34), transparent 55%),
-    radial-gradient(ellipse at -10% 70%,  rgba(201, 184, 255, 0.28), transparent 52%),
-    radial-gradient(ellipse at 50% 110%,  rgba(255, 107, 157, 0.16), transparent 50%),
-    var(--bg);
+    radial-gradient(ellipse at 50% 17%, rgba(255, 210, 122, 0.22), transparent 55%),
+    radial-gradient(ellipse at 17% 61%, rgba(201, 184, 255, 0.14), transparent 52%);
+  animation: wl-drift-far 44s var(--ease-soft) infinite;
+}
+/* near — matcha on the right + a coral whisper low; quicker parallax */
+.wl-near .wl-inner {
+  background:
+    radial-gradient(ellipse at 83% 44%, rgba(180, 240, 222, 0.16), transparent 55%),
+    radial-gradient(ellipse at 50% 83%, rgba(255, 107, 157, 0.10), transparent 50%);
+  animation: wl-drift-near 56s var(--ease-soft) infinite;
+}
+html[data-theme="light"] .wl-far .wl-inner {
+  background:
+    radial-gradient(ellipse at 50% 17%, rgba(255, 210, 122, 0.42), transparent 55%),
+    radial-gradient(ellipse at 17% 61%, rgba(201, 184, 255, 0.28), transparent 52%);
+}
+html[data-theme="light"] .wl-near .wl-inner {
+  background:
+    radial-gradient(ellipse at 83% 44%, rgba(180, 240, 222, 0.34), transparent 55%),
+    radial-gradient(ellipse at 50% 83%, rgba(255, 107, 157, 0.16), transparent 50%);
+}
+@keyframes wl-drift-far {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+  50%      { transform: translate3d(2%, -2.4%, 0) scale(1.06); }
+}
+@keyframes wl-drift-near {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1.05); }
+  50%      { transform: translate3d(-2.6%, 2%, 0) scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .wl-inner { animation: none !important; }
 }
 
 /* ---- Reduced motion ---- */
@@ -185,13 +215,19 @@ html[data-theme="light"] .world {
   -webkit-text-fill-color: transparent; color: transparent;
 }
 
-/* ---- Scroll reveal — site-wide. Only hidden while JS is active, so content is
-        never stuck invisible if JS fails. Revealed by Base's reveal script. ---- */
-html.js [data-reveal] { opacity: 0; transform: translateY(22px); }
+/* ---- Scroll reveal — site-wide. Richer than a flat fade: a soft rise with a
+        breath of scale; cards can slide in from a side (data-reveal="left|right")
+        and stagger behind their sibling (.rd-1 / .rd-2). Only hidden while JS is
+        active, so content is never stuck invisible if JS fails. ---- */
+html.js [data-reveal] { opacity: 0; transform: translateY(28px) scale(.985); }
+html.js [data-reveal="left"]  { transform: translateX(-46px) scale(.99); }
+html.js [data-reveal="right"] { transform: translateX(46px) scale(.99); }
 html.js [data-reveal].seen {
   opacity: 1; transform: none;
-  transition: opacity 800ms var(--ease-out), transform 800ms var(--ease-out);
+  transition: opacity 760ms var(--ease-out), transform 900ms var(--ease-out);
 }
+html.js [data-reveal].rd-1.seen { transition-delay: 90ms; }
+html.js [data-reveal].rd-2.seen { transition-delay: 190ms; }
 @media (prefers-reduced-motion: reduce) {
   html.js [data-reveal] { opacity: 1 !important; transform: none !important; }
 }
