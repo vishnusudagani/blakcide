@@ -9,5 +9,9 @@ import { defineConfig } from 'astro/config';
 // Netlify functions (netlify/functions) stay where they are — separate from the
 // publish dir. netlify.toml publishes dist/ and runs `npm run build`.
 export default defineConfig({
-  site: 'https://blakcide.com',
+  // blaksyd.com is the canonical/primary domain. blakcide.com is the old domain
+  // and 301-redirects here (see the domain-level redirect at the top of
+  // netlify.toml). This value feeds canonical + OG/Twitter URLs via Astro.site in
+  // Base.astro, so it must be the destination domain — never the one redirecting away.
+  site: 'https://blaksyd.com',
 });

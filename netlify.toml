@@ -25,6 +25,32 @@
   functions = "netlify/functions"
   targetPort = 8888
 
+# ──────── Domain migration: blakcide.com → blaksyd.com ────────
+# blaksyd.com is the canonical/primary domain; blakcide.com is the old one.
+# These domain-level rules 301 every blakcide.com request (apex + www, any path)
+# to the same path on blaksyd.com, preserving the path via :splat. They MUST stay
+# at the top of the redirects list: the /api/* rules below match on path only
+# (any host), so a blakcide.com/api/* request would hit them first unless the
+# host-based redirect is evaluated first. `force = true` makes the redirect fire
+# even when a matching file exists, so it always wins.
+#
+# These explicit rules are what perform the redirect: this site serves every
+# attached domain at 200 (no automatic alias→primary redirect on Netlify here),
+# so the rule is required, not just belt-and-suspenders. Both blakcide.com and
+# blaksyd.com are attached to the site with DNS pointing at Netlify and a TLS cert
+# covering both, so the redirect resolves cleanly to a valid https://blaksyd.com.
+[[redirects]]
+  from = "https://blakcide.com/*"
+  to = "https://blaksyd.com/:splat"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "https://www.blakcide.com/*"
+  to = "https://blaksyd.com/:splat"
+  status = 301
+  force = true
+
 [[redirects]]
   from = "/api/chat"
   to = "/.netlify/functions/app"
