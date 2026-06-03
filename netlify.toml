@@ -8,6 +8,16 @@
   publish = "dist"
   functions = "netlify/functions"
 
+[build.environment]
+  # Netlify secrets scanning flags the Supabase ANON key's value where it appears
+  # in the published client JS (dist/app/*.js, team-os bundle). That key is PUBLIC
+  # by design — it ships in the browser and is gated by Row-Level Security on the
+  # database, not by secrecy. Without this omit, the scanner exits 2 and fails the
+  # production git build (SUPABASE_ANON_KEY is defined only in the production
+  # context, which is why deploy-preview builds passed while production builds
+  # failed). The SERVICE_ROLE key is never in dist, so it stays scanned.
+  SECRETS_SCAN_OMIT_KEYS = "SUPABASE_ANON_KEY"
+
 [functions]
   directory = "netlify/functions"
 
