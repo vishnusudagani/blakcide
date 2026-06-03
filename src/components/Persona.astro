@@ -1,0 +1,260 @@
+---
+// Persona — AI side, second scene. Your living clone: a presence that speaks as
+// you and carries you forward. Show-don't-tell via an activity feed of the clone
+// acting on your behalf — keeping the people you love close, and (gently) keeping
+// the story of you for those who'll want it later. The trust line gives explicit
+// control over memory and what is never repeated — essential, because letting a
+// clone speak *as* you is the deepest disclosure on the page.
+// Layout mirrors Blak: device LEFT, copy RIGHT, for an alternating scroll rhythm.
+---
+
+<section class="s-section persona" id="persona">
+  <div class="u-wrap s-two persona-two">
+    <div class="persona-copy">
+      <p class="s-kicker k-lav" data-reveal><span class="orb"></span>Persona · your living clone</p>
+
+      <h3 class="s-title" data-reveal>
+        Persona carries you.<br />
+        <span class="accent">Even when you can't.</span>
+      </h3>
+
+      <p class="s-sub" data-reveal>
+        A second you that's always available — to your people the moment they reach
+        out, and to you when you need to think out loud. It sounds like you,
+        remembers what matters, and keeps showing up.
+      </p>
+
+      <ul class="s-points" data-reveal>
+        <li><span class="pt-dot pt-2"></span><b>Always available</b> — talk to yours, or anyone's, any hour.</li>
+        <li><span class="pt-dot pt-1"></span><b>Looks and speaks as you</b> — your avatar, your voice, on chat or video.</li>
+        <li><span class="pt-dot pt-gold"></span><b>Carries forward</b> — shared memory now; your story, always.</li>
+      </ul>
+
+      <p class="s-trust" data-reveal>
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <rect x="5" y="11" width="14" height="9" rx="2" />
+          <path d="M8 11V8a4 4 0 0 1 8 0v3" />
+        </svg>
+        You decide what it remembers — and what it never repeats.
+      </p>
+    </div>
+
+    <div class="s-stage persona-stage" id="persona-stage" aria-hidden="true">
+      <div class="s-glow" aria-hidden="true"></div>
+      <div class="s-card">
+        <div class="s-card-head">
+          <span class="s-orb">
+            <span class="core"></span>
+            <span class="echo"></span>
+            <span class="echo e2"></span>
+          </span>
+          <span class="who">
+            <b>Your Persona</b>
+            <i class="s-live"><span class="s-live-dot"></span>living as you</i>
+          </span>
+          <span class="s-badge">clone</span>
+          <span class="pcall" aria-hidden="true">
+            <span class="pcall-btn"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.62 10.79a15.15 15.15 0 0 0 6.59 6.59l2.2-2.2a1 1 0 0 1 1.02-.24 11.36 11.36 0 0 0 3.57.57 1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1 11.36 11.36 0 0 0 .57 3.57 1 1 0 0 1-.25 1.02z"/></svg></span>
+            <span class="pcall-btn pcall-video"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="6.5" width="12" height="11" rx="2.5"/><path d="M15.5 10.4 21 7.2v9.6l-5.5-3.2z"/></svg></span>
+          </span>
+        </div>
+
+        <div class="presence">
+          <span class="presence-lead">always on</span>
+          <span class="pavatars">
+            <span class="pav pav-you"></span>
+            <span class="pav pav-a"></span>
+            <span class="pav pav-b"></span>
+            <span class="pav pav-c"></span>
+            <span class="pav pav-more">+</span>
+          </span>
+          <span class="presence-note">talk to yours, or theirs</span>
+        </div>
+
+        <ul class="feed">
+          <li class="feed-row">
+            <span class="feed-when">now</span>
+            <p class="feed-body">Sorted July with <b>Maya</b> — locked your window seat and dropped it on your calendar.</p>
+          </li>
+          <li class="feed-row">
+            <span class="feed-when">2:15 PM</span>
+            <p class="feed-body">Your <b>mum</b> video-called while you were in a meeting — your Persona picked up in your face and voice, and told her you're okay.</p>
+          </li>
+          <li class="feed-row legacy">
+            <span class="feed-when">always</span>
+            <p class="feed-body">Keeping the story of you — for the people who'll want to hear it.</p>
+          </li>
+        </ul>
+      </div>
+
+      <p class="cap-rail">
+        <span class="cap-lead">also</span>
+        <span>meet other Personas</span>
+        <span>plans without you</span>
+        <span>shared memory</span>
+        <span class="cap-more">&amp; a lot more</span>
+      </p>
+    </div>
+  </div>
+</section>
+
+<style>
+  /* device LEFT / copy RIGHT on desktop; copy leads the source so mobile reads
+     the pitch first, then sees the clone in action. */
+  @media (min-width: 901px) {
+    .persona-stage { order: -1; }
+  }
+  @media (max-width: 900px) {
+    .persona-stage { max-width: 460px; margin-inline: auto; width: 100%; }
+  }
+
+  /* ── activity feed ── */
+  .feed { list-style: none; padding-top: 1rem; display: flex; flex-direction: column; gap: .35rem; min-height: 300px; }
+  .feed-row {
+    display: grid; grid-template-columns: 4.2rem 1fr; gap: .8rem; align-items: start;
+    padding: .85rem .6rem; border-radius: var(--r-md);
+    border: 1px solid transparent;
+  }
+  .feed-row + .feed-row { border-top: 1px solid var(--line); border-radius: 0; }
+  .feed-when {
+    font-family: var(--font-mono); font-size: .64rem; line-height: 1.7;
+    text-transform: uppercase; letter-spacing: .12em; color: var(--ink-faint);
+    text-align: right; padding-top: .1rem;
+  }
+  .feed-body { font-size: .95rem; line-height: 1.5; color: var(--ink-soft); }
+  .feed-body b { color: var(--ink); font-weight: 600; }
+
+  /* ── presence strip — "an Instagram of clones": everyone's, always available.
+     Overlapping avatars + live dots are the highest-salience social cue there is,
+     so the idea lands wordlessly. ── */
+  .presence {
+    display: flex; align-items: center; gap: .6rem; flex-wrap: wrap;
+    padding: .9rem 0 .2rem;
+  }
+  .presence-lead {
+    font-family: var(--font-mono); font-size: .58rem;
+    text-transform: uppercase; letter-spacing: .16em; color: var(--lavender-deep);
+  }
+  html[data-theme="dark"] .presence-lead { color: var(--lavender); }
+  .pavatars { display: inline-flex; }
+  .pav {
+    width: 26px; height: 26px; border-radius: 50%; position: relative;
+    margin-left: -7px; box-shadow: 0 0 0 2px var(--glass-strong);
+  }
+  .pav:first-child { margin-left: 0; }
+  .pav-you { background: var(--cta-grad); }
+  .pav-a   { background: linear-gradient(135deg, var(--lavender), var(--lavender-deep)); }
+  .pav-b   { background: linear-gradient(135deg, var(--mint), var(--aqua)); }
+  .pav-c   { background: linear-gradient(135deg, var(--gold), var(--peach-deep)); }
+  .pav-more {
+    background: var(--surface-strong); color: var(--ink-faint);
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: .8rem; font-weight: 600; box-shadow: 0 0 0 2px var(--glass-strong);
+  }
+  .pav:not(.pav-more)::after {
+    content: ''; position: absolute; right: -1px; bottom: -1px;
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--mint-deep); box-shadow: 0 0 0 2px var(--glass-strong), 0 0 7px var(--mint-deep);
+  }
+  .presence-note { margin-left: auto; font-size: .78rem; color: var(--ink-faint); }
+
+  /* avatar silhouettes — Bitmoji-style faces stamped on each presence dot, so
+     "everyone has a clone that looks like them" reads at a glance. */
+  .pav:not(.pav-more)::before {
+    content: ''; position: absolute; inset: 0; border-radius: 50%;
+    background: rgba(255, 255, 255, .92);
+    -webkit-mask: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2024%2024'%3E%3Ccircle%20cx='12'%20cy='9'%20r='3.6'/%3E%3Cpath%20d='M5%2020c0-4.2%203.3-6.7%207-6.7s7%202.5%207%206.7z'/%3E%3C/svg%3E") center / 16px 16px no-repeat;
+            mask: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2024%2024'%3E%3Ccircle%20cx='12'%20cy='9'%20r='3.6'/%3E%3Cpath%20d='M5%2020c0-4.2%203.3-6.7%207-6.7s7%202.5%207%206.7z'/%3E%3C/svg%3E") center / 16px 16px no-repeat;
+  }
+
+  /* call controls in the card head — the Persona is a living presence you can
+     ring or video, exactly like a person. */
+  .pcall { display: inline-flex; align-items: center; gap: .35rem; }
+  .pcall-btn {
+    width: 27px; height: 27px; border-radius: 50%; flex: none;
+    display: inline-flex; align-items: center; justify-content: center;
+    color: var(--ink-soft); border: 1px solid var(--line-strong); background: var(--surface);
+  }
+  .pcall-btn svg { width: 14px; height: 14px; fill: currentColor; }
+  .pcall-video {
+    color: #fff; border: 0;
+    background: linear-gradient(135deg, var(--lavender), var(--lavender-deep));
+    box-shadow: 0 0 14px rgba(201, 184, 255, .45);
+  }
+
+  /* ── capability rail — the long tail, scannable; "and a lot more" ── */
+  .cap-rail {
+    position: relative; z-index: 1;
+    margin-top: 1.1rem;
+    display: flex; flex-wrap: wrap; gap: .4rem;
+  }
+  .cap-rail span {
+    font-family: var(--font-mono); font-size: .6rem;
+    text-transform: lowercase; letter-spacing: .04em; color: var(--ink-faint);
+    padding: .26rem .58rem; border-radius: var(--r-pill);
+    border: 1px solid var(--line); background: var(--surface);
+  }
+  .cap-rail .cap-lead {
+    color: var(--lavender-deep); border-color: rgba(201, 184, 255, .3);
+    text-transform: uppercase; letter-spacing: .14em;
+  }
+  html[data-theme="dark"] .cap-rail .cap-lead { color: var(--lavender); }
+  .cap-rail .cap-more { color: var(--ink-soft); border-style: dashed; }
+
+  /* light theme — deepen accent TEXT to clear WCAG AA on cream */
+  html[data-theme="light"] .presence-lead { color: var(--lavender-ink); }
+  html[data-theme="light"] .cap-rail .cap-lead { color: var(--lavender-ink); }
+  html[data-theme="light"] .feed-row.legacy .feed-when { color: var(--gold-ink); }
+
+  /* legacy beat — warm gold tint, never morbid; this is "carries forward". */
+  .feed-row.legacy {
+    margin-top: .4rem; border-top: 1px solid var(--line);
+    background: linear-gradient(180deg, rgba(255, 210, 122, .07), transparent);
+    border-radius: 0 0 var(--r-md) var(--r-md);
+  }
+  .feed-row.legacy .feed-when { color: var(--gold); }
+  .feed-row.legacy .feed-body { color: var(--ink); }
+
+  /* staggered reveal — the clone "doing things", one beat at a time */
+  :global(html.js) .feed-row { opacity: 0; transform: translateY(10px); transition: opacity 520ms var(--ease-out), transform 520ms var(--ease-out); }
+  :global(html.js) .feed-row.in { opacity: 1; transform: none; }
+
+  @media (prefers-reduced-motion: reduce) {
+    :global(html.js) .feed-row { opacity: 1 !important; transform: none !important; }
+  }
+</style>
+
+<script is:inline>
+  // Persona feed — gentle sequential reveal when scrolled into view (the clone
+  // catching you up, one item at a time). Copy reveals handled globally.
+  (function () {
+    var stage = document.getElementById('persona-stage');
+    if (!stage) return;
+    var reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    var rows = [].slice.call(stage.querySelectorAll('.feed-row'));
+    var started = false;
+
+    function visibleFrac(el) {
+      var r = el.getBoundingClientRect();
+      var h = window.innerHeight || document.documentElement.clientHeight;
+      if (r.height === 0) return (r.top < h && r.bottom > 0) ? 1 : 0;
+      return Math.max(0, Math.min(r.bottom, h) - Math.max(r.top, 0)) / Math.min(r.height, h);
+    }
+    function run() {
+      if (started) return;
+      started = true;
+      if (reduced) { rows.forEach(function (r) { r.classList.add('in'); }); return; }
+      rows.forEach(function (r, i) { setTimeout(function () { r.classList.add('in'); }, 260 + i * 540); });
+    }
+    function check() {
+      if (visibleFrac(stage) >= 0.3) {
+        run();
+        window.removeEventListener('scroll', check);
+        window.removeEventListener('resize', check);
+      }
+    }
+    requestAnimationFrame(function () { requestAnimationFrame(check); });
+    window.addEventListener('scroll', check, { passive: true });
+    window.addEventListener('resize', check);
+  })();
+</script>

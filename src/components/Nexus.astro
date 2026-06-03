@@ -1,0 +1,222 @@
+---
+// Nexus — Human side, second scene and the "somewhere to belong" beat. Cool
+// palette (aqua). Show-don't-tell via a rooms panel: living discussion rooms you
+// can join anonymously, plus a Resonance match that surfaces people who genuinely
+// resonate with you — belonging by quality, not vanity metrics (the ethical
+// alternative to follower-count validation). Anonymity is the default, which is
+// what makes honest rooms safe. Device LEFT, copy RIGHT — alternating rhythm.
+---
+
+<section class="s-section nexus" id="nexus">
+  <div class="u-wrap s-two nexus-two">
+    <div class="nexus-copy">
+      <p class="s-kicker k-aqua" data-reveal><span class="orb"></span>Nexus · somewhere to belong</p>
+
+      <h3 class="s-title" data-reveal>
+        Find where you fit.<br />
+        <span class="accent cool">No performance needed.</span>
+      </h3>
+
+      <p class="s-sub" data-reveal>
+        Not a feed to perform for. Quiet rooms for what's actually on your mind —
+        and a way to find the few people who truly get it.
+      </p>
+
+      <ul class="s-points" data-reveal>
+        <li><span class="pt-dot pt-aqua"></span><b>Anonymous chat</b> — speak freely, no mask to keep up.</li>
+        <li><span class="pt-dot pt-3"></span><b>Discussion rooms</b> — for whatever's moving you tonight.</li>
+        <li><span class="pt-dot pt-aqua"></span><b>Resonance match</b> — meet people who actually resonate.</li>
+      </ul>
+
+      <p class="s-trust" data-reveal>
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <rect x="5" y="11" width="14" height="9" rx="2" />
+          <path d="M8 11V8a4 4 0 0 1 8 0v3" />
+        </svg>
+        Anonymous by default — you choose when to be known.
+      </p>
+    </div>
+
+    <div class="s-stage nexus-stage" id="nexus-stage" aria-hidden="true">
+      <div class="s-glow g-cool" aria-hidden="true"></div>
+      <div class="s-card">
+        <div class="s-card-head">
+          <span class="s-orb cool"><span class="core"></span><span class="echo"></span></span>
+          <span class="who">
+            <b>Nexus</b>
+            <i class="s-live"><span class="s-live-dot"></span>you're anonymous here</i>
+          </span>
+          <span class="s-badge">rooms</span>
+        </div>
+
+        <ul class="rooms" id="nexus-rooms">
+          <li class="room">
+            <span class="room-name"># late-night thoughts</span>
+            <span class="room-here"><span class="here-dot"></span>84 here</span>
+          </li>
+          <li class="room">
+            <span class="room-name"># starting over</span>
+            <span class="room-here"><span class="here-dot"></span>39 here</span>
+          </li>
+          <li class="room">
+            <span class="room-name"># made it through today</span>
+            <span class="room-here"><span class="here-dot"></span>122 here</span>
+          </li>
+          <li class="room room-more"><span>+ 240 more rooms live tonight</span></li>
+        </ul>
+
+        <div class="reso" id="nexus-reso">
+          <div class="reso-head">
+            <span class="reso-spark"></span>
+            <b>Resonance match</b>
+          </div>
+          <p class="reso-body">3 people in <b>#starting over</b> feel a lot like you right now.</p>
+          <span class="reso-btn">Join quietly</span>
+        </div>
+      </div>
+
+      <p class="cap-rail">
+        <span class="cap-lead">also</span>
+        <span>voice rooms</span>
+        <span>start a room</span>
+        <span>1:1 when you're ready</span>
+        <span>no likes, no counts</span>
+        <span class="cap-more">&amp; more</span>
+      </p>
+    </div>
+  </div>
+</section>
+
+<style>
+  /* device LEFT / copy RIGHT on desktop; copy leads source so mobile reads first */
+  @media (min-width: 901px) {
+    .nexus-stage { order: -1; }
+  }
+  @media (max-width: 900px) {
+    .nexus-stage { max-width: 460px; margin-inline: auto; width: 100%; }
+  }
+
+  /* ── rooms ── */
+  .rooms { list-style: none; padding-top: 1.1rem; display: flex; flex-direction: column; }
+  .room {
+    display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+    padding: .9rem .4rem; border-bottom: 1px solid var(--line);
+  }
+  .room-name { font-size: .98rem; color: var(--ink); font-weight: 500; }
+  .room-here {
+    display: inline-flex; align-items: center; gap: .45rem; flex: none;
+    font-family: var(--font-mono); font-size: .68rem; letter-spacing: .04em; color: var(--ink-faint);
+  }
+  .here-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--aqua); box-shadow: 0 0 8px var(--aqua);
+    animation: nexus-pulse 2.2s ease-in-out infinite;
+  }
+  .room:nth-child(2) .here-dot { animation-delay: .5s; }
+  .room:nth-child(3) .here-dot { animation-delay: 1s; }
+  @keyframes nexus-pulse { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: .4; transform: scale(.7); } }
+
+  /* ── resonance match highlight ── */
+  .reso {
+    margin-top: 1.1rem; padding: 1rem 1.1rem; border-radius: var(--r-md);
+    background: linear-gradient(160deg, rgba(91, 192, 255, .12), rgba(106, 211, 184, .08));
+    border: 1px solid rgba(91, 192, 255, .24);
+  }
+  .reso-head { display: flex; align-items: center; gap: .55rem; }
+  .reso-head b {
+    font-family: var(--font-mono); font-size: .64rem; text-transform: uppercase;
+    letter-spacing: .16em; color: var(--aqua); font-weight: 500;
+  }
+  .reso-spark {
+    width: 14px; height: 14px; border-radius: 50%; flex: none;
+    background: radial-gradient(circle at 40% 40%, #BFE9FF, var(--aqua));
+    box-shadow: 0 0 14px rgba(91, 192, 255, .6);
+    animation: reso-glow 3s ease-in-out infinite;
+  }
+  @keyframes reso-glow { 0%,100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.18); opacity: .8; } }
+  .reso-body { margin-top: .6rem; font-size: .95rem; line-height: 1.5; color: var(--ink); }
+  .reso-body b { color: var(--aqua); font-weight: 600; }
+  .reso-btn {
+    display: inline-block; margin-top: .9rem; padding: .55rem 1.1rem;
+    border-radius: var(--r-pill); font-size: .86rem; font-weight: 600; color: var(--ink);
+    background: var(--surface-strong); border: 1px solid rgba(91, 192, 255, .35);
+  }
+
+  /* "+ more rooms" — the three rooms are just the surface; hundreds are live */
+  .room-more { justify-content: center; border-bottom: 0; padding-top: .8rem; }
+  .room-more span {
+    font-family: var(--font-mono); font-size: .66rem; letter-spacing: .05em;
+    text-transform: lowercase; color: var(--ink-faint);
+  }
+
+  /* capability rail — the long tail of Nexus, scannable */
+  .cap-rail {
+    position: relative; z-index: 1;
+    margin-top: 1.1rem;
+    display: flex; flex-wrap: wrap; gap: .4rem;
+  }
+  .cap-rail span {
+    font-family: var(--font-mono); font-size: .6rem;
+    text-transform: lowercase; letter-spacing: .04em; color: var(--ink-faint);
+    padding: .26rem .58rem; border-radius: var(--r-pill);
+    border: 1px solid var(--line); background: var(--surface);
+  }
+  .cap-rail .cap-lead {
+    color: var(--aqua); border-color: rgba(91, 192, 255, .3);
+    text-transform: uppercase; letter-spacing: .14em;
+  }
+  .cap-rail .cap-more { color: var(--ink-soft); border-style: dashed; }
+
+  /* light theme — deepen accent TEXT to clear WCAG AA on cream */
+  html[data-theme="light"] .reso-head b { color: var(--aqua-ink); }
+  html[data-theme="light"] .reso-body b { color: var(--aqua-ink); }
+  html[data-theme="light"] .cap-rail .cap-lead { color: var(--aqua-ink); }
+
+  /* staggered reveal — rooms fill in, then the resonance match lands */
+  :global(html.js) .room, :global(html.js) .reso { opacity: 0; transform: translateY(10px); transition: opacity 520ms var(--ease-out), transform 520ms var(--ease-out); }
+  :global(html.js) .room.in, :global(html.js) .reso.in { opacity: 1; transform: none; }
+
+  @media (prefers-reduced-motion: reduce) {
+    :global(html.js) .room, :global(html.js) .reso { opacity: 1 !important; transform: none !important; }
+  }
+</style>
+
+<script is:inline>
+  // Nexus rooms — rooms reveal in sequence, then the resonance match, on scroll-in.
+  (function () {
+    var stage = document.getElementById('nexus-stage');
+    if (!stage) return;
+    var reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    var rooms = [].slice.call(stage.querySelectorAll('.room'));
+    var reso = document.getElementById('nexus-reso');
+    var started = false;
+
+    function visibleFrac(el) {
+      var r = el.getBoundingClientRect();
+      var h = window.innerHeight || document.documentElement.clientHeight;
+      if (r.height === 0) return (r.top < h && r.bottom > 0) ? 1 : 0;
+      return Math.max(0, Math.min(r.bottom, h) - Math.max(r.top, 0)) / Math.min(r.height, h);
+    }
+    function run() {
+      if (started) return;
+      started = true;
+      if (reduced) {
+        rooms.forEach(function (r) { r.classList.add('in'); });
+        if (reso) reso.classList.add('in');
+        return;
+      }
+      rooms.forEach(function (r, i) { setTimeout(function () { r.classList.add('in'); }, 200 + i * 380); });
+      if (reso) setTimeout(function () { reso.classList.add('in'); }, 200 + rooms.length * 380 + 220);
+    }
+    function check() {
+      if (visibleFrac(stage) >= 0.3) {
+        run();
+        window.removeEventListener('scroll', check);
+        window.removeEventListener('resize', check);
+      }
+    }
+    requestAnimationFrame(function () { requestAnimationFrame(check); });
+    window.addEventListener('scroll', check, { passive: true });
+    window.addEventListener('resize', check);
+  })();
+</script>

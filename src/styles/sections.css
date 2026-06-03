@@ -1,0 +1,190 @@
+/* =====================================================================
+   Blaksyd — section primitives
+   Shared building blocks for the product scenes so every section shares one
+   rhythm: a mono kicker, a two-line headline (Inter + serif-italic accent),
+   a lead, capability points, an optional trust line, and a glass "device" card.
+   Colour encodes structure: the AI side runs warm (coral / lavender), the
+   Human side runs cool (mint / aqua). Hero & Blak keep their own scoped styles.
+   ===================================================================== */
+
+/* ---- section shell + two-column layout ---- */
+.s-section {
+  position: relative; z-index: 1;
+  scroll-margin-top: 110px;
+  padding-block: clamp(3.5rem, 9vh, 6rem);
+}
+.s-two {
+  display: grid; grid-template-columns: 1fr 1.05fr;
+  gap: clamp(2rem, 5vw, 5rem); align-items: center;
+}
+@media (max-width: 900px) {
+  .s-two { grid-template-columns: 1fr; gap: 2.5rem; }
+}
+
+/* ---- kicker (mono eyebrow with a glowing orb) ---- */
+.s-kicker {
+  display: inline-flex; align-items: center; gap: .55rem;
+  font-family: var(--font-mono); font-size: .72rem;
+  text-transform: uppercase; letter-spacing: .2em;
+  margin-bottom: 1.2rem; color: var(--coral);
+}
+.s-kicker .orb {
+  width: 14px; height: 14px; border-radius: 50%; flex: none;
+  background: var(--cta-grad); box-shadow: 0 0 16px rgba(255, 184, 122, .5);
+}
+.s-kicker.k-lav  { color: var(--lavender); }
+.s-kicker.k-lav  .orb { background: radial-gradient(circle at 40% 40%, var(--lavender), var(--lavender-deep)); box-shadow: 0 0 16px rgba(201, 184, 255, .6); }
+.s-kicker.k-mint { color: var(--mint-deep); }
+.s-kicker.k-mint .orb { background: radial-gradient(circle at 40% 40%, var(--mint), var(--mint-deep)); box-shadow: 0 0 16px rgba(106, 211, 184, .6); }
+.s-kicker.k-aqua { color: var(--aqua); }
+.s-kicker.k-aqua .orb { background: radial-gradient(circle at 40% 40%, #9FD9FF, var(--aqua)); box-shadow: 0 0 16px rgba(91, 192, 255, .6); }
+.s-kicker.k-gold { color: var(--gold); }
+.s-kicker.k-gold .orb { background: radial-gradient(circle at 40% 40%, var(--peach), var(--gold)); box-shadow: 0 0 16px rgba(255, 210, 122, .6); }
+html[data-theme="light"] .s-kicker.k-lav  { color: var(--lavender-ink); }
+html[data-theme="light"] .s-kicker.k-mint { color: var(--mint-ink); }
+html[data-theme="light"] .s-kicker.k-aqua { color: var(--aqua-ink); }
+html[data-theme="light"] .s-kicker.k-gold { color: var(--gold-ink); }
+
+/* ---- headline (Inter line + serif-italic gradient accent) ---- */
+.s-title {
+  font-family: var(--font-display); font-weight: 600;
+  font-size: var(--t-h2); line-height: 1.0; letter-spacing: -.03em; color: var(--ink);
+}
+.s-title .accent {
+  font-family: var(--font-serif); font-weight: 400; font-style: italic;
+  font-size: 1.1em; letter-spacing: -.02em;
+  background: var(--accent-grad);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent; color: transparent;
+}
+.s-title .accent.cool { background: linear-gradient(110deg, var(--mint) 0%, var(--mint-deep) 40%, var(--aqua) 90%); -webkit-background-clip: text; background-clip: text; }
+
+/* ---- lead ---- */
+.s-sub {
+  margin-top: 1.3rem; max-width: 46ch;
+  font-size: var(--t-lead); color: var(--ink-soft); line-height: 1.6;
+}
+
+/* ---- capability points ---- */
+.s-points { list-style: none; margin-top: 1.6rem; display: grid; gap: .85rem; }
+/* hanging dot + flowing "label — description" so two-word labels never break into
+   an awkward narrow column when the row wraps on small screens. */
+.s-points li { position: relative; padding-left: 1.55rem; font-size: 1rem; line-height: 1.5; color: var(--ink-soft); }
+.s-points b { color: var(--ink); font-weight: 600; }
+.pt-dot { width: 9px; height: 9px; border-radius: 50%; flex: none; }
+.s-points .pt-dot { position: absolute; left: 1px; top: .5em; }
+.pt-1    { background: var(--coral);    box-shadow: 0 0 10px var(--coral); }
+.pt-2    { background: var(--lavender); box-shadow: 0 0 10px var(--lavender); }
+.pt-3    { background: var(--mint);     box-shadow: 0 0 10px var(--mint); }
+.pt-gold { background: var(--gold);     box-shadow: 0 0 10px var(--gold); }
+.pt-aqua { background: var(--aqua);     box-shadow: 0 0 10px var(--aqua); }
+
+/* ---- trust line ---- */
+.s-trust {
+  display: inline-flex; align-items: center; gap: .55rem;
+  margin-top: 1.9rem; font-size: .9rem; color: var(--ink-faint);
+}
+.s-trust svg {
+  width: 16px; height: 16px; flex: none;
+  fill: none; stroke: var(--mint-deep); stroke-width: 1.8;
+  stroke-linecap: round; stroke-linejoin: round;
+}
+
+/* ---- device stage + glass card ---- */
+.s-stage { position: relative; }
+.s-glow {
+  position: absolute; inset: -8% -6% -10% -6%; z-index: 0; pointer-events: none;
+  filter: blur(36px);
+  background:
+    radial-gradient(60% 50% at 30% 18%, rgba(255, 107, 157, .26), transparent 70%),
+    radial-gradient(60% 55% at 80% 80%, rgba(201, 184, 255, .24), transparent 72%);
+}
+.s-glow.g-cool {
+  background:
+    radial-gradient(60% 50% at 28% 18%, rgba(106, 211, 184, .26), transparent 70%),
+    radial-gradient(60% 55% at 82% 82%, rgba(91, 192, 255, .24), transparent 72%);
+}
+.s-card {
+  position: relative; z-index: 1;
+  border-radius: var(--r-lg);
+  background: var(--glass-strong);
+  backdrop-filter: blur(20px) saturate(150%);
+  -webkit-backdrop-filter: blur(20px) saturate(150%);
+  border: 1px solid var(--line-strong);
+  box-shadow: var(--shadow-soft);
+  padding: 1.1rem 1.1rem 1.3rem;
+}
+.s-card-head {
+  display: flex; align-items: center; gap: .7rem;
+  padding: .2rem .3rem 1rem; border-bottom: 1px solid var(--line);
+}
+.s-card-head .who { display: flex; flex-direction: column; line-height: 1.2; }
+.s-card-head b { font-size: .98rem; color: var(--ink); font-weight: 600; }
+.s-live {
+  display: inline-flex; align-items: center; gap: .35rem;
+  font-style: normal; font-size: .72rem; color: var(--ink-faint);
+}
+.s-live-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--mint-deep); box-shadow: 0 0 8px var(--mint-deep);
+  animation: s-pulse 2.4s ease-in-out infinite;
+}
+@keyframes s-pulse { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: .5; transform: scale(.7); } }
+.s-badge {
+  margin-left: auto;
+  font-family: var(--font-mono); font-size: .6rem;
+  text-transform: uppercase; letter-spacing: .18em; color: var(--ink-faint);
+  padding: .25rem .5rem; border-radius: var(--r-pill);
+  border: 1px solid var(--line-strong);
+}
+
+/* ---- avatar orb (gradient presence) + clone echo ---- */
+.s-orb { position: relative; width: 40px; height: 40px; flex: none; }
+.s-orb .core {
+  position: absolute; inset: 0; border-radius: 50%;
+  background: var(--cta-grad);
+  box-shadow: 0 0 18px rgba(255, 107, 157, .5), inset 0 1px 2px rgba(255, 255, 255, .4);
+  animation: s-breathe 5s ease-in-out infinite;
+}
+.s-orb.cool .core { background: linear-gradient(135deg, var(--mint) 0%, var(--mint-deep) 60%, var(--aqua) 130%); box-shadow: 0 0 18px rgba(106, 211, 184, .5), inset 0 1px 2px rgba(255, 255, 255, .4); }
+.s-orb .echo {
+  position: absolute; inset: 0; border-radius: 50%;
+  border: 1px solid var(--lavender); opacity: 0;
+  animation: s-echo 3.4s var(--ease-out) infinite;
+}
+.s-orb .echo.e2 { animation-delay: 1.7s; }
+@keyframes s-breathe { 0%,100% { transform: scale(1); } 50% { transform: scale(1.06); } }
+@keyframes s-echo { 0% { transform: scale(1); opacity: .7; } 100% { transform: scale(1.7); opacity: 0; } }
+
+/* =====================================================================
+   Shared button system — the two real CTAs (waitlist + enter app) live here
+   so the hero and the finale render identical actions. Warm primary on the
+   signature CTA gradient; a quiet glass ghost for the secondary path.
+   ===================================================================== */
+.btn {
+  display: inline-flex; align-items: center; gap: .6rem;
+  font-weight: 600; font-size: 1rem;
+  padding: 1rem 1.6rem; border-radius: var(--r-pill);
+  transition: transform 300ms var(--ease-magnet), box-shadow var(--t-base) var(--ease-out),
+              background-position var(--t-slow) var(--ease-out), background var(--t-fast) var(--ease-out),
+              border-color var(--t-fast) var(--ease-out);
+}
+.btn svg {
+  width: 1.1em; height: 1.1em; fill: none; stroke: currentColor; stroke-width: 2;
+  stroke-linecap: round; stroke-linejoin: round; transition: transform var(--t-base) var(--ease-out);
+}
+.btn-primary {
+  /* dark label on the bright gradient — white can't clear AA on a *bright*
+     gradient without dimming it; dark text keeps the gradient vivid and passes
+     (~6.6:1 at the darkest stop). Same dark-on-gradient pattern as Minit's CTA. */
+  color: #2A0E1E; background: var(--cta-grad);
+  background-size: 200% 200%; background-position: 0% 50%;
+  box-shadow: var(--shadow-cta);
+}
+.btn-primary:hover { background-position: 100% 50%; transform: translateY(-2px); box-shadow: 0 22px 60px rgba(255, 184, 122, .55); }
+.btn-primary:hover svg { transform: translateX(5px); }
+.btn-ghost { color: var(--ink); background: var(--surface); border: 1px solid var(--line-strong); }
+.btn-ghost:hover { background: var(--surface-strong); border-color: var(--ink-faint); transform: translateY(-2px); }
+@media (max-width: 600px) {
+  .btn { width: 100%; justify-content: center; }
+}

@@ -1,0 +1,58 @@
+# Netlify response headers for the Blaksyd landing.
+# Copied verbatim into dist/_headers at `astro build`, so it only takes effect
+# once the deploy switch makes dist/ the publish dir. It does NOT alter the
+# current live (old) site, whose publish root has no _headers file.
+#
+# IMPORTANT — scoping: the strict Content-Security-Policy + locked-down
+# Permissions-Policy below are applied ONLY to the landing's HTML routes
+# (/, /privacy, /terms). They intentionally do NOT cover /app/*, /team-os/*,
+# or /symp-core/* — those SPAs use camera/mic/WebRTC and third-party origins
+# (Supabase, OpenAI, ICE, Spotify); a landing-tuned CSP would break them.
+
+# ───────────── Universal baseline — safe for the landing AND the sub-apps ─────────────
+/*
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: SAMEORIGIN
+  Referrer-Policy: strict-origin-when-cross-origin
+  Strict-Transport-Security: max-age=63072000; includeSubDomains; preload
+
+# ───────────── Landing-only hardening (HTML document routes) ─────────────
+# CSP notes:
+#   - script-src/style-src include 'unsafe-inline' because the no-flash theme
+#     script must run inline before paint and the section animations are inline.
+#     The page has no user input / reflected data, so practical XSS surface ~ 0.
+#     This can be upgraded to hash-based (drop 'unsafe-inline') by moving the
+#     non-head scripts to Astro-bundled files — a follow-up, not required now.
+#   - connect-src 'self' blocks any external exfiltration; widen it only when
+#     real auth/analytics are wired in.
+#   - fonts are self-hosted (/fonts/*, same-origin); no external font origins,
+#     so font-src/style-src stay 'self' (style-src keeps 'unsafe-inline' for the
+#     bundled/inline styles only).
+/
+  Content-Security-Policy: default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'self'; form-action 'self'; img-src 'self' data:; font-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; connect-src 'self'; manifest-src 'self'; upgrade-insecure-requests
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), browsing-topics=(), payment=(), usb=()
+  Cross-Origin-Opener-Policy: same-origin
+/index.html
+  Content-Security-Policy: default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'self'; form-action 'self'; img-src 'self' data:; font-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; connect-src 'self'; manifest-src 'self'; upgrade-insecure-requests
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), browsing-topics=(), payment=(), usb=()
+  Cross-Origin-Opener-Policy: same-origin
+/privacy
+  Content-Security-Policy: default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'self'; form-action 'self'; img-src 'self' data:; font-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; connect-src 'self'; manifest-src 'self'; upgrade-insecure-requests
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), browsing-topics=(), payment=(), usb=()
+  Cross-Origin-Opener-Policy: same-origin
+/terms
+  Content-Security-Policy: default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'self'; form-action 'self'; img-src 'self' data:; font-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; connect-src 'self'; manifest-src 'self'; upgrade-insecure-requests
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), browsing-topics=(), payment=(), usb=()
+  Cross-Origin-Opener-Policy: same-origin
+
+# ───────────── Fingerprinted assets — safe to cache forever ─────────────
+/_astro/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# Self-hosted fonts — stable filenames; cache for a year.
+/fonts/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# Brand images (wordmarks, OG card) — rarely change.
+/assets/*
+  Cache-Control: public, max-age=2592000

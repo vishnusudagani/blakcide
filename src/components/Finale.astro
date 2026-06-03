@@ -1,0 +1,179 @@
+---
+// Finale — the closing payoff. After the four products and the Learning keystone,
+// the page zooms back out to the whole: one world, built around you. Emotion is
+// "the better future" — hopeful, warm, human. The accent spans warm→cool to fuse
+// the AI and Human sides one last time. One "Begin" CTA opens the signup/login
+// modal, and a quiet five-dot constellation recaps the structure
+// (Blak · Persona · Learning · Minit · Nexus) without a word of jargon.
+---
+
+<section class="s-section finale" id="waitlist" aria-label="Join Blaksyd">
+  <div class="finale-glow" aria-hidden="true"></div>
+
+  <div class="u-wrap finale-inner">
+    <p class="s-kicker k-gold finale-kicker" data-reveal><span class="orb"></span>your world, from here</p>
+
+    <h2 class="s-title finale-title" data-reveal>
+      Step into a world<br />
+      <span class="accent">that's yours alone.</span>
+    </h2>
+
+    <p class="s-sub finale-sub" data-reveal>
+      Blak and Persona to know you. Minit and Nexus to bring people close. One
+      engine learning you a little more every day. The better future isn't
+      coming — it's yours to enter.
+    </p>
+
+    <div class="finale-ctas" data-reveal>
+      <button type="button" class="btn btn-primary" data-open-auth data-tab="signup">
+        <span>Begin</span>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
+      </button>
+    </div>
+
+    <div class="constellation" data-reveal aria-hidden="true">
+      <span class="cdot c-coral"></span>
+      <span class="cdot c-lav"></span>
+      <span class="cdot c-gold"></span>
+      <span class="cdot c-mint"></span>
+      <span class="cdot c-aqua"></span>
+    </div>
+    <p class="cnames" data-reveal>Blak · Persona · Learning · Minit · Nexus</p>
+  </div>
+
+  <footer class="foot">
+    <div class="u-wrap foot-inner">
+      <span class="foot-brand"><span class="foot-dot"></span>Blaksyd</span>
+      <nav class="foot-links" aria-label="Footer">
+        <a href="/privacy">Privacy</a>
+        <a href="/terms">Terms</a>
+        <a href="#" data-open-auth data-tab="signup">Begin</a>
+        <span class="foot-sep" aria-hidden="true"></span>
+        <span class="foot-social">
+          <a href="https://www.instagram.com/blaksyd" target="_blank" rel="noopener noreferrer" aria-label="Blaksyd on Instagram (@blaksyd)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect x="3" y="3" width="18" height="18" rx="5" />
+              <circle cx="12" cy="12" r="4" />
+              <circle cx="17.2" cy="6.8" r="1.15" fill="currentColor" stroke="none" />
+            </svg>
+          </a>
+          <a href="https://www.youtube.com/@blaksyd" target="_blank" rel="noopener noreferrer" aria-label="Blaksyd on YouTube (@blaksyd)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect x="2.5" y="5.5" width="19" height="13" rx="4.2" />
+              <path d="M10.2 9.3l5 2.7-5 2.7z" fill="currentColor" stroke="none" />
+            </svg>
+          </a>
+        </span>
+      </nav>
+      <span class="foot-copy">© 2026 Blaksyd</span>
+    </div>
+  </footer>
+</section>
+
+<style>
+  .finale {
+    position: relative; overflow: hidden;
+    padding-block: clamp(5rem, 13vh, 9rem) 0;
+  }
+  .finale-glow {
+    position: absolute; left: 50%; top: 18%; transform: translateX(-50%);
+    width: min(900px, 120%); height: 520px; z-index: 0; pointer-events: none;
+    filter: blur(70px); opacity: .9;
+    background:
+      radial-gradient(42% 60% at 30% 40%, rgba(255, 107, 157, .26), transparent 70%),
+      radial-gradient(42% 60% at 70% 45%, rgba(91, 192, 255, .22), transparent 70%),
+      radial-gradient(50% 60% at 50% 60%, rgba(201, 184, 255, .20), transparent 72%);
+  }
+  .finale-inner { position: relative; z-index: 1; text-align: center; max-width: 64ch; margin-inline: auto; }
+  .finale-kicker { margin-inline: auto; }
+
+  .finale-title { margin-inline: auto; max-width: 16ch; }
+  .finale-title .accent {
+    /* warm→cool spectrum — fuses the AI and Human sides one last time */
+    background: linear-gradient(110deg, var(--coral) 0%, var(--lavender) 42%, var(--aqua) 92%);
+    -webkit-background-clip: text; background-clip: text;
+  }
+  .finale-sub { margin-inline: auto; max-width: 54ch; }
+
+  .finale-ctas {
+    display: flex; flex-wrap: wrap; justify-content: center; gap: .9rem;
+    margin-top: 2.6rem;
+  }
+  @media (max-width: 600px) {
+    .finale-ctas { width: 100%; max-width: 360px; margin-inline: auto; }
+  }
+
+  /* ── closing constellation — the whole system in five dots ── */
+  .constellation {
+    position: relative; display: inline-flex; align-items: center; gap: clamp(1.4rem, 5vw, 2.6rem);
+    margin-top: clamp(3rem, 7vh, 4.5rem); padding: 0 .4rem;
+  }
+  .constellation::before {
+    content: ''; position: absolute; left: 0; right: 0; top: 50%; height: 1px;
+    background: linear-gradient(90deg, transparent, var(--line-strong) 18%, var(--line-strong) 82%, transparent);
+    z-index: 0;
+  }
+  .cdot {
+    position: relative; z-index: 1; width: 11px; height: 11px; border-radius: 50%;
+    animation: finale-twinkle 3.4s ease-in-out infinite;
+  }
+  .c-coral { background: var(--coral);    box-shadow: 0 0 12px var(--coral); }
+  .c-lav   { background: var(--lavender); box-shadow: 0 0 12px var(--lavender); animation-delay: .4s; }
+  .c-gold  { background: var(--gold);     box-shadow: 0 0 14px var(--gold); transform: scale(1.18); animation-delay: .8s; }
+  .c-mint  { background: var(--mint);     box-shadow: 0 0 12px var(--mint); animation-delay: 1.2s; }
+  .c-aqua  { background: var(--aqua);     box-shadow: 0 0 12px var(--aqua); animation-delay: 1.6s; }
+  @keyframes finale-twinkle { 0%,100% { opacity: 1; } 50% { opacity: .5; } }
+
+  .cnames {
+    margin-top: 1.1rem;
+    font-family: var(--font-mono); font-size: .68rem;
+    letter-spacing: .18em; text-transform: uppercase; color: var(--ink-faint);
+  }
+
+  /* ── slim footer ── */
+  .foot {
+    position: relative; z-index: 1;
+    margin-top: clamp(4rem, 10vh, 7rem);
+    border-top: 1px solid var(--line);
+    padding-block: 1.6rem;
+  }
+  .foot-inner {
+    display: flex; align-items: center; justify-content: space-between; gap: 1rem 1.5rem;
+    flex-wrap: wrap;
+  }
+  .foot-brand {
+    display: inline-flex; align-items: center; gap: .55rem;
+    font-weight: 600; font-size: .95rem; color: var(--ink);
+  }
+  .foot-dot {
+    width: 12px; height: 12px; border-radius: 50%;
+    background: var(--accent-grad); box-shadow: 0 0 12px rgba(255, 184, 122, .45);
+  }
+  .foot-links { display: inline-flex; align-items: center; gap: 1.2rem; }
+  /* text links keep their .9rem size; min-height lifts the touch target to 44px
+     (text stays centred, so the footer just gains a little tappable height). */
+  .foot-links a {
+    display: inline-flex; align-items: center; min-height: 44px;
+    font-size: .9rem; color: var(--ink-soft); transition: color var(--t-fast) var(--ease-out);
+  }
+  .foot-links a:hover { color: var(--ink); }
+  .foot-sep { width: 1px; height: 15px; background: var(--line-strong); }
+  .foot-social { display: inline-flex; align-items: center; gap: .35rem; }
+  /* 44×44 hit area around the 18px glyph — tightened gap keeps the icons from
+     drifting apart now that each sits in a larger invisible box. */
+  .foot-social a {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 44px; height: 44px; color: var(--ink-soft);
+    transition: color var(--t-fast) var(--ease-out), transform var(--t-fast) var(--ease-spring);
+  }
+  .foot-social a:hover { color: var(--ink); transform: translateY(-2px); }
+  .foot-social svg { width: 18px; height: 18px; }
+  .foot-copy { font-size: .82rem; color: var(--ink-faint); }
+  @media (max-width: 560px) {
+    .foot-inner { justify-content: center; text-align: center; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .cdot { animation: none !important; }
+  }
+</style>

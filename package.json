@@ -1,0 +1,14 @@
+{
+  "name": "blaksyd-site",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build && node scripts/copy-subapps.mjs",
+    "preview": "astro preview",
+    "astro": "astro"
+  },
+  "devDependencies": {
+    "astro": "^5"
+  }
+}

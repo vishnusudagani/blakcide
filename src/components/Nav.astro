@@ -1,0 +1,159 @@
+---
+// Nav — floating glass capsule (the live site's signature, rebuilt).
+// Real wordmark (swaps black/white per theme), the product spine
+// (Blak · Persona · Minit · Nexus), a theme toggle, and one "Begin" CTA.
+// Shrinks toward the top edge on scroll.
+---
+
+<nav class="nav" id="nav" aria-label="Primary">
+  <a href="#top" class="brand" aria-label="Blaksyd — home">
+    <span class="brand-mark" aria-hidden="true"></span>
+  </a>
+
+  <div class="links">
+    <a href="#blak">Blak</a>
+    <a href="#persona">Persona</a>
+    <a href="#minit">Minit</a>
+    <a href="#nexus">Nexus</a>
+  </div>
+
+  <span class="divider" aria-hidden="true"></span>
+
+  <div class="actions">
+    <button class="toggle" id="theme-toggle" type="button" aria-label="Toggle light and dark mode">
+      <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" />
+      </svg>
+      <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+      </svg>
+    </button>
+    <button type="button" class="cta" data-open-auth data-tab="signup">Begin</button>
+  </div>
+</nav>
+
+<style>
+  .nav {
+    position: fixed;
+    top: 28px; left: 50%;
+    transform: translateX(-50%);
+    z-index: 100;
+    display: flex; align-items: center;
+    gap: clamp(.55rem, 1.4vw, .9rem);
+    max-width: calc(100vw - 32px);
+    padding: 8px 8px 8px 20px;
+    border-radius: var(--r-pill);
+    background: var(--glass-strong);
+    backdrop-filter: blur(24px) saturate(160%);
+    -webkit-backdrop-filter: blur(24px) saturate(160%);
+    border: 1px solid var(--line-strong);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.32), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+    transition: top var(--t-base) var(--ease-soft), padding var(--t-base) var(--ease-soft),
+                background var(--t-slow) var(--ease-soft), border-color var(--t-slow) var(--ease-soft);
+  }
+  .nav.scrolled { top: 14px; padding-top: 7px; padding-bottom: 7px; }
+
+  /* brand wordmark — swaps per theme */
+  .brand { display: inline-flex; align-items: center; transition: transform var(--t-fast) var(--ease-spring); }
+  .brand:hover { transform: scale(1.04); }
+  /* one wordmark fetched per theme — a CSS background means the inactive theme's
+     file is never downloaded (a hidden <img> would be). aspect-ratio + fixed height
+     reserve the box so the mark never causes layout shift before it paints. */
+  .brand-mark {
+    display: block; height: 26px; width: auto; aspect-ratio: 737 / 338;
+    background: url('/assets/blaksyd-white.webp') center / contain no-repeat;
+  }
+  html[data-theme="light"] .brand-mark {
+    aspect-ratio: 758 / 329;
+    background-image: url('/assets/blaksyd-black.webp');
+  }
+
+  .links { display: flex; align-items: center; gap: clamp(.4rem, 1.4vw, 1.1rem); font-size: .875rem; color: var(--ink-soft); }
+  .links a { position: relative; padding: .35rem .2rem; transition: color var(--t-fast) var(--ease-out); }
+  .links a:hover { color: var(--ink); }
+  .links a::after {
+    content: ''; position: absolute; bottom: -1px; left: 50%; right: 50%; height: 1px;
+    background: var(--coral);
+    transition: left var(--t-base) var(--ease-out), right var(--t-base) var(--ease-out);
+  }
+  .links a:hover::after { left: 0; right: 0; }
+
+  .divider { width: 1px; height: 20px; background: var(--line-strong); }
+
+  .actions { display: flex; align-items: center; gap: .5rem; }
+
+  .toggle {
+    width: 36px; height: 36px; border-radius: 50%;
+    display: inline-flex; align-items: center; justify-content: center;
+    color: var(--ink-soft);
+    background: var(--surface);
+    border: 1px solid var(--line);
+    transition: background var(--t-fast) var(--ease-out), color var(--t-fast) var(--ease-out),
+                transform var(--t-fast) var(--ease-spring), border-color var(--t-fast) var(--ease-out);
+  }
+  .toggle:hover { color: var(--ink); background: var(--surface-strong); border-color: var(--ink-faint); transform: rotate(30deg) scale(1.06); }
+  .toggle svg { width: 16px; height: 16px; }
+  .icon-sun  { display: block; }
+  .icon-moon { display: none; }
+  html[data-theme="light"] .icon-sun  { display: none; }
+  html[data-theme="light"] .icon-moon { display: block; }
+
+  .cta {
+    font-size: .875rem; font-weight: 600; color: #2A0E1E;
+    padding: .6rem 1.1rem; border-radius: var(--r-pill);
+    background: var(--cta-grad);
+    background-size: 200% 200%; background-position: 0% 50%;
+    box-shadow: 0 8px 24px rgba(255, 184, 122, 0.4);
+    transition: background-position var(--t-slow) var(--ease-out), box-shadow var(--t-base) var(--ease-out), transform 300ms var(--ease-magnet);
+  }
+  .cta:hover { background-position: 100% 50%; transform: translateY(-1px); box-shadow: 0 12px 32px rgba(255, 184, 122, 0.5); }
+
+  @media (max-width: 820px) {
+    .links, .divider { display: none; }
+    .nav { padding-left: 18px; gap: .6rem; }
+  }
+</style>
+
+<script is:inline>
+  (function () {
+    var root = document.documentElement;
+
+    var setTheme = function (next) {
+      root.setAttribute('data-theme', next);
+      var meta = document.querySelector('meta[name="theme-color"]');
+      if (meta) meta.setAttribute('content', next === 'light' ? '#FAF4EC' : '#08091A');
+    };
+
+    var btn = document.getElementById('theme-toggle');
+    if (btn) {
+      btn.addEventListener('click', function () {
+        var next = root.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+        setTheme(next);
+        try { localStorage.setItem('theme', next); } catch (e) {}
+      });
+    }
+
+    // Follow the OS theme live — but only until the user makes an explicit choice.
+    try {
+      var mq = window.matchMedia('(prefers-color-scheme: light)');
+      var onScheme = function (e) {
+        var stored = null;
+        try { stored = localStorage.getItem('theme'); } catch (_) {}
+        if (stored === 'light' || stored === 'dark') return;
+        setTheme(e.matches ? 'light' : 'dark');
+      };
+      if (mq.addEventListener) mq.addEventListener('change', onScheme);
+      else if (mq.addListener) mq.addListener(onScheme);
+    } catch (e) {}
+
+    var nav = document.getElementById('nav');
+    if (nav) {
+      var onScroll = function () {
+        if (window.scrollY > 24) nav.classList.add('scrolled');
+        else nav.classList.remove('scrolled');
+      };
+      onScroll();
+      window.addEventListener('scroll', onScroll, { passive: true });
+    }
+  })();
+</script>

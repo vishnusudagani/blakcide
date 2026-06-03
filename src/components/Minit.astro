@@ -1,0 +1,260 @@
+---
+// Human-side locator + Minit — the first Human scene. After the AI side and the
+// Learning keystone, a cool-toned locator orients the visitor: now it's about
+// real people. Minit proves it show-don't-tell with a live listener match — a
+// warm, real human you can talk to *now*, book for later, or escalate to a
+// trained specialist. Cool palette (mint/aqua) encodes the Human side, mirroring
+// the warm AI side. Copy LEFT, device RIGHT — same rhythm Blak set.
+---
+
+<section class="locator cool" id="people" aria-label="The Human side">
+  <div class="u-wrap locator-inner">
+    <p class="eyebrow" data-reveal>
+      <span class="eyebrow-dot"></span>
+      the people who show up
+    </p>
+    <h2 class="locator-title" data-reveal>
+      Real people.<br />
+      <span class="accent">Right when it counts.</span>
+    </h2>
+    <p class="locator-sub" data-reveal>
+      Some moments need a voice, not a bot. Blaksyd brings real humans close —
+      on your terms, in your time, no one watching.
+    </p>
+  </div>
+</section>
+
+<section class="s-section minit" id="minit">
+  <div class="u-wrap s-two">
+    <div class="minit-copy">
+      <p class="s-kicker k-mint" data-reveal><span class="orb"></span>Minit · real people, now</p>
+
+      <h3 class="s-title" data-reveal>
+        Someone real.<br />
+        <span class="accent cool">In a minute.</span>
+      </h3>
+
+      <p class="s-sub" data-reveal>
+        Not a queue. Not a ticket. A warm human who's ready to listen — matched to
+        what you're carrying, available the moment you reach out.
+      </p>
+
+      <ul class="s-points" data-reveal>
+        <li><span class="pt-dot pt-3"></span><b>Connect now</b> — a real person in about a minute.</li>
+        <li><span class="pt-dot pt-aqua"></span><b>Book for later</b> — hold time with someone you trust.</li>
+        <li><span class="pt-dot pt-3"></span><b>Specialist listeners</b> — trained people for the heavy stuff.</li>
+      </ul>
+
+      <p class="s-trust" data-reveal>
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <rect x="5" y="11" width="14" height="9" rx="2" />
+          <path d="M8 11V8a4 4 0 0 1 8 0v3" />
+        </svg>
+        Talk freely — your name is yours to give, never required.
+      </p>
+    </div>
+
+    <div class="s-stage minit-stage" id="minit-stage" aria-hidden="true">
+      <div class="s-glow g-cool" aria-hidden="true"></div>
+      <div class="s-card">
+        <div class="s-card-head">
+          <span class="s-orb cool"><span class="core"></span></span>
+          <span class="who">
+            <b>Minit</b>
+            <i class="s-live"><span class="s-live-dot"></span>1,240 listeners online</i>
+          </span>
+          <span class="s-badge">human</span>
+        </div>
+
+        <div class="match" id="minit-match">
+          <div class="match-top">
+            <span class="lpic"></span>
+            <span class="lwho">
+              <b>Aria M.</b>
+              <span class="lmeta">warm · grounded · great at 2&nbsp;am</span>
+            </span>
+            <span class="lrate">★ 4.9</span>
+          </div>
+
+          <div class="ltags">
+            <span class="ltag">grief</span>
+            <span class="ltag">burnout</span>
+            <span class="ltag">big decisions</span>
+          </div>
+
+          <div class="lstatus"><span class="lstatus-dot"></span>available now · connects in ~30s</div>
+
+          <div class="lactions">
+            <span class="lbtn lbtn-go">Talk now</span>
+            <span class="lbtn">Book for later</span>
+          </div>
+
+          <p class="lspecialist">Carrying something heavier? <b>Specialist listeners</b> are one tap away.</p>
+        </div>
+      </div>
+
+      <p class="cap-rail">
+        <span class="cap-lead">also</span>
+        <span>voice or text</span>
+        <span>any language</span>
+        <span>regular check-ins</span>
+        <span>talk as long as you need</span>
+        <span class="cap-more">&amp; more</span>
+      </p>
+    </div>
+  </div>
+</section>
+
+<style>
+  /* ───────── Human-side locator (cool) ───────── */
+  .locator {
+    position: relative; z-index: 1;
+    scroll-margin-top: 120px;
+    padding-block: clamp(5.5rem, 14vh, 9rem) clamp(1rem, 3vh, 2rem);
+  }
+  .locator-inner { text-align: center; max-width: 60ch; margin-inline: auto; }
+  .locator .eyebrow {
+    display: inline-flex; align-items: center; gap: .7rem;
+    font-family: var(--font-mono);
+    font-size: var(--t-eyebrow); text-transform: uppercase; letter-spacing: .28em;
+    color: var(--mint-deep);
+    margin-bottom: 1.4rem;
+  }
+  .locator .eyebrow-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--mint); box-shadow: 0 0 12px var(--mint);
+  }
+  .locator-title {
+    font-family: var(--font-display); font-weight: 600;
+    font-size: clamp(1.9rem, 1.3rem + 2.6vw, 3.25rem);
+    line-height: 1.04; letter-spacing: -.03em; color: var(--ink);
+  }
+  .locator-title .accent {
+    font-family: var(--font-serif); font-weight: 400; font-style: italic;
+    font-size: 1.08em; letter-spacing: -.02em;
+    background: linear-gradient(110deg, var(--mint) 0%, var(--mint-deep) 42%, var(--aqua) 92%);
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent; color: transparent;
+  }
+  .locator-sub {
+    margin: 1.3rem auto 0; max-width: 52ch;
+    font-size: var(--t-lead); color: var(--ink-soft); line-height: 1.6;
+  }
+
+  /* ───────── Minit scene ───────── */
+  .minit { scroll-margin-top: 110px; }
+  @media (max-width: 900px) {
+    .minit-stage { max-width: 460px; margin-inline: auto; width: 100%; }
+  }
+
+  /* ── listener match card ── */
+  .match { padding-top: 1.1rem; min-height: 300px; }
+  :global(html.js) .match { opacity: 0; transform: translateY(14px) scale(.985); transition: opacity 560ms var(--ease-out), transform 560ms var(--ease-out); }
+  :global(html.js) .match.in { opacity: 1; transform: none; }
+
+  .match-top { display: flex; align-items: center; gap: .8rem; }
+  .lpic {
+    width: 46px; height: 46px; border-radius: 50%; flex: none;
+    background: linear-gradient(135deg, var(--mint) 0%, var(--mint-deep) 60%, var(--aqua) 130%);
+    box-shadow: 0 0 16px rgba(106, 211, 184, .4), inset 0 1px 2px rgba(255, 255, 255, .45);
+  }
+  .lwho { display: flex; flex-direction: column; line-height: 1.3; }
+  .lwho b { font-size: 1rem; color: var(--ink); font-weight: 600; }
+  .lmeta { font-size: .82rem; color: var(--ink-soft); }
+  .lrate { margin-left: auto; font-size: .85rem; color: var(--gold); font-weight: 600; white-space: nowrap; }
+
+  .ltags { display: flex; flex-wrap: wrap; gap: .45rem; margin-top: 1rem; }
+  .ltag {
+    font-family: var(--font-mono); font-size: .64rem;
+    text-transform: lowercase; letter-spacing: .04em;
+    padding: .28rem .6rem; border-radius: var(--r-pill);
+    color: var(--mint-deep); background: rgba(106, 211, 184, .14);
+    border: 1px solid rgba(106, 211, 184, .22);
+  }
+
+  .lstatus {
+    display: inline-flex; align-items: center; gap: .5rem;
+    margin-top: 1.1rem; font-size: .86rem; color: var(--ink-soft);
+  }
+  .lstatus-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--mint-deep); box-shadow: 0 0 10px var(--mint-deep);
+    animation: minit-pulse 2s ease-in-out infinite;
+  }
+  @keyframes minit-pulse { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: .45; transform: scale(.7); } }
+
+  .lactions { display: flex; gap: .7rem; margin-top: 1.3rem; }
+  .lbtn {
+    flex: 1; text-align: center; padding: .7rem 1rem; border-radius: var(--r-pill);
+    font-size: .9rem; font-weight: 600; color: var(--ink);
+    border: 1px solid var(--line-strong); background: var(--surface);
+  }
+  .lbtn-go {
+    color: #06231C; border: 0;
+    background: linear-gradient(135deg, var(--mint) 0%, var(--mint-deep) 70%, var(--aqua) 130%);
+    box-shadow: 0 10px 28px rgba(106, 211, 184, .35);
+  }
+  .lspecialist { margin-top: 1.1rem; font-size: .82rem; color: var(--ink-faint); line-height: 1.5; }
+  .lspecialist b { color: var(--mint-deep); font-weight: 600; }
+
+  /* capability rail — the long tail of how Minit shows up, scannable */
+  .cap-rail {
+    position: relative; z-index: 1;
+    margin-top: 1.1rem;
+    display: flex; flex-wrap: wrap; gap: .4rem;
+  }
+  .cap-rail span {
+    font-family: var(--font-mono); font-size: .6rem;
+    text-transform: lowercase; letter-spacing: .04em; color: var(--ink-faint);
+    padding: .26rem .58rem; border-radius: var(--r-pill);
+    border: 1px solid var(--line); background: var(--surface);
+  }
+  .cap-rail .cap-lead {
+    color: var(--mint-deep); border-color: rgba(106, 211, 184, .28);
+    text-transform: uppercase; letter-spacing: .14em;
+  }
+  .cap-rail .cap-more { color: var(--ink-soft); border-style: dashed; }
+
+  /* light theme — deepen accent TEXT to clear WCAG AA on cream */
+  html[data-theme="light"] .locator .eyebrow { color: var(--mint-ink); }
+  html[data-theme="light"] .ltag { color: var(--mint-ink); }
+  html[data-theme="light"] .lspecialist b { color: var(--mint-ink); }
+  html[data-theme="light"] .lrate { color: var(--gold-ink); }
+  html[data-theme="light"] .cap-rail .cap-lead { color: var(--mint-ink); }
+
+  @media (prefers-reduced-motion: reduce) {
+    :global(html.js) .match { opacity: 1 !important; transform: none !important; }
+  }
+</style>
+
+<script is:inline>
+  // Minit listener match — soft reveal once, when the card scrolls into view.
+  (function () {
+    var stage = document.getElementById('minit-stage');
+    if (!stage) return;
+    var card = document.getElementById('minit-match');
+    if (!card) return;
+    var reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reduced) { card.classList.add('in'); return; }
+    var done = false;
+
+    function visibleFrac(el) {
+      var r = el.getBoundingClientRect();
+      var h = window.innerHeight || document.documentElement.clientHeight;
+      if (r.height === 0) return (r.top < h && r.bottom > 0) ? 1 : 0;
+      return Math.max(0, Math.min(r.bottom, h) - Math.max(r.top, 0)) / Math.min(r.height, h);
+    }
+    function check() {
+      if (done) return;
+      if (visibleFrac(stage) >= 0.3) {
+        done = true;
+        setTimeout(function () { card.classList.add('in'); }, 160);
+        window.removeEventListener('scroll', check);
+        window.removeEventListener('resize', check);
+      }
+    }
+    requestAnimationFrame(function () { requestAnimationFrame(check); });
+    window.addEventListener('scroll', check, { passive: true });
+    window.addEventListener('resize', check);
+  })();
+</script>

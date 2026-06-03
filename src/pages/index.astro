@@ -1,0 +1,33 @@
+---
+import Base from '../layouts/Base.astro';
+import Nav from '../components/Nav.astro';
+import Hero from '../components/Hero.astro';
+import Blak from '../components/Blak.astro';
+import Persona from '../components/Persona.astro';
+import Learning from '../components/Learning.astro';
+import Minit from '../components/Minit.astro';
+import Nexus from '../components/Nexus.astro';
+import Finale from '../components/Finale.astro';
+
+// The homepage owns the brand line — the approved tagline ships as the <title>.
+const title = 'Blaksyd — Human + AI, revolving around you.';
+const description =
+  'Human + AI, together, revolving around you. Blak knows you and acts for you, Persona is your digital self, Minit brings real listeners close, and Nexus is where you belong — one world, always learning you.';
+---
+
+<Base title={title} description={description}>
+  <Nav />
+  <main>
+    <Hero />
+    {/* AI side — the minds that know you */}
+    <Blak />
+    <Persona />
+    {/* keystone — the engine that ties both sides */}
+    <Learning />
+    {/* Human side — the people who show up */}
+    <Minit />
+    <Nexus />
+    {/* payoff + the two real CTAs */}
+    <Finale />
+  </main>
+</Base>
