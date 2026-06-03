@@ -2,8 +2,8 @@
 /* =====================================================================
    Auth — the single "Begin" gateway. One glass modal that opens from any
    [data-open-auth] trigger on the page (hero "Begin", nav "Enter", finale
-   CTAs). Self-contained email capture for signup / login; wired to real
-   auth on deploy. Dark + light aware via tokens. Esc / backdrop / × close it;
+   CTAs). Self-contained email capture for signup / login; posts the email
+   to the waitlist (/api/waitlist -> Supabase). Dark + light aware via tokens. Esc / backdrop / × close it;
    body scroll locks while open; focus moves in and returns to the trigger.
    ===================================================================== */
 ---
@@ -281,6 +281,7 @@
     var form = modal.querySelector('[data-auth-form]');
     var email = modal.querySelector('[data-auth-email]');
     var note = modal.querySelector('[data-auth-note]');
+    var submitBtn = modal.querySelector('[data-auth-submit]');
 
     var mode = 'signup';
     var lastTrigger = null;
@@ -380,17 +381,44 @@
     });
 
     var EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    var submitting = false;
     form.addEventListener('submit', function (e) {
       e.preventDefault();
+      if (submitting) return;
       var val = (email.value || '').trim();
       if (!EMAIL_RE.test(val)) {
         setNote('Enter a valid email to continue.', 'error');
         email.focus();
         return;
       }
-      /* front-end capture for now; real auth is wired on deploy */
-      setNote(COPY[mode].ok, 'ok');
-      form.reset();
+      submitting = true;
+      if (submitBtn) submitBtn.disabled = true;
+      setNote('One moment…', 'ok');
+      fetch('/api/waitlist', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: val })
+      })
+        .then(function (res) {
+          return res.json().catch(function () { return {}; }).then(function (data) {
+            return { ok: res.ok, data: data };
+          });
+        })
+        .then(function (r) {
+          if (r.ok && r.data && r.data.ok) {
+            setNote(COPY[mode].ok, 'ok');
+            form.reset();
+          } else {
+            setNote((r.data && r.data.error) || 'Could not save right now. Please try again.', 'error');
+          }
+        })
+        .catch(function () {
+          setNote('Network error — please try again.', 'error');
+        })
+        .then(function () {
+          submitting = false;
+          if (submitBtn) submitBtn.disabled = false;
+        });
     });
   })();
 </script>
