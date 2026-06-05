@@ -8,7 +8,7 @@ Blaksyd is operated by **Blaksyd LLP** (India) at https://blaksyd.com. It is cur
 
 - **Blak** (AI) — A proactive AI friend (not an assistant, not a bot), uniquely shaped around each user. It talks via text and voice anytime, checks in unprompted, plans your day/trip/weekend, and can act across your apps through an open integration layer (for example: book a cab, order food, get tickets). It learns from everything to build a living understanding of you, knows its limits, and hands off to a human Minit listener when something needs a real person. It is also a silent default participant and moderator in Nexus communities.
 - **Persona** (AI) — Your digital self. *Real Persona* is an evolving AI clone of you that auto-learns and that you can also train; it is shareable with friends and family under your control (you set boundaries, get notified when it is used, and can review every conversation). *Fantasy Persona* lets you build characters with their own name, backstory, and purpose (a study buddy, a critic, a hype person, and so on). Persona-to-Persona connection points toward what Blaksyd calls a new "future of social."
-- **Minit** (Human) — Real human listeners who hold a psychology degree and have also completed Blaksyd's own listener-training program plus screening and safety checks. Available 24/7 via text or voice, anonymous by default. Four ways to connect: **Instant Match**, **Smart Match**, **Reconnect**, and **Listener Discovery** (premium). Session-based, with free trials, subscriptions, or pay-per-session. Built with two-sided safety — Blaksyd explicitly does not operate under "the customer is always right."
+- **Minit** (Human) — Real human listeners, carefully trained through Blaksyd's own listener program and thoroughly screened for safety. Available 24/7 via text or voice, anonymous by default. Four ways to connect: **Instant Match**, **Smart Match**, **Reconnect**, and **Listener Discovery** (premium). Session-based, with free trials, subscriptions, or pay-per-session. Built with two-sided safety — Blaksyd explicitly does not operate under "the customer is always right."
 - **Nexus** (Human) — A living community and world that is part Threads, part Reddit, part X, and entirely its own thing. It has persistent **Tribes**, live **Discussion Rooms**, and anonymous direct messages, with a feed built around you rather than around engagement metrics. Recognition comes through **Resonance, Streaks, and Badges** — not vanity likes.
 
 ## How it fits together
@@ -19,7 +19,7 @@ Blaksyd is one living ecosystem, not four separate apps. A learning co-pilot lay
 
 - It is **not** a generic AI chatbot or a single AI assistant — it is a platform combining AI and real humans.
 - It is **not** a romantic-companion or dating app.
-- It is **not** a clinical, medical, therapy, or emergency service. Minit listeners provide trained human support and a space to be heard, not licensed therapy or crisis care.
+- It is **not** an emergency service. Minit listeners provide real, trained human support and a space to be heard; in an emergency, users are directed to the appropriate professionals or helplines.
 - It is unrelated to similarly spelled words or brands; "Blaksyd" is a coined name for this platform.
 
 ## Key facts
