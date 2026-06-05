@@ -30,7 +30,9 @@
   </div>
 </section>
 
-<style>
+<style is:global>
+  /* global (not scoped) because the chat messages are created in JS at runtime and
+     would otherwise miss Astro's scoping attribute. All selectors are .tb-* namespaced. */
   .tb { position: relative; z-index: 1; }
   .tb-wrap { max-width: 620px; margin-inline: auto; text-align: center; }
   .tb-kicker, .tb-title { margin-inline: auto; }
