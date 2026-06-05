@@ -1,0 +1,110 @@
+---
+// /blak — the Blak pillar page. Canonical copy from "What is BLAKSYD?" (llms-full).
+// Deep, crawlable, quotable; cross-links the other three pillars; carries WebPage
+// + FAQPage JSON-LD so answer engines can lift Blak-specific Q&A directly.
+import Page from '../layouts/Page.astro';
+
+const faqs = [
+  {
+    q: 'Is Blak just another AI chatbot or assistant?',
+    a: `No. Blak is designed as a proactive AI friend — not an assistant and not a bot. It is shaped uniquely around you, reaches out on its own, and can act across your connected apps. When something needs a real person, Blak hands the conversation to a trained human listener on Minit.`,
+  },
+  {
+    q: 'Can Blak do things in my other apps?',
+    a: `Yes. Through an open integration layer you can connect apps to Blaksyd, giving Blak the ability to act on your behalf — for example booking a cab, ordering food, or getting tickets. The more you connect, the more capable your Blak becomes.`,
+  },
+  {
+    q: 'Does Blak message me first?',
+    a: `Yes. Blak is proactive: it checks in when you have been quiet, reminds you before you knew you needed it, and reaches out just like a friend would — always within guardrails you control.`,
+  },
+];
+
+const schema = [
+  {
+    '@type': 'WebPage',
+    '@id': 'https://blaksyd.com/blak/#webpage',
+    url: 'https://blaksyd.com/blak/',
+    name: 'Blak — Blaksyd’s proactive AI friend',
+    description:
+      'Blak is Blaksyd’s proactive AI friend: shaped around you, present over text and voice, able to act across your apps, and always learning you.',
+    isPartOf: { '@id': 'https://blaksyd.com/#website' },
+    about: { '@id': 'https://blaksyd.com/#organization' },
+    breadcrumb: { '@id': 'https://blaksyd.com/blak/#breadcrumb' },
+    primaryImageOfPage: {
+      '@type': 'ImageObject',
+      url: 'https://blaksyd.com/assets/blaksyd-blak.png',
+      caption: 'Blak — Blaksyd’s proactive AI friend.',
+    },
+  },
+  {
+    '@type': 'FAQPage',
+    '@id': 'https://blaksyd.com/blak/#faq',
+    mainEntity: faqs.map((f) => ({
+      '@type': 'Question',
+      name: f.q,
+      acceptedAnswer: { '@type': 'Answer', text: f.a },
+    })),
+  },
+];
+---
+
+<Page
+  title="Blak — your proactive AI friend | Blaksyd"
+  description="Blak is Blaksyd’s proactive AI friend — not an assistant, not a bot. Shaped around you, present over text and voice, able to act across your apps, and always learning you."
+  image="/assets/blaksyd-blak.png"
+  kicker="Blak · the AI friend"
+  heading="Not an assistant."
+  accent="A friend who happens to be infinitely capable."
+  lede="Blak is your proactive AI friend on Blaksyd — shaped entirely around you, present over text and voice anytime, and able to act across your apps. It checks in unprompted, plans your days, and hands off to a real human when you need one."
+  heroImage="/assets/blaksyd-blak.png"
+  heroAlt="Blak — Blaksyd’s proactive AI friend that talks by text and voice, checks in unprompted, and acts across your connected apps."
+  breadcrumb={[{ name: 'Home', href: '/' }, { name: 'Blak', href: '/blak/' }]}
+  schema={schema}
+>
+  <section>
+    <h2>What Blak does</h2>
+    <p>
+      Blak is not an assistant and not a bot. Blak is a friend — your friend — who happens to be
+      infinitely capable, always present, and uniquely shaped around you.
+    </p>
+    <ul>
+      <li>Talks to you about anything, anytime, over <b>text and voice</b></li>
+      <li>Checks in on you <b>without being asked</b></li>
+      <li>Plans your day, your trip, your weekend</li>
+      <li>Books your cab, orders your food, gets your tickets</li>
+      <li>Listens when you need to vent and celebrates when things go right</li>
+      <li>Calls you — just like a friend would</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>What makes Blak different</h2>
+    <h3>Yours</h3>
+    <p>No two Blaks are the same. Your Blak learns your stories, humour, habits, and world, and becomes a version of itself shaped entirely around you.</p>
+    <h3>Proactive</h3>
+    <p>Blak doesn’t wait to be summoned. It reaches out — a message when you’ve been quiet, a call just to check in, a reminder before you knew you needed one.</p>
+    <h3>Connected</h3>
+    <p>Through an open integration layer, any app can be connected to Blaksyd, giving Blak the ability to act on your behalf across your digital life.</p>
+    <h3>Always learning</h3>
+    <p>From every conversation, every <a href="/nexus/">Nexus</a> tribe, every <a href="/persona/">Persona</a> session, and every connected app, Blak builds a living understanding of who you are — quietly, always.</p>
+    <h3>Knows its limits</h3>
+    <p>Guardrails keep the friendship safe, and when something needs a real human touch, Blak hands the conversation to a <a href="/minit/">Minit</a> listener seamlessly.</p>
+  </section>
+
+  <section>
+    <h2>Blak is the connective spine</h2>
+    <p>
+      Blak runs through all of Blaksyd. In <a href="/nexus/">Nexus</a> it is a quiet, default participant in
+      every tribe — it observes, moderates when needed, and speaks only when called upon, keeping the human
+      space safe and alive without dominating it. Before a <a href="/minit/">Minit</a> session, Blak briefs the
+      human listener on the <em>shape</em> of the conversation — context, never the private content — so you
+      never start from scratch and the listener walks in warm.
+    </p>
+    <p class="callout"><b>Blak is one of four pillars.</b> It works alongside <a href="/persona/">Persona</a> (your digital self), <a href="/minit/">Minit</a> (real human listeners), and <a href="/nexus/">Nexus</a> (your community) — all built around you. <a href="/about/">See how they fit together →</a></p>
+  </section>
+
+  <section>
+    <h2>Questions about Blak</h2>
+    {faqs.map((f) => (<><h3>{f.q}</h3><p>{f.a}</p></>))}
+  </section>
+</Page>

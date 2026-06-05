@@ -1,0 +1,56 @@
+---
+// /blog/<slug> — renders a single post from the content collection on the shared
+// Page layout (so it inherits breadcrumb, hero <img>, CTA, footer, and the @graph).
+// Adds BlogPosting JSON-LD with author + publisher + dates so the post is eligible
+// for article rich results and is clearly an authored, datable source for AI engines.
+import { getCollection, render } from 'astro:content';
+import Page from '../../layouts/Page.astro';
+
+export async function getStaticPaths() {
+  const posts = await getCollection('blog');
+  return posts.map((post) => ({ params: { slug: post.id }, props: { post } }));
+}
+
+const { post } = Astro.props;
+const { Content } = await render(post);
+const d = post.data;
+const url = `https://blaksyd.com/blog/${post.id}/`;
+
+const schema = [
+  {
+    '@type': 'BlogPosting',
+    '@id': `${url}#article`,
+    headline: d.title,
+    description: d.description,
+    datePublished: d.pubDate.toISOString(),
+    dateModified: (d.updatedDate ?? d.pubDate).toISOString(),
+    author: { '@type': 'Organization', name: d.author, url: 'https://blaksyd.com/' },
+    publisher: { '@id': 'https://blaksyd.com/#organization' },
+    image: `https://blaksyd.com${d.image}`,
+    inLanguage: 'en',
+    isPartOf: { '@id': 'https://blaksyd.com/blog/#blog' },
+    mainEntityOfPage: url,
+  },
+];
+---
+
+<Page
+  title={`${d.title} | Blaksyd Blog`}
+  description={d.description}
+  image={d.image}
+  kicker="Blog"
+  kickerClass="k-gold"
+  heading={d.title}
+  lede={d.description}
+  heroImage={d.image}
+  heroAlt={d.imageAlt}
+  breadcrumb={[
+    { name: 'Home', href: '/' },
+    { name: 'Blog', href: '/blog/' },
+    { name: d.title, href: `/blog/${post.id}/` },
+  ]}
+  schema={schema}
+  updated={d.pubDate.toISOString().slice(0, 10)}
+>
+  <Content />
+</Page>

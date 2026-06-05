@@ -1,0 +1,50 @@
+---
+// Time-aware greeting — a small "your world revolves around you" touch. Reads the
+// visitor's LOCAL hour, shows a personal greeting, and sets data-time on <html>
+// which subtly shifts the hero dawn-sky warmth (morning fresher, evening warmer,
+// night calmer). One-shot script, no continuous animation — smooth on any device.
+// Renders empty + hidden server-side, so no flash and no SEO noise.
+---
+
+<p class="hero-greet" id="hero-greet" hidden></p>
+
+<style>
+  .hero-greet {
+    font-family: var(--font-serif); font-style: italic;
+    font-size: clamp(1rem, .9rem + .55vw, 1.3rem);
+    line-height: 1; letter-spacing: -.01em; color: var(--ink-soft);
+    margin-bottom: .95rem;
+    opacity: 0; transform: translateY(6px);
+    transition: opacity 620ms var(--ease-out), transform 620ms var(--ease-out);
+  }
+  .hero-greet.in { opacity: 1; transform: none; }
+  .hero-greet[hidden] { display: none; }
+</style>
+
+{/* subtle static dawn-warmth shift by time of day — a GPU-cheap filter, no
+    animation. is:global so it can reach the hero's .sky (defined in Hero.astro). */}
+<style is:global>
+  html[data-time="morning"] .sky { filter: saturate(1.06) brightness(1.05); }
+  html[data-time="evening"] .sky { filter: saturate(1.10) hue-rotate(-6deg); }
+  html[data-time="night"]   .sky { filter: saturate(.92) brightness(.90); }
+</style>
+
+<script is:inline>
+  (function () {
+    var el = document.getElementById('hero-greet');
+    if (!el) return;
+    var h = new Date().getHours();
+    var t, g;
+    if (h < 5)       { t = 'night';   g = 'Up late?'; }
+    else if (h < 12) { t = 'morning'; g = 'Good morning.'; }
+    else if (h < 17) { t = 'day';     g = 'Good afternoon.'; }
+    else if (h < 22) { t = 'evening'; g = 'Good evening.'; }
+    else             { t = 'night';   g = 'Up late?'; }
+    document.documentElement.setAttribute('data-time', t);
+    el.textContent = g;
+    el.hidden = false;
+    requestAnimationFrame(function () {
+      requestAnimationFrame(function () { el.classList.add('in'); });
+    });
+  })();
+</script>

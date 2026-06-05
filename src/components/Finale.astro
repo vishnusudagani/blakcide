@@ -26,7 +26,7 @@
 
     <div class="finale-ctas" data-reveal>
       <button type="button" class="btn btn-primary" data-open-auth data-tab="signup">
-        <span>Begin</span>
+        <span>Join Us</span>
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
       </button>
     </div>
@@ -42,33 +42,6 @@
     <p class="cnames" data-reveal>Blak · Persona · Learning · Minit · Nexus</p>
   </div>
 
-  <footer class="foot">
-    <div class="u-wrap foot-inner">
-      <span class="foot-brand"><span class="foot-dot"></span>Blaksyd</span>
-      <nav class="foot-links" aria-label="Footer">
-        <a href="/privacy">Privacy</a>
-        <a href="/terms">Terms</a>
-        <a href="#" data-open-auth data-tab="signup">Begin</a>
-        <span class="foot-sep" aria-hidden="true"></span>
-        <span class="foot-social">
-          <a href="https://www.instagram.com/blaksyd" target="_blank" rel="noopener noreferrer" aria-label="Blaksyd on Instagram (@blaksyd)">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <rect x="3" y="3" width="18" height="18" rx="5" />
-              <circle cx="12" cy="12" r="4" />
-              <circle cx="17.2" cy="6.8" r="1.15" fill="currentColor" stroke="none" />
-            </svg>
-          </a>
-          <a href="https://www.youtube.com/@blaksyd" target="_blank" rel="noopener noreferrer" aria-label="Blaksyd on YouTube (@blaksyd)">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <rect x="2.5" y="5.5" width="19" height="13" rx="4.2" />
-              <path d="M10.2 9.3l5 2.7-5 2.7z" fill="currentColor" stroke="none" />
-            </svg>
-          </a>
-        </span>
-      </nav>
-      <span class="foot-copy">© 2026 Blaksyd LLP</span>
-    </div>
-  </footer>
 </section>
 
 <style>
@@ -152,48 +125,7 @@
     letter-spacing: .18em; text-transform: uppercase; color: var(--ink-faint);
   }
 
-  /* ── slim footer ── */
-  .foot {
-    position: relative; z-index: 1;
-    margin-top: clamp(4rem, 10vh, 7rem);
-    border-top: 1px solid var(--line);
-    padding-block: 1.6rem;
-  }
-  .foot-inner {
-    display: flex; align-items: center; justify-content: space-between; gap: 1rem 1.5rem;
-    flex-wrap: wrap;
-  }
-  .foot-brand {
-    display: inline-flex; align-items: center; gap: .55rem;
-    font-weight: 600; font-size: .95rem; color: var(--ink);
-  }
-  .foot-dot {
-    width: 12px; height: 12px; border-radius: 50%;
-    background: var(--accent-grad); box-shadow: 0 0 12px rgba(255, 184, 122, .45);
-  }
-  .foot-links { display: inline-flex; align-items: center; gap: 1.2rem; }
-  /* text links keep their .9rem size; min-height lifts the touch target to 44px
-     (text stays centred, so the footer just gains a little tappable height). */
-  .foot-links a {
-    display: inline-flex; align-items: center; min-height: 44px;
-    font-size: .9rem; color: var(--ink-soft); transition: color var(--t-fast) var(--ease-out);
-  }
-  .foot-links a:hover { color: var(--ink); }
-  .foot-sep { width: 1px; height: 15px; background: var(--line-strong); }
-  .foot-social { display: inline-flex; align-items: center; gap: .35rem; }
-  /* 44×44 hit area around the 18px glyph — tightened gap keeps the icons from
-     drifting apart now that each sits in a larger invisible box. */
-  .foot-social a {
-    display: inline-flex; align-items: center; justify-content: center;
-    width: 44px; height: 44px; color: var(--ink-soft);
-    transition: color var(--t-fast) var(--ease-out), transform var(--t-fast) var(--ease-spring);
-  }
-  .foot-social a:hover { color: var(--ink); transform: translateY(-2px); }
-  .foot-social svg { width: 18px; height: 18px; }
-  .foot-copy { font-size: .82rem; color: var(--ink-faint); }
-  @media (max-width: 560px) {
-    .foot-inner { justify-content: center; text-align: center; }
-  }
+  /* (the sitewide footer now lives in components/Footer.astro) */
 
   @media (prefers-reduced-motion: reduce) {
     .cdot { animation: none !important; transform: none !important; transition: none !important; }

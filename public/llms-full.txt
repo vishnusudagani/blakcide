@@ -246,6 +246,13 @@ resonance over vanity metrics.
 ## Canonical links
 
 - Home: https://blaksyd.com/
+- About / how the four pillars fit together: https://blaksyd.com/about/
+- Manifesto (ethos): https://blaksyd.com/manifesto/
+- Blak (the AI friend): https://blaksyd.com/blak/
+- Persona (your digital self): https://blaksyd.com/persona/
+- Minit (real human listeners): https://blaksyd.com/minit/
+- Nexus (your community): https://blaksyd.com/nexus/
+- Blog: https://blaksyd.com/blog/
 - Concise AI summary: https://blaksyd.com/llms.txt
 - Privacy Policy: https://blaksyd.com/privacy/
 - Terms of Service: https://blaksyd.com/terms/

@@ -27,6 +27,38 @@ export default defineConfig({
       // 200-OK canonical URLs and never point at a 301 redirect.
       changefreq: 'weekly',
       lastmod: new Date(),
+      // serialize runs per URL: (1) set priorities so the homepage + pillars
+      // outrank the legal pages, and (2) attach <image:image> entries so Google
+      // Images can discover each page's brand card (the site is otherwise CSS art
+      // with no crawlable raster imagery). Image namespace is added automatically.
+      serialize(item) {
+        const path = item.url.replace('https://blaksyd.com', '');
+
+        // /inspect is a noindex dev-only scaffold ("delete before deploy") — keep it
+        // out of the sitemap too, so we never advertise a page we tell Google to skip.
+        if (path.startsWith('/inspect')) return undefined;
+
+        const IMG = {
+          '/': { file: 'og-cover.png', caption: 'Blaksyd — Human + AI, revolving around you.' },
+          '/blak/': { file: 'blaksyd-blak.png', caption: 'Blak — Blaksyd’s proactive AI friend.' },
+          '/persona/': { file: 'blaksyd-persona.png', caption: 'Persona — your digital self on Blaksyd.' },
+          '/minit/': { file: 'blaksyd-minit.png', caption: 'Minit — real human listeners, 24/7.' },
+          '/nexus/': { file: 'blaksyd-nexus.png', caption: 'Nexus — your community on Blaksyd.' },
+          '/about/': { file: 'blaksyd-four-pillars.png', caption: 'The four pillars of Blaksyd.' },
+          '/manifesto/': { file: 'blaksyd-manifesto.png', caption: 'Most apps want your attention. Blaksyd wants your life to be better.' },
+        };
+        const hit = IMG[path];
+        if (hit) {
+          item.img = [{ url: `https://blaksyd.com/assets/${hit.file}`, title: 'Blaksyd', caption: hit.caption }];
+        }
+
+        if (path === '/') item.priority = 1.0;
+        else if (['/blak/', '/persona/', '/minit/', '/nexus/', '/about/'].includes(path)) item.priority = 0.9;
+        else if (path === '/manifesto/' || path.startsWith('/blog')) item.priority = 0.7;
+        else item.priority = 0.5; // privacy / terms
+
+        return item;
+      },
     }),
   ],
 });

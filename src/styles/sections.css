@@ -75,6 +75,9 @@ html[data-theme="light"] .act-human .act-aura { background: radial-gradient(clos
 .s-kicker.k-aqua .orb { background: radial-gradient(circle at 40% 40%, #9FD9FF, var(--aqua)); box-shadow: 0 0 16px rgba(91, 192, 255, .6); }
 .s-kicker.k-gold { color: var(--gold); }
 .s-kicker.k-gold .orb { background: radial-gradient(circle at 40% 40%, var(--peach), var(--gold)); box-shadow: 0 0 16px rgba(255, 210, 122, .6); }
+/* base (coral) kicker gets the same AA-safe ink on cream the variants get —
+   without this, a default .s-kicker reads as low-contrast coral on the light theme */
+html[data-theme="light"] .s-kicker        { color: var(--coral-ink); }
 html[data-theme="light"] .s-kicker.k-lav  { color: var(--lavender-ink); }
 html[data-theme="light"] .s-kicker.k-mint { color: var(--mint-ink); }
 html[data-theme="light"] .s-kicker.k-aqua { color: var(--aqua-ink); }
@@ -93,6 +96,18 @@ html[data-theme="light"] .s-kicker.k-gold { color: var(--gold-ink); }
   -webkit-text-fill-color: transparent; color: transparent;
 }
 .s-title .accent.cool { background: linear-gradient(110deg, var(--mint) 0%, var(--mint-deep) 40%, var(--aqua) 90%); -webkit-background-clip: text; background-clip: text; }
+
+/* Light theme: deepen the gradient accent TEXT so it stays legible on the bright
+   cream canvas — the pale base accents are fine for decorative dots/orbs, but as
+   *reading* text on cream they wash out. Dark theme keeps the luminous brights. */
+html[data-theme="light"] .s-title .accent {
+  background: linear-gradient(110deg, var(--gold-ink) 0%, var(--coral-ink) 50%, var(--lavender-ink) 95%);
+  -webkit-background-clip: text; background-clip: text;
+}
+html[data-theme="light"] .s-title .accent.cool {
+  background: linear-gradient(110deg, var(--mint-ink) 0%, var(--aqua-ink) 95%);
+  -webkit-background-clip: text; background-clip: text;
+}
 
 /* ---- lead ---- */
 .s-sub {
@@ -239,3 +254,35 @@ html[data-theme="light"] .s-kicker.k-gold { color: var(--gold-ink); }
 @media (max-width: 600px) {
   .btn { width: 100%; justify-content: center; }
 }
+
+/* =====================================================================
+   Prose — long-form body for the content pages (pillars, about, manifesto)
+   and rendered Markdown (blog posts). Defined GLOBALLY on purpose: this content
+   is slotted into Page.astro's <article class="prose">, so Astro's component-
+   scoped styles would never reach it. The .prose class keeps it from leaking.
+   ===================================================================== */
+.prose { color: var(--ink-soft); margin-top: clamp(2rem, 5vh, 3rem); }
+.prose > section { margin-top: 2.4rem; }
+.prose h2 { font-family: var(--font-display); font-weight: 600; font-size: var(--t-h3); line-height: 1.1; letter-spacing: -.02em; color: var(--ink); margin-bottom: .8rem; }
+.prose h3 { font-family: var(--font-display); font-weight: 600; font-size: 1.1rem; letter-spacing: -.01em; color: var(--ink); margin: 1.4rem 0 .5rem; }
+.prose p { font-size: 1.05rem; line-height: 1.75; margin-bottom: .9rem; max-width: 68ch; }
+.prose b, .prose strong { color: var(--ink); font-weight: 600; }
+.prose em { font-style: italic; }
+.prose ul, .prose ol { margin: .4rem 0 1.2rem; display: grid; gap: .6rem; padding-left: 0; }
+.prose ul { list-style: none; }
+.prose ol { list-style: none; counter-reset: prose; }
+.prose li { position: relative; padding-left: 1.5rem; font-size: 1.03rem; line-height: 1.65; max-width: 66ch; }
+.prose ul li::before { content: ''; position: absolute; left: .15rem; top: .62em; width: 7px; height: 7px; border-radius: 50%; background: var(--accent-grad); }
+.prose ol li { counter-increment: prose; }
+.prose ol li::before { content: counter(prose); position: absolute; left: 0; top: 0; font-family: var(--font-mono); font-size: .8rem; color: var(--coral); font-weight: 700; }
+.prose a { color: var(--coral); text-decoration: underline; text-underline-offset: 2px; }
+.prose a:hover { color: var(--coral-deep); }
+html[data-theme="light"] .prose a { color: var(--coral-ink); }
+.prose blockquote { margin: 1.5rem 0; padding: 1rem 1.4rem; border-left: 3px solid var(--coral); background: var(--surface); border-radius: var(--r-sm); font-family: var(--font-serif); font-style: italic; font-size: 1.25rem; line-height: 1.45; color: var(--ink); }
+html[data-theme="light"] .prose blockquote { border-left-color: var(--coral-ink); }
+.prose blockquote p { font-size: inherit; max-width: none; margin: 0; }
+.prose .callout { margin: 1.2rem 0; padding: 1rem 1.2rem; border-radius: var(--r-md); background: var(--surface-strong); border: 1px solid var(--line-strong); color: var(--ink); }
+.prose .callout a, html[data-theme="light"] .prose .callout a { color: var(--coral-ink); }
+.prose img { border-radius: var(--r-md); margin: 1rem 0; }
+.prose hr { border: 0; border-top: 1px solid var(--line); margin: 2rem 0; }
+.prose code { font-family: var(--font-mono); font-size: .9em; background: var(--surface-strong); padding: .1rem .35rem; border-radius: 6px; }

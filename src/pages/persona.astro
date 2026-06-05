@@ -1,0 +1,101 @@
+---
+// /persona — the Persona pillar page. Canonical copy from "What is BLAKSYD?".
+import Page from '../layouts/Page.astro';
+
+const faqs = [
+  {
+    q: 'What is a Real Persona?',
+    a: `Your Real Persona is an evolving AI clone of you. It auto-learns from your activity on Blaksyd — your conversations with Blak, your Nexus activity, your voice and history — and you can also actively train it with your thoughts, opinions, memories, and voice notes.`,
+  },
+  {
+    q: 'Is my Persona private and under my control?',
+    a: `Yes. When you share your Persona, you stay in control: set boundaries on what your clone can discuss, get notified every time it is used, and review every conversation it has had. Sharing is always your choice.`,
+  },
+  {
+    q: 'What is a Fantasy Persona?',
+    a: `A character you build from scratch — give it a name, a backstory, a personality, and a purpose. Examples: a focused study friend, a no-punches-pulled critic, or a hype person always in your corner. Each fantasy character only knows what you have told it directly.`,
+  },
+];
+
+const schema = [
+  {
+    '@type': 'WebPage',
+    '@id': 'https://blaksyd.com/persona/#webpage',
+    url: 'https://blaksyd.com/persona/',
+    name: 'Persona — your digital self on Blaksyd',
+    description:
+      'Persona is your digital self: a Real Persona that clones and evolves with you, plus Fantasy Personas you build — pointing toward a new future of social.',
+    isPartOf: { '@id': 'https://blaksyd.com/#website' },
+    about: { '@id': 'https://blaksyd.com/#organization' },
+    breadcrumb: { '@id': 'https://blaksyd.com/persona/#breadcrumb' },
+    primaryImageOfPage: {
+      '@type': 'ImageObject',
+      url: 'https://blaksyd.com/assets/blaksyd-persona.png',
+      caption: 'Persona — your digital self on Blaksyd.',
+    },
+  },
+  {
+    '@type': 'FAQPage',
+    '@id': 'https://blaksyd.com/persona/#faq',
+    mainEntity: faqs.map((f) => ({
+      '@type': 'Question',
+      name: f.q,
+      acceptedAnswer: { '@type': 'Answer', text: f.a },
+    })),
+  },
+];
+---
+
+<Page
+  title="Persona — your digital self | Blaksyd"
+  description="Persona is your digital self on Blaksyd: a Real Persona that clones and evolves with you and that you control, plus Fantasy Personas you build — a new future of social."
+  image="/assets/blaksyd-persona.png"
+  kicker="Persona · your digital self"
+  kickerClass="k-lav"
+  heading="A living, evolving"
+  accent="version of you."
+  lede="Persona lets you create a digital version of yourself — or any character you can imagine. Your Real Persona is an AI clone that learns and grows with you and that you fully control; Fantasy Personas are characters you build for any purpose."
+  heroImage="/assets/blaksyd-persona.png"
+  heroAlt="Persona — your digital self on Blaksyd: a Real Persona clone of you plus Fantasy characters you build."
+  breadcrumb={[{ name: 'Home', href: '/' }, { name: 'Persona', href: '/persona/' }]}
+  schema={schema}
+>
+  <section>
+    <h2>Real Persona — your clone</h2>
+    <p>A digital twin that tries its best to become you. It auto-learns from everything available to it on Blaksyd, and you can actively train it with your thoughts, opinions, memories, and voice notes.</p>
+    <ul>
+      <li>Talk to yourself and hear your own perspective back</li>
+      <li>Challenge your own thinking from a new angle</li>
+      <li>See yourself the way others might</li>
+      <li>Share your Persona with friends and family — under your control</li>
+    </ul>
+    <p>
+      <b>Sharing with control.</b> When you share your Persona — say, with your friend Raj — they can have real
+      conversations with your clone even when you’re not there. You set boundaries on what it can discuss, get
+      notified every time it’s used, and can review every conversation it has had.
+    </p>
+  </section>
+
+  <section>
+    <h2>Fantasy Persona — your characters</h2>
+    <p>Build whoever you need — give them a name, a backstory, a personality, a purpose:</p>
+    <ul>
+      <li>A focused study friend</li>
+      <li>A no-punches-pulled critic</li>
+      <li>A playful, light “flirting friend”</li>
+      <li>A hype person always in your corner</li>
+    </ul>
+    <p>Your Real Persona is the omniscient version of you and knows everything across every conversation; each fantasy character lives in its own bubble and only knows what has been spoken to it directly.</p>
+  </section>
+
+  <section>
+    <h2>The future of social</h2>
+    <blockquote>When your clone can converse with your friend’s clone, a new kind of social connection emerges — one that doesn’t need both people online at once.</blockquote>
+    <p>Blaksyd calls this the future of social: connection that extends who you are beyond your waking hours. Persona is powered by the same learning spine as <a href="/blak/">Blak</a>, and lives in one world with <a href="/minit/">Minit</a> and <a href="/nexus/">Nexus</a>. <a href="/about/">See how the four pillars fit together →</a></p>
+  </section>
+
+  <section>
+    <h2>Questions about Persona</h2>
+    {faqs.map((f) => (<><h3>{f.q}</h3><p>{f.a}</p></>))}
+  </section>
+</Page>

@@ -6,10 +6,13 @@
     "dev": "astro dev",
     "build": "astro build && node scripts/copy-subapps.mjs",
     "preview": "astro preview",
+    "gen:images": "node scripts/gen-images.mjs",
+    "indexnow": "node scripts/indexnow.mjs",
     "astro": "astro"
   },
   "devDependencies": {
     "@astrojs/sitemap": "^3",
-    "astro": "^5"
+    "astro": "^5",
+    "sharp": "^0.34"
   }
 }

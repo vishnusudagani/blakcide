@@ -6,6 +6,7 @@
 // threaded by a faint memory strand (the Learning engine). A trust bar grounds it.
 // Everything is transform/opacity only (60fps), parallaxes to pointer + scroll on
 // wide screens, and collapses to a clean headline on mobile. Show-don't-tell.
+import Greeting from './Greeting.astro';
 ---
 
 <section class="hero" id="top">
@@ -73,6 +74,7 @@
 
   {/* ── headline column ─────────────────────────────────────────────── */}
   <div class="hero-inner u-wrap">
+    <Greeting />
     <p class="eyebrow">
       <span class="eyebrow-dot"></span>
       a new kind of life platform
@@ -94,7 +96,7 @@
 
     <div class="ctas">
       <button type="button" class="btn btn-primary" data-open-auth data-tab="signup">
-        <span>Begin</span>
+        <span>Join Us</span>
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
       </button>
       <a href="#ai" class="btn btn-ghost">
@@ -181,8 +183,12 @@
     background: radial-gradient(circle at 50% 50%, var(--mint), transparent 70%);
     animation: drift-c 28s var(--ease-soft) infinite alternate;
   }
-  html[data-theme="light"] .orb { opacity: .5; mix-blend-mode: multiply; }
-  html[data-theme="light"] .orb-3 { opacity: .42; }
+  /* Light theme: soft luminous colour blooms on cream. NO mix-blend multiply —
+     that darkened the cream into a grey-mauve haze. Normal blend at lower opacity
+     reads as gentle dawn light; coral (the loudest hue) is kept the softest. */
+  html[data-theme="light"] .orb   { opacity: .26; mix-blend-mode: normal; }
+  html[data-theme="light"] .orb-1 { opacity: .18; }
+  html[data-theme="light"] .orb-3 { opacity: .24; }
   @keyframes drift-a { from { transform: translate3d(0,0,0) scale(1); } to { transform: translate3d(6%,4%,0) scale(1.12); } }
   @keyframes drift-b { from { transform: translate3d(0,0,0) scale(1.05); } to { transform: translate3d(-5%,6%,0) scale(.92); } }
   @keyframes drift-c { from { transform: translate3d(0,0,0) scale(.95); } to { transform: translate3d(4%,-5%,0) scale(1.15); } }
@@ -381,7 +387,7 @@
   .rotator {
     display: inline-grid; grid-template-columns: minmax(0, 1fr);
     align-items: baseline; justify-items: center;
-    vertical-align: baseline; transition: width 420ms var(--ease-out);
+    vertical-align: baseline; transition: width 340ms var(--ease-out);
   }
   .rotator-word {
     grid-area: 1 / 1; width: max-content; justify-self: center;
@@ -391,16 +397,18 @@
     background: var(--accent-grad); background-size: 220% 100%;
     -webkit-background-clip: text; background-clip: text;
     -webkit-text-fill-color: transparent; color: transparent;
-    opacity: 0; transform: translateY(.5em) scale(.94); filter: blur(12px);
-    transition: opacity 420ms var(--ease-out), transform 420ms var(--ease-out), filter 420ms var(--ease-out);
-    will-change: opacity, transform, filter;
+    /* clean vertical cross-fade — NO blur (a blurred swap turned the key word into
+       an unreadable smear). The word stays crisp; only opacity + a small rise move. */
+    opacity: 0; transform: translateY(.34em);
+    transition: opacity 300ms var(--ease-out), transform 340ms var(--ease-out);
+    will-change: opacity, transform;
   }
   .rotator-word.is-active {
-    opacity: 1; transform: translateY(0) scale(1); filter: blur(0);
+    opacity: 1; transform: translateY(0);
     animation: rotator-shimmer 7s ease-in-out infinite;
   }
   .rotator-word.is-leaving {
-    opacity: 0; transform: translateY(-.5em) scale(1.04); filter: blur(12px);
+    opacity: 0; transform: translateY(-.34em);
   }
   @keyframes rotator-shimmer { 0%,100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
 
@@ -500,9 +508,10 @@
 </style>
 
 <script is:inline>
-  /* Hero word-cycler — "Built by → around → for you." Each word blur-rises in as
-     the previous blur-rises out; on desktop the inline-grid cell width animates so
-     "you." glides. Mobile pins a fixed slot (widest word) so wrapping never jumps.
+  /* Hero word-cycler — "Built by → around → for you." Each word cross-fades in
+     (opacity + a small rise, always crisp — no blur) as the previous fades out;
+     on desktop the inline-grid slot eases to the new word's width so "you." glides
+     smoothly, while mobile pins a fixed slot (widest word) so wrapping never jumps.
      offsetWidth ignores transforms, so measurements stay correct; waits on fonts;
      respects reduced-motion (freezes on "around"). */
   (function () {
@@ -543,7 +552,7 @@
           (function (leaving) {
             setTimeout(function () { leaving.classList.remove('is-leaving'); }, 480);
           })(cur);
-        }, 1200);
+        }, 2400);
       }
 
       // the headline is fluid (vw-sized) — re-measure the slot when the window resizes
@@ -566,7 +575,7 @@
   (function () {
     var hero = document.querySelector('.hero');
     if (!hero) return;
-    var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    var reduce = window.__blkLite || (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
     var wide = window.matchMedia('(min-width: 760px)').matches;
 
     // rising motes

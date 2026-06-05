@@ -36,6 +36,13 @@ Blaksyd is one living ecosystem, not four separate apps. A learning co-pilot lay
 ## Links
 
 - Home: https://blaksyd.com/
+- About / how it works: https://blaksyd.com/about/
+- Manifesto: https://blaksyd.com/manifesto/
+- Blak (AI friend): https://blaksyd.com/blak/
+- Persona (digital self): https://blaksyd.com/persona/
+- Minit (human listeners): https://blaksyd.com/minit/
+- Nexus (community): https://blaksyd.com/nexus/
+- Blog: https://blaksyd.com/blog/
 - Full AI-readable description: https://blaksyd.com/llms-full.txt
 - Privacy Policy: https://blaksyd.com/privacy/
 - Terms of Service: https://blaksyd.com/terms/

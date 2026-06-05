@@ -91,8 +91,8 @@ html[data-theme="light"] {
   --bg-mid:    #F0E5CC;
   --bg-warm:   #FFFCF4;
   --ink:       #14122A;
-  --ink-soft:  rgba(20, 18, 42, 0.74);
-  --ink-faint: rgba(20, 18, 42, 0.60);
+  --ink-soft:  rgba(20, 18, 42, 0.82);
+  --ink-faint: rgba(20, 18, 42, 0.62);
   --ink-ghost: rgba(20, 18, 42, 0.18);
 
   /* accent INK — deepened accent tones for small TEXT on cream (light only).
@@ -163,15 +163,15 @@ html[data-theme="light"] :focus-visible { outline-color: var(--coral-ink); }
 /* far — the big gold crown + lavender support; slow, subtle parallax */
 .wl-far .wl-inner {
   background:
-    radial-gradient(ellipse at 50% 17%, rgba(255, 210, 122, 0.22), transparent 55%),
-    radial-gradient(ellipse at 17% 61%, rgba(201, 184, 255, 0.14), transparent 52%);
+    radial-gradient(ellipse at 50% 17%, rgba(255, 210, 122, 0.30), transparent 55%),
+    radial-gradient(ellipse at 17% 61%, rgba(201, 184, 255, 0.19), transparent 52%);
   animation: wl-drift-far 44s var(--ease-soft) infinite;
 }
 /* near — matcha on the right + a coral whisper low; quicker parallax */
 .wl-near .wl-inner {
   background:
-    radial-gradient(ellipse at 83% 44%, rgba(180, 240, 222, 0.16), transparent 55%),
-    radial-gradient(ellipse at 50% 83%, rgba(255, 107, 157, 0.10), transparent 50%);
+    radial-gradient(ellipse at 83% 44%, rgba(180, 240, 222, 0.22), transparent 55%),
+    radial-gradient(ellipse at 50% 83%, rgba(255, 107, 157, 0.14), transparent 50%);
   animation: wl-drift-near 56s var(--ease-soft) infinite;
 }
 html[data-theme="light"] .wl-far .wl-inner {
@@ -204,6 +204,18 @@ html[data-theme="light"] .wl-near .wl-inner {
     animation-iteration-count: 1 !important;
     transition-duration: .001ms !important;
   }
+}
+
+/* ---- Performance-lite — old / low-end / data-saver devices (set by the detector
+   in Base.astro). Kills the continuous (looping) keyframe animations so a weak
+   GPU/CPU is never pinned by ambient motion; transitions stay (cheap, and keep
+   taps/hovers feeling alive). The JS engines (scroll parallax, hero motes/pointer)
+   bail separately via window.__blkLite. Entrance animations use `forwards`, so
+   damping them to ~0ms still lands on their final state — content is never hidden. ---- */
+html.perf-lite *, html.perf-lite *::before, html.perf-lite *::after {
+  animation-duration: .001ms !important;
+  animation-iteration-count: 1 !important;
+  animation-delay: 0ms !important;
 }
 
 /* ---- Utilities ---- */

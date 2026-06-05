@@ -1,0 +1,120 @@
+---
+// Footer — sitewide. One consistent footer on every page (home + content + blog).
+// Its real job beyond chrome: a full internal-link graph so crawlers and answer
+// engines can reach every page from anywhere (the homepage holds the most
+// authority, so linking the pillar/company pages from here passes the most value).
+// The wordmark is a CSS background (swaps per theme, inactive file never fetched)
+// — matching Nav and the legal pages. Indexable <img> assets live in page bodies,
+// where surrounding text helps them rank, not in chrome.
+const year = 2026; // static build; stamped, not Date.now() (kept deterministic)
+---
+
+<footer class="site-foot" aria-label="Footer">
+  <div class="u-wrap foot-grid">
+    <div class="foot-brand-col">
+      <a href="/" class="foot-brand" aria-label="Blaksyd — home">
+        <span class="foot-mark" aria-hidden="true"></span>
+      </a>
+      <p class="foot-line">Human&nbsp;+&nbsp;AI, revolving around you.</p>
+      <span class="foot-social">
+        <a href="https://www.instagram.com/blaksyd" target="_blank" rel="noopener noreferrer" aria-label="Blaksyd on Instagram (@blaksyd)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="18" height="18" rx="5" /><circle cx="12" cy="12" r="4" />
+            <circle cx="17.2" cy="6.8" r="1.15" fill="currentColor" stroke="none" />
+          </svg>
+        </a>
+        <a href="https://www.youtube.com/@blaksyd" target="_blank" rel="noopener noreferrer" aria-label="Blaksyd on YouTube (@blaksyd)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="2.5" y="5.5" width="19" height="13" rx="4.2" /><path d="M10.2 9.3l5 2.7-5 2.7z" fill="currentColor" stroke="none" />
+          </svg>
+        </a>
+      </span>
+    </div>
+
+    <nav class="foot-nav" aria-label="Explore Blaksyd">
+      <p class="foot-h">Explore</p>
+      <a href="/blak/">Blak — your AI friend</a>
+      <a href="/persona/">Persona — your digital self</a>
+      <a href="/minit/">Minit — real human listeners</a>
+      <a href="/nexus/">Nexus — your community</a>
+    </nav>
+
+    <nav class="foot-nav" aria-label="Company">
+      <p class="foot-h">Company</p>
+      <a href="/about/">About Blaksyd</a>
+      <a href="/manifesto/">Manifesto</a>
+      <a href="/blog/">Blog</a>
+      <a href="/#faq">FAQ</a>
+    </nav>
+
+    <nav class="foot-nav" aria-label="Legal">
+      <p class="foot-h">Legal</p>
+      <a href="/privacy/">Privacy</a>
+      <a href="/terms/">Terms</a>
+      <a href="mailto:ceo@blaksyd.com">Contact</a>
+      <a href="/#waitlist" data-open-auth data-tab="signup">Join the waitlist</a>
+    </nav>
+  </div>
+
+  <div class="u-wrap foot-base">
+    <span class="foot-copy">© {year} Blaksyd LLP · Made in India 🇮🇳</span>
+    <span class="foot-tag">Most apps want your attention. Blaksyd wants your life to be better.</span>
+  </div>
+</footer>
+
+<style>
+  .site-foot {
+    position: relative; z-index: 1;
+    margin-top: clamp(4rem, 10vh, 7rem);
+    border-top: 1px solid var(--line);
+    padding-block: clamp(2.6rem, 6vh, 4rem) 1.6rem;
+  }
+  .foot-grid {
+    display: grid;
+    grid-template-columns: 1.4fr 1fr 1fr 1fr;
+    gap: clamp(1.6rem, 4vw, 3rem) 1.5rem;
+  }
+  @media (max-width: 760px) { .foot-grid { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 460px) { .foot-grid { grid-template-columns: 1fr; } }
+
+  .foot-brand { display: inline-flex; transition: transform var(--t-fast) var(--ease-spring); }
+  .foot-brand:hover { transform: scale(1.04); }
+  .foot-mark {
+    display: block; height: 26px; width: auto; aspect-ratio: 737 / 338;
+    background: url('/assets/blaksyd-white.webp') left center / contain no-repeat;
+  }
+  html[data-theme="light"] .foot-mark {
+    aspect-ratio: 758 / 329; background-image: url('/assets/blaksyd-black.webp');
+  }
+  .foot-line { margin-top: .9rem; font-size: .9rem; color: var(--ink-soft); max-width: 24ch; }
+  .foot-social { display: inline-flex; align-items: center; gap: .35rem; margin-top: 1rem; margin-left: -10px; }
+  .foot-social a {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 40px; height: 40px; color: var(--ink-soft);
+    transition: color var(--t-fast) var(--ease-out), transform var(--t-fast) var(--ease-spring);
+  }
+  .foot-social a:hover { color: var(--ink); transform: translateY(-2px); }
+  .foot-social svg { width: 18px; height: 18px; }
+
+  .foot-h {
+    font-family: var(--font-mono); font-size: .66rem; text-transform: uppercase;
+    letter-spacing: .18em; color: var(--ink-faint); margin-bottom: .9rem;
+  }
+  .foot-nav { display: flex; flex-direction: column; }
+  .foot-nav a {
+    display: inline-flex; align-items: center; min-height: 38px;
+    font-size: .9rem; color: var(--ink-soft);
+    transition: color var(--t-fast) var(--ease-out);
+  }
+  .foot-nav a:hover { color: var(--ink); }
+
+  .foot-base {
+    display: flex; align-items: center; justify-content: space-between; gap: .6rem 1.5rem;
+    flex-wrap: wrap;
+    margin-top: clamp(2rem, 5vh, 3rem); padding-top: 1.4rem;
+    border-top: 1px solid var(--line);
+  }
+  .foot-copy { font-size: .82rem; color: var(--ink-faint); }
+  .foot-tag { font-size: .82rem; color: var(--ink-ghost); font-style: italic; }
+  @media (max-width: 560px) { .foot-base { justify-content: center; text-align: center; } }
+</style>

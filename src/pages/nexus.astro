@@ -1,0 +1,94 @@
+---
+// /nexus — the Nexus pillar page. Canonical copy from "What is BLAKSYD?".
+import Page from '../layouts/Page.astro';
+
+const faqs = [
+  {
+    q: 'What is Nexus?',
+    a: `Nexus is Blaksyd’s living community — part Threads, part Reddit, part X, and entirely its own thing. It has persistent Tribes, live Discussion Rooms, and anonymous direct messages, with a feed built around you rather than around engagement metrics.`,
+  },
+  {
+    q: 'What are Tribes and Discussion Rooms?',
+    a: `A Tribe is a persistent community built around a passion, a phase of life, a shared experience, or a topic — and can be public, private, or anonymous. A Discussion Room is a live moment, inside a tribe or standalone, that ends when the energy does.`,
+  },
+  {
+    q: 'How is recognition different on Nexus?',
+    a: `Instead of vanity likes, Nexus recognises you through Resonance (the real impact of what you share), Streaks (consistency and presence), and Badges (milestones and achievements). No hollow likes — just real resonance.`,
+  },
+];
+
+const schema = [
+  {
+    '@type': 'WebPage',
+    '@id': 'https://blaksyd.com/nexus/#webpage',
+    url: 'https://blaksyd.com/nexus/',
+    name: 'Nexus — your community on Blaksyd',
+    description:
+      'Nexus is Blaksyd’s community: persistent Tribes, live Discussion Rooms, anonymous DMs, and a feed built around you — recognition through resonance, not vanity likes.',
+    isPartOf: { '@id': 'https://blaksyd.com/#website' },
+    about: { '@id': 'https://blaksyd.com/#organization' },
+    breadcrumb: { '@id': 'https://blaksyd.com/nexus/#breadcrumb' },
+    primaryImageOfPage: {
+      '@type': 'ImageObject',
+      url: 'https://blaksyd.com/assets/blaksyd-nexus.png',
+      caption: 'Nexus — your community on Blaksyd: tribes, rooms, and a feed built around you.',
+    },
+  },
+  {
+    '@type': 'FAQPage',
+    '@id': 'https://blaksyd.com/nexus/#faq',
+    mainEntity: faqs.map((f) => ({
+      '@type': 'Question',
+      name: f.q,
+      acceptedAnswer: { '@type': 'Answer', text: f.a },
+    })),
+  },
+];
+---
+
+<Page
+  title="Nexus — your community | Blaksyd"
+  description="Nexus is Blaksyd’s community — part Threads, part Reddit, part X. Persistent Tribes, live Discussion Rooms, anonymous DMs, and a feed built around you. Resonance over vanity likes."
+  image="/assets/blaksyd-nexus.png"
+  kicker="Nexus · your world"
+  kickerClass="k-aqua"
+  heading="A community that’s"
+  accent="alive around you."
+  accentCool={true}
+  lede="Nexus is Blaksyd’s living community — part Threads, part Reddit, part X, and entirely its own thing. Persistent tribes, live discussion rooms, and anonymous connections, with a feed built around you, not around engagement."
+  heroImage="/assets/blaksyd-nexus.png"
+  heroAlt="Nexus — Blaksyd’s community of persistent tribes, live discussion rooms, and a feed built around you."
+  breadcrumb={[{ name: 'Home', href: '/' }, { name: 'Nexus', href: '/nexus/' }]}
+  schema={schema}
+>
+  <section>
+    <h2>Tribes — your people</h2>
+    <p>Any user can create a Tribe: a persistent community built around a passion, a phase of life, a shared experience, a topic, or a feeling. Tribes are always there and grow richer over time, and can be public, private, or anonymous.</p>
+    <p>Inside a tribe you can post text, images, polls, links, and reels; start discussions and threads; debate and write long-form; and engage with people who get it.</p>
+  </section>
+
+  <section>
+    <h2>Discussion Rooms — live moments</h2>
+    <p>A live event inside a tribe, or a standalone space where like-minded people gather in real time. Unlike a tribe (permanent), a Discussion Room is a moment — it ends when the energy does.</p>
+  </section>
+
+  <section>
+    <h2>A feed built around you</h2>
+    <p>The Nexus feed is not algorithmic in the engagement-chasing sense. It’s built around you — your tribes, your moods, your history, your world — and shows you what actually matters to you. <a href="/blak/">Blak</a> is a quiet, default participant in every tribe: it observes, moderates when needed, and responds only when called upon, keeping the space safe and honest without taking over.</p>
+  </section>
+
+  <section>
+    <h2>Resonance, not vanity</h2>
+    <ul>
+      <li><b>Resonance</b> — the impact you create with what you share.</li>
+      <li><b>Streaks</b> — consistency and presence.</li>
+      <li><b>Badges</b> — milestones and achievements.</li>
+    </ul>
+    <p>No hollow likes, no vanity metrics — just real resonance. Nexus lives in one world with <a href="/persona/">Persona</a> and <a href="/minit/">Minit</a>. <a href="/about/">See how the four pillars fit together →</a></p>
+  </section>
+
+  <section>
+    <h2>Questions about Nexus</h2>
+    {faqs.map((f) => (<><h3>{f.q}</h3><p>{f.a}</p></>))}
+  </section>
+</Page>

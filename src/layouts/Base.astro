@@ -42,7 +42,13 @@ const organization = {
   legalName: 'Blaksyd LLP',
   foundingDate: '2026',
   url: 'https://blaksyd.com/',
-  logo: 'https://blaksyd.com/assets/blaksyd-black.webp',
+  logo: {
+    '@type': 'ImageObject',
+    url: 'https://blaksyd.com/assets/blaksyd-logo.png',
+    width: 640,
+    height: 220,
+    caption: 'Blaksyd — Human + AI, revolving around you.',
+  },
   image: 'https://blaksyd.com/assets/og-cover.png',
   slogan: 'Human + AI, revolving around you.',
   email: 'ceo@blaksyd.com',
@@ -89,11 +95,11 @@ const favicon =
 ---
 
 <!doctype html>
-<html lang="en" data-theme="dark">
+<html lang="en" data-theme="light">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <meta name="theme-color" content="#08091A" />
+    <meta name="theme-color" content="#FAF4EC" />
 
     {/* Google Search Console — site-ownership verification. Keep permanently. */}
     <meta name="google-site-verification" content="9mosoNbZxxY3aU9M8TIIHVRKrchK7SN87jqcvPe5D2c" />
@@ -103,6 +109,16 @@ const favicon =
     <title>{title}</title>
     <link rel="icon" href={favicon} />
     <link rel="canonical" href={canonicalURL} />
+    {/* hreflang — one English page served globally to an India-first audience.
+        Every variant points to the same canonical URL (no separate localized URLs
+        exist), the correct signal for a single-language site: it nudges Google
+        toward the India market without risking duplicate content. */}
+    <link rel="alternate" hreflang="en" href={canonicalURL} />
+    <link rel="alternate" hreflang="en-IN" href={canonicalURL} />
+    <link rel="alternate" hreflang="x-default" href={canonicalURL} />
+    {/* RSS autodiscovery — the blog feed (a real discovery channel for readers,
+        aggregators, and some AI ingestion pipelines). */}
+    <link rel="alternate" type="application/rss+xml" title="The Blaksyd Blog" href="/rss.xml" />
 
     {/* Open Graph — link previews (iMessage, Slack, LinkedIn, Facebook…) */}
     <meta property="og:type" content="website" />
@@ -113,7 +129,7 @@ const favicon =
     <meta property="og:image" content={ogImageURL} />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
-    <meta property="og:image:alt" content="Blaksyd — Human + AI, revolving around you." />
+    <meta property="og:image:alt" content={title} />
 
     {/* Twitter / X large-image card */}
     <meta name="twitter:card" content="summary_large_image" />
@@ -123,6 +139,7 @@ const favicon =
 
     {/* Entity + locale hints */}
     <meta property="og:locale" content="en_US" />
+    <meta property="og:locale:alternate" content="en_IN" />
     <meta property="og:image:type" content="image/png" />
     <meta name="author" content="Blaksyd LLP" />
     <meta name="publisher" content="Blaksyd LLP" />
@@ -141,7 +158,8 @@ const favicon =
         try {
           var t = localStorage.getItem('theme');
           if (t !== 'light' && t !== 'dark') {
-            t = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+            // Brand default is the bright (light) theme; honour an explicit OS dark choice.
+            t = (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
           }
           document.documentElement.setAttribute('data-theme', t);
           var meta = document.querySelector('meta[name="theme-color"]');
@@ -149,6 +167,27 @@ const favicon =
         } catch (e) {
           document.documentElement.setAttribute('data-theme', 'dark');
         }
+      })();
+    </script>
+
+    {/* Performance tier — decide ONCE whether this device gets the full motion
+        experience or a calmer "lite" mode (old / low-end / data-saver /
+        reduced-motion). Lite keeps the full layout + gradients (cheap) but the
+        body scripts skip continuous animation + cursor parallax, and CSS damps
+        the keyframes. Smoothness over flourish on weak hardware. */}
+    <script is:inline>
+      (function () {
+        var lite = false;
+        try {
+          var mm = window.matchMedia;
+          var reduced = mm && mm('(prefers-reduced-motion: reduce)').matches;
+          var save = navigator.connection && navigator.connection.saveData;
+          var mem = navigator.deviceMemory;          // GB (Chromium)
+          var cores = navigator.hardwareConcurrency; // logical cores
+          lite = !!(reduced || save || (mem && mem <= 2) || (cores && cores <= 2));
+        } catch (e) {}
+        window.__blkLite = lite;
+        document.documentElement.classList.add(lite ? 'perf-lite' : 'perf-full');
       })();
     </script>
 
@@ -171,7 +210,7 @@ const favicon =
         (robust across browsers; no IntersectionObserver dependency). */}
     <script is:inline>
       (function () {
-        var reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        var reduced = window.__blkLite || (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
         var pending = [].slice.call(document.querySelectorAll('[data-reveal]'));
         if (!pending.length) return;
         if (reduced) { pending.forEach(function (el) { el.classList.add('seen'); }); return; }
@@ -206,7 +245,7 @@ const favicon =
         offsetTop walk (transform-independent) so the parallax never feeds back. */}
     <script is:inline>
       (function () {
-        var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        var reduce = window.__blkLite || (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
         if (reduce) return;
 
         var bg = [].slice.call(document.querySelectorAll('.world .wl')).map(function (el) {

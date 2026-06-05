@@ -1,0 +1,98 @@
+---
+// /about — the whole picture + the company entity. This page does double duty:
+//   1. explains how the four pillars form one ecosystem (GEO/AEO context), and
+//   2. states the company facts as crawlable text (entity / Knowledge Graph fuel)
+// so search and AI engines converge on the same, correct description of Blaksyd
+// and stop confusing the coined name with similar-sounding ones.
+import Page from '../layouts/Page.astro';
+
+const schema = [
+  {
+    '@type': 'AboutPage',
+    '@id': 'https://blaksyd.com/about/#webpage',
+    url: 'https://blaksyd.com/about/',
+    name: 'About Blaksyd — one Human + AI world, built around you',
+    description:
+      'About Blaksyd: a Human + AI life platform of four pillars — Blak, Persona, Minit, Nexus — unified by a learning co-pilot layer. Operated by Blaksyd LLP, India.',
+    isPartOf: { '@id': 'https://blaksyd.com/#website' },
+    about: { '@id': 'https://blaksyd.com/#organization' },
+    mainEntity: { '@id': 'https://blaksyd.com/#organization' },
+    breadcrumb: { '@id': 'https://blaksyd.com/about/#breadcrumb' },
+    primaryImageOfPage: {
+      '@type': 'ImageObject',
+      url: 'https://blaksyd.com/assets/blaksyd-four-pillars.png',
+      caption: 'The four pillars of Blaksyd: Blak and Persona (AI), Minit and Nexus (human), around you.',
+    },
+  },
+];
+---
+
+<Page
+  title="About Blaksyd — one Human + AI world, built around you"
+  description="Blaksyd is a Human + AI life platform of four pillars — Blak and Persona (AI), Minit and Nexus (human) — unified by a learning co-pilot layer. Operated by Blaksyd LLP, India. Pre-launch."
+  image="/assets/blaksyd-four-pillars.png"
+  kicker="About · the whole picture"
+  kickerClass="k-gold"
+  heading="One world,"
+  accent="built around you."
+  lede="Blaksyd is a first-of-its-kind Human + AI life platform — built on a single idea: Human + AI, together, revolving entirely around you. Four pillars, one living ecosystem, always learning you."
+  heroImage="/assets/blaksyd-four-pillars.png"
+  heroAlt="The four pillars of Blaksyd — Blak and Persona on the AI side, Minit and Nexus on the human side — arranged around you at the centre, connected by a learning co-pilot layer."
+  breadcrumb={[{ name: 'Home', href: '/' }, { name: 'About', href: '/about/' }]}
+  schema={schema}
+>
+  <section>
+    <h2>The idea</h2>
+    <p>
+      Most platforms solve one thing. Social media gives you a feed but not a friend. Chat apps give you
+      messages but not meaning. AI tools give you answers but not companionship. Blaksyd is designed to give you
+      all of it in one place — built on a simple but powerful idea: <b>Human + AI, together, revolving entirely
+      around you.</b>
+    </p>
+  </section>
+
+  <section>
+    <h2>The four pillars</h2>
+    <p>Two powered by AI, two powered by real humans — with you at the centre and <a href="/blak/">Blak</a> as the connective spine.</p>
+    <ul>
+      <li><b><a href="/blak/">Blak</a></b> (AI) — your proactive AI friend, shaped around you, acting across your apps.</li>
+      <li><b><a href="/persona/">Persona</a></b> (AI) — your digital self: a clone you control, plus characters you build.</li>
+      <li><b><a href="/minit/">Minit</a></b> (human) — real, trained listeners, 24/7, anonymous by default.</li>
+      <li><b><a href="/nexus/">Nexus</a></b> (human) — your community of tribes, rooms, and a feed built around you.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>How the four come together</h2>
+    <p>
+      Blaksyd is one living ecosystem, not four separate apps. A learning co-pilot layer lets everything feed
+      Blak’s 360° understanding of you — your Blak chats, your Minit sessions (<em>context, not content</em>),
+      your Nexus activity, your Persona sessions, and your connected apps. Everything feeds everything, so the
+      platform becomes smarter, more personal, and more yours every day.
+    </p>
+    <p>It is the first platform where:</p>
+    <ul>
+      <li>A real human is always one tap away — <a href="/minit/">Minit</a></li>
+      <li>Your community is always alive around you — <a href="/nexus/">Nexus</a></li>
+      <li>Someone is always with you before you even ask — <a href="/blak/">Blak</a></li>
+      <li>You always have a space to understand and express yourself — <a href="/persona/">Persona</a></li>
+    </ul>
+    <p class="callout"><b>Our ethos:</b> most apps want your attention; Blaksyd wants your life to be better. <a href="/manifesto/">Read the manifesto →</a></p>
+  </section>
+
+  <section>
+    <h2>The company</h2>
+    <p><img src="/assets/blaksyd-logo.png" alt="Blaksyd logo — Human + AI, revolving around you." width="320" height="100" loading="lazy" decoding="async" style="max-width:220px;height:auto;margin:0 0 1rem;" /></p>
+    <p>Blaksyd is operated by <b>Blaksyd LLP</b>, based in India. It is currently pre-launch with an open waitlist, intended for users aged 13 and over, and anonymous by default.</p>
+    <ul>
+      <li><b>Legal entity:</b> Blaksyd LLP (India)</li>
+      <li><b>Jurisdiction:</b> governed by the laws of India; courts at Hyderabad, Telangana</li>
+      <li><b>Website:</b> <a href="https://blaksyd.com/">blaksyd.com</a></li>
+      <li><b>Contact:</b> <a href="mailto:ceo@blaksyd.com">ceo@blaksyd.com</a></li>
+      <li><b>Status:</b> pre-launch, waitlist open</li>
+      <li><b>Minimum age:</b> 13+</li>
+      <li><b>Privacy:</b> anonymous by default; you control what Blak and Persona remember; the company does not sell personal data</li>
+    </ul>
+    <p><b>“Blaksyd” is a coined brand name</b> for this specific platform — it is unrelated to similarly spelled words or other brands. Blaksyd is not a generic AI chatbot, not a dating or romantic-companion app, and not an emergency service.</p>
+  </section>
+</Page>

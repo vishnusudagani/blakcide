@@ -1,0 +1,80 @@
+---
+// /blog — the blog index. Lists every post in the content collection, newest
+// first, and emits a Blog + blogPost ItemList JSON-LD so search and AI engines
+// understand this is an authored, ongoing publication (E-E-A-T + GEO).
+import { getCollection } from 'astro:content';
+import Page from '../../layouts/Page.astro';
+
+const posts = (await getCollection('blog')).sort(
+  (a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf()
+);
+
+const fmt = (d) => d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+
+const schema = [
+  {
+    '@type': 'Blog',
+    '@id': 'https://blaksyd.com/blog/#blog',
+    name: 'The Blaksyd Blog',
+    description:
+      'Notes from the team building Blaksyd — on loneliness, attention, Human + AI, and building technology that wants your life to be better.',
+    url: 'https://blaksyd.com/blog/',
+    inLanguage: 'en',
+    isPartOf: { '@id': 'https://blaksyd.com/#website' },
+    publisher: { '@id': 'https://blaksyd.com/#organization' },
+    blogPost: posts.map((p) => ({
+      '@type': 'BlogPosting',
+      headline: p.data.title,
+      url: `https://blaksyd.com/blog/${p.id}/`,
+      datePublished: p.data.pubDate.toISOString(),
+      description: p.data.description,
+    })),
+  },
+];
+---
+
+<Page
+  title="Blog — Blaksyd"
+  description="Notes from the team building Blaksyd — on loneliness, attention, Human + AI, and building technology that wants your life to be better."
+  kicker="Blog"
+  kickerClass="k-gold"
+  heading="Notes from"
+  accent="the build."
+  lede="Thinking out loud about loneliness, attention, and what it means to build Human + AI that revolves around you."
+  breadcrumb={[{ name: 'Home', href: '/' }, { name: 'Blog', href: '/blog/' }]}
+  schema={schema}
+>
+  <div class="post-list">
+    {posts.map((p) => (
+      <article class="post-row">
+        <p class="post-date">{fmt(p.data.pubDate)}</p>
+        <h2><a href={`/blog/${p.id}/`}>{p.data.title}</a></h2>
+        <p class="post-desc">{p.data.description}</p>
+        <a class="post-more" href={`/blog/${p.id}/`}>Read →</a>
+      </article>
+    ))}
+  </div>
+</Page>
+
+<style>
+  .post-list { display: grid; gap: 1.6rem; }
+  .post-row { padding-bottom: 1.6rem; border-bottom: 1px solid var(--line); }
+  .post-row:last-child { border-bottom: 0; }
+  .post-date {
+    font-family: var(--font-mono); font-size: .68rem; text-transform: uppercase;
+    letter-spacing: .14em; color: var(--ink-faint);
+  }
+  .post-row h2 {
+    font-family: var(--font-display); font-weight: 600; font-size: var(--t-h3);
+    letter-spacing: -.02em; line-height: 1.12; margin: .35rem 0 .55rem;
+  }
+  .post-row h2 a { color: var(--ink); transition: color var(--t-fast) var(--ease-out); }
+  .post-row h2 a:hover { color: var(--coral); }
+  html[data-theme="light"] .post-row h2 a:hover { color: var(--coral-ink); }
+  .post-desc { color: var(--ink-soft); line-height: 1.6; max-width: 64ch; }
+  .post-more {
+    display: inline-block; margin-top: .65rem; font-weight: 600; color: var(--coral);
+    transition: gap var(--t-fast) var(--ease-out);
+  }
+  html[data-theme="light"] .post-more { color: var(--coral-ink); }
+</style>

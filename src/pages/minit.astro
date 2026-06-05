@@ -1,0 +1,108 @@
+---
+// /minit — the Minit pillar page. Canonical copy from "What is BLAKSYD?".
+import Page from '../layouts/Page.astro';
+
+const faqs = [
+  {
+    q: 'Who are Minit listeners?',
+    a: `Real people, carefully trained through Blaksyd’s own listener-training program and thoroughly screened for safety. They give you space to talk freely and listen without judging, rushing, or fixing. They are not therapists, and Minit is not an emergency service.`,
+  },
+  {
+    q: 'Is Minit anonymous?',
+    a: `Yes — anonymous by default. Listeners don’t know your real name or details unless you choose to share them. When you reconnect with a listener you trust, you can see your past conversation history without compromising your privacy.`,
+  },
+  {
+    q: 'How do I connect with a listener?',
+    a: `Four ways: Instant Match (the next available listener), Smart Match (matched on your mood, topic, and language), Reconnect (a listener you’ve spoken with before), and Listener Discovery (premium: browse profiles and choose). Available 24/7 by text or voice.`,
+  },
+  {
+    q: 'Is Minit free?',
+    a: `Minit is session-based. New users get free trials, and regular access is available through premium subscriptions or pay-per-session. Blaksyd is currently pre-launch with an open waitlist.`,
+  },
+];
+
+const schema = [
+  {
+    '@type': 'WebPage',
+    '@id': 'https://blaksyd.com/minit/#webpage',
+    url: 'https://blaksyd.com/minit/',
+    name: 'Minit — real human listeners, 24/7',
+    description:
+      'Minit is Blaksyd’s human connection layer: real, trained, screened listeners available 24/7 by text or voice, anonymous by default, with two-sided safety.',
+    isPartOf: { '@id': 'https://blaksyd.com/#website' },
+    about: { '@id': 'https://blaksyd.com/#organization' },
+    breadcrumb: { '@id': 'https://blaksyd.com/minit/#breadcrumb' },
+    primaryImageOfPage: {
+      '@type': 'ImageObject',
+      url: 'https://blaksyd.com/assets/blaksyd-minit.png',
+      caption: 'Minit — real human listeners on Blaksyd, available 24/7.',
+    },
+  },
+  {
+    '@type': 'FAQPage',
+    '@id': 'https://blaksyd.com/minit/#faq',
+    mainEntity: faqs.map((f) => ({
+      '@type': 'Question',
+      name: f.q,
+      acceptedAnswer: { '@type': 'Answer', text: f.a },
+    })),
+  },
+];
+---
+
+<Page
+  title="Minit — real human listeners, 24/7 | Blaksyd"
+  description="Minit is Blaksyd’s human layer: real, trained, screened listeners available 24/7 by text or voice, anonymous by default, built with two-sided safety. Not an emergency service."
+  image="/assets/blaksyd-minit.png"
+  kicker="Minit · the human layer"
+  kickerClass="k-mint"
+  heading="Some conversations need"
+  accent="a real human."
+  accentCool={true}
+  lede="Minit connects you to real, trained human listeners — not an algorithm, not an AI — available 24/7 by text or voice and anonymous by default. People with lived experience who actually get it."
+  heroImage="/assets/blaksyd-minit.png"
+  heroAlt="Minit — real, trained human listeners on Blaksyd, available 24/7 by text or voice, anonymous by default."
+  breadcrumb={[{ name: 'Home', href: '/' }, { name: 'Minit', href: '/minit/' }]}
+  schema={schema}
+>
+  <section>
+    <h2>Who the listeners are</h2>
+    <p>
+      Real people, carefully trained through Blaksyd’s own listener-training program and passed through thorough
+      screening and safety checks. Their role is to give you space to talk freely, listen without judging or
+      rushing or fixing, help you feel heard, ask thoughtful questions, and offer real human perspective and
+      encouragement.
+    </p>
+  </section>
+
+  <section>
+    <h2>Four ways to connect</h2>
+    <ul>
+      <li><b>Instant Match</b> — connect immediately to the next available listener.</li>
+      <li><b>Smart Match</b> — share your mood, topic, language, and preferences, and the system finds the best available match.</li>
+      <li><b>Reconnect</b> — return to a listener you spoke with before; trust builds over time.</li>
+      <li><b>Listener Discovery (premium)</b> — browse profiles by experience, languages, style, availability, and community ratings, and choose exactly who you want.</li>
+    </ul>
+    <p>Available <b>24/7, via text or voice</b>. Anonymous by default — listeners don’t know your real name unless you share it.</p>
+  </section>
+
+  <section>
+    <h2>Two-sided safety</h2>
+    <p>Blaksyd protects <b>both</b> sides of every conversation — and explicitly does not operate under “the user is always right.”</p>
+    <h3>For users</h3>
+    <p>Anonymous by default, emergency-escalation protocols for extreme situations, and crisis resources always one tap away.</p>
+    <h3>For listeners</h3>
+    <p>Immediate conversation exit (no listener is ever trapped), a full report and escalation system, clear boundary protections, break controls, session limits, burnout monitoring, and supervisor support. Repeated violations by users lead to warnings, suspension, or removal.</p>
+    <p class="callout"><b>Minit is not an emergency service.</b> It offers real, trained human listening and support. In an emergency, contact the appropriate professionals or helplines.</p>
+  </section>
+
+  <section>
+    <h2>Warm, not cold — the co-pilot layer</h2>
+    <p>Before connecting you to a listener, <a href="/blak/">Blak</a> acts as your context companion, helping the listener understand the shape of the conversation without revealing private details. The listener walks in warm, and you don’t start from scratch. Minit lives in one world with <a href="/persona/">Persona</a> and <a href="/nexus/">Nexus</a>. <a href="/about/">See how the four pillars fit together →</a></p>
+  </section>
+
+  <section>
+    <h2>Questions about Minit</h2>
+    {faqs.map((f) => (<><h3>{f.q}</h3><p>{f.a}</p></>))}
+  </section>
+</Page>

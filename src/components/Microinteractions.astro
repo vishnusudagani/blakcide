@@ -1,0 +1,49 @@
+---
+// Signature micro-interactions (capable desktops only): the four pillar "device"
+// cards (Blak/Persona/Minit/Nexus) tilt a few degrees toward the cursor, and the
+// primary CTA is gently magnetic. Pointer-driven and SKIPPED on touch /
+// reduced-motion / perf-lite — zero cost on phones or weak hardware. The card
+// tilt uses a self-terminating lerp loop (eases in, eases back to flat on leave,
+// then stops its rAF) so it never overrides the cards' own transitions or idles.
+---
+
+<script is:inline>
+  (function () {
+    var reduced = window.__blkLite || (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+    var fine = window.matchMedia && window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+    if (reduced || !fine) return;
+
+    // ── pillar cards tilt toward the cursor (the hero .surfaces already parallax) ──
+    [].slice.call(document.querySelectorAll('.bk-card, .pp-card, .mn-card, .nx-card')).forEach(function (card) {
+      var tx = 0, ty = 0, cx = 0, cy = 0, raf = 0, active = false;
+      function loop() {
+        cx += (tx - cx) * 0.16; cy += (ty - cy) * 0.16;
+        card.style.transform = 'perspective(1000px) rotateX(' + cy.toFixed(2) + 'deg) rotateY(' + cx.toFixed(2) + 'deg)';
+        if (active || Math.abs(tx - cx) > 0.02 || Math.abs(ty - cy) > 0.02) {
+          raf = requestAnimationFrame(loop);
+        } else { raf = 0; card.style.transform = ''; }   // settled back to flat — drop the inline transform
+      }
+      card.addEventListener('pointerenter', function () { active = true; if (!raf) raf = requestAnimationFrame(loop); });
+      card.addEventListener('pointermove', function (e) {
+        var r = card.getBoundingClientRect();
+        tx = ((e.clientX - r.left) / r.width - 0.5) * 6;     // rotateY target
+        ty = -((e.clientY - r.top) / r.height - 0.5) * 5;    // rotateX target
+      });
+      card.addEventListener('pointerleave', function () { active = false; tx = 0; ty = 0; if (!raf) raf = requestAnimationFrame(loop); });
+    });
+
+    // ── magnetic primary CTA (leans toward the cursor; the CSS ease-magnet transition smooths it) ──
+    [].slice.call(document.querySelectorAll('.btn-primary')).forEach(function (btn) {
+      var raf = 0, t = '';
+      function apply() { raf = 0; btn.style.transform = t; }
+      btn.addEventListener('pointermove', function (e) {
+        var r = btn.getBoundingClientRect();
+        var dx = ((e.clientX - (r.left + r.width / 2)) / r.width) * 10;
+        var dy = ((e.clientY - (r.top + r.height / 2)) / r.height) * 8;
+        t = 'translate(' + dx.toFixed(1) + 'px,' + dy.toFixed(1) + 'px)';
+        if (!raf) raf = requestAnimationFrame(apply);
+      });
+      btn.addEventListener('pointerleave', function () { t = ''; btn.style.transform = ''; });
+    });
+  })();
+</script>

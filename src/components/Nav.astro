@@ -28,7 +28,7 @@
         <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
       </svg>
     </button>
-    <button type="button" class="cta" data-open-auth data-tab="signup">Begin</button>
+    <button type="button" class="cta" data-open-auth data-tab="signup">Join Us</button>
   </div>
 </nav>
 
@@ -99,7 +99,7 @@
   html[data-theme="light"] .icon-moon { display: block; }
 
   .cta {
-    font-size: .875rem; font-weight: 600; color: #2A0E1E;
+    font-size: .875rem; font-weight: 600; color: #2A0E1E; white-space: nowrap;
     padding: .6rem 1.1rem; border-radius: var(--r-pill);
     background: var(--cta-grad);
     background-size: 200% 200%; background-position: 0% 50%;
@@ -112,6 +112,16 @@
     .links, .divider { display: none; }
     .nav { padding-left: 18px; gap: .6rem; }
   }
+</style>
+
+<style is:global>
+  /* Theme-toggle "dawn sweep" — the new theme circles out from the toggle button
+     via the View Transitions API. We disable the default crossfade so the JS
+     clip-path animation is what the eye sees. Unsupported browsers / reduced-motion
+     / perf-lite skip the transition and flip instantly (handled in the script). */
+  ::view-transition-old(root), ::view-transition-new(root) { animation: none; mix-blend-mode: normal; }
+  ::view-transition-old(root) { z-index: 0; }
+  ::view-transition-new(root) { z-index: 1; }
 </style>
 
 <script is:inline>
@@ -128,8 +138,23 @@
     if (btn) {
       btn.addEventListener('click', function () {
         var next = root.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
-        setTheme(next);
         try { localStorage.setItem('theme', next); } catch (e) {}
+
+        // "Dawn sweep": the new theme circles out from the toggle button. Needs the
+        // View Transitions API; reduced-motion / perf-lite / unsupported → instant.
+        var reduce = window.__blkLite || (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+        if (reduce || !document.startViewTransition) { setTheme(next); return; }
+
+        var r = btn.getBoundingClientRect();
+        var x = r.left + r.width / 2, y = r.top + r.height / 2;
+        var end = Math.hypot(Math.max(x, window.innerWidth - x), Math.max(y, window.innerHeight - y));
+        var vt = document.startViewTransition(function () { setTheme(next); });
+        vt.ready.then(function () {
+          root.animate(
+            { clipPath: ['circle(0px at ' + x + 'px ' + y + 'px)', 'circle(' + end + 'px at ' + x + 'px ' + y + 'px)'] },
+            { duration: 720, easing: 'cubic-bezier(0.16, 1, 0.3, 1)', pseudoElement: '::view-transition-new(root)' }
+          );
+        }).catch(function () {});
       });
     }
 

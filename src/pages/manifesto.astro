@@ -1,0 +1,79 @@
+---
+// /manifesto — the ethos, stated plainly and quotably. Built to be lifted: short,
+// declarative lines and blockquotes that read well as a pull-quote in an AI answer
+// or a featured snippet. Speakable JSON-LD points voice assistants at the lede and
+// the quotes.
+import Page from '../layouts/Page.astro';
+
+const schema = [
+  {
+    '@type': 'WebPage',
+    '@id': 'https://blaksyd.com/manifesto/#webpage',
+    url: 'https://blaksyd.com/manifesto/',
+    name: 'The Blaksyd Manifesto',
+    description:
+      'The Blaksyd manifesto: most apps want your attention; Blaksyd wants your life to be better. No engagement-bait, no manufactured FOMO, no dependency-by-design.',
+    isPartOf: { '@id': 'https://blaksyd.com/#website' },
+    about: { '@id': 'https://blaksyd.com/#organization' },
+    breadcrumb: { '@id': 'https://blaksyd.com/manifesto/#breadcrumb' },
+    primaryImageOfPage: {
+      '@type': 'ImageObject',
+      url: 'https://blaksyd.com/assets/blaksyd-manifesto.png',
+      caption: 'Most apps want your attention. Blaksyd wants your life to be better.',
+    },
+    speakable: {
+      '@type': 'SpeakableSpecification',
+      cssSelector: ['.pg-lede', '.prose blockquote'],
+    },
+  },
+];
+---
+
+<Page
+  title="The Blaksyd Manifesto — attention is not the goal"
+  description="Most apps want your attention. Blaksyd wants your life to be better. No engagement-bait, no manufactured FOMO, no dependency-by-design — safety first, resonance over vanity metrics."
+  image="/assets/blaksyd-manifesto.png"
+  kicker="Manifesto"
+  kickerClass="k-gold"
+  heading="Most apps want your attention."
+  accent="We want your life to be better."
+  lede="Blaksyd is built on a refusal: that technology shaped around you should make your life better, not just longer on a screen. This is what we stand for."
+  heroImage="/assets/blaksyd-manifesto.png"
+  heroAlt="The Blaksyd manifesto — most apps want your attention, Blaksyd wants your life to be better."
+  breadcrumb={[{ name: 'Home', href: '/' }, { name: 'Manifesto', href: '/manifesto/' }]}
+  schema={schema}
+>
+  <section>
+    <blockquote>Most apps want your attention. Blaksyd wants your life to be better.</blockquote>
+    <p>
+      That single line is the test every feature has to pass. If it’s built to capture you, it doesn’t belong
+      here. If it’s built to serve you, it does.
+    </p>
+  </section>
+
+  <section>
+    <h2>What we refuse</h2>
+    <ul>
+      <li><b>No engagement-bait.</b> We don’t design to maximise time-on-screen.</li>
+      <li><b>No manufactured FOMO.</b> We don’t invent urgency to keep you anxious and scrolling.</li>
+      <li><b>No dependency-by-design.</b> We don’t build hooks meant to make you need us.</li>
+      <li><b>No vanity metrics.</b> Hollow likes measure nothing real, so we don’t keep score that way.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>What we stand for</h2>
+    <ul>
+      <li><b>You at the centre.</b> Every feature, interaction, and conversation revolves around who you are and what you need right now.</li>
+      <li><b>Human + AI, together.</b> <a href="/blak/">Blak</a> and <a href="/persona/">Persona</a> to know you; <a href="/minit/">Minit</a> and <a href="/nexus/">Nexus</a> to bring real people close.</li>
+      <li><b>Safety first — on both sides.</b> Protections for the people who reach out <em>and</em> the people who show up to listen. We don’t operate under “the user is always right.”</li>
+      <li><b>Resonance over reach.</b> We recognise the real impact of what you share, not how loud it is.</li>
+      <li><b>Your world stays yours.</b> Anonymous by default, you control what is remembered, and we don’t sell your personal data.</li>
+    </ul>
+  </section>
+
+  <section>
+    <blockquote>The better future isn’t coming — it’s yours to enter.</blockquote>
+    <p>Blaksyd is pre-launch, with an open waitlist. <a href="/about/">Learn how it works →</a></p>
+  </section>
+</Page>

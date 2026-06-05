@@ -10,7 +10,11 @@ import Learning from '../components/Learning.astro';
 import Minit from '../components/Minit.astro';
 import Nexus from '../components/Nexus.astro';
 import Faq from '../components/Faq.astro';
+import WhyBlaksyd from '../components/WhyBlaksyd.astro';
 import Finale from '../components/Finale.astro';
+import Footer from '../components/Footer.astro';
+import Microinteractions from '../components/Microinteractions.astro';
+import TalkToBlak from '../components/TalkToBlak.astro';
 
 // The homepage owns the brand line — the approved tagline ships as the <title>.
 const title = 'Blaksyd — Human + AI, revolving around you.';
@@ -57,6 +61,26 @@ const faqs = [
   {
     q: 'Is Blaksyd a dating app or just a chatbot?',
     a: `No. Blaksyd is a Human + AI life platform — not a dating or romantic-companion app, and not a single AI chatbot. It combines AI (Blak and Persona) with real people (Minit and Nexus), all built around you. Minit offers real human connection and support; in an emergency, contact the appropriate professionals or helplines.`,
+  },
+  {
+    q: 'What makes Blaksyd different from other apps?',
+    a: `Most platforms solve one thing — social media gives you a feed but not a friend, chat apps give you messages but not meaning, AI tools give you answers but not companionship. Blaksyd brings it together around you: a proactive AI friend (Blak) and your digital self (Persona) on the AI side, and real human listeners (Minit) and your community (Nexus) on the human side — one platform, always learning you. It is not a single AI chatbot, not a dating or romantic-companion app, and not a substitute for professional care.`,
+  },
+  {
+    q: 'Is Blaksyd safe to use?',
+    a: `Safety is built in on both sides. Minit uses trained, screened listeners with two-sided safety protections and crisis resources one tap away; Minit and Nexus are anonymous by default; and you control what Blak and Persona remember. Blaksyd is intended for ages 13 and over and does not sell your personal data. It is not an emergency service — in a crisis, contact the appropriate professionals or helplines.`,
+  },
+  {
+    q: 'Who is behind Blaksyd?',
+    a: `Blaksyd is built and operated by Blaksyd LLP, a company based in India (Hyderabad, Telangana). It is currently pre-launch. You can reach the team at ceo@blaksyd.com.`,
+  },
+  {
+    q: 'How do I join Blaksyd, and when does it launch?',
+    a: `Blaksyd is pre-launch with an open waitlist — join from the homepage to get early access. When Minit opens, new users will get free trials.`,
+  },
+  {
+    q: 'Is Blaksyd available in India?',
+    a: `Yes. Blaksyd is built in India and operated by Blaksyd LLP, with an India-first focus, and is available to anyone aged 13 and over as it rolls out. It is currently pre-launch with an open waitlist.`,
   },
 ];
 
@@ -123,6 +147,8 @@ const pageSchema = [
       <Blak />
       <Persona />
     </div>
+    {/* try-it moment — a scripted, no-API taste of talking to Blak */}
+    <TalkToBlak />
     {/* keystone — the engine that ties both sides */}
     <Learning />
     {/* Human side — the people who show up. A held cool stage carries both cards. */}
@@ -135,7 +161,12 @@ const pageSchema = [
     </div>
     {/* the questions a first-time visitor — and answer engines — actually ask */}
     <Faq items={faqs} />
+    {/* the one-line "why we exist" — brand-signed, with optional voice-over */}
+    <WhyBlaksyd />
     {/* payoff + the two real CTAs */}
     <Finale />
   </main>
+  <Footer />
+  {/* desktop-only pointer micro-interactions (card tilt + magnetic CTA) */}
+  <Microinteractions />
 </Base>

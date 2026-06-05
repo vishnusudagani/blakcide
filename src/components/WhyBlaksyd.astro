@@ -1,0 +1,160 @@
+---
+// Why Blaksyd — a single-line manifesto, signed by the brand (not a person).
+// An optional voice-over is pure progressive enhancement: the line reads and
+// works with zero audio, and the "Hear it" control stays HIDDEN until a real
+// recording actually loads. Drop the two recordings here to light it up:
+//   public/audio/why-blaksyd-1.mp3   (e.g. female voice)
+//   public/audio/why-blaksyd-2.mp3   (e.g. male voice)
+// Any web audio format works (mp3/m4a/ogg) — just match the filename/extension.
+---
+
+<section class="why" aria-labelledby="why-line">
+  <div class="why-glow" aria-hidden="true"></div>
+
+  <div class="u-wrap why-inner">
+    <p class="s-kicker k-gold why-kicker" data-reveal><span class="orb"></span>why we're here</p>
+
+    <p class="why-line" id="why-line" data-reveal>
+      Most apps want your attention.
+      <span class="why-em">Blaksyd wants your life to be better</span>
+      — and that's the only reason we're here.
+    </p>
+
+    <div class="why-foot" data-reveal>
+      <span class="why-sign">— Blaksyd</span>
+
+      {/* hidden until an actual recording loads (see script) */}
+      <span class="why-voice" id="why-voice" hidden>
+        <button type="button" class="why-play" id="why-play" aria-label="Hear this read aloud">
+          <svg class="i-play" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z" /></svg>
+          <svg class="i-stop" viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="2" /></svg>
+          <span class="why-play-txt">Hear it</span>
+        </button>
+        <span class="why-pick" role="group" aria-label="Choose a voice">
+          <button type="button" class="why-v is-on" data-voice="1" aria-pressed="true">1</button>
+          <button type="button" class="why-v"       data-voice="2" aria-pressed="false">2</button>
+        </span>
+      </span>
+    </div>
+
+    <audio id="why-aud-1" preload="metadata" src="/audio/why-blaksyd-1.mp3"></audio>
+    <audio id="why-aud-2" preload="metadata" src="/audio/why-blaksyd-2.mp3"></audio>
+  </div>
+</section>
+
+<style>
+  .why { position: relative; z-index: 1; padding-block: clamp(4.5rem, 12vh, 8rem); overflow: hidden; }
+  .why-glow {
+    position: absolute; left: 50%; top: 42%; transform: translateX(-50%);
+    width: min(820px, 116%); height: 420px; z-index: 0; pointer-events: none;
+    filter: blur(72px); opacity: .8;
+    background:
+      radial-gradient(46% 60% at 38% 42%, rgba(255, 210, 122, .24), transparent 70%),
+      radial-gradient(46% 60% at 66% 52%, rgba(255, 107, 157, .16), transparent 72%);
+  }
+  /* width in rem (root-relative + predictable) — NOT ch, which resolves against
+     the small inherited font and would crush the big headline to one word/line. */
+  .why-inner { position: relative; z-index: 1; max-width: 30rem; margin-inline: auto; text-align: center; }
+  @media (min-width: 760px) { .why-inner { max-width: 40rem; } }
+  .why-kicker { margin-inline: auto; }
+
+  .why-line {
+    font-family: var(--font-display); font-weight: 600;
+    font-size: clamp(1.75rem, 1.2rem + 3vw, 3.25rem);
+    line-height: 1.16; letter-spacing: -.02em; color: var(--ink);
+    text-wrap: balance;
+  }
+  .why-em {
+    font-family: var(--font-serif); font-weight: 400; font-style: italic;
+    font-size: 1.08em; letter-spacing: -.01em;
+    background: var(--accent-grad);
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent; color: transparent;
+  }
+
+  .why-foot {
+    margin-top: clamp(1.6rem, 4vh, 2.4rem);
+    display: flex; flex-wrap: wrap; align-items: center; justify-content: center;
+    gap: .9rem 1.2rem;
+  }
+  .why-sign {
+    font-family: var(--font-mono); font-size: .82rem; letter-spacing: .12em;
+    text-transform: uppercase; color: var(--ink-faint);
+  }
+
+  /* voice player — hidden until a recording loads */
+  .why-voice { display: inline-flex; align-items: center; gap: .55rem; }
+  .why-voice[hidden] { display: none; }
+  .why-play {
+    display: inline-flex; align-items: center; gap: .5rem; min-height: 40px;
+    padding: .5rem .95rem; border-radius: var(--r-pill);
+    font-size: .85rem; font-weight: 600; color: var(--ink);
+    background: var(--surface); border: 1px solid var(--line-strong);
+    transition: background var(--t-fast) var(--ease-out), border-color var(--t-fast) var(--ease-out), transform var(--t-fast) var(--ease-spring);
+  }
+  .why-play:hover { background: var(--surface-strong); border-color: var(--ink-faint); transform: translateY(-1px); }
+  .why-play svg { width: 16px; height: 16px; fill: currentColor; stroke: none; }
+  .why-play .i-stop { display: none; }
+  .why.playing .why-play .i-play { display: none; }
+  .why.playing .why-play .i-stop { display: block; }
+  .why.playing .why-play { border-color: var(--coral); }
+  html[data-theme="light"] .why.playing .why-play { border-color: var(--coral-ink); }
+
+  .why-pick { display: inline-flex; gap: .3rem; }
+  .why-v {
+    width: 30px; height: 30px; border-radius: 50%;
+    font-family: var(--font-mono); font-size: .72rem; color: var(--ink-faint);
+    background: transparent; border: 1px solid var(--line-strong);
+    transition: color var(--t-fast) var(--ease-out), border-color var(--t-fast) var(--ease-out), background var(--t-fast) var(--ease-out);
+  }
+  .why-v:hover { color: var(--ink-soft); border-color: var(--ink-faint); }
+  .why-v.is-on { color: var(--ink); border-color: var(--coral); background: rgba(255, 107, 157, .1); }
+  html[data-theme="light"] .why-v.is-on { border-color: var(--coral-ink); }
+</style>
+
+<script is:inline>
+  /* Voice-over is optional + progressive: probe both recordings; reveal the
+     player only if at least one actually loads, so there's never a dead button
+     before the audio exists. Play is a user gesture, so autoplay policy is fine. */
+  (function () {
+    var wrap = document.querySelector('.why');
+    if (!wrap) return;
+    var voice = document.getElementById('why-voice');
+    var playBtn = document.getElementById('why-play');
+    var auds = { '1': document.getElementById('why-aud-1'), '2': document.getElementById('why-aud-2') };
+    var avail = { '1': false, '2': false };
+    var sel = '1';
+    var cur = null;
+
+    function revealIfReady() { if ((avail['1'] || avail['2']) && voice) voice.hidden = false; }
+    Object.keys(auds).forEach(function (k) {
+      var a = auds[k];
+      if (!a) return;
+      a.addEventListener('loadedmetadata', function () { avail[k] = true; revealIfReady(); }, { once: true });
+      a.addEventListener('error', function () { avail[k] = false; }, { once: true });
+      a.addEventListener('ended', stop);
+    });
+
+    function stop() { if (cur) { cur.pause(); try { cur.currentTime = 0; } catch (e) {} } wrap.classList.remove('playing'); }
+    function play() {
+      var a = auds[sel];
+      if (!a || !avail[sel]) return;
+      if (cur === a && !a.paused) { stop(); return; }
+      stop(); cur = a;
+      var p = a.play();
+      if (p && p.then) p.then(function () { wrap.classList.add('playing'); }).catch(function () { wrap.classList.remove('playing'); });
+      else wrap.classList.add('playing');
+    }
+    if (playBtn) playBtn.addEventListener('click', play);
+
+    [].slice.call(document.querySelectorAll('.why-v')).forEach(function (b) {
+      b.addEventListener('click', function () {
+        sel = b.getAttribute('data-voice');
+        [].slice.call(document.querySelectorAll('.why-v')).forEach(function (x) {
+          var on = x === b; x.classList.toggle('is-on', on); x.setAttribute('aria-pressed', on ? 'true' : 'false');
+        });
+        if (wrap.classList.contains('playing')) play();   // switch voice mid-listen
+      });
+    });
+  })();
+</script>
