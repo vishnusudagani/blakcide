@@ -1,0 +1,63 @@
+---
+// Lede — one plain-language, crawlable definition right after the hero.
+// Two jobs: (1) tell a first-time visitor what Blaksyd actually is, and (2) hand
+// search / answer / generative engines a single clean, quotable sentence that
+// names the category AND all four pillars in *visible* body text. The hero is
+// evocative ("Your world. Built around you.") — deliberately not definitional —
+// so without this the page had no crawlable "Blaksyd is…" statement. The visible
+// "What is Blaksyd?" question also mirrors the JSON-LD FAQ for answer engines.
+---
+
+<section class="lede" aria-labelledby="lede-q">
+  <div class="u-wrap lede-inner">
+    <p class="lede-kicker" id="lede-q" data-reveal><span class="lede-orb" aria-hidden="true"></span>What is Blaksyd?</p>
+    <p class="lede-def" data-reveal>
+      <b>Blaksyd is a Human&nbsp;+&nbsp;AI life platform</b> built around you —
+      your proactive AI friend <span class="hl hl-coral">Blak</span>, your digital
+      self <span class="hl hl-lav">Persona</span>, real human listeners on
+      <span class="hl hl-mint">Minit</span>, and your people on
+      <span class="hl hl-aqua">Nexus</span>. Four pillars, one world, always
+      learning you.
+    </p>
+  </div>
+</section>
+
+<style>
+  .lede {
+    position: relative; z-index: 1;
+    padding-block: clamp(3rem, 8vh, 5.75rem);
+    text-align: center;
+  }
+  .lede-inner { max-width: 50ch; margin-inline: auto; }
+
+  .lede-kicker {
+    display: inline-flex; align-items: center; gap: .55rem;
+    font-family: var(--font-mono); font-size: .72rem; letter-spacing: .16em;
+    text-transform: uppercase; color: var(--ink-soft);
+    margin-bottom: 1.5rem;
+  }
+  .lede-orb {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--coral); box-shadow: 0 0 10px var(--coral);
+  }
+
+  .lede-def {
+    font-family: var(--font-display);
+    font-size: clamp(1.2rem, 0.98rem + 1vw, 1.6rem);
+    line-height: 1.55; color: var(--ink-soft);
+    letter-spacing: -.005em;
+  }
+  .lede-def b { color: var(--ink); font-weight: 600; }
+
+  /* pillar names carry their pillar colour — show-don't-tell of the four-part
+     structure. Light theme swaps to the AA-safe -ink variants. */
+  .hl { font-weight: 600; }
+  .hl-coral { color: var(--coral); }
+  .hl-lav   { color: var(--lavender); }
+  .hl-mint  { color: var(--mint); }
+  .hl-aqua  { color: var(--aqua); }
+  html[data-theme="light"] .hl-coral { color: var(--coral-ink); }
+  html[data-theme="light"] .hl-lav   { color: var(--lavender-ink); }
+  html[data-theme="light"] .hl-mint  { color: var(--mint-ink); }
+  html[data-theme="light"] .hl-aqua  { color: var(--aqua-ink); }
+</style>

@@ -1,0 +1,75 @@
+---
+// Faq — the *visible* FAQ. Renders the exact same Q&A pairs that index.astro
+// feeds the FAQPage JSON-LD, so structured data mirrors on-page content (Google's
+// rule) and answer/generative engines have clean, extractable text to lift.
+// Native <details>/<summary>: the answers live in the DOM even when collapsed
+// (crawlable), works with zero JS, and is keyboard-accessible by default.
+interface Props {
+  items?: { q: string; a: string }[];
+}
+const { items = [] } = Astro.props;
+---
+
+<section class="s-section faq" id="faq" aria-label="Frequently asked questions">
+  <div class="u-wrap faq-inner">
+    <p class="s-kicker k-lav faq-kicker" data-reveal><span class="orb"></span>good to know</p>
+    <h2 class="s-title faq-title" data-reveal>Questions, <span class="accent">answered.</span></h2>
+
+    <div class="faq-list" data-reveal>
+      {items.map((item, i) => (
+        <details class="faq-item" open={i === 0}>
+          <summary class="faq-q">
+            <span>{item.q}</span>
+            <svg class="faq-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+          </summary>
+          <div class="faq-a"><p>{item.a}</p></div>
+        </details>
+      ))}
+    </div>
+  </div>
+</section>
+
+<style>
+  .faq { position: relative; z-index: 1; padding-block: clamp(3.5rem, 9vh, 6rem); }
+  .faq-inner { max-width: 760px; margin-inline: auto; text-align: center; }
+  .faq-kicker { margin-inline: auto; }
+  .faq-title { margin-inline: auto; margin-bottom: clamp(2rem, 4vh, 3rem); }
+
+  .faq-list { text-align: left; display: grid; gap: .75rem; }
+
+  .faq-item {
+    border: 1px solid var(--line);
+    border-radius: var(--r-md);
+    background: var(--surface);
+    overflow: hidden;
+    transition: border-color var(--t-base) var(--ease-out), background var(--t-base) var(--ease-out);
+  }
+  .faq-item[open] { border-color: var(--line-strong); background: var(--surface-strong); }
+  .faq-item:hover { border-color: var(--line-strong); }
+
+  .faq-q {
+    list-style: none; cursor: pointer;
+    display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+    padding: 1.1rem 1.25rem; min-height: 56px;
+    font-family: var(--font-display); font-weight: 600;
+    font-size: clamp(1rem, .95rem + .2vw, 1.08rem); color: var(--ink);
+  }
+  .faq-q::-webkit-details-marker { display: none; }   /* hide native triangle (Safari) */
+  .faq-q::marker { content: ''; }                     /* hide native triangle (Firefox) */
+
+  .faq-chev {
+    flex: none; width: 20px; height: 20px; color: var(--ink-faint);
+    transition: transform var(--t-base) var(--ease-out), color var(--t-base) var(--ease-out);
+  }
+  .faq-item[open] .faq-chev { transform: rotate(180deg); color: var(--coral); }
+
+  .faq-a { padding: 0 1.25rem 1.2rem; }
+  .faq-a p {
+    margin: 0; max-width: 64ch;
+    font-size: 1rem; line-height: 1.7; color: var(--ink-soft);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .faq-chev { transition: none; }
+  }
+</style>

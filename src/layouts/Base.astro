@@ -8,17 +8,71 @@ interface Props {
   title?: string;
   description?: string;
   image?: string;
+  /* Page-specific JSON-LD nodes (no @context needed — they're folded into the
+     site-wide @graph below). e.g. the homepage passes SoftwareApplication + FAQPage. */
+  schema?: Record<string, unknown>[];
+  /* Keep a page out of the index (e.g. the 404). */
+  noindex?: boolean;
 }
 
 const {
   title = 'Blaksyd — Human + AI, revolving around you.',
   description = 'Human + AI, together, revolving around you. Blak knows you and acts for you, Persona is your digital self, Minit brings real listeners close, and Nexus is where you belong — one world, always learning you.',
   image = '/assets/og-cover.png',
+  schema = [],
+  noindex = false,
 } = Astro.props;
 
 // Absolute URLs for canonical + link-preview cards (Astro.site = https://blaksyd.com).
 const canonicalURL = new URL(Astro.url.pathname, Astro.site).href;
 const ogImageURL = new URL(image, Astro.site).href;
+
+// ───────────── Structured data (JSON-LD) ─────────────
+// Site-wide entity graph so Google and AI answer-engines understand exactly what
+// Blaksyd is and who runs it. Facts mirror the canonical product definition;
+// nothing speculative (e.g. unresolved per-minute pricing) is asserted here.
+// @id anchors let page-level nodes (passed via `schema`) reference the org/site.
+const ORG_ID = 'https://blaksyd.com/#organization';
+const SITE_ID = 'https://blaksyd.com/#website';
+
+const organization = {
+  '@type': 'Organization',
+  '@id': ORG_ID,
+  name: 'Blaksyd',
+  legalName: 'Blaksyd LLP',
+  url: 'https://blaksyd.com/',
+  logo: 'https://blaksyd.com/assets/blaksyd-black.webp',
+  image: 'https://blaksyd.com/assets/og-cover.png',
+  slogan: 'Human + AI, revolving around you.',
+  email: 'ceo@blaksyd.com',
+  description:
+    'Blaksyd is a Human + AI life platform built around you — four pillars (Blak and Persona on the AI side; Minit and Nexus on the human side) unified by a learning co-pilot layer.',
+  foundingLocation: {
+    '@type': 'Place',
+    address: { '@type': 'PostalAddress', addressRegion: 'Telangana', addressCountry: 'IN' },
+  },
+  // Official profiles — ties this entity to its known accounts for the knowledge
+  // graph and AI assistants. Add more (LinkedIn, X, Crunchbase, Wikidata) here as
+  // they go live.
+  sameAs: ['https://www.instagram.com/blaksyd', 'https://www.youtube.com/@blaksyd'],
+};
+
+const website = {
+  '@type': 'WebSite',
+  '@id': SITE_ID,
+  name: 'Blaksyd',
+  url: 'https://blaksyd.com/',
+  description:
+    'Human + AI, together, revolving around you. Blak, Persona, Minit, and Nexus — one world, always learning you.',
+  inLanguage: 'en',
+  publisher: { '@id': ORG_ID },
+};
+
+const jsonLd = JSON.stringify({
+  '@context': 'https://schema.org',
+  '@graph': [organization, website, ...schema],
+  // Escape "<" so the JSON can never break out of the <script> element.
+}).replace(/</g, '\\u003c');
 
 // Inline gradient-dot favicon — a tiny "living presence" in the brand accents.
 const favicon =
@@ -34,7 +88,12 @@ const favicon =
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#08091A" />
+
+    {/* Google Search Console — site-ownership verification. Keep permanently. */}
+    <meta name="google-site-verification" content="9mosoNbZxxY3aU9M8TIIHVRKrchK7SN87jqcvPe5D2c" />
+
     <meta name="description" content={description} />
+    {noindex && <meta name="robots" content="noindex, follow" />}
     <title>{title}</title>
     <link rel="icon" href={favicon} />
     <link rel="canonical" href={canonicalURL} />
@@ -55,6 +114,18 @@ const favicon =
     <meta name="twitter:title" content={title} />
     <meta name="twitter:description" content={description} />
     <meta name="twitter:image" content={ogImageURL} />
+
+    {/* Entity + locale hints */}
+    <meta property="og:locale" content="en_US" />
+    <meta property="og:image:type" content="image/png" />
+    <meta name="author" content="Blaksyd LLP" />
+    <meta name="publisher" content="Blaksyd LLP" />
+    <meta name="application-name" content="Blaksyd" />
+
+    {/* Structured data — Organization + WebSite site-wide, plus any page nodes
+        (e.g. SoftwareApplication + FAQPage on the homepage). Feeds Google rich
+        results and helps AI assistants describe Blaksyd correctly. */}
+    <script type="application/ld+json" set:html={jsonLd} />
 
     {/* Set theme before paint to avoid a flash of the wrong mode.
         Priority: explicit toggle choice → OS preference → dark fallback. */}

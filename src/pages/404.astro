@@ -1,0 +1,83 @@
+---
+// Custom 404 — branded, friendly, and a clear way back. Netlify serves this
+// (dist/404.html) with a 404 status for any unmatched path, so crawlers treat it
+// as not-found; noindex is belt-and-suspenders. @astrojs/sitemap excludes /404
+// by default, so it never enters the sitemap.
+import Base from '../layouts/Base.astro';
+import Nav from '../components/Nav.astro';
+---
+
+<Base
+  title="Page not found — Blaksyd"
+  description="That page wandered off — but your world is still here. Head back to Blaksyd."
+  noindex={true}
+>
+  <Nav />
+  <main class="nf">
+    <div class="u-wrap nf-inner">
+      <p class="nf-code" aria-hidden="true">404</p>
+      <h1 class="nf-title">This page <span class="accent">wandered off.</span></h1>
+      <p class="nf-sub">
+        The link may be broken or the page may have moved — but your world is still
+        right here.
+      </p>
+
+      <div class="nf-ctas">
+        <a href="/" class="btn btn-primary">
+          <span>Back home</span>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
+        </a>
+        <a href="/#faq" class="btn btn-ghost">What is Blaksyd?</a>
+      </div>
+
+      <p class="nf-names" aria-hidden="true">Blak · Persona · Minit · Nexus</p>
+    </div>
+  </main>
+</Base>
+
+<style>
+  .nf {
+    position: relative; z-index: 1;
+    min-height: 100svh;
+    display: grid; place-items: center;
+    padding: clamp(6rem, 16vh, 9rem) 0 clamp(3rem, 8vh, 5rem);
+    text-align: center;
+  }
+  .nf-inner { max-width: 52ch; margin-inline: auto; }
+
+  .nf-code {
+    font-family: var(--font-mono); font-weight: 700;
+    font-size: clamp(3.5rem, 2rem + 10vw, 7rem); line-height: 1;
+    letter-spacing: .02em;
+    background: var(--accent-grad);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    opacity: .92;
+  }
+  .nf-title {
+    margin-top: 1.2rem;
+    font-family: var(--font-display); font-weight: 600;
+    font-size: clamp(1.8rem, 1.3rem + 2.2vw, 2.9rem); letter-spacing: -.02em; color: var(--ink);
+  }
+  .nf-title .accent {
+    font-family: var(--font-serif); font-style: italic; font-weight: 400;
+    background: linear-gradient(110deg, var(--coral), var(--lavender) 60%, var(--aqua));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .nf-sub {
+    margin-top: 1.1rem; margin-inline: auto; max-width: 44ch;
+    font-size: 1.05rem; line-height: 1.65; color: var(--ink-soft);
+  }
+  .nf-ctas {
+    display: flex; flex-wrap: wrap; justify-content: center; gap: .8rem;
+    margin-top: 2.4rem;
+  }
+  .nf-names {
+    margin-top: clamp(2.5rem, 6vh, 4rem);
+    font-family: var(--font-mono); font-size: .68rem;
+    letter-spacing: .18em; text-transform: uppercase; color: var(--ink-faint);
+  }
+  @media (max-width: 600px) {
+    .nf-ctas { width: 100%; max-width: 360px; margin-inline: auto; }
+    .nf-ctas .btn { width: 100%; }
+  }
+</style>

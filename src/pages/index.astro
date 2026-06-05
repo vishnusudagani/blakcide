@@ -3,24 +3,118 @@ import Base from '../layouts/Base.astro';
 import Nav from '../components/Nav.astro';
 import Spine from '../components/Spine.astro';
 import Hero from '../components/Hero.astro';
+import Lede from '../components/Lede.astro';
 import Blak from '../components/Blak.astro';
 import Persona from '../components/Persona.astro';
 import Learning from '../components/Learning.astro';
 import Minit from '../components/Minit.astro';
 import Nexus from '../components/Nexus.astro';
+import Faq from '../components/Faq.astro';
 import Finale from '../components/Finale.astro';
 
 // The homepage owns the brand line — the approved tagline ships as the <title>.
 const title = 'Blaksyd — Human + AI, revolving around you.';
 const description =
   'Human + AI, together, revolving around you. Blak knows you and acts for you, Persona is your digital self, Minit brings real listeners close, and Nexus is where you belong — one world, always learning you.';
+
+// Single source of truth for the FAQ. The visible <Faq> on the page AND the
+// FAQPage JSON-LD below are both built from this array, so the structured data
+// always mirrors what a user can actually see (Google's requirement) and answer
+// engines get identical, canonical text. Every answer is from "What is BLAKSYD?".
+const faqs = [
+  {
+    q: 'What is Blaksyd?',
+    a: `Blaksyd is a Human + AI life platform built around you — summed up as "Human + AI, together, revolving entirely around you." It combines four pillars: Blak and Persona on the AI side, and Minit and Nexus on the human side, unified by a learning co-pilot layer with Blak as the connective spine. Blaksyd is operated by Blaksyd LLP and is currently pre-launch with a waitlist.`,
+  },
+  {
+    q: 'What is Blak?',
+    a: `Blak is Blaksyd's proactive AI friend — not an assistant or a bot. Shaped uniquely around each user, it talks by text and voice anytime, checks in unprompted, plans your day, and can act across your connected apps (for example booking a cab, ordering food, or getting tickets). It learns continuously and hands off to a human Minit listener when something needs a real person.`,
+  },
+  {
+    q: 'What is Persona?',
+    a: `Persona is your digital self on Blaksyd. Real Persona is an evolving AI clone of you that you can train and share with friends under your control; Fantasy Persona lets you build characters such as a study buddy, a critic, or a hype person. When personas connect with each other, Blaksyd sees it as a new "future of social."`,
+  },
+  {
+    q: 'What is Minit?',
+    a: `Minit is Blaksyd's human connection layer: real listeners who hold a psychology degree and complete Blaksyd's own training and screening. It is available 24/7 by text or voice, anonymous by default, with four ways to connect — Instant Match, Smart Match, Reconnect, and premium Listener Discovery. Minit is session-based with free trials, and is not a substitute for therapy or emergency services.`,
+  },
+  {
+    q: 'What is Nexus?',
+    a: `Nexus is Blaksyd's community — part Threads, part Reddit, part X. It has persistent Tribes, live Discussion Rooms, and anonymous direct messages, with a feed built around you rather than around engagement metrics. Recognition comes through Resonance, Streaks, and Badges instead of vanity likes.`,
+  },
+  {
+    q: 'Is Blaksyd private and anonymous?',
+    a: `Yes. On Minit and Nexus you are anonymous by default, and you control what Blak and Persona remember. Blaksyd states that it does not sell your personal data.`,
+  },
+  {
+    q: 'How much does Blaksyd cost?',
+    a: `Blaksyd is pre-launch with an open waitlist. Minit is session-based, with free trials for new users and access through premium subscriptions or pay-per-session.`,
+  },
+  {
+    q: 'Who can use Blaksyd?',
+    a: `Blaksyd is intended for users aged 13 and over.`,
+  },
+  {
+    q: 'Is Blaksyd a therapy or crisis service?',
+    a: `No. Blaksyd is not a medical, psychiatric, legal, or emergency service. Minit offers trained human listening and support, not licensed therapy or crisis care. In an emergency, contact the appropriate professionals or helplines.`,
+  },
+];
+
+// Homepage JSON-LD (folded into Base's site-wide @graph). SoftwareApplication
+// types the product; WebPage adds a Speakable hint for voice assistants; FAQPage
+// is generated from `faqs` so it always matches the visible FAQ. No invented
+// ratings or prices.
+const pageSchema = [
+  {
+    '@type': 'SoftwareApplication',
+    '@id': 'https://blaksyd.com/#app',
+    name: 'Blaksyd',
+    applicationCategory: 'LifestyleApplication',
+    operatingSystem: 'Web',
+    url: 'https://blaksyd.com/',
+    description:
+      'Blaksyd is a Human + AI life platform: Blak (a proactive AI friend) and Persona (your AI digital self) on the AI side; Minit (24/7 real human listeners) and Nexus (your community) on the human side — unified by a learning co-pilot layer.',
+    publisher: { '@id': 'https://blaksyd.com/#organization' },
+    featureList: [
+      'Blak — proactive AI friend over text and voice that acts across your apps',
+      'Persona — your AI digital self, Real and Fantasy',
+      'Minit — 24/7 real human listeners, anonymous by default',
+      'Nexus — community of tribes, live discussion rooms, and anonymous DMs',
+    ],
+  },
+  {
+    '@type': 'WebPage',
+    '@id': 'https://blaksyd.com/#webpage',
+    url: 'https://blaksyd.com/',
+    name: title,
+    description,
+    isPartOf: { '@id': 'https://blaksyd.com/#website' },
+    about: { '@id': 'https://blaksyd.com/#organization' },
+    // Voice assistants may read these sections aloud — the definition and the FAQ.
+    speakable: {
+      '@type': 'SpeakableSpecification',
+      cssSelector: ['.lede-def', '.faq-q', '.faq-a'],
+    },
+  },
+  {
+    '@type': 'FAQPage',
+    '@id': 'https://blaksyd.com/#faq',
+    mainEntity: faqs.map((f) => ({
+      '@type': 'Question',
+      name: f.q,
+      acceptedAnswer: { '@type': 'Answer', text: f.a },
+    })),
+  },
+];
 ---
 
-<Base title={title} description={description}>
+<Base title={title} description={description} schema={pageSchema}>
   <Nav />
   <Spine />
   <main>
     <Hero />
+    {/* one crawlable, plain-language definition (SEO/AEO/GEO) before the deep dive */}
+    <Lede />
     {/* AI side — the minds that know you. A held warm stage carries both cards. */}
     <div class="act act-ai">
       <div class="act-stage" aria-hidden="true">
@@ -39,6 +133,8 @@ const description =
       <Minit />
       <Nexus />
     </div>
+    {/* the questions a first-time visitor — and answer engines — actually ask */}
+    <Faq items={faqs} />
     {/* payoff + the two real CTAs */}
     <Finale />
   </main>

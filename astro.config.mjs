@@ -1,4 +1,5 @@
 import { defineConfig } from 'astro/config';
+import sitemap from '@astrojs/sitemap';
 
 // Blaksyd landing — static-first Astro build.
 //
@@ -14,4 +15,18 @@ export default defineConfig({
   // netlify.toml). This value feeds canonical + OG/Twitter URLs via Astro.site in
   // Base.astro, so it must be the destination domain — never the one redirecting away.
   site: 'https://blaksyd.com',
+
+  // @astrojs/sitemap emits sitemap-index.xml + sitemap-0.xml into dist/ at build,
+  // covering the Astro routes only (/, /privacy/, /terms/) — exactly the public
+  // marketing pages we want indexed. The copied sub-apps (app/, team-os/,
+  // symp-core/) are added after the build and are intentionally NOT listed.
+  // robots.txt points crawlers at /sitemap-index.xml.
+  integrations: [
+    sitemap({
+      // Match Astro's directory output (trailing slash) so sitemap URLs equal the
+      // 200-OK canonical URLs and never point at a 301 redirect.
+      changefreq: 'weekly',
+      lastmod: new Date(),
+    }),
+  ],
 });

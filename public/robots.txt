@@ -1,0 +1,77 @@
+# Blaksyd — robots.txt
+# Search engines AND AI assistants are welcome here. We WANT crawlers and
+# answer engines to read Blaksyd and describe it correctly. For a clean,
+# structured, machine-readable summary, see /llms.txt and /llms-full.txt.
+
+# ── All standard crawlers: full access ──
+User-agent: *
+Allow: /
+
+# ── AI / LLM crawlers — explicitly welcomed ──
+# (training, retrieval, and live answer-engine fetches). Listed individually so
+# our intent is unambiguous even if a blanket policy changes upstream.
+
+# OpenAI / ChatGPT
+User-agent: GPTBot
+Allow: /
+
+User-agent: OAI-SearchBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+# Anthropic / Claude
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: anthropic-ai
+Allow: /
+
+User-agent: Claude-Web
+Allow: /
+
+User-agent: Claude-User
+Allow: /
+
+User-agent: Claude-SearchBot
+Allow: /
+
+# Perplexity
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Perplexity-User
+Allow: /
+
+# Google (Gemini / AI Overviews opt-in) and Apple Intelligence
+User-agent: Google-Extended
+Allow: /
+
+User-agent: Applebot
+Allow: /
+
+User-agent: Applebot-Extended
+Allow: /
+
+# Others (Common Crawl feeds many models, plus major assistants)
+User-agent: CCBot
+Allow: /
+
+User-agent: Amazonbot
+Allow: /
+
+User-agent: Meta-ExternalAgent
+Allow: /
+
+User-agent: Bytespider
+Allow: /
+
+User-agent: cohere-ai
+Allow: /
+
+User-agent: DuckAssistBot
+Allow: /
+
+# ── Sitemap ──
+Sitemap: https://blaksyd.com/sitemap-index.xml
