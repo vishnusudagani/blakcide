@@ -176,13 +176,13 @@ html[data-theme="light"] :focus-visible { outline-color: var(--coral-ink); }
 }
 html[data-theme="light"] .wl-far .wl-inner {
   background:
-    radial-gradient(ellipse at 50% 17%, rgba(255, 210, 122, 0.42), transparent 55%),
-    radial-gradient(ellipse at 17% 61%, rgba(201, 184, 255, 0.28), transparent 52%);
+    radial-gradient(ellipse at 50% 17%, rgba(255, 210, 122, 0.32), transparent 55%),
+    radial-gradient(ellipse at 17% 61%, rgba(201, 184, 255, 0.21), transparent 52%);
 }
 html[data-theme="light"] .wl-near .wl-inner {
   background:
-    radial-gradient(ellipse at 83% 44%, rgba(180, 240, 222, 0.34), transparent 55%),
-    radial-gradient(ellipse at 50% 83%, rgba(255, 107, 157, 0.16), transparent 50%);
+    radial-gradient(ellipse at 83% 44%, rgba(180, 240, 222, 0.26), transparent 55%),
+    radial-gradient(ellipse at 50% 83%, rgba(255, 107, 157, 0.12), transparent 50%);
 }
 @keyframes wl-drift-far {
   0%, 100% { transform: translate3d(0, 0, 0) scale(1); }

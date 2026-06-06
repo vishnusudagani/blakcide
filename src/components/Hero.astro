@@ -80,9 +80,8 @@ import Greeting from './Greeting.astro';
       a new kind of life platform
     </p>
 
-    <a href="#top" class="hero-logo" aria-label="Blaksyd">
-      <span class="brand-mark" aria-hidden="true"></span>
-    </a>
+    {/* in-hero wordmark removed — the nav already carries it. Declutters the
+        headline column so the headline clearly leads (one focal path). */}
 
     <h1 class="title">
       <span class="line">Your world.</span>
@@ -104,6 +103,7 @@ import Greeting from './Greeting.astro';
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M6 13l6 6 6-6" /></svg>
       </a>
     </div>
+    <p class="hero-microcopy">Free early access · we're still building — be first when it opens.</p>
   </div>
 
   {/* ── trust bar — four pillars, warm→cool ─────────────────────────── */}
@@ -166,22 +166,22 @@ import Greeting from './Greeting.astro';
 
   /* drifting accent orbs (atmospheric light over the world wash) */
   .orbs { position: absolute; inset: 0; z-index: 1; pointer-events: none; will-change: transform; }
-  .orb { position: absolute; border-radius: 50%; filter: blur(80px); opacity: .5; will-change: transform; }
+  .orb { position: absolute; border-radius: 50%; filter: blur(52px); opacity: .34; will-change: transform; }
   .orb-1 {
     width: 50vw; height: 50vw; left: 2%; top: 4%;
     background: radial-gradient(circle at 40% 40%, var(--coral), transparent 68%);
-    animation: drift-a 20s var(--ease-soft) infinite alternate;
+    animation: drift-a 32s var(--ease-soft) infinite alternate;
   }
   .orb-2 {
     width: 48vw; height: 48vw; right: 0%; top: 10%;
     background: radial-gradient(circle at 60% 40%, var(--lavender), transparent 68%);
-    animation: drift-b 24s var(--ease-soft) infinite alternate;
+    animation: drift-b 36s var(--ease-soft) infinite alternate;
   }
   .orb-3 {
     width: 42vw; height: 42vw; left: 30%; top: 40%;
     opacity: .42;
     background: radial-gradient(circle at 50% 50%, var(--mint), transparent 70%);
-    animation: drift-c 28s var(--ease-soft) infinite alternate;
+    animation: drift-c 40s var(--ease-soft) infinite alternate;
   }
   /* Light theme: soft luminous colour blooms on cream. NO mix-blend multiply —
      that darkened the cream into a grey-mauve haze. Normal blend at lower opacity
@@ -405,7 +405,6 @@ import Greeting from './Greeting.astro';
   }
   .rotator-word.is-active {
     opacity: 1; transform: translateY(0);
-    animation: rotator-shimmer 7s ease-in-out infinite;
   }
   .rotator-word.is-leaving {
     opacity: 0; transform: translateY(-.34em);
@@ -425,6 +424,11 @@ import Greeting from './Greeting.astro';
     display: flex; flex-wrap: wrap; justify-content: center; gap: .9rem;
     margin-top: 2.4rem;
     opacity: 0; animation: rise 1000ms var(--ease-out) 1200ms forwards;
+  }
+  /* honest reality anchor — small + faint, fades in last (it's pre-launch context, not a focal element) */
+  .hero-microcopy {
+    margin-top: 1.1rem; font-size: .82rem; color: var(--ink-faint);
+    opacity: 0; animation: rise 1000ms var(--ease-out) 1350ms forwards;
   }
 
   .btn {
@@ -581,7 +585,7 @@ import Greeting from './Greeting.astro';
     // rising motes
     var box = document.getElementById('hero-motes');
     if (box && !reduce && wide) {
-      for (var k = 0; k < 12; k++) {
+      for (var k = 0; k < 5; k++) {
         var m = document.createElement('span');
         m.className = 'mote';
         var dur = 16 + Math.random() * 14;

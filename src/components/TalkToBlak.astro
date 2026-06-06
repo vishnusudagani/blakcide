@@ -87,6 +87,14 @@
   .tb-chip:hover { color: var(--ink); border-color: var(--coral); background: var(--surface-strong); transform: translateY(-1px); }
   html[data-theme="light"] .tb-chip:hover { border-color: var(--coral-ink); }
 
+  .tb-cta {
+    font-size: .9rem; font-weight: 600; color: #2A0E1E;
+    padding: .6rem 1.1rem; border-radius: var(--r-pill);
+    background: var(--cta-grad); background-size: 200% 200%; background-position: 0% 50%;
+    box-shadow: var(--shadow-cta);
+    transition: background-position var(--t-slow) var(--ease-out), transform var(--t-fast) var(--ease-magnet);
+  }
+  .tb-cta:hover { background-position: 100% 50%; transform: translateY(-1px); }
   .tb-note { margin-top: 1rem; text-align: center; font-size: .8rem; color: var(--ink-faint); }
 
   @media (prefers-reduced-motion: reduce) { .tb-dot, .tb-av { animation: none; } }
@@ -142,7 +150,22 @@
         }, 18);
       }, 750);
     }
-    function finish() { busy = false; chips.style.opacity = ''; chips.style.pointerEvents = ''; }
+    var count = 0;
+    function finish() {
+      busy = false;
+      if (++count >= 3) {
+        // Honest cap — after a few exchanges, turn the taste into the real thing
+        // rather than pretending the canned demo is endless.
+        chips.innerHTML = '';
+        bubble('blak', "That's just a taste — the real Blak learns only you and remembers every conversation. Yours is waiting.");
+        var cta = document.createElement('button');
+        cta.type = 'button'; cta.className = 'tb-cta';
+        cta.setAttribute('data-open-auth', ''); cta.setAttribute('data-tab', 'signup');
+        cta.textContent = 'Join the waitlist →';
+        chips.appendChild(cta);
+      }
+      chips.style.opacity = ''; chips.style.pointerEvents = '';
+    }
 
     [].slice.call(chips.querySelectorAll('.tb-chip')).forEach(function (c) {
       c.addEventListener('click', function () { answer(c.getAttribute('data-k')); });
