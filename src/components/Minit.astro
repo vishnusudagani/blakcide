@@ -20,8 +20,8 @@
       <span class="accent">Right when it counts.</span>
     </h2>
     <p class="locator-sub" data-reveal>
-      Some moments need a voice, not a bot. Blaksyd brings real humans close —
-      on your terms, in your time, no one watching.
+      Sometimes you just want a real person in the mix. Blaksyd brings friendly
+      humans close — on your terms, anytime, anonymous if you like.
     </p>
   </div>
 </section>
@@ -37,14 +37,13 @@
       </h3>
 
       <p class="s-sub" data-reveal>
-        Not a queue. Not a ticket. A warm, real listener — carefully trained
-        and screened — matched to what you're carrying, the moment you
-        reach out.
+        Not a queue. Not a ticket. A real, friendly person — vetted, never
+        random — matched to your vibe the moment you reach out.
       </p>
 
       <ul class="s-points" data-reveal>
         <li><span class="pt-dot pt-3"></span><b>Connect now</b> — a real person in about a minute.</li>
-        <li><span class="pt-dot pt-aqua"></span><b>Trained &amp; screened</b> — real, vetted listeners, never random strangers.</li>
+        <li><span class="pt-dot pt-aqua"></span><b>Vetted, not random</b> — real people we actually check, never random strangers.</li>
         <li><span class="pt-dot pt-3"></span><b>Reconnect anytime</b> — pick up with someone you trust.</li>
       </ul>
 
@@ -71,7 +70,7 @@
         </div>
 
         <div class="mn-feed" id="mn-feed" aria-hidden="true">
-          <p class="mn-lead">However you're carrying it — choose how to reach a real person. Anonymous unless you say otherwise.</p>
+          <p class="mn-lead">Pick how you want to connect — a real person, your way. Anonymous unless you say otherwise.</p>
         </div>
 
         <div class="mn-modes" id="mn-modes" role="group" aria-label="How to connect">
@@ -284,7 +283,7 @@
     display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1;
   }
   .mn-cal b { font-size: .9rem; color: var(--ink); font-weight: 700; }
-  .mn-cal i { font-family: var(--font-mono); font-size: .48rem; text-transform: uppercase; letter-spacing: .1em; color: var(--mint-deep); font-style: normal; }
+  .mn-cal i { font-family: var(--font-mono); font-size: .56rem; text-transform: uppercase; letter-spacing: .08em; color: var(--mint-deep); font-style: normal; }
   .mn-booked-txt b { color: var(--ink); font-weight: 600; }
   .mn-booked-txt { font-size: .92rem; color: var(--ink-soft); line-height: 1.4; }
 
@@ -335,9 +334,9 @@
 
 <script is:inline>
   // Minit — live, playable. Pick a connect mode → Blaksyd "reaches out" (a warm
-  // ripple) → a real, anonymous listener arrives (or a booking is set). Surfaces
-  // the Blak co-pilot brief and two-sided care. Auto-plays one connect on
-  // scroll-in so the promise — someone real, in a minute — is felt.
+  // ripple) → a real, anonymous person arrives (or a booking is set). Surfaces
+  // the Blak co-pilot brief. Auto-plays one connect on scroll-in so the promise
+  // — someone real, in a minute — is felt.
   (function () {
     var stage = document.getElementById('minit-stage');
     if (!stage) return;
@@ -357,23 +356,23 @@
     var heartSvg = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20s-7-4.6-7-9.5A3.5 3.5 0 0 1 12 8a3.5 3.5 0 0 1 7 1.5C19 15.4 12 20 12 20z"/></svg>';
 
     var DATA = {
-      talk: { connect: 'Finding someone <b>warm</b>, right now…',
-        result: '<div class="mn-listener"><div class="mn-l-top"><span class="mn-pic"></span><span class="mn-l-who"><b>Aria M.</b><span class="mn-l-meta">warm · grounded · great at 2&nbsp;am</span></span><span class="mn-l-rate">★ 4.9</span></div>'
-          + '<div class="mn-tags"><span class="mn-tag">late nights</span><span class="mn-tag">burnout</span><span class="mn-tag">big decisions</span></div>'
+      talk: { connect: 'Finding your <b>person</b>, right now…',
+        result: '<div class="mn-listener"><div class="mn-l-top"><span class="mn-pic"></span><span class="mn-l-who"><b>Aria M.</b><span class="mn-l-meta">warm · funny · great company</span></span><span class="mn-l-rate">★ 4.9</span></div>'
+          + '<div class="mn-tags"><span class="mn-tag">trip planning</span><span class="mn-tag">pep talks</span><span class="mn-tag">big ideas</span></div>'
           + '<div class="mn-l-status"><span class="mn-l-status-dot"></span>available now · connects in ~28s</div>'
           + '<div class="mn-note">' + lockSvg + '<span><b>Anonymous</b> by default — your name is yours to give, never required.</span></div>'
           + '<button type="button" class="mn-go-btn">Start talking</button></div>' },
-      smart: { connect: 'Reading what you\'re <b>carrying</b> and matching…',
-        result: '<div class="mn-listener"><div class="mn-l-top"><span class="mn-pic"></span><span class="mn-l-who"><b>Sol K.</b><span class="mn-l-meta">steady · good when thoughts spiral</span></span><span class="mn-l-rate">★ 4.9</span></div>'
-          + '<div class="mn-tags"><span class="mn-tag">anxiety</span><span class="mn-tag">work</span><span class="mn-tag">sleep</span></div>'
+      smart: { connect: 'Reading your <b>vibe</b> and matching…',
+        result: '<div class="mn-listener"><div class="mn-l-top"><span class="mn-pic"></span><span class="mn-l-who"><b>Sol K.</b><span class="mn-l-meta">steady · great brainstorm buddy</span></span><span class="mn-l-rate">★ 4.9</span></div>'
+          + '<div class="mn-tags"><span class="mn-tag">ideas</span><span class="mn-tag">plans</span><span class="mn-tag">motivation</span></div>'
           + '<div class="mn-l-status"><span class="mn-l-status-dot"></span>matched to you · connects in ~40s</div>'
           + '<div class="mn-note">' + sparkSvg + '<span><b>Blak briefed Sol</b> on the shape of it — context, not content. You won\'t have to re-explain.</span></div>'
           + '<button type="button" class="mn-go-btn">Start talking</button></div>' },
-      spec: { connect: 'Carrying something heavier — finding a <b>specialist</b>…',
-        result: '<div class="mn-listener"><div class="mn-l-top"><span class="mn-pic spec"></span><span class="mn-l-who"><b>Specialist listener</b><span class="mn-l-meta">trained in grief &amp; loss</span></span><span class="mn-l-rate">★ 5.0</span></div>'
-          + '<div class="mn-tags"><span class="mn-tag">bereavement</span><span class="mn-tag">trauma-informed</span></div>'
+      spec: { connect: 'Want someone with a <b>specialty</b>? Finding them…',
+        result: '<div class="mn-listener"><div class="mn-l-top"><span class="mn-pic spec"></span><span class="mn-l-who"><b>Specialist</b><span class="mn-l-meta">knows your world inside out</span></span><span class="mn-l-rate">★ 5.0</span></div>'
+          + '<div class="mn-tags"><span class="mn-tag">deep dives</span><span class="mn-tag">your niche</span></div>'
           + '<div class="mn-l-status"><span class="mn-l-status-dot"></span>available · connects in ~2 min</div>'
-          + '<div class="mn-note">' + heartSvg + '<span><b>Two-sided care</b> — your listener is supported and screened too. This isn\'t "the customer is always right."</span></div>'
+          + '<div class="mn-note">' + heartSvg + '<span><b>Good vibes both ways</b> — the people you talk to are looked after too.</span></div>'
           + '<button type="button" class="mn-go-btn">Talk to a specialist</button></div>' },
       book: { connect: 'Holding a time for you…',
         result: '<div class="mn-booked"><div class="mn-booked-when"><span class="mn-cal"><b>9:00</b><i>tonight</i></span><span class="mn-booked-txt"><b>Priya</b> will be ready at 9:00 tonight. We\'ll nudge you at 8:55 — nothing to remember.</span></div>'

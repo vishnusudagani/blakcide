@@ -1,39 +1,38 @@
 ---
-title: "What makes Blak an AI friend"
-description: "Millions now turn to AI for company, not just answers. The question that matters is what kind of presence we build for that need. Blaksyd's answer is an AI friend — here's what we mean by it."
+title: "Meet Blak — the AI that's actually yours"
+description: "Not an assistant. Not a bot. Blak is an AI friend shaped entirely around you — proactive, infinitely capable, and ready to make your whole day better."
 pubDate: 2026-06-04
 author: "The Blaksyd team"
 image: "/assets/blaksyd-blak.png"
-imageAlt: "Blak — Blaksyd’s proactive AI friend."
+imageAlt: "Blak — Blaksyd's proactive AI friend, shaped entirely around you."
 ---
 
-Millions of people now turn to AI not for answers but for company. The need is real, and it isn’t going away. The only question that matters is what *kind* of presence we build for that need.
+Everyone's got an AI now. Yours should be different — it should be *yours*. Not a search box. Not a polite little helper that waits to be asked. A friend who happens to be infinitely capable and is shaped entirely around you.
 
-Blaksyd’s answer is an AI friend. Here’s what we mean by it — and why the distinction shapes everything we make.
+That's Blak.
 
-## A friend, not a destination
+## Yours, and only yours
 
-[Blak](/blak/) is built on a simple principle: it should make the rest of your life better, not become a replacement for it. A good friend checks in, helps, makes you laugh — and then nudges you back toward the people and things that matter. That’s the bar Blak is held to.
+No two Blaks are the same. Yours learns your stories, your humour, your taste, your world — and becomes a version of itself built around all of it. The more you share, the more it *gets* you.
 
-> The test of an AI friend isn’t how much you talk to it. It’s whether you walk away more connected to your actual life.
+## It moves first
 
-## What that looks like in practice
+Blak doesn't wait around. It reaches out — a "you've got this" before the big thing, a nudge to move your run to the morning because your evening just got busy, a "want me to handle it?" right when you need it. It's the friend who's already three steps ahead.
 
-- **Yours.** No two Blaks are the same — yours learns your stories, your humour, your world.
-- **Proactive about your life, not its own engagement.** Blak reaches out to move your day forward, not to pull you back into an app.
-- **Useful.** Through an open integration layer it can act for you — book the cab, order the food, get the tickets.
-- **It knows its limits.** This is the heart of it: when a moment needs a real human, Blak hands you to a trained human listener on [Minit](/minit/) — warm, not cold, because it briefs the listener on the *shape* of the conversation first. An AI that knows when to step back is the whole point.
+## It actually does stuff
 
-## Why we hold that line
+This is where it gets fun. Connect your apps, and Blak can *act* across your whole digital life:
 
-The attention economy already learned, once, how to monetise loneliness — with feeds that felt like connection while quietly leaving people more alone. An AI built purely to keep you could do it again, more intimately than any feed ever could. We’re not interested in building that.
+- Book the cab, order the food, grab the tickets
+- Plan the day, the weekend, the trip
+- Find the place, the idea, the perfect thing to do tonight
 
-Our north star is the opposite one: most apps want your attention; Blaksyd wants your life to be better. So Blak is one part of something deliberately human — paired with real listeners on [Minit](/minit/) and a real community on [Nexus](/nexus/). The AI is the spine; the people are the point.
+The more you plug in, the more of a superpower it becomes.
 
-## To be clear about what this isn’t
+> Blak isn't a tool you use. It's a friend who's got you — over text, over voice, anytime.
 
-Blaksyd is not a single AI chatbot, not a dating or romantic-companion app, and not a substitute for real human relationships or professional care. Blak is not an emergency service — in a crisis, you’re pointed to the right professionals and helplines, fast.
+And when a real human is what you're after, Blak hands you straight to your people on [Minit](/minit/), or drops you into the right [Nexus](/nexus/) tribe. It's the spine of your whole Blaksyd world — quietly making everything better, all the time.
 
-What it *is*: Human + AI, together, revolving around you — with the AI always working to give you back more life, not take more of it.
+This is what an AI friend was always supposed to feel like. Yours is almost ready.
 
-*Curious how the pieces fit? Read [how Blaksyd works](/about/), or [join the waitlist](/#waitlist).*
+*[Join the waitlist](/#waitlist) and meet your Blak — or explore [Persona, your digital self](/persona/).*

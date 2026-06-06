@@ -114,3 +114,19 @@
   from = "/team-os/*"
   to = "/team-os/index.html"
   status = 200
+
+# ──────── Retired blog posts → closest live page (301) ────────
+# Three early posts were replaced in the brand-voice refresh; 301 their URLs so the
+# links already submitted to search / IndexNow don't 404.
+[[redirects]]
+  from = "/blog/what-makes-a-good-listener"
+  to = "/minit/"
+  status = 301
+[[redirects]]
+  from = "/blog/an-app-that-wants-you-to-put-it-down"
+  to = "/manifesto/"
+  status = 301
+[[redirects]]
+  from = "/blog/anonymous-by-default"
+  to = "/nexus/"
+  status = 301
