@@ -371,8 +371,11 @@
         armed = true;
         window.removeEventListener('scroll', check);
         window.removeEventListener('resize', check);
-        /* No auto-play: the demo waits for a tap, so scrolling past stays calm.
-           (Blak still auto-plays once to teach the tap-to-see-it pattern.) */
+        /* One gentle auto-beat on mobile only (no hover + fast scroll = passive
+           users miss the demo otherwise); desktop stays tap-driven and calm. */
+        if (!reduced && window.matchMedia && window.matchMedia('(max-width: 760px)').matches) { autoTimer = setTimeout(function () {
+          if (!interacted) { var el = tribes.filter(function (t) { return t.getAttribute('data-tribe') === 'reso'; })[0]; if (el) { setActive(el); enter('reso'); } }
+        }, 1900); }
       }
     }
     requestAnimationFrame(function () { requestAnimationFrame(check); });

@@ -45,7 +45,7 @@
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
       </button>
     </form>
-    <p class="finale-reassure" data-reveal>Free · we're still building — be first when it opens.</p>
+    <p class="finale-reassure" data-reveal>Anonymous by default · we never sell your data · free early access.</p>
     <p class="finale-wl-note" data-wl-note role="status" aria-live="polite" hidden></p>
 
     <div class="constellation" id="finale-constellation" data-reveal aria-hidden="true">
@@ -239,7 +239,7 @@
     var busy = false;
     function setNote(msg, kind) {
       if (!note) return;
-      note.textContent = msg; note.hidden = false;
+      note.innerHTML = msg; note.hidden = false;
       note.classList.remove('is-error', 'is-ok');
       note.classList.add(kind === 'error' ? 'is-error' : 'is-ok');
     }
@@ -252,7 +252,7 @@
       fetch('/api/waitlist', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: val }) })
         .then(function (r) { return r.json().catch(function () { return {}; }).then(function (d) { return { ok: r.ok, d: d }; }); })
         .then(function (r) {
-          if (r.ok && r.d && r.d.ok) { setNote("You're in — welcome to Blaksyd. We'll open your world soon.", 'ok'); form.reset(); }
+          if (r.ok && r.d && r.d.ok) { setNote('You\'re in — welcome to Blaksyd. We\'ll email you the moment we open. Meanwhile, <a href="/manifesto/">see why we\'re building this →</a>', 'ok'); form.reset(); }
           else { setNote((r.d && r.d.error) || 'Could not save right now. Please try again.', 'error'); }
         })
         .catch(function () { setNote('Network error — please try again.', 'error'); })

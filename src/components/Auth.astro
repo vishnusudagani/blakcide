@@ -297,7 +297,7 @@
         cta: 'Get early access',
         switchText: 'Already have a world?',
         switchBtn: 'Log in',
-        ok: "You're in — welcome to Blaksyd. We'll open your world soon."
+        ok: 'You\'re in — welcome to Blaksyd. We\'ll email you the moment we open. Meanwhile, <a href="/manifesto/">see why we\'re building this →</a>'
       },
       login: {
         title: 'Welcome back',
@@ -324,7 +324,7 @@
       note.classList.remove('is-error', 'is-ok');
     }
     function setNote(msg, kind) {
-      note.textContent = msg;
+      note.innerHTML = msg;
       note.hidden = false;
       note.classList.remove('is-error', 'is-ok');
       note.classList.add(kind === 'error' ? 'is-error' : 'is-ok');
