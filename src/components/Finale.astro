@@ -26,15 +26,14 @@
 
     <figure class="finale-founder" data-reveal>
       <blockquote>"Most apps are built to take your time. We're building Blaksyd to make your life better — and we'd love for you to be one of the first inside."</blockquote>
-      {/* Signatures: swap each .sig-name span for <img class="sig-img" src="/assets/sig-*.svg" alt="..."> when the signature graphics are ready. */}
       <figcaption class="finale-sigs">
         <span class="founder-sig">
-          <span class="sig-name">Vishnu Sudagani</span>
-          <span class="sig-role">Co-founder</span>
+          <span class="sig-img sig-vishnu" aria-hidden="true"></span>
+          <span class="sig-role">Vishnu Sudagani · Co-founder</span>
         </span>
         <span class="founder-sig">
-          <span class="sig-name">Dr. Sindhuu Devarakonda</span>
-          <span class="sig-role">Co-founder</span>
+          <span class="sig-img sig-sindhuu" aria-hidden="true"></span>
+          <span class="sig-role">Dr. Sindhuu Devarakonda · Co-founder</span>
         </span>
       </figcaption>
     </figure>
@@ -93,19 +92,21 @@
     font-size: var(--fs-xl); line-height: 1.5; color: var(--ink);
   }
   .finale-sigs {
-    display: flex; flex-wrap: wrap; justify-content: center; gap: 1.3rem 2.6rem;
-    margin-top: 1.3rem;
+    display: flex; flex-wrap: wrap; justify-content: center; align-items: flex-end; gap: 1.4rem 3rem;
+    margin-top: 1.4rem;
   }
-  .founder-sig { display: flex; flex-direction: column; gap: .2rem; }
-  /* italic-serif name now; replace with a transparent .sig-img signature graphic later */
-  .sig-name {
-    font-family: var(--font-serif); font-style: italic; font-size: 1.5rem;
-    line-height: 1; letter-spacing: -.01em; color: var(--ink);
+  .founder-sig { display: flex; flex-direction: column; align-items: center; gap: .4rem; }
+  /* signature graphics, masked so the ink follows the theme (dark on cream, cream on void) */
+  .sig-img {
+    height: 52px; color: var(--ink); background-color: currentColor;
+    -webkit-mask: var(--sig) center / contain no-repeat;
+            mask: var(--sig) center / contain no-repeat;
   }
-  .sig-img { height: 38px; width: auto; }
+  .sig-vishnu  { --sig: url('/assets/sig-vishnu.png');  width: 63px; }
+  .sig-sindhuu { --sig: url('/assets/sig-sindhuu.png'); width: 111px; }
   .sig-role {
     font-family: var(--font-mono); font-size: var(--fs-3xs);
-    text-transform: uppercase; letter-spacing: .14em; color: var(--ink-faint);
+    text-transform: uppercase; letter-spacing: .12em; color: var(--ink-faint);
   }
 
   .finale-form {
