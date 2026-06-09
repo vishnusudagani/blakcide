@@ -141,7 +141,15 @@ import Greeting from './Greeting.astro';
   }
 
   /* ═══════════ living world backdrop ═══════════ */
-  .world-stage { position: absolute; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; }
+  .world-stage {
+    position: absolute; inset: 0; z-index: 0; overflow: hidden; pointer-events: none;
+    /* Dissolve the hero's whole atmosphere toward the bottom so it reveals the SAME
+       page background that continues below the hero — no hard seam, no sudden
+       warm->cool jump at the hero's edge. (Masking the layer beats painting an
+       opaque fade, which only relocated the seam.) */
+    -webkit-mask: linear-gradient(to bottom, #000 70%, transparent 100%);
+            mask: linear-gradient(to bottom, #000 70%, transparent 100%);
+  }
 
   /* dawn bloom rising from the horizon — warm centre, cool flanks */
   .sky {
@@ -159,11 +167,8 @@ import Greeting from './Greeting.astro';
   }
 
   /* a single luminous horizon strand — implies a world without a literal vista */
-  .horizon {
-    position: absolute; left: -5%; right: -5%; top: 62%; height: 1px; z-index: 1; will-change: transform;
-    background: linear-gradient(90deg, transparent, rgba(255, 210, 122, .5) 28%, rgba(201, 184, 255, .42) 64%, transparent);
-    box-shadow: 0 0 46px 10px rgba(255, 200, 140, .10);
-  }
+  /* horizon strand removed — it read as an unwanted line across the hero */
+  .horizon { display: none; }
   html[data-theme="light"] .horizon {
     background: linear-gradient(90deg, transparent, rgba(255, 184, 110, .6) 28%, rgba(150, 131, 230, .4) 64%, transparent);
     box-shadow: 0 0 50px 12px rgba(255, 188, 120, .16);

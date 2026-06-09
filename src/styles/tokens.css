@@ -204,7 +204,7 @@ html[data-theme="light"] .wl-far .wl-inner {
 }
 html[data-theme="light"] .wl-near .wl-inner {
   background:
-    radial-gradient(ellipse at 83% 44%, rgba(180, 240, 222, 0.26), transparent 55%),
+    radial-gradient(ellipse at 83% 44%, rgba(180, 240, 222, 0.15), transparent 55%),
     radial-gradient(ellipse at 50% 83%, rgba(255, 107, 157, 0.12), transparent 50%);
 }
 @keyframes wl-drift-far {
