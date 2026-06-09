@@ -111,6 +111,8 @@
     box-shadow: var(--shadow-soft), inset 0 1px 0 rgba(255, 255, 255, .45);
     padding: 1.1rem 1.1rem 1.2rem;
   }
+  /* mobile: tighter card padding so the scene isn't holding desktop air on a phone */
+  @media (max-width: 600px) { .nx-card { padding: .9rem .9rem 1.05rem; } }
   .nx-card::after {
     content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
     padding: 1px; opacity: .55;
@@ -234,6 +236,10 @@
 
   /* tribe selector — the interactive control */
   .nx-tribes { display: flex; flex-wrap: wrap; gap: .45rem; margin-top: 1rem; }
+  /* mobile: trim chip padding so wide tribe labels pack 2-up instead of one
+     full-width pill per row (still all-visible, still 44px tall via the global
+     touch-target rule) */
+  @media (max-width: 600px) { .nx-tribes { gap: .4rem; } .nx-tribe { padding: .5rem .7rem; } }
   .nx-tribe {
     display: inline-flex; align-items: center; gap: .45rem;
     font-family: inherit; font-size: var(--fs-sm); font-weight: 500; color: var(--ink-soft);

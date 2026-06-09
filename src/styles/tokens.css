@@ -138,6 +138,12 @@ html[data-theme="light"] {
   color-scheme: light;
 }
 
+/* Mobile: lift the smallest micro-label step (10px → 11px) so mono badges,
+   kickers, cap-rails and handles stay legible on a phone. */
+@media (max-width: 600px) {
+  :root { --fs-3xs: 0.6875rem; }
+}
+
 /* ---- Reset ---- */
 *, *::before, *::after { box-sizing: border-box; }
 * { margin: 0; }

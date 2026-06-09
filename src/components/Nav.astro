@@ -134,7 +134,9 @@
     position: absolute; top: calc(100% + 10px); right: 0;
     min-width: 200px; display: flex; flex-direction: column; gap: .15rem;
     padding: .6rem; border-radius: var(--r-lg);
-    background: var(--glass-strong);
+    /* opaque (glass tint over the solid page bg) — at 85–92% the bare glass let
+       the busy hero bleed through the menu items and hurt legibility */
+    background: linear-gradient(var(--glass-strong), var(--glass-strong)), var(--bg);
     backdrop-filter: blur(16px) saturate(160%); -webkit-backdrop-filter: blur(16px) saturate(160%);
     border: 1px solid var(--line-strong); box-shadow: 0 12px 40px rgba(0, 0, 0, .32);
   }
@@ -147,6 +149,12 @@
     .links, .divider { display: none; }
     .nav-burger { display: inline-flex; }
     .nav { padding-left: 18px; gap: .6rem; }
+    /* #5: the hero form + sticky bottom bar already carry the CTA on phones —
+       drop the pill CTA so the nav isn't a third identical "Get early access". */
+    .cta { display: none; }
+    /* #8: ≥44px touch targets for the icon buttons and menu rows */
+    .toggle, .nav-burger { width: 44px; height: 44px; }
+    .nav-menu a { padding: .75rem .9rem; }
   }
   @media (min-width: 821px) { .nav-menu { display: none !important; } }
 </style>

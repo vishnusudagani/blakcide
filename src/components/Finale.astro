@@ -136,6 +136,9 @@
   html[data-theme="light"] .finale-wl-note.is-ok { color: var(--mint-ink); }
   @media (max-width: 600px) {
     .finale-form { flex-direction: column; max-width: 360px; }
+    /* kill the 220px flex-basis so the stacked input keeps its natural height
+       instead of ballooning into a 220px-tall pill (mirrors the hero fix) */
+    .finale-email { flex: 0 0 auto; width: 100%; }
     .finale-form .btn-primary { width: 100%; justify-content: center; }
   }
 

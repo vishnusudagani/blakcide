@@ -31,13 +31,18 @@
     if (window.matchMedia && window.matchMedia('(min-width: 821px)').matches) return; // mobile only
     var hero = document.querySelector('.hero');
     var finale = document.getElementById('waitlist');
+    var footer = document.querySelector('footer');
     if (!hero) return;
     bar.hidden = false;
-    var pastHero = false, atFinale = false;
-    function update() { bar.classList.toggle('show', pastHero && !atFinale); }
+    var pastHero = false, atFinale = false, atFooter = false;
+    function update() { bar.classList.toggle('show', pastHero && !atFinale && !atFooter); }
     if ('IntersectionObserver' in window) {
       new IntersectionObserver(function (es) { pastHero = !es[0].isIntersecting; update(); }).observe(hero);
       if (finale) new IntersectionObserver(function (es) { atFinale = es[0].isIntersecting; update(); }, { rootMargin: '0px 0px -35% 0px' }).observe(finale);
+      // also hide over the footer — once the finale scrolls above the viewport it
+      // no longer intersects, so without this the bar would reappear and cover the
+      // last footer rows (there's no content below to scroll it clear of).
+      if (footer) new IntersectionObserver(function (es) { atFooter = es[0].isIntersecting; update(); }).observe(footer);
     } else {
       bar.classList.add('show');
     }

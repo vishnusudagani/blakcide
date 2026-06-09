@@ -546,6 +546,15 @@ import Greeting from './Greeting.astro';
     .btn { width: 100%; justify-content: center; }
     .ctas { width: 100%; max-width: 360px; }
     .title .line-2 { white-space: normal; }
+    /* #7: size the headline so "Built around you." fits one clean line instead
+       of orphaning "you." onto a third line */
+    .title { font-size: clamp(2.45rem, 10.6vw, 2.85rem); text-wrap: balance; }
+    /* #10: the eyebrow's lone dot floats orphaned at the left once the label
+       wraps to two centered lines — drop it, and tighten tracking so it wraps less */
+    .eyebrow { letter-spacing: .18em; }
+    .eyebrow-dot { display: none; }
+    /* #8: ≥44px tap area for the text link */
+    .hero-explore { padding: .7rem .65rem; margin-top: .9rem; }
     .trust-item { flex: 0 0 calc(50% - .9rem); justify-content: center; }
   }
 

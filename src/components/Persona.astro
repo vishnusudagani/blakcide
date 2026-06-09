@@ -120,6 +120,8 @@
     box-shadow: var(--shadow-soft), inset 0 1px 0 rgba(255, 255, 255, .45);
     padding: 1.1rem 1.1rem 1.2rem;
   }
+  /* mobile: tighter card padding so the scene isn't holding desktop air on a phone */
+  @media (max-width: 600px) { .pp-card { padding: .9rem .9rem 1.05rem; } }
   .pp-card::after {
     content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
     padding: 1px; opacity: .55;

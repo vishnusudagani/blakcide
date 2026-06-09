@@ -28,6 +28,9 @@
     padding-block: clamp(3rem, 8vh, 5.75rem);
     text-align: center;
   }
+  /* mobile: much less top/bottom air so the definition doesn't leave a big empty
+     gap before the next scene */
+  @media (max-width: 600px) { .lede { padding-block: clamp(1.75rem, 5vh, 3rem); } }
   .lede-inner { max-width: 50ch; margin-inline: auto; }
 
   .lede-kicker {
