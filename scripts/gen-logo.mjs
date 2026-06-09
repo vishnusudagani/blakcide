@@ -49,6 +49,20 @@ async function run() {
     await writeFile(resolve(OUT, name), out);
     console.log(`  ✓ ${name} (1024×1024 square)`);
   }
+
+  // ── Wire into the SITE: drop the SVGs into served assets, and refresh the
+  //    wordmark .webp from the vector at the SAME dimensions the components expect
+  //    (fit: contain → no distortion, no layout change — just vector-crisp). ──
+  const SITE_ASSETS = resolve(dirname(fileURLToPath(import.meta.url)), '..', 'public', 'assets');
+  await writeFile(resolve(SITE_ASSETS, 'blaksyd-logo.svg'), black);
+  await writeFile(resolve(SITE_ASSETS, 'blaksyd-logo-white.svg'), white);
+  for (const [svg, w, h, name] of [[black, 758, 329, 'blaksyd-black.webp'], [white, 737, 338, 'blaksyd-white.webp']]) {
+    const buf = await sharp(Buffer.from(sized(svg, w * 3)))
+      .resize({ width: w, height: h, fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
+      .webp({ quality: 92, alphaQuality: 100 }).toBuffer();
+    await writeFile(resolve(SITE_ASSETS, name), buf);
+    console.log(`  ✓ site assets: ${name} (${w}×${h}, refreshed from vector)`);
+  }
   console.log('Done →', OUT);
 }
 run().catch((e) => { console.error(e); process.exit(1); });

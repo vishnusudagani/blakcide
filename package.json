@@ -7,6 +7,8 @@
     "build": "astro build && node scripts/copy-subapps.mjs",
     "preview": "astro preview",
     "gen:images": "node scripts/gen-images.mjs",
+    "gen:logo": "node scripts/gen-logo.mjs",
+    "gen:favicon": "node scripts/gen-favicon.mjs",
     "indexnow": "node scripts/indexnow.mjs",
     "astro": "astro"
   },
