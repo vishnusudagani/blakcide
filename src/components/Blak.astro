@@ -271,6 +271,8 @@
     overflow-y: auto; scroll-behavior: smooth; scrollbar-width: none;
   }
   .bk-feed::-webkit-scrollbar { display: none; }
+  /* mobile: a shorter chat viewport — it scrolls internally, so nothing is lost */
+  @media (max-width: 600px) { .bk-feed { height: clamp(200px, 32vh, 280px); margin-top: .7rem; } }
   .bk-row { display: flex; }
   .bk-row.left { justify-content: flex-start; }
   .bk-row.right { justify-content: flex-end; }

@@ -253,6 +253,16 @@ html[data-theme="light"] .s-title .accent.cool {
 .btn-ghost:hover { background: var(--surface-strong); border-color: var(--ink-faint); transform: translateY(-2px); }
 @media (max-width: 600px) {
   .btn { width: 100%; justify-content: center; }
+  /* Mobile: trim the product scenes so a phone scrolls through calmer, shorter
+     cards. The demos stay fully live — this only removes stacked vertical air
+     (section padding, two-col gap, card padding, text-column rhythm) that, ×4
+     pillars, made the page feel heavy on a small screen. */
+  .s-section { padding-block: clamp(2.25rem, 6vh, 3.5rem); }
+  .s-two     { gap: 1.7rem; }
+  .s-card    { padding: .9rem .9rem 1.05rem; }
+  .s-sub     { margin-top: 1rem; }
+  .s-points  { margin-top: 1.15rem; gap: .7rem; }
+  .s-trust   { margin-top: 1.3rem; }
 }
 
 /* =====================================================================
