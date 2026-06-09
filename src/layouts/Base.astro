@@ -13,14 +13,21 @@ interface Props {
   schema?: Record<string, unknown>[];
   /* Keep a page out of the index (e.g. the 404). */
   noindex?: boolean;
+  /* og:type — 'website' (default) or 'article' for blog posts. */
+  ogType?: string;
+  publishedTime?: string;   // ISO; emitted as article:published_time when ogType=article
+  modifiedTime?: string;    // ISO; emitted as article:modified_time when ogType=article
 }
 
 const {
   title = 'Blaksyd — Human + AI, revolving around you.',
-  description = 'Human + AI, together, revolving around you. Blak knows you and acts for you, Persona is your digital self, Minit brings real listeners close, and Nexus is where you belong — one world, always learning you.',
+  description = 'Human + AI, revolving around you. Blak acts for you, Persona is your digital self, Minit brings real listeners, and Nexus is where you belong.',
   image = '/assets/og-cover.png',
   schema = [],
   noindex = false,
+  ogType = 'website',
+  publishedTime,
+  modifiedTime,
 } = Astro.props;
 
 // Absolute URLs for canonical + link-preview cards (Astro.site = https://blaksyd.com).
@@ -95,7 +102,7 @@ const favicon =
 ---
 
 <!doctype html>
-<html lang="en" data-theme="light">
+<html lang="en-IN" data-theme="light">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
@@ -108,6 +115,9 @@ const favicon =
     {noindex && <meta name="robots" content="noindex, follow" />}
     <title>{title}</title>
     <link rel="icon" href={favicon} />
+    <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png" />
+    <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
     <link rel="canonical" href={canonicalURL} />
     {/* hreflang — one English page served globally to an India-first audience.
         Every variant points to the same canonical URL (no separate localized URLs
@@ -121,12 +131,16 @@ const favicon =
     <link rel="alternate" type="application/rss+xml" title="The Blaksyd Blog" href="/rss.xml" />
 
     {/* Open Graph — link previews (iMessage, Slack, LinkedIn, Facebook…) */}
-    <meta property="og:type" content="website" />
+    <meta property="og:type" content={ogType} />
+    {ogType === 'article' && publishedTime && <meta property="article:published_time" content={publishedTime} />}
+    {ogType === 'article' && modifiedTime && <meta property="article:modified_time" content={modifiedTime} />}
+    {ogType === 'article' && <meta property="article:author" content="Blaksyd LLP" />}
     <meta property="og:site_name" content="Blaksyd" />
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
     <meta property="og:url" content={canonicalURL} />
     <meta property="og:image" content={ogImageURL} />
+    <meta property="og:image:secure_url" content={ogImageURL} />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
     <meta property="og:image:alt" content={title} />
@@ -136,10 +150,11 @@ const favicon =
     <meta name="twitter:title" content={title} />
     <meta name="twitter:description" content={description} />
     <meta name="twitter:image" content={ogImageURL} />
+    <meta name="twitter:image:alt" content={title} />
 
-    {/* Entity + locale hints */}
-    <meta property="og:locale" content="en_US" />
-    <meta property="og:locale:alternate" content="en_IN" />
+    {/* Entity + locale hints — India-first audience, so en_IN leads. */}
+    <meta property="og:locale" content="en_IN" />
+    <meta property="og:locale:alternate" content="en_US" />
     <meta property="og:image:type" content="image/png" />
     <meta name="author" content="Blaksyd LLP" />
     <meta name="publisher" content="Blaksyd LLP" />
@@ -197,8 +212,11 @@ const favicon =
         on the stylesheet. */}
     <link rel="preload" href="/fonts/inter.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="preload" href="/fonts/instrument-serif-400-italic.woff2" as="font" type="font/woff2" crossorigin />
+    {/* mono drives every above-the-fold eyebrow/kicker — preload to avoid the label FOUT/shift */}
+    <link rel="preload" href="/fonts/jetbrains-mono.woff2" as="font" type="font/woff2" crossorigin />
   </head>
   <body>
+    <a href="#main" class="skip-link">Skip to content</a>
     <div class="world" aria-hidden="true">
       <div class="wl wl-far"  data-bg="0.020"><div class="wl-inner"></div></div>
       <div class="wl wl-near" data-bg="0.055"><div class="wl-inner"></div></div>

@@ -13,12 +13,18 @@
     font-family: var(--font-serif); font-style: italic;
     font-size: clamp(1rem, .9rem + .55vw, 1.3rem);
     line-height: 1; letter-spacing: -.01em; color: var(--ink-soft);
+    min-height: 1em;          /* reserve the line so revealing it can't shift the headline (CLS) */
     margin-bottom: .95rem;
     opacity: 0; transform: translateY(6px);
     transition: opacity 620ms var(--ease-out), transform 620ms var(--ease-out);
   }
   .hero-greet.in { opacity: 1; transform: none; }
-  .hero-greet[hidden] { display: none; }
+  /* keep the box (reserve space) while hidden — only visibility toggles, so the
+     reveal can't push the headline down. */
+  .hero-greet[hidden] { display: block; visibility: hidden; }
+  @media (prefers-reduced-motion: reduce) {
+    .hero-greet { transition: none; opacity: 1; transform: none; }
+  }
 </style>
 
 {/* subtle static dawn-warmth shift by time of day — a GPU-cheap filter, no

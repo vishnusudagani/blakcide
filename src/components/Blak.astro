@@ -69,21 +69,23 @@
           <span class="bk-badge">moves first</span>
         </div>
 
-        <div class="bk-feed" id="bk-feed" aria-hidden="true">
+        <div class="bk-feed" id="bk-feed" aria-live="polite">
           <div class="bk-row left">
             <div class="bk-bubble blak">
-              <span class="bk-cap cap-anticipate"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12z"/><circle cx="12" cy="12" r="2.5"/></svg></span>Morning — you're back-to-back till 2. I've got the small stuff. What do you need?
+              <span class="bk-cap cap-anticipate"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12z"/><circle cx="12" cy="12" r="2.5"/></svg></span>You're back-to-back till 2 — I've got the small stuff. What do you need?
             </div>
           </div>
         </div>
 
         <div class="bk-chips" id="bk-chips" role="group" aria-label="Ask Blak">
-          <button type="button" class="bk-chip" data-act="ride">Book me a ride</button>
-          <button type="button" class="bk-chip" data-act="food">Order my usual</button>
-          <button type="button" class="bk-chip" data-act="mood">I'm wiped today</button>
-          <button type="button" class="bk-chip" data-act="pitch">Prep my pitch</button>
+          <button type="button" class="bk-chip" data-act="ride" aria-pressed="false">Book me a ride</button>
+          <button type="button" class="bk-chip" data-act="food" aria-pressed="false">Order my usual</button>
+          <button type="button" class="bk-chip" data-act="mood" aria-pressed="false">I'm wiped today</button>
+          <button type="button" class="bk-chip" data-act="pitch" aria-pressed="false">Prep my pitch</button>
         </div>
       </div>
+
+      <p class="demo-note">Interactive preview — the real thing opens at launch.</p>
 
       <p class="cap-rail" aria-hidden="true">
         <span class="cap-lead">also</span>
@@ -91,7 +93,7 @@
         <span>drafts the hard text</span>
         <span>tracks your day</span>
         <span>speaks your languages</span>
-        <span class="cap-more">&amp; almost anything</span>
+        <span class="cap-more">&amp; more</span>
       </p>
     </div>
   </div>
@@ -147,7 +149,7 @@
 
   .kicker {
     display: inline-flex; align-items: center; gap: .55rem;
-    font-family: var(--font-mono); font-size: .72rem;
+    font-family: var(--font-mono); font-size: var(--fs-xs);
     text-transform: uppercase; letter-spacing: .2em; color: var(--coral);
     margin-bottom: 1.2rem;
   }
@@ -176,7 +178,7 @@
   .blak-points { list-style: none; margin-top: 1.6rem; display: grid; gap: .85rem; }
   .blak-points li {
     position: relative; padding-left: 1.55rem;
-    font-size: 1rem; line-height: 1.5; color: var(--ink-soft);
+    font-size: var(--fs-lg); line-height: 1.5; color: var(--ink-soft);
   }
   .blak-points b { color: var(--ink); font-weight: 600; }
   .pt-dot { position: absolute; left: 1px; top: .55em; width: 9px; height: 9px; border-radius: 50%; }
@@ -187,7 +189,7 @@
   .blak-trust {
     display: inline-flex; align-items: center; gap: .55rem;
     margin-top: 1.9rem;
-    font-size: .9rem; color: var(--ink-faint);
+    font-size: var(--fs-md); color: var(--ink-faint);
   }
   .blak-trust svg {
     width: 16px; height: 16px; flex: none;
@@ -234,17 +236,17 @@
     animation: bk-breathe 5s ease-in-out infinite;
   }
   .bk-ring {
-    position: absolute; inset: -5px; border-radius: 50%;
-    border: 1px solid rgba(255, 107, 157, .45); border-top-color: transparent; border-left-color: transparent;
-    animation: bk-spin 6s linear infinite;
+    position: absolute; inset: 0; border-radius: 50%;
+    border: 1px solid rgba(255, 107, 157, .5);
+    animation: bk-ring-echo 3.4s ease-out infinite;
   }
   @keyframes bk-breathe { 0%,100% { transform: scale(1); } 50% { transform: scale(1.06); } }
-  @keyframes bk-spin { to { transform: rotate(360deg); } }
+  @keyframes bk-ring-echo { 0% { transform: scale(1); opacity: .7; } 100% { transform: scale(1.7); opacity: 0; } }
   .bk-who { display: flex; flex-direction: column; line-height: 1.2; }
-  .bk-who b { font-size: .98rem; color: var(--ink); font-weight: 600; }
+  .bk-who b { font-size: var(--fs-lg); color: var(--ink); font-weight: 600; }
   .bk-status {
     display: inline-flex; align-items: center; gap: .35rem;
-    font-style: normal; font-size: .72rem; color: var(--ink-faint); letter-spacing: .02em;
+    font-style: normal; font-size: var(--fs-xs); color: var(--ink-faint); letter-spacing: .02em;
   }
   .bk-live {
     width: 6px; height: 6px; border-radius: 50%;
@@ -254,7 +256,7 @@
   @keyframes bk-pulse { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: .5; transform: scale(.7); } }
   .bk-badge {
     margin-left: auto;
-    font-family: var(--font-mono); font-size: .6rem;
+    font-family: var(--font-mono); font-size: var(--fs-3xs);
     text-transform: uppercase; letter-spacing: .18em; color: var(--coral);
     padding: .25rem .55rem; border-radius: var(--r-pill);
     border: 1px solid rgba(255, 107, 157, .3);
@@ -275,7 +277,7 @@
 
   .bk-bubble {
     max-width: 86%; padding: .8rem .95rem;
-    font-size: .94rem; line-height: 1.5; color: var(--ink);
+    font-size: var(--fs-base); line-height: 1.5; color: var(--ink);
     animation: bk-bubble-in 340ms var(--ease-spring) both;
   }
   .bk-bubble.blak {
@@ -318,14 +320,14 @@
     animation: bk-action-in 440ms var(--ease-spring) both;
   }
   @keyframes bk-action-in { from { opacity: 0; transform: translateY(8px) scale(.98); } to { opacity: 1; transform: none; } }
-  .bk-act-head { display: flex; align-items: center; gap: .45rem; font-size: .86rem; color: var(--ink); }
+  .bk-act-head { display: flex; align-items: center; gap: .45rem; font-size: var(--fs-md); color: var(--ink); }
   .bk-act-head b { font-weight: 600; }
   .bk-act-head svg { width: 16px; height: 16px; flex: none; color: var(--coral); }
   .bk-action.pitch .bk-act-head svg { color: #B9892F; }
   html[data-theme="dark"] .bk-action.pitch .bk-act-head svg { color: var(--gold); }
   html[data-theme="light"] .bk-action .bk-act-head svg { color: var(--coral-ink); }
   html[data-theme="light"] .bk-action.pitch .bk-act-head svg { color: var(--gold-ink); }
-  .bk-eta { margin-left: auto; font-family: var(--font-mono); font-size: .6rem; letter-spacing: .06em; color: var(--ink-faint); }
+  .bk-eta { margin-left: auto; font-family: var(--font-mono); font-size: var(--fs-3xs); letter-spacing: .06em; color: var(--ink-faint); }
 
   /* ride — a cab running its route */
   .bk-route { position: relative; height: 22px; margin-top: .55rem; }
@@ -354,7 +356,7 @@
   /* mood — quiet "handled" chips */
   .bk-dones { display: flex; flex-wrap: wrap; gap: .35rem; margin-top: .55rem; }
   .bk-dones span {
-    font-family: var(--font-mono); font-size: .58rem; letter-spacing: .03em;
+    font-family: var(--font-mono); font-size: var(--fs-3xs); letter-spacing: .03em;
     color: var(--coral); background: rgba(255, 107, 157, .12);
     border: 1px solid rgba(255, 107, 157, .22); padding: .22rem .5rem; border-radius: var(--r-pill);
     opacity: 0; transform: translateY(4px);
@@ -368,7 +370,7 @@
   /* pitch — talking points tick in, playlist equalizes */
   .bk-ticks { list-style: none; margin-top: .45rem; display: grid; gap: .34rem; }
   .bk-ticks li {
-    position: relative; padding-left: 1.4rem; font-size: .82rem; color: var(--ink-soft);
+    position: relative; padding-left: 1.4rem; font-size: var(--fs-sm); color: var(--ink-soft);
     opacity: 0; transform: translateY(4px);
   }
   .bk-ticks li::before {
@@ -394,7 +396,7 @@
   /* prompt chips — the interactive control */
   .bk-chips { display: flex; flex-wrap: wrap; gap: .45rem; margin-top: 1rem; }
   .bk-chip {
-    font-family: inherit; font-size: .82rem; font-weight: 500; color: var(--ink-soft);
+    font-family: inherit; font-size: var(--fs-sm); font-weight: 500; color: var(--ink-soft);
     padding: .5rem .85rem; border-radius: var(--r-pill);
     background: var(--surface); border: 1px solid var(--line-strong); cursor: pointer;
     transition: transform 200ms var(--ease-spring), border-color 200ms var(--ease-out),
@@ -410,7 +412,7 @@
   /* ── capability rail — the long tail, "and so much more" ── */
   .cap-rail { position: relative; z-index: 1; margin-top: 1.1rem; display: flex; flex-wrap: wrap; gap: .4rem; }
   .cap-rail span {
-    font-family: var(--font-mono); font-size: .6rem;
+    font-family: var(--font-mono); font-size: var(--fs-3xs);
     text-transform: lowercase; letter-spacing: .04em; color: var(--ink-faint);
     padding: .26rem .58rem; border-radius: var(--r-pill);
     border: 1px solid var(--line); background: var(--surface);
@@ -450,7 +452,7 @@
     var feed  = document.getElementById('bk-feed');
     var chips = [].slice.call(stage.querySelectorAll('.bk-chip'));
     if (!feed) return;
-    var reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    var reduced = window.__blkLite || (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
     var busy = false, interacted = false, autoTimer = 0, armed = false;
 
     // Astro scopes component CSS via a data-astro-cid-* attribute that only the
@@ -522,7 +524,7 @@
           var card = row.querySelector('.bk-action');
           if (card) requestAnimationFrame(function () { card.classList.add('run'); });
         }
-        if (chip) chip.classList.add('done');
+        if (chip) { chip.classList.add('done'); chip.setAttribute('aria-pressed', 'true'); }
         busy = false;
       }
 

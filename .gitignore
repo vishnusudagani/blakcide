@@ -7,3 +7,11 @@
 node_modules
 dist
 .astro
+
+# OS / editor junk
+.DS_Store
+**/.DS_Store
+
+# Claude Code local settings (machine-specific; may contain secrets)
+.claude/settings.local.json
+.claude/MIGRATION_TABLE.md

@@ -5,6 +5,7 @@
 // by default, so it never enters the sitemap.
 import Base from '../layouts/Base.astro';
 import Nav from '../components/Nav.astro';
+import Footer from '../components/Footer.astro';
 ---
 
 <Base
@@ -13,7 +14,7 @@ import Nav from '../components/Nav.astro';
   noindex={true}
 >
   <Nav />
-  <main class="nf">
+  <main class="nf" id="main" tabindex="-1">
     <div class="u-wrap nf-inner">
       <p class="nf-code" aria-hidden="true">404</p>
       <h1 class="nf-title">This page <span class="accent">wandered off.</span></h1>
@@ -30,9 +31,12 @@ import Nav from '../components/Nav.astro';
         <a href="/#faq" class="btn btn-ghost">What is Blaksyd?</a>
       </div>
 
-      <p class="nf-names" aria-hidden="true">Blak · Persona · Minit · Nexus</p>
+      <nav class="nf-names" aria-label="Explore Blaksyd">
+        <a href="/blak/">Blak</a> · <a href="/persona/">Persona</a> · <a href="/minit/">Minit</a> · <a href="/nexus/">Nexus</a>
+      </nav>
     </div>
   </main>
+  <Footer />
 </Base>
 
 <style>
@@ -65,7 +69,7 @@ import Nav from '../components/Nav.astro';
   }
   .nf-sub {
     margin-top: 1.1rem; margin-inline: auto; max-width: 44ch;
-    font-size: 1.05rem; line-height: 1.65; color: var(--ink-soft);
+    font-size: var(--fs-lg); line-height: 1.65; color: var(--ink-soft);
   }
   .nf-ctas {
     display: flex; flex-wrap: wrap; justify-content: center; gap: .8rem;
@@ -73,9 +77,12 @@ import Nav from '../components/Nav.astro';
   }
   .nf-names {
     margin-top: clamp(2.5rem, 6vh, 4rem);
-    font-family: var(--font-mono); font-size: .68rem;
+    font-family: var(--font-mono); font-size: var(--fs-2xs);
     letter-spacing: .18em; text-transform: uppercase; color: var(--ink-faint);
   }
+  .nf-names a { color: var(--ink-soft); transition: color var(--t-fast) var(--ease-out); }
+  .nf-names a:hover { color: var(--ink); }
+  html[data-theme="light"] .nf-names a:hover { color: var(--coral-ink); }
   @media (max-width: 600px) {
     .nf-ctas { width: 100%; max-width: 360px; margin-inline: auto; }
     .nf-ctas .btn { width: 100%; }

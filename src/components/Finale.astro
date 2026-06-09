@@ -24,12 +24,30 @@
       coming — it's yours to enter.
     </p>
 
-    <div class="finale-ctas" data-reveal>
-      <button type="button" class="btn btn-primary" data-open-auth data-tab="signup">
-        <span>Join Us</span>
+    <figure class="finale-founder" data-reveal>
+      <blockquote>"Most apps are built to take your time. We're building Blaksyd to make your life better — and we'd love for you to be one of the first inside."</blockquote>
+      {/* Signatures: swap each .sig-name span for <img class="sig-img" src="/assets/sig-*.svg" alt="..."> when the signature graphics are ready. */}
+      <figcaption class="finale-sigs">
+        <span class="founder-sig">
+          <span class="sig-name">Vishnu Sudagani</span>
+          <span class="sig-role">Co-founder</span>
+        </span>
+        <span class="founder-sig">
+          <span class="sig-name">Dr. Sindhuu Devarakonda</span>
+          <span class="sig-role">Co-founder</span>
+        </span>
+      </figcaption>
+    </figure>
+
+    <form class="finale-form" data-reveal data-wl novalidate>
+      <input type="email" class="finale-email" name="email" inputmode="email" autocomplete="email" placeholder="you@example.com" aria-label="Your email" required />
+      <button type="submit" class="btn btn-primary">
+        <span>Get early access</span>
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
       </button>
-    </div>
+    </form>
+    <p class="finale-reassure" data-reveal>Free · we're still building — be first when it opens.</p>
+    <p class="finale-wl-note" data-wl-note role="status" aria-live="polite" hidden></p>
 
     <div class="constellation" id="finale-constellation" data-reveal aria-hidden="true">
       <span class="con-wire" aria-hidden="true"></span>
@@ -68,13 +86,56 @@
     -webkit-background-clip: text; background-clip: text;
   }
   .finale-sub { margin-inline: auto; max-width: 54ch; }
-
-  .finale-ctas {
-    display: flex; flex-wrap: wrap; justify-content: center; gap: .9rem;
-    margin-top: 2.6rem;
+  /* founder note — a personal trust beat right before the ask (swap in a real name + photo later) */
+  .finale-founder { margin: 2.2rem auto 0; max-width: 48ch; }
+  .finale-founder blockquote {
+    margin: 0; font-family: var(--font-serif); font-style: italic;
+    font-size: var(--fs-xl); line-height: 1.5; color: var(--ink);
   }
+  .finale-sigs {
+    display: flex; flex-wrap: wrap; justify-content: center; gap: 1.3rem 2.6rem;
+    margin-top: 1.3rem;
+  }
+  .founder-sig { display: flex; flex-direction: column; gap: .2rem; }
+  /* italic-serif name now; replace with a transparent .sig-img signature graphic later */
+  .sig-name {
+    font-family: var(--font-serif); font-style: italic; font-size: 1.5rem;
+    line-height: 1; letter-spacing: -.01em; color: var(--ink);
+  }
+  .sig-img { height: 38px; width: auto; }
+  .sig-role {
+    font-family: var(--font-mono); font-size: var(--fs-3xs);
+    text-transform: uppercase; letter-spacing: .14em; color: var(--ink-faint);
+  }
+
+  .finale-form {
+    display: flex; flex-wrap: wrap; justify-content: center; gap: .7rem;
+    margin-top: 2.6rem; max-width: 480px; margin-inline: auto;
+  }
+  .finale-email {
+    flex: 1 1 220px; min-width: 0; padding: 1rem 1.1rem;
+    background: var(--surface); border: 1px solid var(--line-strong); border-radius: var(--r-pill);
+    color: var(--ink); font-size: var(--fs-lg);
+    transition: border-color var(--t-fast) var(--ease-out), background var(--t-fast) var(--ease-out), box-shadow var(--t-fast) var(--ease-out);
+  }
+  .finale-email::placeholder { color: var(--ink-ghost); }
+  .finale-email:focus { outline: none; border-color: var(--coral); background: var(--surface-strong); box-shadow: 0 0 0 3px rgba(255, 107, 157, .18); }
+  html[data-theme="light"] .finale-email:focus { border-color: var(--coral-ink); }
+  .finale-form .btn-primary { flex: 0 0 auto; }
+  .finale-reassure { margin-top: 1rem; font-size: var(--fs-sm); color: var(--ink-soft); }
+  .finale-wl-note {
+    margin: .9rem auto 0; max-width: 420px;
+    font-size: var(--fs-sm); line-height: 1.5; color: var(--ink-soft);
+    padding: .65rem .85rem; border-radius: var(--r-sm);
+    background: var(--surface); border: 1px solid var(--line);
+  }
+  .finale-wl-note.is-error { color: var(--coral-deep); border-color: rgba(244, 69, 140, .4); background: rgba(244, 69, 140, .07); }
+  .finale-wl-note.is-ok { color: var(--mint-deep); border-color: rgba(106, 211, 184, .4); background: rgba(106, 211, 184, .08); }
+  html[data-theme="light"] .finale-wl-note.is-error { color: var(--coral-ink); }
+  html[data-theme="light"] .finale-wl-note.is-ok { color: var(--mint-ink); }
   @media (max-width: 600px) {
-    .finale-ctas { width: 100%; max-width: 360px; margin-inline: auto; }
+    .finale-form { flex-direction: column; max-width: 360px; }
+    .finale-form .btn-primary { width: 100%; justify-content: center; }
   }
 
   /* ── closing constellation — the whole system in five dots ── */
@@ -121,7 +182,7 @@
 
   .cnames {
     margin-top: 1.1rem;
-    font-family: var(--font-mono); font-size: .68rem;
+    font-family: var(--font-mono); font-size: var(--fs-2xs);
     letter-spacing: .18em; text-transform: uppercase; color: var(--ink-faint);
   }
 
@@ -162,5 +223,40 @@
     requestAnimationFrame(function () { requestAnimationFrame(check); });
     window.addEventListener('scroll', check, { passive: true });
     window.addEventListener('resize', check);
+  })();
+</script>
+
+<script is:inline>
+  // Inline waitlist capture — posts the email straight to /api/waitlist (Supabase),
+  // no modal hop. Mirrors the Auth modal's validation + result states.
+  (function () {
+    var form = document.querySelector('[data-wl]');
+    if (!form) return;
+    var note = form.parentNode.querySelector('[data-wl-note]');
+    var input = form.querySelector('input[type="email"]');
+    var btn = form.querySelector('button[type="submit"]');
+    var RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    var busy = false;
+    function setNote(msg, kind) {
+      if (!note) return;
+      note.textContent = msg; note.hidden = false;
+      note.classList.remove('is-error', 'is-ok');
+      note.classList.add(kind === 'error' ? 'is-error' : 'is-ok');
+    }
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      if (busy) return;
+      var val = (input.value || '').trim();
+      if (!RE.test(val)) { setNote('Enter a valid email to continue.', 'error'); input.focus(); return; }
+      busy = true; if (btn) btn.disabled = true; setNote('One moment…', 'ok');
+      fetch('/api/waitlist', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: val }) })
+        .then(function (r) { return r.json().catch(function () { return {}; }).then(function (d) { return { ok: r.ok, d: d }; }); })
+        .then(function (r) {
+          if (r.ok && r.d && r.d.ok) { setNote("You're in — welcome to Blaksyd. We'll open your world soon.", 'ok'); form.reset(); }
+          else { setNote((r.d && r.d.error) || 'Could not save right now. Please try again.', 'error'); }
+        })
+        .catch(function () { setNote('Network error — please try again.', 'error'); })
+        .then(function () { busy = false; if (btn) btn.disabled = false; });
+    });
   })();
 </script>

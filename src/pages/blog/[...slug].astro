@@ -50,7 +50,10 @@ const schema = [
     { name: d.title, href: `/blog/${post.id}/` },
   ]}
   schema={schema}
-  updated={d.pubDate.toISOString().slice(0, 10)}
+  updated={(d.updatedDate ?? d.pubDate).toISOString().slice(0, 10)}
+  ogType="article"
+  publishedTime={d.pubDate.toISOString()}
+  modifiedTime={(d.updatedDate ?? d.pubDate).toISOString()}
 >
   <Content />
 </Page>

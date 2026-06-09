@@ -52,7 +52,7 @@ const year = 2026; // static build; stamped, not Date.now() (kept deterministic)
       <a href="/privacy/">Privacy</a>
       <a href="/terms/">Terms</a>
       <a href="mailto:ceo@blaksyd.com">Contact</a>
-      <a href="/#waitlist" data-open-auth data-tab="signup">Join the waitlist</a>
+      <a href="/#waitlist" data-open-auth data-tab="signup">Get early access</a>
     </nav>
   </div>
 
@@ -86,7 +86,7 @@ const year = 2026; // static build; stamped, not Date.now() (kept deterministic)
   html[data-theme="light"] .foot-mark {
     aspect-ratio: 758 / 329; background-image: url('/assets/blaksyd-black.webp');
   }
-  .foot-line { margin-top: .9rem; font-size: .9rem; color: var(--ink-soft); max-width: 24ch; }
+  .foot-line { margin-top: .9rem; font-size: var(--fs-md); color: var(--ink-soft); max-width: 24ch; }
   .foot-social { display: inline-flex; align-items: center; gap: .35rem; margin-top: 1rem; margin-left: -10px; }
   .foot-social a {
     display: inline-flex; align-items: center; justify-content: center;
@@ -97,13 +97,13 @@ const year = 2026; // static build; stamped, not Date.now() (kept deterministic)
   .foot-social svg { width: 18px; height: 18px; }
 
   .foot-h {
-    font-family: var(--font-mono); font-size: .66rem; text-transform: uppercase;
+    font-family: var(--font-mono); font-size: var(--fs-2xs); text-transform: uppercase;
     letter-spacing: .18em; color: var(--ink-faint); margin-bottom: .9rem;
   }
   .foot-nav { display: flex; flex-direction: column; }
   .foot-nav a {
     display: inline-flex; align-items: center; min-height: 38px;
-    font-size: .9rem; color: var(--ink-soft);
+    font-size: var(--fs-md); color: var(--ink-soft);
     transition: color var(--t-fast) var(--ease-out);
   }
   .foot-nav a:hover { color: var(--ink); }
@@ -114,7 +114,7 @@ const year = 2026; // static build; stamped, not Date.now() (kept deterministic)
     margin-top: clamp(2rem, 5vh, 3rem); padding-top: 1.4rem;
     border-top: 1px solid var(--line);
   }
-  .foot-copy { font-size: .82rem; color: var(--ink-faint); }
-  .foot-tag { font-size: .82rem; color: var(--ink-ghost); font-style: italic; }
+  .foot-copy { font-size: var(--fs-sm); color: var(--ink-faint); }
+  .foot-tag { font-size: var(--fs-sm); color: var(--ink-ghost); font-style: italic; }
   @media (max-width: 560px) { .foot-base { justify-content: center; text-align: center; } }
 </style>

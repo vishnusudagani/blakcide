@@ -33,10 +33,17 @@
     background: linear-gradient(110deg, var(--peach) 0%, var(--gold) 45%, var(--peach-deep) 95%);
     -webkit-background-clip: text; background-clip: text;
   }
+  /* Light theme (the brand default): the pale peach/gold washes out to ~1.3:1 on
+     cream. Deepen to ink tones — scoped here so it out-specifies the base rule
+     above (Astro's scope attr) and the global .s-title light fix. */
+  html[data-theme="light"] .learn-title .accent {
+    background: linear-gradient(110deg, var(--gold-ink) 0%, var(--coral-ink) 55%, var(--lavender-ink) 95%);
+    -webkit-background-clip: text; background-clip: text;
+  }
   .learn-sub { margin-inline: auto; max-width: 56ch; }
   .learn-foot {
     margin-top: clamp(2.4rem, 5vh, 3.4rem);
-    font-family: var(--font-mono); font-size: .72rem;
+    font-family: var(--font-mono); font-size: var(--fs-xs);
     text-transform: uppercase; letter-spacing: .16em; color: var(--ink-faint);
   }
 </style>

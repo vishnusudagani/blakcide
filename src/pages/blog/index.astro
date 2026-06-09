@@ -44,24 +44,29 @@ const schema = [
   breadcrumb={[{ name: 'Home', href: '/' }, { name: 'Blog', href: '/blog/' }]}
   schema={schema}
 >
-  <div class="post-list">
-    {posts.map((p) => (
-      <article class="post-row">
-        <p class="post-date">{fmt(p.data.pubDate)}</p>
-        <h2><a href={`/blog/${p.id}/`}>{p.data.title}</a></h2>
-        <p class="post-desc">{p.data.description}</p>
-        <a class="post-more" href={`/blog/${p.id}/`}>Read →</a>
-      </article>
-    ))}
-  </div>
+  {posts.length === 0 ? (
+    <p class="post-empty">No posts yet — the first notes from the build are coming soon.</p>
+  ) : (
+    <div class="post-list">
+      {posts.map((p) => (
+        <article class="post-row">
+          <p class="post-date">{fmt(p.data.pubDate)}</p>
+          <h2><a href={`/blog/${p.id}/`}>{p.data.title}</a></h2>
+          <p class="post-desc">{p.data.description}</p>
+          <a class="post-more" href={`/blog/${p.id}/`}>Read →</a>
+        </article>
+      ))}
+    </div>
+  )}
 </Page>
 
 <style>
   .post-list { display: grid; gap: 1.6rem; }
+  .post-empty { color: var(--ink-soft); font-size: var(--fs-lg); line-height: 1.6; }
   .post-row { padding-bottom: 1.6rem; border-bottom: 1px solid var(--line); }
   .post-row:last-child { border-bottom: 0; }
   .post-date {
-    font-family: var(--font-mono); font-size: .68rem; text-transform: uppercase;
+    font-family: var(--font-mono); font-size: var(--fs-2xs); text-transform: uppercase;
     letter-spacing: .14em; color: var(--ink-faint);
   }
   .post-row h2 {

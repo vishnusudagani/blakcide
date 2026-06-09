@@ -7,6 +7,7 @@
 // NOTE: not legal advice — have counsel review before relying on it. The
 // effective date and contact email below are placeholders to confirm.
 import Base from '../layouts/Base.astro';
+import Footer from '../components/Footer.astro';
 
 const effective = 'June 2, 2026';
 const contact = 'ceo@blaksyd.com';
@@ -16,7 +17,7 @@ const contact = 'ceo@blaksyd.com';
   title="Privacy Policy — Blaksyd"
   description="How Blaksyd collects, uses, and protects your data. Your world stays yours — never sold."
 >
-  <main class="legal">
+  <main class="legal" id="main" tabindex="-1">
     <header class="legal-head">
       <a href="/" class="legal-brand" aria-label="Blaksyd — home">
         <span class="bm" aria-hidden="true"></span>
@@ -184,6 +185,7 @@ const contact = 'ceo@blaksyd.com';
       Back to Blaksyd
     </a>
   </main>
+  <Footer />
 </Base>
 
 <style>
@@ -213,26 +215,26 @@ const contact = 'ceo@blaksyd.com';
   }
   .legal-meta {
     margin-top: .9rem;
-    font-family: var(--font-mono); font-size: .7rem;
+    font-family: var(--font-mono); font-size: var(--fs-2xs);
     text-transform: uppercase; letter-spacing: .14em; color: var(--ink-faint);
   }
 
   .legal-body { color: var(--ink-soft); }
   .legal-body .lede {
-    font-size: 1.12rem; line-height: 1.7; color: var(--ink);
+    font-size: var(--fs-xl); line-height: 1.7; color: var(--ink);
     padding-bottom: 1.8rem; margin-bottom: .6rem; border-bottom: 1px solid var(--line);
   }
   .legal-body .lede b { font-weight: 600; }
   .legal-body section { margin-top: 2.1rem; }
   .legal-body h2 {
     font-family: var(--font-display); font-weight: 600;
-    font-size: 1.15rem; letter-spacing: -.01em; color: var(--ink); margin-bottom: .7rem;
+    font-size: var(--fs-xl); letter-spacing: -.01em; color: var(--ink); margin-bottom: .7rem;
   }
-  .legal-body p { font-size: 1rem; line-height: 1.75; margin-bottom: .8rem; }
+  .legal-body p { font-size: var(--fs-lg); line-height: 1.75; margin-bottom: .8rem; }
   .legal-body b { color: var(--ink); font-weight: 600; }
   .legal-body ul { list-style: none; margin: .2rem 0 1rem; display: grid; gap: .55rem; }
   .legal-body li {
-    position: relative; padding-left: 1.4rem; font-size: 1rem; line-height: 1.65;
+    position: relative; padding-left: 1.4rem; font-size: var(--fs-lg); line-height: 1.65;
   }
   .legal-body li::before {
     content: ''; position: absolute; left: .15rem; top: .62em;
@@ -252,7 +254,7 @@ const contact = 'ceo@blaksyd.com';
   .legal-back {
     display: inline-flex; align-items: center; gap: .5rem;
     margin-top: clamp(3rem, 7vh, 4.5rem);
-    font-size: .95rem; font-weight: 600; color: var(--ink-soft);
+    font-size: var(--fs-base); font-weight: 600; color: var(--ink-soft);
     transition: color var(--t-fast) var(--ease-out), gap var(--t-fast) var(--ease-out);
   }
   .legal-back:hover { color: var(--ink); gap: .75rem; }

@@ -20,7 +20,10 @@
   <span class="divider" aria-hidden="true"></span>
 
   <div class="actions">
-    <button class="toggle" id="theme-toggle" type="button" aria-label="Toggle light and dark mode">
+    <button class="nav-burger" id="nav-burger" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="nav-menu">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" /></svg>
+    </button>
+    <button class="toggle" id="theme-toggle" type="button" aria-label="Toggle light and dark mode" aria-pressed="false">
       <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
         <circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" />
       </svg>
@@ -28,7 +31,17 @@
         <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
       </svg>
     </button>
-    <button type="button" class="cta" data-open-auth data-tab="signup">Join Us</button>
+    <button type="button" class="cta" data-open-auth data-tab="signup">Get early access</button>
+  </div>
+
+  <div class="nav-menu" id="nav-menu" hidden>
+    <a href="#blak">Blak</a>
+    <a href="#persona">Persona</a>
+    <a href="#minit">Minit</a>
+    <a href="#nexus">Nexus</a>
+    <span class="nav-menu-div" aria-hidden="true"></span>
+    <a href="/about/">About</a>
+    <a href="/#faq">FAQ</a>
   </div>
 </nav>
 
@@ -68,7 +81,7 @@
     background-image: url('/assets/blaksyd-black.webp');
   }
 
-  .links { display: flex; align-items: center; gap: clamp(.4rem, 1.4vw, 1.1rem); font-size: .875rem; color: var(--ink-soft); }
+  .links { display: flex; align-items: center; gap: clamp(.4rem, 1.4vw, 1.1rem); font-size: var(--fs-md); color: var(--ink-soft); }
   .links a { position: relative; padding: .35rem .2rem; transition: color var(--t-fast) var(--ease-out); }
   .links a:hover { color: var(--ink); }
   .links a::after {
@@ -99,19 +112,43 @@
   html[data-theme="light"] .icon-moon { display: block; }
 
   .cta {
-    font-size: .875rem; font-weight: 600; color: #2A0E1E; white-space: nowrap;
+    font-size: var(--fs-md); font-weight: 600; color: var(--cta-ink); white-space: nowrap;
     padding: .6rem 1.1rem; border-radius: var(--r-pill);
-    background: var(--cta-grad);
+    background: var(--cta);
     background-size: 200% 200%; background-position: 0% 50%;
-    box-shadow: 0 8px 24px rgba(255, 184, 122, 0.4);
+    box-shadow: 0 8px 24px rgba(30, 99, 216, 0.4);
     transition: background-position var(--t-slow) var(--ease-out), box-shadow var(--t-base) var(--ease-out), transform 300ms var(--ease-magnet);
   }
-  .cta:hover { background-position: 100% 50%; transform: translateY(-1px); box-shadow: 0 12px 32px rgba(255, 184, 122, 0.5); }
+  .cta:hover { background-position: 100% 50%; transform: translateY(-1px); box-shadow: 0 12px 32px rgba(30, 99, 216, 0.5); }
+
+  /* mobile menu (hamburger + dropdown) — shown only below the desktop-links breakpoint */
+  .nav-burger {
+    display: none; width: 40px; height: 40px; border-radius: 50%;
+    align-items: center; justify-content: center;
+    color: var(--ink-soft); background: var(--surface); border: 1px solid var(--line);
+    transition: background var(--t-fast) var(--ease-out), color var(--t-fast) var(--ease-out);
+  }
+  .nav-burger:hover { color: var(--ink); background: var(--surface-strong); }
+  .nav-burger svg { width: 18px; height: 18px; }
+  .nav-menu {
+    position: absolute; top: calc(100% + 10px); right: 0;
+    min-width: 200px; display: flex; flex-direction: column; gap: .15rem;
+    padding: .6rem; border-radius: var(--r-lg);
+    background: var(--glass-strong);
+    backdrop-filter: blur(16px) saturate(160%); -webkit-backdrop-filter: blur(16px) saturate(160%);
+    border: 1px solid var(--line-strong); box-shadow: 0 12px 40px rgba(0, 0, 0, .32);
+  }
+  .nav-menu[hidden] { display: none; }
+  .nav-menu a { padding: .6rem .8rem; border-radius: var(--r-md); font-size: var(--fs-md); color: var(--ink-soft); transition: background var(--t-fast) var(--ease-out), color var(--t-fast) var(--ease-out); }
+  .nav-menu a:hover { background: var(--surface); color: var(--ink); }
+  .nav-menu-div { height: 1px; background: var(--line); margin: .3rem .4rem; }
 
   @media (max-width: 820px) {
     .links, .divider { display: none; }
+    .nav-burger { display: inline-flex; }
     .nav { padding-left: 18px; gap: .6rem; }
   }
+  @media (min-width: 821px) { .nav-menu { display: none !important; } }
 </style>
 
 <style is:global>
@@ -132,9 +169,12 @@
       root.setAttribute('data-theme', next);
       var meta = document.querySelector('meta[name="theme-color"]');
       if (meta) meta.setAttribute('content', next === 'light' ? '#FAF4EC' : '#08091A');
+      var tg = document.getElementById('theme-toggle');
+      if (tg) tg.setAttribute('aria-pressed', next === 'dark' ? 'true' : 'false');
     };
 
     var btn = document.getElementById('theme-toggle');
+    if (btn) btn.setAttribute('aria-pressed', root.getAttribute('data-theme') === 'dark' ? 'true' : 'false');
     if (btn) {
       btn.addEventListener('click', function () {
         var next = root.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
@@ -179,6 +219,29 @@
       };
       onScroll();
       window.addEventListener('scroll', onScroll, { passive: true });
+    }
+
+    // mobile menu toggle (hamburger) — open/close, close on link / outside / Esc
+    var burger = document.getElementById('nav-burger');
+    var menu = document.getElementById('nav-menu');
+    if (burger && menu) {
+      burger.addEventListener('click', function (e) {
+        e.stopPropagation();
+        var willOpen = menu.hidden;
+        menu.hidden = !willOpen;
+        burger.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+      });
+      menu.addEventListener('click', function (e) {
+        if (e.target.closest('a')) { menu.hidden = true; burger.setAttribute('aria-expanded', 'false'); }
+      });
+      document.addEventListener('click', function (e) {
+        if (!menu.hidden && !menu.contains(e.target) && !burger.contains(e.target)) {
+          menu.hidden = true; burger.setAttribute('aria-expanded', 'false');
+        }
+      });
+      document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && !menu.hidden) { menu.hidden = true; burger.setAttribute('aria-expanded', 'false'); burger.focus(); }
+      });
     }
   })();
 </script>

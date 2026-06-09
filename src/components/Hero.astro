@@ -84,8 +84,13 @@ import Greeting from './Greeting.astro';
         headline column so the headline clearly leads (one focal path). */}
 
     <h1 class="title">
-      <span class="line">Your world.</span>
-      <span class="line line-2" aria-label="Built around you.">Built <span class="rotator" id="hero-rotator" aria-hidden="true"><span class="rotator-word is-active">by</span><span class="rotator-word">around</span><span class="rotator-word">for</span></span> you.</span>
+      {/* one clean, canonical name for screen readers + crawlers — the animated
+          version below is decorative (aria-hidden) so AT never reads "by around for". */}
+      <span class="sr-only">Your world. Built around you.</span>
+      <span class="title-vis" aria-hidden="true">
+        <span class="line">Your world.</span>
+        <span class="line line-2">Built <span class="rotator" id="hero-rotator"><span class="rotator-word is-active">by</span><span class="rotator-word">around</span><span class="rotator-word">for</span></span> you.</span>
+      </span>
     </h1>
 
     <p class="sub">
@@ -95,7 +100,7 @@ import Greeting from './Greeting.astro';
 
     <div class="ctas">
       <button type="button" class="btn btn-primary" data-open-auth data-tab="signup">
-        <span>Join Us</span>
+        <span>Get early access</span>
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
       </button>
       <a href="#ai" class="btn btn-ghost">
@@ -257,20 +262,20 @@ import Greeting from './Greeting.astro';
   }
   .surf-orb.warm { background: radial-gradient(circle at 38% 36%, #FFE7C4, var(--coral) 92%); }
   .surf-orb.cool { background: radial-gradient(circle at 38% 36%, #CFF3FF, var(--aqua) 92%); }
-  .surf-name { font-weight: 700; font-size: .92rem; color: var(--ink); letter-spacing: -.01em; }
+  .surf-name { font-weight: 700; font-size: var(--fs-base); color: var(--ink); letter-spacing: -.01em; }
   .surf-live {
     margin-left: auto; display: inline-flex; align-items: center; gap: .35rem;
-    font-family: var(--font-mono); font-size: .56rem; letter-spacing: .06em; text-transform: uppercase;
+    font-family: var(--font-mono); font-size: var(--fs-3xs); letter-spacing: .06em; text-transform: uppercase;
     color: var(--ink-faint);
   }
   .surf-live i { width: 6px; height: 6px; border-radius: 50%; background: var(--mint-deep); box-shadow: 0 0 7px var(--mint-deep); animation: surf-pulse 2.2s ease-in-out infinite; }
   @keyframes surf-pulse { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: .4; transform: scale(.65); } }
 
   /* Blak surface */
-  .surf-line { margin-top: .7rem; font-size: .86rem; line-height: 1.45; color: var(--ink); }
+  .surf-line { margin-top: .7rem; font-size: var(--fs-md); line-height: 1.45; color: var(--ink); }
   .surf-chip {
     display: inline-block; margin-top: .7rem;
-    font-family: var(--font-mono); font-size: .56rem; letter-spacing: .03em; text-transform: lowercase;
+    font-family: var(--font-mono); font-size: var(--fs-3xs); letter-spacing: .03em; text-transform: lowercase;
     color: var(--gold); padding: .26rem .55rem; border-radius: var(--r-pill);
     border: 1px solid rgba(255, 210, 122, .32); background: rgba(255, 210, 122, .08);
   }
@@ -283,25 +288,25 @@ import Greeting from './Greeting.astro';
     box-shadow: inset 0 1px 2px rgba(255,255,255,.5);
   }
   .surf-who { display: flex; flex-direction: column; line-height: 1.2; }
-  .surf-who b { font-size: .9rem; color: var(--ink); font-weight: 600; }
-  .surf-who i { font-style: normal; font-size: .68rem; color: var(--ink-soft); }
-  .surf-rate { margin-left: auto; font-size: .74rem; color: var(--gold); font-weight: 600; white-space: nowrap; }
+  .surf-who b { font-size: var(--fs-md); color: var(--ink); font-weight: 600; }
+  .surf-who i { font-style: normal; font-size: var(--fs-2xs); color: var(--ink-soft); }
+  .surf-rate { margin-left: auto; font-size: var(--fs-xs); color: var(--gold); font-weight: 600; white-space: nowrap; }
   html[data-theme="light"] .surf-rate { color: var(--gold-ink); }
   .surf-status {
     display: inline-flex; align-items: center; gap: .42rem; margin-top: .85rem;
-    font-size: .76rem; color: var(--ink-soft);
+    font-size: var(--fs-xs); color: var(--ink-soft);
   }
   .surf-status i { width: 7px; height: 7px; border-radius: 50%; background: var(--mint-deep); box-shadow: 0 0 8px var(--mint-deep); animation: surf-pulse 2s ease-in-out infinite; }
   .surf-go {
     display: inline-block; margin-top: .85rem; padding: .45rem .95rem;
-    border-radius: var(--r-pill); font-size: .8rem; font-weight: 600; color: #06231C;
+    border-radius: var(--r-pill); font-size: var(--fs-sm); font-weight: 600; color: #06231C;
     background: linear-gradient(135deg, var(--mint) 0%, var(--mint-deep) 70%, var(--aqua) 130%);
     box-shadow: 0 8px 22px rgba(106, 211, 184, .32);
   }
 
   /* Nexus surface */
-  .surf-room { margin-top: .7rem; font-size: .92rem; font-weight: 600; color: var(--ink); }
-  .surf-sub { display: block; margin-top: .25rem; font-size: .74rem; color: var(--ink-faint); }
+  .surf-room { margin-top: .7rem; font-size: var(--fs-base); font-weight: 600; color: var(--ink); }
+  .surf-sub { display: block; margin-top: .25rem; font-size: var(--fs-xs); color: var(--ink-faint); }
 
   /* memory thread — a faint living strand between Blak and Nexus (the Learning engine) */
   .thread {
@@ -383,6 +388,9 @@ import Greeting from './Greeting.astro';
   .title .line { display: block; opacity: 0; transform: translateY(36px); animation: rise 1100ms var(--ease-out) 600ms forwards; }
   .title .line:nth-child(2) { animation-delay: 780ms; }
   .title .line-2 { white-space: nowrap; }
+  /* layout-neutral wrapper: keeps the visible headline aria-hidden without changing
+     how the two lines lay out (still behave as direct children of .title). */
+  .title-vis { display: contents; }
 
   .rotator {
     display: inline-grid; grid-template-columns: minmax(0, 1fr);
@@ -417,38 +425,38 @@ import Greeting from './Greeting.astro';
     font-size: var(--t-lead);
     color: var(--ink-soft);
     line-height: 1.6;
-    opacity: 0; animation: rise 1000ms var(--ease-out) 1050ms forwards;
+    opacity: 0; animation: rise 1000ms var(--ease-out) 700ms forwards;
   }
 
   .ctas {
     display: flex; flex-wrap: wrap; justify-content: center; gap: .9rem;
     margin-top: 2.4rem;
-    opacity: 0; animation: rise 1000ms var(--ease-out) 1200ms forwards;
+    opacity: 0; animation: rise 1000ms var(--ease-out) 850ms forwards;
   }
   /* honest reality anchor — small + faint, fades in last (it's pre-launch context, not a focal element) */
   .hero-microcopy {
-    margin-top: 1.1rem; font-size: .82rem; color: var(--ink-faint);
-    opacity: 0; animation: rise 1000ms var(--ease-out) 1350ms forwards;
+    margin-top: 1.1rem; font-size: var(--fs-sm); color: var(--ink-soft);
+    opacity: 0; animation: rise 1000ms var(--ease-out) 1000ms forwards;
   }
 
   .btn {
     display: inline-flex; align-items: center; gap: .6rem;
-    font-weight: 600; font-size: 1rem;
+    font-weight: 600; font-size: var(--fs-lg);
     padding: 1rem 1.6rem; border-radius: var(--r-pill);
     transition: transform 300ms var(--ease-magnet), box-shadow var(--t-base) var(--ease-out), background-position var(--t-slow) var(--ease-out), background var(--t-fast) var(--ease-out), border-color var(--t-fast) var(--ease-out);
   }
   .btn svg { width: 1.1em; height: 1.1em; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; transition: transform var(--t-base) var(--ease-out); }
 
   .btn-primary {
-    color: #2A0E1E;
-    background: var(--cta-grad);
+    color: var(--cta-ink);
+    background: var(--cta);
     background-size: 200% 200%; background-position: 0% 50%;
     box-shadow: var(--shadow-cta);
   }
-  .btn-primary:hover { background-position: 100% 50%; transform: translateY(-2px); box-shadow: 0 22px 60px rgba(255,184,122,.55); }
+  .btn-primary:hover { background-position: 100% 50%; transform: translateY(-2px); box-shadow: 0 22px 60px rgba(30,99,216,.5); }
   .btn-primary:hover svg { transform: translateX(5px); }
 
-  .btn-ghost { color: var(--ink); background: var(--surface); border: 1px solid var(--line-strong); }
+  .btn-ghost { color: var(--ink-soft); background: var(--surface); border: 1px solid var(--line); }
   .btn-ghost svg { stroke-width: 1.7; }
   .btn-ghost:hover { background: var(--surface-strong); border-color: var(--ink-faint); transform: translateY(-2px); }
   .btn-ghost:hover svg { transform: translateY(3px); }
@@ -460,13 +468,13 @@ import Greeting from './Greeting.astro';
     display: flex; flex-wrap: wrap; justify-content: center; align-items: center;
     gap: clamp(.8rem, 2.6vw, 2rem);
     padding: .5rem clamp(1.25rem, 5vw, 4rem) clamp(1.4rem, 3.6vh, 2.4rem);
-    opacity: 0; animation: rise 1000ms var(--ease-out) 1500ms forwards;
+    opacity: 0; animation: rise 1000ms var(--ease-out) 1100ms forwards;
   }
   .trust-item { display: inline-flex; align-items: center; gap: .6rem; }
   .trust-item svg { width: 19px; height: 19px; flex: none; fill: none; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
   .trust-txt { display: flex; flex-direction: column; line-height: 1.18; text-align: left; }
-  .trust-txt b { font-size: .85rem; font-weight: 600; color: var(--ink); letter-spacing: -.01em; }
-  .trust-txt i { font-style: normal; font-size: .7rem; color: var(--ink-faint); }
+  .trust-txt b { font-size: var(--fs-md); font-weight: 600; color: var(--ink); letter-spacing: -.01em; }
+  .trust-txt i { font-style: normal; font-size: var(--fs-2xs); color: var(--ink-faint); }
   .ti-1 svg { stroke: var(--gold); }
   .ti-2 svg { stroke: var(--coral); }
   .ti-3 svg { stroke: var(--mint-deep); }
@@ -485,7 +493,7 @@ import Greeting from './Greeting.astro';
     .slot-nexus, .thread { display: none; }
     .slot-blak  { width: min(264px, 30vw); top: 11%; left: 1.5%; }
     .slot-minit { width: min(240px, 28vw); top: 30%; right: 1.5%; }
-    .surf-line { font-size: .82rem; }
+    .surf-line { font-size: var(--fs-sm); }
   }
   /* below tablet: drop the world cards, keep a clean headline + trust */
   @media (max-width: 760px) {
@@ -500,6 +508,12 @@ import Greeting from './Greeting.astro';
     .title .line-2 { white-space: normal; }
     .trust-item { flex: 0 0 calc(50% - .9rem); justify-content: center; }
   }
+
+  /* pause ambient hero motion while the hero is scrolled out of view (GPU saver) */
+  .hero.is-paused .orb,
+  .hero.is-paused .mote,
+  .hero.is-paused .surface,
+  .hero.is-paused .thread-mote { animation-play-state: paused; }
 
   @media (prefers-reduced-motion: reduce) {
     .orb, .mote, .surface, .thread-mote { animation: none !important; }
@@ -545,7 +559,8 @@ import Greeting from './Greeting.astro';
         i = 0;
         words[0].classList.add('is-active');
         applyWidth();
-        setInterval(function () {
+        var steps = 0;
+        var iv = setInterval(function () {
           var cur = words[i];
           var nextI = (i + 1) % words.length;
           cur.classList.remove('is-active');
@@ -556,6 +571,9 @@ import Greeting from './Greeting.astro';
           (function (leaving) {
             setTimeout(function () { leaving.classList.remove('is-leaving'); }, 480);
           })(cur);
+          // After one full pass, rest on "around" — the canonical "Built around you."
+          // (No longer loops forever; the headline settles instead of perpetually moving.)
+          if (++steps >= 4 && i === 1) clearInterval(iv);
         }, 2400);
       }
 
@@ -579,6 +597,13 @@ import Greeting from './Greeting.astro';
   (function () {
     var hero = document.querySelector('.hero');
     if (!hero) return;
+    // Pause the continuous ambient animations (orbs, motes, floating surfaces) once
+    // the hero leaves the viewport — they're invisible then, so this just saves GPU.
+    if ('IntersectionObserver' in window) {
+      new IntersectionObserver(function (es) {
+        hero.classList.toggle('is-paused', !es[0].isIntersecting);
+      }).observe(hero);
+    }
     var reduce = window.__blkLite || (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
     var wide = window.matchMedia('(min-width: 760px)').matches;
 

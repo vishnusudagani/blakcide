@@ -11,7 +11,9 @@
 .s-section {
   position: relative; z-index: 1;
   scroll-margin-top: 110px;
-  padding-block: clamp(3.5rem, 9vh, 6rem);
+  /* trimmed from clamp(3.5rem,9vh,6rem) — ~18% less section air so the long page
+     scrolls shorter without feeling cramped. */
+  padding-block: clamp(3rem, 7vh, 5rem);
 }
 .s-two {
   display: grid; grid-template-columns: 1fr 1.05fr;
@@ -59,7 +61,7 @@ html[data-theme="light"] .act-human .act-aura { background: radial-gradient(clos
 /* ---- kicker (mono eyebrow with a glowing orb) ---- */
 .s-kicker {
   display: inline-flex; align-items: center; gap: .55rem;
-  font-family: var(--font-mono); font-size: .72rem;
+  font-family: var(--font-mono); font-size: var(--fs-xs);
   text-transform: uppercase; letter-spacing: .2em;
   margin-bottom: 1.2rem; color: var(--coral);
 }
@@ -119,7 +121,7 @@ html[data-theme="light"] .s-title .accent.cool {
 .s-points { list-style: none; margin-top: 1.6rem; display: grid; gap: .85rem; }
 /* hanging dot + flowing "label — description" so two-word labels never break into
    an awkward narrow column when the row wraps on small screens. */
-.s-points li { position: relative; padding-left: 1.55rem; font-size: 1rem; line-height: 1.5; color: var(--ink-soft); }
+.s-points li { position: relative; padding-left: 1.55rem; font-size: var(--fs-lg); line-height: 1.5; color: var(--ink-soft); }
 .s-points b { color: var(--ink); font-weight: 600; }
 .pt-dot { width: 9px; height: 9px; border-radius: 50%; flex: none; }
 .s-points .pt-dot { position: absolute; left: 1px; top: .5em; }
@@ -132,7 +134,7 @@ html[data-theme="light"] .s-title .accent.cool {
 /* ---- trust line ---- */
 .s-trust {
   display: inline-flex; align-items: center; gap: .55rem;
-  margin-top: 1.9rem; font-size: .9rem; color: var(--ink-faint);
+  margin-top: 1.9rem; font-size: var(--fs-md); color: var(--ink-faint);
 }
 .s-trust svg {
   width: 16px; height: 16px; flex: none;
@@ -185,10 +187,10 @@ html[data-theme="light"] .s-title .accent.cool {
   padding: .2rem .3rem 1rem; border-bottom: 1px solid var(--line);
 }
 .s-card-head .who { display: flex; flex-direction: column; line-height: 1.2; }
-.s-card-head b { font-size: .98rem; color: var(--ink); font-weight: 600; }
+.s-card-head b { font-size: var(--fs-lg); color: var(--ink); font-weight: 600; }
 .s-live {
   display: inline-flex; align-items: center; gap: .35rem;
-  font-style: normal; font-size: .72rem; color: var(--ink-faint);
+  font-style: normal; font-size: var(--fs-xs); color: var(--ink-faint);
 }
 .s-live-dot {
   width: 6px; height: 6px; border-radius: 50%;
@@ -198,8 +200,8 @@ html[data-theme="light"] .s-title .accent.cool {
 @keyframes s-pulse { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: .5; transform: scale(.7); } }
 .s-badge {
   margin-left: auto;
-  font-family: var(--font-mono); font-size: .6rem;
-  text-transform: uppercase; letter-spacing: .18em; color: var(--ink-faint);
+  font-family: var(--font-mono); font-size: var(--fs-3xs);
+  text-transform: uppercase; letter-spacing: .16em; color: var(--ink-faint);
   padding: .25rem .5rem; border-radius: var(--r-pill);
   border: 1px solid var(--line-strong);
 }
@@ -229,7 +231,7 @@ html[data-theme="light"] .s-title .accent.cool {
    ===================================================================== */
 .btn {
   display: inline-flex; align-items: center; gap: .6rem;
-  font-weight: 600; font-size: 1rem;
+  font-weight: 600; font-size: var(--fs-lg);
   padding: 1rem 1.6rem; border-radius: var(--r-pill);
   transition: transform 300ms var(--ease-magnet), box-shadow var(--t-base) var(--ease-out),
               background-position var(--t-slow) var(--ease-out), background var(--t-fast) var(--ease-out),
@@ -240,14 +242,12 @@ html[data-theme="light"] .s-title .accent.cool {
   stroke-linecap: round; stroke-linejoin: round; transition: transform var(--t-base) var(--ease-out);
 }
 .btn-primary {
-  /* dark label on the bright gradient — white can't clear AA on a *bright*
-     gradient without dimming it; dark text keeps the gradient vivid and passes
-     (~6.6:1 at the darkest stop). Same dark-on-gradient pattern as Minit's CTA. */
-  color: #2A0E1E; background: var(--cta-grad);
+  /* white label on the teal→blue trust gradient — both stops clear ~5:1 with white. */
+  color: var(--cta-ink); background: var(--cta);
   background-size: 200% 200%; background-position: 0% 50%;
   box-shadow: var(--shadow-cta);
 }
-.btn-primary:hover { background-position: 100% 50%; transform: translateY(-2px); box-shadow: 0 22px 60px rgba(255, 184, 122, .55); }
+.btn-primary:hover { background-position: 100% 50%; transform: translateY(-2px); box-shadow: 0 22px 60px rgba(30, 99, 216, .5); }
 .btn-primary:hover svg { transform: translateX(5px); }
 .btn-ghost { color: var(--ink); background: var(--surface); border: 1px solid var(--line-strong); }
 .btn-ghost:hover { background: var(--surface-strong); border-color: var(--ink-faint); transform: translateY(-2px); }
@@ -264,21 +264,21 @@ html[data-theme="light"] .s-title .accent.cool {
 .prose { color: var(--ink-soft); margin-top: clamp(2rem, 5vh, 3rem); }
 .prose > section { margin-top: 2.4rem; }
 .prose h2 { font-family: var(--font-display); font-weight: 600; font-size: var(--t-h3); line-height: 1.1; letter-spacing: -.02em; color: var(--ink); margin-bottom: .8rem; }
-.prose h3 { font-family: var(--font-display); font-weight: 600; font-size: 1.1rem; letter-spacing: -.01em; color: var(--ink); margin: 1.4rem 0 .5rem; }
-.prose p { font-size: 1.05rem; line-height: 1.75; margin-bottom: .9rem; max-width: 68ch; }
+.prose h3 { font-family: var(--font-display); font-weight: 600; font-size: var(--fs-xl); letter-spacing: -.01em; color: var(--ink); margin: 1.4rem 0 .5rem; }
+.prose p { font-size: var(--fs-lg); line-height: 1.75; margin-bottom: .9rem; max-width: 68ch; }
 .prose b, .prose strong { color: var(--ink); font-weight: 600; }
 .prose em { font-style: italic; }
 .prose ul, .prose ol { margin: .4rem 0 1.2rem; display: grid; gap: .6rem; padding-left: 0; }
 .prose ul { list-style: none; }
 .prose ol { list-style: none; counter-reset: prose; }
-.prose li { position: relative; padding-left: 1.5rem; font-size: 1.03rem; line-height: 1.65; max-width: 66ch; }
+.prose li { position: relative; padding-left: 1.5rem; font-size: var(--fs-lg); line-height: 1.65; max-width: 66ch; }
 .prose ul li::before { content: ''; position: absolute; left: .15rem; top: .62em; width: 7px; height: 7px; border-radius: 50%; background: var(--accent-grad); }
 .prose ol li { counter-increment: prose; }
-.prose ol li::before { content: counter(prose); position: absolute; left: 0; top: 0; font-family: var(--font-mono); font-size: .8rem; color: var(--coral); font-weight: 700; }
+.prose ol li::before { content: counter(prose); position: absolute; left: 0; top: 0; font-family: var(--font-mono); font-size: var(--fs-sm); color: var(--coral); font-weight: 700; }
 .prose a { color: var(--coral); text-decoration: underline; text-underline-offset: 2px; }
 .prose a:hover { color: var(--coral-deep); }
 html[data-theme="light"] .prose a { color: var(--coral-ink); }
-.prose blockquote { margin: 1.5rem 0; padding: 1rem 1.4rem; border-left: 3px solid var(--coral); background: var(--surface); border-radius: var(--r-sm); font-family: var(--font-serif); font-style: italic; font-size: 1.25rem; line-height: 1.45; color: var(--ink); }
+.prose blockquote { margin: 1.5rem 0; padding: 1rem 1.4rem; border-left: 3px solid var(--coral); background: var(--surface); border-radius: var(--r-sm); font-family: var(--font-serif); font-style: italic; font-size: var(--fs-2xl); line-height: 1.45; color: var(--ink); }
 html[data-theme="light"] .prose blockquote { border-left-color: var(--coral-ink); }
 .prose blockquote p { font-size: inherit; max-width: none; margin: 0; }
 .prose .callout { margin: 1.2rem 0; padding: 1rem 1.2rem; border-radius: var(--r-md); background: var(--surface-strong); border: 1px solid var(--line-strong); color: var(--ink); }

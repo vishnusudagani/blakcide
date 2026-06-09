@@ -5,14 +5,22 @@
       "name": "Netlify Dev",
       "runtimeExecutable": "netlify",
       "runtimeArgs": ["dev"],
-      "port": 8888
+      "port": 8888,
+      "autoPort": false
     },
     {
       "name": "Static Preview",
       "runtimeExecutable": "sh",
-      "runtimeArgs": ["-c", "exec python3 -m http.server \"$PORT\""],
+      "runtimeArgs": ["-c", "cd /tmp 2>/dev/null; cd /Users/vsudagani/Desktop/\\#business/T2M/T2MSite/site && exec python3 -m http.server \"$PORT\""],
       "port": 8901,
       "autoPort": true
+    },
+    {
+      "name": "Blaksyd Dev",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": ["-c", "cd /Users/vsudagani/Desktop/Business/T2M/T2M_Tech/T2M_Site/site && exec npm run dev -- --port \"$PORT\""],
+      "port": 4321,
+      "autoPort": false
     }
   ]
 }

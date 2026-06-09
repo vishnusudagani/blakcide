@@ -42,20 +42,23 @@
       </label>
 
       <button type="submit" class="btn btn-primary auth-submit" data-auth-submit>
-        <span data-auth-cta>Join Us</span>
+        <span data-auth-cta>Get early access</span>
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
       </button>
 
       <p class="auth-note" data-auth-note role="status" aria-live="polite" hidden></p>
     </form>
 
-    <p class="auth-switch">
+    {/* Pre-launch there are no real accounts yet — only the waitlist — so the
+        signup/login switch is hidden to keep one honest action. The login flow
+        still works underneath; remove `hidden` at launch to restore the toggle. */}
+    <p class="auth-switch" hidden>
       <span data-auth-switch-text>Already have a world?</span>
       <button type="button" class="auth-switch-btn" data-auth-switch>Log in</button>
     </p>
 
     <p class="auth-fine">
-      By continuing you agree to our <a href="/terms">Terms</a> &amp; <a href="/privacy">Privacy</a>.
+      By continuing you agree to our <a href="/terms/">Terms</a> &amp; <a href="/privacy/">Privacy</a>.
     </p>
   </div>
 </div>
@@ -185,7 +188,7 @@
     border: 1px solid var(--line-strong);
     border-radius: var(--r-md);
     color: var(--ink);
-    font-size: 1rem;
+    font-size: var(--fs-lg);
     transition:
       border-color var(--t-fast) var(--ease-out),
       background var(--t-fast) var(--ease-out),
@@ -207,7 +210,7 @@
 
   .auth-note {
     margin: 0;
-    font-size: 0.85rem;
+    font-size: var(--fs-md);
     line-height: 1.5;
     color: var(--ink-soft);
     padding: 0.65rem 0.85rem;
@@ -228,7 +231,7 @@
 
   .auth-switch {
     margin-top: 1.3rem;
-    font-size: 0.9rem;
+    font-size: var(--fs-md);
     color: var(--ink-soft);
   }
   .auth-switch-btn {
@@ -250,7 +253,7 @@
 
   .auth-fine {
     margin-top: 1.1rem;
-    font-size: 0.72rem;
+    font-size: var(--fs-xs);
     line-height: 1.5;
     color: var(--ink-faint);
   }
@@ -291,7 +294,7 @@
       signup: {
         title: 'Step into your world',
         sub: 'Built around you. Join in seconds.',
-        cta: 'Join Us',
+        cta: 'Get early access',
         switchText: 'Already have a world?',
         switchBtn: 'Log in',
         ok: "You're in — welcome to Blaksyd. We'll open your world soon."

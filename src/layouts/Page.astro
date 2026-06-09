@@ -27,11 +27,15 @@ interface Props {
   breadcrumb: Crumb[];       // e.g. [{name:'Home',href:'/'},{name:'Blak',href:'/blak/'}]
   schema?: Record<string, unknown>[];
   updated?: string;          // ISO date shown in the meta line
+  ogType?: string;           // 'article' for blog posts
+  publishedTime?: string;    // ISO → article:published_time
+  modifiedTime?: string;     // ISO → article:modified_time
 }
 
 const {
   title, description, image, kicker, kickerClass = '', heading, accent,
   accentCool = false, lede, heroImage, heroAlt, breadcrumb, schema = [], updated,
+  ogType = 'website', publishedTime, modifiedTime,
 } = Astro.props;
 
 // BreadcrumbList JSON-LD — absolute item URLs (the SERP shows the trail, and AI
@@ -48,13 +52,13 @@ const breadcrumbList = {
 };
 ---
 
-<Base title={title} description={description} image={image} schema={[breadcrumbList, ...schema]}>
+<Base title={title} description={description} image={image} schema={[breadcrumbList, ...schema]} ogType={ogType} publishedTime={publishedTime} modifiedTime={modifiedTime}>
   <header class="pg-top u-wrap">
     <a href="/" class="pg-brand" aria-label="Blaksyd — home"><span class="pg-mark" aria-hidden="true"></span></a>
-    <button type="button" class="pg-cta" data-open-auth data-tab="signup">Join Us</button>
+    <button type="button" class="pg-cta" data-open-auth data-tab="signup">Get early access</button>
   </header>
 
-  <main class="pg">
+  <main class="pg" id="main" tabindex="-1">
     {/* Visible breadcrumb — mirrors the JSON-LD, helps users and crawlers place the page */}
     <nav class="pg-crumbs" aria-label="Breadcrumb">
       <ol>
@@ -92,7 +96,7 @@ const breadcrumbList = {
       <h2 class="pg-cta-title">Step into a world <span class="accent">that's yours alone.</span></h2>
       <div class="pg-cta-row">
         <button type="button" class="btn btn-primary" data-open-auth data-tab="signup">
-          <span>Join the waitlist</span>
+          <span>Get early access</span>
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
         </button>
         <a href="/#faq" class="btn btn-ghost">What is Blaksyd?</a>
@@ -117,10 +121,10 @@ const breadcrumbList = {
   }
   html[data-theme="light"] .pg-mark { aspect-ratio: 758 / 329; background-image: url('/assets/blaksyd-black.webp'); }
   .pg-cta {
-    font-size: .875rem; font-weight: 600; color: #2A0E1E; white-space: nowrap;
+    font-size: var(--fs-md); font-weight: 600; color: var(--cta-ink); white-space: nowrap;
     padding: .55rem 1.05rem; border-radius: var(--r-pill);
-    background: var(--cta-grad); background-size: 200% 200%; background-position: 0% 50%;
-    box-shadow: 0 8px 24px rgba(255, 184, 122, .4);
+    background: var(--cta); background-size: 200% 200%; background-position: 0% 50%;
+    box-shadow: 0 8px 24px rgba(30, 99, 216, .4);
     transition: background-position var(--t-slow) var(--ease-out), transform 300ms var(--ease-magnet);
   }
   .pg-cta:hover { background-position: 100% 50%; transform: translateY(-1px); }
@@ -134,7 +138,7 @@ const breadcrumbList = {
   .pg-crumbs ol { display: flex; flex-wrap: wrap; align-items: center; gap: .1rem; list-style: none; }
   .pg-crumbs li { display: inline-flex; align-items: center; }
   .pg-crumbs {
-    font-family: var(--font-mono); font-size: .68rem; text-transform: uppercase; letter-spacing: .12em;
+    font-family: var(--font-mono); font-size: var(--fs-2xs); text-transform: uppercase; letter-spacing: .12em;
     color: var(--ink-faint); margin-bottom: clamp(1.6rem, 4vh, 2.4rem);
   }
   .pg-crumbs a { color: var(--ink-soft); transition: color var(--t-fast) var(--ease-out); }
@@ -170,7 +174,7 @@ const breadcrumbList = {
     font-size: var(--t-lead); line-height: 1.6; color: var(--ink-soft);
   }
   .pg-meta {
-    margin-top: 1rem; font-family: var(--font-mono); font-size: .68rem;
+    margin-top: 1rem; font-family: var(--font-mono); font-size: var(--fs-2xs);
     text-transform: uppercase; letter-spacing: .14em; color: var(--ink-faint);
   }
 

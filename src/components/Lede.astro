@@ -13,10 +13,10 @@
     <p class="lede-kicker" id="lede-q" data-reveal><span class="lede-orb" aria-hidden="true"></span>What is Blaksyd?</p>
     <p class="lede-def" data-reveal>
       <b>Blaksyd is a Human&nbsp;+&nbsp;AI life platform</b> built around you —
-      your proactive AI friend <span class="hl hl-coral">Blak</span>, your digital
-      self <span class="hl hl-lav">Persona</span>, real human listeners on
-      <span class="hl hl-mint">Minit</span>, and your people on
-      <span class="hl hl-aqua">Nexus</span>. Four pillars, one world, always
+      your proactive AI friend <a class="hl hl-coral" href="#blak">Blak</a>, your digital
+      self <a class="hl hl-lav" href="#persona">Persona</a>, real human listeners on
+      <a class="hl hl-mint" href="#minit">Minit</a>, and your people on
+      <a class="hl hl-aqua" href="#nexus">Nexus</a>. Four pillars, one world, always
       learning you.
     </p>
   </div>
@@ -32,7 +32,7 @@
 
   .lede-kicker {
     display: inline-flex; align-items: center; gap: .55rem;
-    font-family: var(--font-mono); font-size: .72rem; letter-spacing: .16em;
+    font-family: var(--font-mono); font-size: var(--fs-xs); letter-spacing: .16em;
     text-transform: uppercase; color: var(--ink-soft);
     margin-bottom: 1.5rem;
   }
@@ -52,6 +52,10 @@
   /* pillar names carry their pillar colour — show-don't-tell of the four-part
      structure. Light theme swaps to the AA-safe -ink variants. */
   .hl { font-weight: 600; }
+  /* the four pillar names double as jump-links to their sections — identical look,
+     now a scannable index. A quiet underline only on hover keeps the prose clean. */
+  a.hl { cursor: pointer; transition: opacity var(--t-fast) var(--ease-out); }
+  a.hl:hover { text-decoration: underline; text-underline-offset: 3px; }
   .hl-coral { color: var(--coral); }
   .hl-lav   { color: var(--lavender); }
   .hl-mint  { color: var(--mint); }

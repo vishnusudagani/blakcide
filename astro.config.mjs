@@ -16,6 +16,10 @@ export default defineConfig({
   // Base.astro, so it must be the destination domain — never the one redirecting away.
   site: 'https://blaksyd.com',
 
+  // Output + canonicals + sitemap already use directory URLs (trailing slash);
+  // make that the enforced policy so /blak and /blak/ don't both resolve.
+  trailingSlash: 'always',
+
   // @astrojs/sitemap emits sitemap-index.xml + sitemap-0.xml into dist/ at build,
   // covering the Astro routes only (/, /privacy/, /terms/) — exactly the public
   // marketing pages we want indexed. The copied sub-apps (app/, team-os/,
