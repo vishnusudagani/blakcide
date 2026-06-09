@@ -15,6 +15,7 @@ import Finale from '../components/Finale.astro';
 import Footer from '../components/Footer.astro';
 import Microinteractions from '../components/Microinteractions.astro';
 import TalkToBlak from '../components/TalkToBlak.astro';
+import MobileCta from '../components/MobileCta.astro';
 
 // The homepage owns the brand line — the approved tagline ships as the <title>.
 const title = 'Blaksyd — Human + AI, revolving around you.';
@@ -169,4 +170,6 @@ const pageSchema = [
   <Footer />
   {/* desktop-only pointer micro-interactions (card tilt + magnetic CTA) */}
   <Microinteractions />
+  {/* persistent mobile "Get early access" bar, revealed past the hero */}
+  <MobileCta />
 </Base>

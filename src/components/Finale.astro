@@ -231,12 +231,11 @@
   // Inline waitlist capture — posts the email straight to /api/waitlist (Supabase),
   // no modal hop. Mirrors the Auth modal's validation + result states.
   (function () {
-    var form = document.querySelector('[data-wl]');
-    if (!form) return;
+    var RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    [].forEach.call(document.querySelectorAll('[data-wl]'), function (form) {
     var note = form.parentNode.querySelector('[data-wl-note]');
     var input = form.querySelector('input[type="email"]');
     var btn = form.querySelector('button[type="submit"]');
-    var RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     var busy = false;
     function setNote(msg, kind) {
       if (!note) return;
@@ -258,6 +257,7 @@
         })
         .catch(function () { setNote('Network error — please try again.', 'error'); })
         .then(function () { busy = false; if (btn) btn.disabled = false; });
+    });
     });
   })();
 </script>

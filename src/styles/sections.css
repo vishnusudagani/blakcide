@@ -286,3 +286,10 @@ html[data-theme="light"] .prose blockquote { border-left-color: var(--coral-ink)
 .prose img { border-radius: var(--r-md); margin: 1rem 0; }
 .prose hr { border: 0; border-top: 1px solid var(--line); margin: 2rem 0; }
 .prose code { font-family: var(--font-mono); font-size: .9em; background: var(--surface-strong); padding: .1rem .35rem; border-radius: 6px; }
+
+/* Comfortable ≥44px tap targets for the interactive demo chips/buttons on touch screens */
+@media (max-width: 760px) {
+  .bk-chip, .mn-mode, .nx-tribe, .pp-self, .tb-chip, .mn-go-btn, .nx-join {
+    min-height: 44px; display: inline-flex; align-items: center; justify-content: center;
+  }
+}

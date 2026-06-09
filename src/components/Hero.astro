@@ -77,7 +77,7 @@ import Greeting from './Greeting.astro';
     <Greeting />
     <p class="eyebrow">
       <span class="eyebrow-dot"></span>
-      a new kind of life platform
+      Human + AI · a new kind of life platform
     </p>
 
     {/* in-hero wordmark removed — the nav already carries it. Declutters the
@@ -98,16 +98,17 @@ import Greeting from './Greeting.astro';
       A world that's yours, and only yours.
     </p>
 
-    <div class="ctas">
-      <button type="button" class="btn btn-primary" data-open-auth data-tab="signup">
+    <form class="hero-form" data-wl novalidate>
+      <input type="email" class="hero-email" name="email" inputmode="email" autocomplete="email" placeholder="Enter your email" aria-label="Your email" required />
+      <button type="submit" class="btn btn-primary">
         <span>Get early access</span>
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
       </button>
-      <a href="#ai" class="btn btn-ghost">
-        <span>Explore the world</span>
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M6 13l6 6 6-6" /></svg>
-      </a>
-    </div>
+    </form>
+    <p class="hero-wl-note" data-wl-note role="status" aria-live="polite" hidden></p>
+    <a href="#ai" class="hero-explore">Explore the world
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M6 13l6 6 6-6" /></svg>
+    </a>
     <p class="hero-microcopy">Free early access · we're still building — be first when it opens.</p>
   </div>
 
@@ -433,10 +434,44 @@ import Greeting from './Greeting.astro';
     opacity: 0; animation: rise 1000ms var(--ease-out) 700ms forwards;
   }
 
-  .ctas {
-    display: flex; flex-wrap: wrap; justify-content: center; gap: .9rem;
-    margin-top: 2.4rem;
+  .hero-form {
+    display: flex; flex-wrap: wrap; justify-content: center; gap: .7rem;
+    margin-top: 2.4rem; width: 100%; max-width: 480px; margin-inline: auto;
     opacity: 0; animation: rise 1000ms var(--ease-out) 850ms forwards;
+  }
+  .hero-email {
+    flex: 1 1 220px; min-width: 0; padding: 1rem 1.2rem;
+    background: var(--surface); border: 1px solid var(--line-strong); border-radius: var(--r-pill);
+    color: var(--ink); font-size: var(--fs-lg);
+    transition: border-color var(--t-fast) var(--ease-out), background var(--t-fast) var(--ease-out), box-shadow var(--t-fast) var(--ease-out);
+  }
+  .hero-email::placeholder { color: var(--ink-faint); }
+  .hero-email:focus { outline: none; border-color: var(--aqua); background: var(--surface-strong); box-shadow: 0 0 0 3px rgba(30, 99, 216, .18); }
+  .hero-form .btn-primary { flex: 0 0 auto; }
+  .hero-wl-note {
+    margin: .9rem auto 0; max-width: 420px;
+    font-size: var(--fs-sm); line-height: 1.5; color: var(--ink-soft);
+    padding: .6rem .85rem; border-radius: var(--r-sm);
+    background: var(--surface); border: 1px solid var(--line);
+  }
+  .hero-wl-note.is-error { color: var(--coral-deep); border-color: rgba(244, 69, 140, .4); background: rgba(244, 69, 140, .07); }
+  .hero-wl-note.is-ok { color: var(--mint-deep); border-color: rgba(106, 211, 184, .4); background: rgba(106, 211, 184, .08); }
+  html[data-theme="light"] .hero-wl-note.is-error { color: var(--coral-ink); }
+  html[data-theme="light"] .hero-wl-note.is-ok { color: var(--mint-ink); }
+  .hero-explore {
+    display: inline-flex; align-items: center; gap: .4rem; margin-top: 1.25rem;
+    font-size: var(--fs-md); font-weight: 500; color: var(--ink-soft);
+    opacity: 0; animation: rise 1000ms var(--ease-out) 1000ms forwards;
+    transition: color var(--t-fast) var(--ease-out), gap var(--t-fast) var(--ease-out);
+  }
+  .hero-explore:hover { color: var(--ink); gap: .65rem; }
+  .hero-explore svg { width: 1.05em; height: 1.05em; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  @media (max-width: 600px) {
+    .hero-form { flex-direction: column; max-width: 340px; }
+    /* in the stacked (column) form, kill the 220px flex-basis so the input keeps
+       its natural height instead of becoming a 220px-tall pill */
+    .hero-email { flex: 0 0 auto; width: 100%; }
+    .hero-form .btn-primary { width: 100%; justify-content: center; }
   }
   /* honest reality anchor — small + faint, fades in last (it's pre-launch context, not a focal element) */
   .hero-microcopy {

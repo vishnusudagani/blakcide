@@ -1,0 +1,45 @@
+---
+// Sticky mobile CTA — a persistent "Get early access" bar on phones, revealed once
+// the hero scrolls out of view and hidden again at the closing waitlist section (so
+// it never doubles up with the finale form). Opens the waitlist modal. Mobile only.
+---
+<div class="m-cta" id="m-cta" hidden>
+  <button type="button" class="btn btn-primary m-cta-btn" data-open-auth data-tab="signup">Get early access</button>
+</div>
+
+<style>
+  .m-cta {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 90;
+    padding: .7rem clamp(1rem, 5vw, 1.5rem);
+    padding-bottom: calc(.7rem + env(safe-area-inset-bottom, 0px));
+    background: var(--glass-strong);
+    -webkit-backdrop-filter: blur(16px) saturate(160%); backdrop-filter: blur(16px) saturate(160%);
+    border-top: 1px solid var(--line-strong);
+    transform: translateY(110%); transition: transform var(--t-base) var(--ease-out);
+  }
+  .m-cta.show { transform: translateY(0); }
+  .m-cta[hidden] { display: none; }
+  .m-cta-btn { width: 100%; justify-content: center; }
+  @media (min-width: 821px) { .m-cta { display: none !important; } }
+  @media (prefers-reduced-motion: reduce) { .m-cta { transition: none; } }
+</style>
+
+<script is:inline>
+  (function () {
+    var bar = document.getElementById('m-cta');
+    if (!bar) return;
+    if (window.matchMedia && window.matchMedia('(min-width: 821px)').matches) return; // mobile only
+    var hero = document.querySelector('.hero');
+    var finale = document.getElementById('waitlist');
+    if (!hero) return;
+    bar.hidden = false;
+    var pastHero = false, atFinale = false;
+    function update() { bar.classList.toggle('show', pastHero && !atFinale); }
+    if ('IntersectionObserver' in window) {
+      new IntersectionObserver(function (es) { pastHero = !es[0].isIntersecting; update(); }).observe(hero);
+      if (finale) new IntersectionObserver(function (es) { atFinale = es[0].isIntersecting; update(); }, { rootMargin: '0px 0px -35% 0px' }).observe(finale);
+    } else {
+      bar.classList.add('show');
+    }
+  })();
+</script>
