@@ -16,7 +16,6 @@
 
   <a class="spine-node sn-blak"     href="#blak"     data-spine="blak"><span class="sn-dot"></span><span class="sn-label">Blak</span></a>
   <a class="spine-node sn-persona"  href="#persona"  data-spine="persona"><span class="sn-dot"></span><span class="sn-label">Persona</span></a>
-  <a class="spine-node sn-learning" href="#learning" data-spine="learning"><span class="sn-dot"></span><span class="sn-label">Learning</span></a>
   <a class="spine-node sn-minit"    href="#minit"    data-spine="minit"><span class="sn-dot"></span><span class="sn-label">Minit</span></a>
   <a class="spine-node sn-nexus"    href="#nexus"    data-spine="nexus"><span class="sn-dot"></span><span class="sn-label">Nexus</span></a>
 </nav>
@@ -130,7 +129,7 @@
     if (!fill || !atmos) return;
 
     var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    var ids = ['blak', 'persona', 'learning', 'minit', 'nexus'];
+    var ids = ['blak', 'persona', 'minit', 'nexus'];
     var nodes = {};
     ids.forEach(function (id) { nodes[id] = rail ? rail.querySelector('[data-spine="' + id + '"]') : null; });
 

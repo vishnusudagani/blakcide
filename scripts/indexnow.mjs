@@ -6,18 +6,24 @@
 // https://blaksyd.com/453cf1928da71298a881bc66a89e6f8c.txt (it ships from public/).
 // Run AFTER a deploy:  npm run indexnow
 import { setTimeout as wait } from 'node:timers/promises';
+import { readdir } from 'node:fs/promises';
 
 const HOST = 'blaksyd.com';
 const KEY = '453cf1928da71298a881bc66a89e6f8c';
 const KEY_LOCATION = `https://${HOST}/${KEY}.txt`;
 
-// The pages we want answer engines and search to (re)crawl. Keep in sync with the
-// sitemap's indexable routes.
+// The pages we want answer engines and search to (re)crawl: static section routes
+// plus every blog post, derived from the content collection so the list never goes
+// stale as new posts ship (the previous hardcoded list pinged sections only).
 const PATHS = [
   '/', '/blak/', '/persona/', '/minit/', '/nexus/',
   '/about/', '/manifesto/', '/blog/', '/privacy/', '/terms/',
 ];
-const urlList = PATHS.map((p) => `https://${HOST}${p}`);
+const blogDir = new URL('../src/content/blog/', import.meta.url);
+const blogPaths = (await readdir(blogDir))
+  .filter((f) => f.endsWith('.md'))
+  .map((f) => `/blog/${f.replace(/\.md$/, '')}/`);
+const urlList = [...PATHS, ...blogPaths].map((p) => `https://${HOST}${p}`);
 
 async function submit(endpoint) {
   const res = await fetch(endpoint, {
