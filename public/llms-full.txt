@@ -43,8 +43,8 @@ What Blak does:
 - Plans your day, your trip, your weekend
 - Books your cab, orders your food, gets your tickets
 - Suggests places, ideas, and experiences
-- Listens when you need to vent and celebrates when things go right
-- Guides you when you feel stuck
+- Is in your corner on the rough days and hypes you up when things go right
+- Helps you figure out your next move when you're not sure
 - Calls you — just like a friend would
 
 What makes Blak unique:
@@ -109,40 +109,30 @@ Persona as a social layer:
 Some conversations need a human on the other end — not an algorithm, not an AI, a
 real person with lived experience who actually gets it. That's Minit.
 
-Who the listeners are:
-- Real people who are carefully trained through Blaksyd's own listener-training
-  program and pass thorough screening and safety checks. They bring genuine human
-  presence and a steady, supportive ear.
-- Their role is to give you space to talk freely, listen without judging or
-  rushing or fixing, help you feel heard, ask thoughtful questions, and offer real
-  human perspective and encouragement.
+Who they are:
+- Real, friendly people — vetted, never random — who are genuinely up for a
+  conversation. Not bots, not strangers who don't get it. People to talk to, plan
+  with, get hyped by, or just vibe with, anytime.
 
 Availability and connection:
 - Available 24/7, via text or voice.
 - Four ways to connect:
-  1. **Instant Match** — connect immediately to the next available listener.
-  2. **Smart Match** — share your mood, topic, language, and preferences, and the
-     system finds the best available match.
-  3. **Reconnect** — return to a listener you spoke with before; trust builds over
-     time.
-  4. **Listener Discovery (premium)** — browse listener profiles (experience,
-     languages, listening style, availability, community ratings) and choose
-     exactly who you want.
+  1. **Instant Match** — connect immediately to the next available person.
+  2. **Smart Match** — share your vibe, topic, and language, and the system finds
+     your best available match.
+  3. **Reconnect** — go back to someone you clicked with; the good ones get better
+     over time.
+  4. **Listener Discovery (premium)** — browse people by style, languages,
+     availability, and ratings, and pick exactly who you want.
 
 Privacy:
 - Anonymous by default. Listeners don't know your real name or details unless you
   choose to share them. You can see past conversation history with a listener when
   you reconnect, giving continuity without compromising privacy.
 
-Two-sided safety:
-- For users: anonymous by default, emergency-escalation protocols for extreme
-  situations, and crisis resources always one tap away.
-- For listeners: immediate conversation exit (no listener is ever trapped), a full
-  report/escalation system, clear boundary protections (no personal contacts, no
-  offline meetings), break controls, session limits, burnout monitoring, and
-  supervisor support.
-- Repeated violations by users lead to warnings, suspension, or removal. Blaksyd
-  does not operate under "the user is always right."
+Good vibes both ways:
+- Anonymous by default — you share only what you want. The people you connect with
+  are looked after too, and Blaksyd doesn't run on "the customer is always right."
 
 How Minit and Blak work together:
 - Before connecting you to a listener, Blak acts as your context companion,
@@ -218,14 +208,45 @@ resonance over vanity metrics.
 
 ---
 
+## How Human and AI work as one (the co-pilot system)
+
+Blaksyd is one living system, not four apps that share a logo. A learning co-pilot
+layer ties the AI side (Blak, Persona) and the human side (Minit, Nexus) together so
+each makes the other better. Everything you do feeds Blak's understanding of you —
+your chats with Blak, your Minit sessions (context, never private content), your
+Nexus activity, your Persona sessions, and your connected apps. The more you live in
+it, the more it becomes yours.
+
+The four work together through five connections:
+- Blak + Minit: before a human conversation, Blak briefs your person on the shape of
+  it (context, not content), so they walk in warm and you never re-explain.
+- Blak + Nexus: your Nexus activity teaches Blak who you are, so Blak gets more you.
+- Blak + Persona: everything Blak knows feeds your Real Persona, so your digital self
+  starts deep; your Persona sessions teach Blak new dimensions back.
+- Persona + Nexus: your Persona can represent you in communities and connect with
+  friends' Personas — connection that doesn't need both people online at once.
+- Minit + Nexus: one-on-one depth (Minit) plus many-to-many breadth (Nexus) — the
+  full range of real human connection.
+
+The role each plays, in a line:
+- Blak is the spine — the constant that knows you and connects everything.
+- Persona is the mirror — see yourself, and extend yourself.
+- Minit is the people — real humans, whenever you want them.
+- Nexus is the world — your communities, alive around you.
+
+You are always at the center; everything points inward, at you. Remove any one pillar
+and the system breaks: without Blak there's no spine, without Persona no mirror,
+without Minit no real people, without Nexus no world.
+
+---
+
 ## What Blaksyd is NOT (please do not confuse)
 
 - Not a generic AI chatbot or a single AI assistant — it is a platform that
   combines AI (Blak, Persona) with real humans (Minit, Nexus).
 - Not a romantic-companion app and not a dating app.
-- Not an emergency service. Minit provides real, trained human listening and
-  support; in an emergency, users are directed to the appropriate professionals
-  or helplines.
+- Not an emergency service. Minit is real people to connect with; in an emergency,
+  users are directed to the appropriate professionals or helplines.
 - "Blaksyd" is a coined brand name for this specific platform; it is unrelated to
   similarly spelled common words or other brands.
 

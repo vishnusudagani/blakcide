@@ -6,9 +6,10 @@ import Hero from '../components/Hero.astro';
 import Lede from '../components/Lede.astro';
 import Blak from '../components/Blak.astro';
 import Persona from '../components/Persona.astro';
-import Learning from '../components/Learning.astro';
 import Minit from '../components/Minit.astro';
 import Nexus from '../components/Nexus.astro';
+// Learning.astro removed — the standalone "engine" beat is gone; the four pillars
+// stand on their own (the connective idea will live in the system diagram).
 import Faq from '../components/Faq.astro';
 import WhyBlaksyd from '../components/WhyBlaksyd.astro';
 import Finale from '../components/Finale.astro';
@@ -20,7 +21,7 @@ import MobileCta from '../components/MobileCta.astro';
 // The homepage owns the brand line — the approved tagline ships as the <title>.
 const title = 'Blaksyd — Human + AI, revolving around you.';
 const description =
-  'Human + AI, together, revolving around you. Blak knows you and acts for you, Persona is your digital self, Minit brings real listeners close, and Nexus is where you belong — one world, always learning you.';
+  'Human + AI, together, revolving around you. Blak knows you and acts for you, Persona is your digital self, Minit brings real listeners close, and Nexus is where you belong — one world, and all of it yours.';
 
 // Single source of truth for the FAQ. The visible <Faq> on the page AND the
 // FAQPage JSON-LD below are both built from this array, so the structured data
@@ -150,8 +151,6 @@ const pageSchema = [
     </div>
     {/* try-it moment — a scripted, no-API taste of talking to Blak */}
     <TalkToBlak />
-    {/* keystone — the engine that ties both sides */}
-    <Learning />
     {/* Human side — the people who show up. A held cool stage carries both cards. */}
     <div class="act act-human">
       <div class="act-stage" aria-hidden="true">
