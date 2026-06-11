@@ -4,6 +4,7 @@ import Nav from '../components/Nav.astro';
 import Spine from '../components/Spine.astro';
 import Hero from '../components/Hero.astro';
 import Lede from '../components/Lede.astro';
+import Experience from '../components/Experience.astro';
 import Blak from '../components/Blak.astro';
 import Persona from '../components/Persona.astro';
 import Minit from '../components/Minit.astro';
@@ -15,7 +16,6 @@ import WhyBlaksyd from '../components/WhyBlaksyd.astro';
 import Finale from '../components/Finale.astro';
 import Footer from '../components/Footer.astro';
 import Microinteractions from '../components/Microinteractions.astro';
-import TalkToBlak from '../components/TalkToBlak.astro';
 import MobileCta from '../components/MobileCta.astro';
 
 // The homepage owns the brand line — the approved tagline ships as the <title>.
@@ -141,6 +141,8 @@ const pageSchema = [
     <Hero />
     {/* one crawlable, plain-language definition (SEO/AEO/GEO) before the deep dive */}
     <Lede />
+    {/* hands-on overview — play with all four pillars in one place before the deep dive */}
+    <Experience />
     {/* AI side — the minds that know you. A held warm stage carries both cards. */}
     <div class="act act-ai">
       <div class="act-stage" aria-hidden="true">
@@ -149,8 +151,6 @@ const pageSchema = [
       <Blak />
       <Persona />
     </div>
-    {/* try-it moment — a scripted, no-API taste of talking to Blak */}
-    <TalkToBlak />
     {/* Human side — the people who show up. A held cool stage carries both cards. */}
     <div class="act act-human">
       <div class="act-stage" aria-hidden="true">

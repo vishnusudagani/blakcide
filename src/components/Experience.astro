@@ -1,0 +1,244 @@
+---
+// Experience Blaksyd — one hands-on, tabbed "try it" for all four pillars (the
+// Talk-to-Blak pattern, extended to the whole product). Scripted, no-API: chat
+// with Blak, talk to a Persona, connect a real Minit listener, step into a Nexus
+// tribe — switch tabs to test each. Honestly capped after a couple of plays ->
+// early access. Token-based so it adapts to light/dark; .exp-* global so the
+// JS-built chat nodes inherit styles. Sits right after the one-line definition.
+---
+
+<section class="exp s-section" id="experience" aria-label="Experience Blaksyd">
+  <div class="u-wrap exp-wrap">
+    <p class="s-kicker k-gold exp-kicker" data-reveal><span class="orb"></span>try it</p>
+    <h2 class="s-title exp-title" data-reveal>Experience <span class="accent">Blaksyd</span>.</h2>
+    <p class="s-sub exp-sub" data-reveal>All four, hands-on. Pick a side — play with each.</p>
+
+    <div class="exp-tabs" id="exp-tabs" role="tablist" aria-label="Pick a pillar to try" data-reveal>
+      <button type="button" class="exp-tab is-on" data-p="blak" role="tab" aria-selected="true"><span class="exp-d"></span>Blak</button>
+      <button type="button" class="exp-tab" data-p="persona" role="tab" aria-selected="false"><span class="exp-d"></span>Persona</button>
+      <button type="button" class="exp-tab" data-p="minit" role="tab" aria-selected="false"><span class="exp-d"></span>Minit</button>
+      <button type="button" class="exp-tab" data-p="nexus" role="tab" aria-selected="false"><span class="exp-d"></span>Nexus</button>
+    </div>
+
+    <div class="exp-card exp-p-blak" id="exp-card" data-reveal>
+      <div class="exp-head" id="exp-head"></div>
+      <div class="exp-stream" id="exp-stream" aria-live="polite"></div>
+      <div class="exp-chips" id="exp-chips" role="group" aria-label="Try a prompt"></div>
+    </div>
+    <p class="exp-note" data-reveal>A scripted taste — the real, open-ended thing opens at launch.</p>
+  </div>
+</section>
+
+<style is:global>
+  /* global (not scoped): the chat nodes are built in JS at runtime and would miss
+     Astro's scope attribute. Everything is .exp-* namespaced. */
+  .exp { position: relative; z-index: 1; }
+  .exp-wrap { max-width: 600px; margin-inline: auto; text-align: center; }
+  .exp-kicker, .exp-title { margin-inline: auto; }
+  .exp-sub { margin-inline: auto; margin-bottom: clamp(1.4rem, 4vh, 2rem); }
+
+  /* ── pillar accent tokens (bright by default → readable on dark; deepened ink on light) ── */
+  .exp-p-blak    { --c: var(--coral);     --ci: var(--coral); }
+  .exp-p-persona { --c: var(--lavender);  --ci: var(--lavender); }
+  .exp-p-minit   { --c: var(--mint-deep); --ci: var(--mint-deep); }
+  .exp-p-nexus   { --c: var(--aqua);      --ci: var(--aqua); }
+  html[data-theme="light"] .exp-p-blak    { --ci: var(--coral-ink); }
+  html[data-theme="light"] .exp-p-persona { --ci: var(--lavender-ink); }
+  html[data-theme="light"] .exp-p-minit   { --ci: var(--mint-ink); }
+  html[data-theme="light"] .exp-p-nexus   { --ci: var(--aqua-ink); }
+
+  /* ── tabs ── */
+  .exp-tabs { display: flex; gap: .5rem; justify-content: center; flex-wrap: wrap; margin-bottom: .9rem; }
+  .exp-tab {
+    display: inline-flex; align-items: center; gap: .45rem;
+    font-family: inherit; font-size: var(--fs-md); font-weight: 600; color: var(--ink-soft);
+    padding: .5rem .95rem; border-radius: var(--r-pill); cursor: pointer;
+    background: var(--surface); border: 1px solid var(--line-strong);
+    transition: transform var(--t-fast) var(--ease-spring), color var(--t-fast) var(--ease-out),
+                border-color var(--t-fast) var(--ease-out), background var(--t-fast) var(--ease-out);
+  }
+  .exp-tab .exp-d { width: 9px; height: 9px; border-radius: 50%; flex: none; }
+  .exp-tab[data-p="blak"]    .exp-d { background: var(--coral); }
+  .exp-tab[data-p="persona"] .exp-d { background: var(--lavender); }
+  .exp-tab[data-p="minit"]   .exp-d { background: var(--mint-deep); }
+  .exp-tab[data-p="nexus"]   .exp-d { background: var(--aqua); }
+  .exp-tab:hover { transform: translateY(-1px); color: var(--ink); }
+  .exp-tab.is-on { color: var(--ink); }
+  .exp-tab.is-on[data-p="blak"]    { border-color: var(--coral);     background: color-mix(in srgb, var(--coral) 14%, transparent); }
+  .exp-tab.is-on[data-p="persona"] { border-color: var(--lavender);  background: color-mix(in srgb, var(--lavender) 16%, transparent); }
+  .exp-tab.is-on[data-p="minit"]   { border-color: var(--mint-deep); background: color-mix(in srgb, var(--mint-deep) 14%, transparent); }
+  .exp-tab.is-on[data-p="nexus"]   { border-color: var(--aqua);      background: color-mix(in srgb, var(--aqua) 14%, transparent); }
+  .exp-tab:focus-visible { outline: 2px solid var(--c, var(--coral)); outline-offset: 2px; }
+
+  /* ── card ── */
+  .exp-card {
+    text-align: left; border-radius: var(--r-lg);
+    background: var(--glass-strong);
+    backdrop-filter: blur(20px) saturate(150%); -webkit-backdrop-filter: blur(20px) saturate(150%);
+    border: 1px solid var(--line-strong);
+    box-shadow: var(--shadow-soft), inset 0 1px 0 rgba(255, 255, 255, .4);
+    padding: 1.1rem;
+  }
+  .exp-head { display: flex; align-items: center; gap: .7rem; padding-bottom: .8rem; border-bottom: 1px solid var(--line); margin-bottom: .85rem; }
+  .exp-orb { width: 34px; height: 34px; border-radius: 50%; flex: none; background: radial-gradient(circle at 34% 30%, #fff, var(--c)); box-shadow: 0 0 13px var(--c); }
+  .exp-who { display: flex; flex-direction: column; line-height: 1.2; }
+  .exp-who b { font-size: var(--fs-lg); font-weight: 650; color: var(--ink); }
+  .exp-who i { font-style: normal; font-size: var(--fs-xs); color: var(--ink-faint); }
+  .exp-badge { margin-left: auto; font-family: var(--font-mono); font-size: var(--fs-3xs); letter-spacing: .14em; text-transform: uppercase; color: var(--ci); padding: .2rem .55rem; border-radius: var(--r-pill); border: 1px solid var(--c); }
+
+  .exp-stream { display: flex; flex-direction: column; gap: .55rem; min-height: 178px; }
+  .exp-row { display: flex; align-items: flex-end; gap: .5rem; max-width: 92%; animation: exp-in .34s var(--ease-out) both; }
+  .exp-row.them { align-self: flex-start; }
+  .exp-row.me { align-self: flex-end; flex-direction: row-reverse; }
+  @keyframes exp-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+  .exp-av { width: 26px; height: 26px; border-radius: 50%; flex: none; background: linear-gradient(135deg, var(--aqua), var(--lavender)); }
+  .exp-bub { padding: .6rem .8rem; border-radius: 14px; font-size: var(--fs-base); line-height: 1.5; color: var(--ink); }
+  .exp-row.me .exp-bub { background: var(--surface-strong); border: 1px solid var(--line-strong); color: var(--ink-soft); border-radius: 14px 6px 14px 14px; }
+  .exp-row.them .exp-bub { background: color-mix(in srgb, var(--c) 13%, transparent); border: 1px solid color-mix(in srgb, var(--c) 26%, transparent); border-bottom-left-radius: 5px; }
+
+  .exp-typing { display: inline-flex; gap: 4px; align-items: center; }
+  .exp-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--c); animation: exp-blink 1.2s infinite ease-in-out; }
+  .exp-dot:nth-child(2) { animation-delay: .18s; } .exp-dot:nth-child(3) { animation-delay: .36s; }
+  @keyframes exp-blink { 0%,100% { opacity: .3; } 50% { opacity: 1; } }
+
+  /* Minit listener card */
+  .exp-lc { animation: exp-in .4s var(--ease-spring) both; border: 1px solid color-mix(in srgb, var(--mint-deep) 26%, transparent); border-radius: 14px; padding: .8rem; background: color-mix(in srgb, var(--mint-deep) 9%, transparent); }
+  .exp-lc-top { display: flex; align-items: center; gap: .6rem; }
+  .exp-pic { width: 40px; height: 40px; border-radius: 50%; flex: none; background: linear-gradient(135deg, var(--mint), var(--aqua)); }
+  .exp-lc-who b { font-size: var(--fs-base); color: var(--ink); font-weight: 650; }
+  .exp-lc-who span { display: block; font-size: var(--fs-sm); color: var(--ink-faint); }
+  .exp-rate { margin-left: auto; color: var(--ci); font-weight: 650; font-size: var(--fs-md); white-space: nowrap; }
+  .exp-st { font-size: var(--fs-sm); color: var(--ink-soft); margin-top: .55rem; }
+  .exp-go { display: block; width: 100%; text-align: center; font-size: var(--fs-md); font-weight: 650; color: #06231C; background: linear-gradient(135deg, var(--mint), var(--mint-deep) 70%, var(--aqua)); border-radius: var(--r-pill); padding: .55rem; margin-top: .7rem; border: 0; cursor: pointer; }
+
+  /* Nexus room */
+  .exp-room { animation: exp-in .4s var(--ease-spring) both; }
+  .exp-rh { font-size: var(--fs-md); font-weight: 650; color: var(--ink); margin-bottom: .6rem; }
+  .exp-rh span { font-weight: 400; color: var(--ink-faint); }
+
+  /* Persona confidence meter */
+  .exp-meter { height: 7px; border-radius: var(--r-pill); background: color-mix(in srgb, var(--ink) 8%, transparent); overflow: hidden; margin-top: .5rem; }
+  .exp-meter span { display: block; height: 100%; width: 6%; border-radius: var(--r-pill); background: linear-gradient(90deg, var(--lavender), var(--lavender-deep)); transition: width 1.1s var(--ease-out); }
+  .exp-mlabel { font-size: var(--fs-xs); color: var(--ink-faint); margin-top: .4rem; }
+
+  /* chips */
+  .exp-chips { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: 1rem; padding-top: .9rem; border-top: 1px solid var(--line); }
+  .exp-chip {
+    font-family: inherit; font-size: var(--fs-md); font-weight: 500; color: var(--ink-soft);
+    padding: .5rem .85rem; border-radius: var(--r-pill); cursor: pointer;
+    background: var(--surface); border: 1px solid var(--line-strong);
+    transition: transform var(--t-fast) var(--ease-spring), color var(--t-fast) var(--ease-out), border-color var(--t-fast) var(--ease-out);
+  }
+  .exp-chip:hover { transform: translateY(-1px); color: var(--ink); border-color: var(--c); }
+  .exp-cta {
+    font-family: inherit; font-size: var(--fs-md); font-weight: 650; color: var(--cta-ink); cursor: pointer; border: 0;
+    padding: .6rem 1.1rem; border-radius: var(--r-pill);
+    background: var(--cta); background-size: 200% 200%; background-position: 0% 50%; box-shadow: var(--shadow-cta);
+    transition: background-position var(--t-slow) var(--ease-out), transform var(--t-fast) var(--ease-magnet);
+  }
+  .exp-cta:hover { background-position: 100% 50%; transform: translateY(-1px); }
+  .exp-note { margin-top: .9rem; text-align: center; font-size: var(--fs-sm); color: var(--ink-faint); }
+
+  @media (max-width: 760px) {
+    .exp-tab, .exp-chip { min-height: 44px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .exp-dot, .exp-row, .exp-lc, .exp-room { animation: none !important; }
+  }
+</style>
+
+<script is:inline>
+  (function () {
+    var card = document.getElementById('exp-card'),
+        head = document.getElementById('exp-head'),
+        stream = document.getElementById('exp-stream'),
+        chips = document.getElementById('exp-chips'),
+        tabs = document.getElementById('exp-tabs');
+    if (!card || !stream || !chips || !tabs) return;
+    var reduced = window.__blkLite || (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+
+    var P = {
+      blak: { name: 'Blak', role: 'your AI friend', badge: 'AI', open: "Hey — I'm Blak. What's going on for you right now?",
+        chips: [['overwhelmed', "I'm overwhelmed"], ['weekend', 'Plan my weekend'], ['focus', 'Help me focus']],
+        reply: { overwhelmed: "Then let's make today smaller. I'll push everything non-urgent to tomorrow and keep just the one thing that matters. Breathe — I've got the rest.",
+          weekend: "On it. There's a quiet trail 20 minutes away and Saturday looks clear. Want me to pencil it in and sort lunch after?",
+          focus: "Love it. Notifications off for an hour, the two things that actually move the needle lined up, and I'll nudge you when the block's done." } },
+      persona: { name: 'Persona', role: 'your digital self', badge: 'You', open: "Pick a side of you to talk to — your clone, or a character you build.",
+        chips: [['hype', 'Hype'], ['critic', 'Critic'], ['study', 'Study buddy']],
+        reply: { hype: "You've got this. You've done harder things half-asleep — walk in like the room's already yours.",
+          critic: "Solid start. But slide 3 is doing two jobs — cut it in half and the whole thing gets sharper.",
+          study: "Okay, 25-minute sprint: just the first problem set. I'll quiz you the second the timer's done." }, meter: true },
+      minit: { name: 'Minit', role: 'real people', badge: 'Human', open: "Pick how you want to reach a real person — anonymous unless you say otherwise.",
+        chips: [['talk', 'Talk now'], ['smart', 'Smart match'], ['book', 'Book for later']] },
+      nexus: { name: 'Nexus', role: 'your community', badge: 'Tribes', open: "Step into a tribe — or find the few who genuinely resonate with you.",
+        chips: [['founders', 'Founders who overthink'], ['starting', 'Starting over'], ['reso', 'Resonance']] }
+    };
+
+    var cur = 'blak', busy = false, count = 0;
+
+    function el(t, c, h) { var e = document.createElement(t); if (c) e.className = c; if (h != null) e.innerHTML = h; return e; }
+    function header(p) { head.innerHTML = '<span class="exp-orb"></span><span class="exp-who"><b>' + p.name + '</b><i>' + p.role + '</i></span><span class="exp-badge">' + p.badge + '</span>'; }
+    function bubble(side, text) { var r = el('div', 'exp-row ' + side); var b = el('div', 'exp-bub'); if (text != null) b.textContent = text; r.appendChild(b); stream.appendChild(r); return b; }
+
+    function load(p) {
+      cur = p; busy = false; count = 0; var d = P[p];
+      card.className = 'exp-card exp-p-' + p; header(d); stream.innerHTML = ''; chips.innerHTML = '';
+      bubble('them', d.open);
+      d.chips.forEach(function (c) { var b = el('button', 'exp-chip'); b.type = 'button'; b.textContent = c[1]; b.addEventListener('click', function () { act(p, c[0], c[1]); }); chips.appendChild(b); });
+    }
+
+    function typeOut(text, cb) {
+      if (reduced) { bubble('them', text); cb && cb(); return; }
+      var r = el('div', 'exp-row them'); r.innerHTML = '<div class="exp-bub"><span class="exp-typing"><span class="exp-dot"></span><span class="exp-dot"></span><span class="exp-dot"></span></span></div>'; stream.appendChild(r);
+      setTimeout(function () {
+        var b = r.querySelector('.exp-bub'); b.textContent = ''; var i = 0;
+        var iv = setInterval(function () { b.textContent = text.slice(0, ++i); if (i >= text.length) { clearInterval(iv); cb && cb(); } }, 16);
+      }, 650);
+    }
+
+    function cap(text) { chips.innerHTML = ''; bubble('them', text); var c = el('button', 'exp-cta'); c.type = 'button'; c.setAttribute('data-open-auth', ''); c.setAttribute('data-tab', 'signup'); c.textContent = 'Get early access →'; chips.appendChild(c); }
+
+    function act(p, k, label) {
+      if (busy) return; busy = true; var d = P[p];
+      var used = [].slice.call(chips.children).filter(function (x) { return x.textContent === label; })[0]; if (used) used.remove();
+
+      if (p === 'blak' || p === 'persona') {
+        bubble('me', label);
+        typeOut(d.reply[k], function () {
+          if (p === 'persona' && d.meter) { var lab = el('div', 'exp-mlabel'); lab.textContent = 'confidence'; stream.appendChild(lab); var m = el('div', 'exp-meter', '<span></span>'); stream.appendChild(m); setTimeout(function () { m.firstChild.style.width = '82%'; }, 60); }
+          done(p);
+        });
+      } else if (p === 'minit') {
+        bubble('me', label);
+        var run = function () {
+          var lc = el('div', 'exp-lc', '<div class="exp-lc-top"><span class="exp-pic"></span><span class="exp-lc-who"><b>Aria M.</b><span>warm · funny · great company</span></span><span class="exp-rate">★ 4.9</span></div><div class="exp-st">● available now · connects in ~28s · anonymous by default</div><button type="button" class="exp-go" data-open-auth data-tab="signup">Start talking</button>');
+          stream.appendChild(lc); done(p);
+        };
+        if (reduced) { run(); return; }
+        var t = el('div', 'exp-row them'); t.innerHTML = '<div class="exp-bub"><span class="exp-typing"><span class="exp-dot"></span><span class="exp-dot"></span><span class="exp-dot"></span></span> finding your person…</div>'; stream.appendChild(t);
+        setTimeout(function () { stream.removeChild(t); run(); }, 1050);
+      } else if (p === 'nexus') {
+        var rooms = {
+          founders: ['Founders Who Overthink', '1.2k here', ['shipped it. immediately found nine problems with it.', "anyone else rehearse conversations that'll never happen?"]],
+          starting: ['Starting Over', '840 here', ['day 1 of the rest of it. terrified. here anyway.', "you showed up. that's the whole job today."]],
+          reso: ['Resonance match', 'for you', ['also starting over — resonates', 'quiet, like you — resonates', 'one step ahead — resonates']]
+        };
+        var r = rooms[k];
+        var msgs = r[2].map(function (m) { return '<div class="exp-row them" style="max-width:100%"><span class="exp-av"></span><div class="exp-bub" style="font-size:var(--fs-sm)">' + m + '</div></div>'; }).join('');
+        var box = el('div', 'exp-room', '<div class="exp-rh">' + r[0] + ' <span>· ' + r[1] + '</span></div>' + msgs); stream.appendChild(box); done(p);
+      }
+    }
+
+    function done(p) { busy = false; if (++count >= 2) { setTimeout(function () { cap("That's the taste — the real " + P[p].name + " is yours at launch. Come in early?"); }, 550); } }
+
+    [].slice.call(tabs.querySelectorAll('.exp-tab')).forEach(function (t) {
+      t.addEventListener('click', function () {
+        [].slice.call(tabs.querySelectorAll('.exp-tab')).forEach(function (x) { x.classList.remove('is-on'); x.setAttribute('aria-selected', 'false'); });
+        t.classList.add('is-on'); t.setAttribute('aria-selected', 'true');
+        load(t.getAttribute('data-p'));
+      });
+    });
+
+    load('blak');
+  })();
+</script>

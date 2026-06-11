@@ -1,13 +1,13 @@
 ---
-title: "Your AI is yours alone"
+title: "Your AI is truly yours"
 description: "Your world should stay your world. On Blaksyd, your AI is private by default — yours to share on your terms, and no one else's. Here's our simple promise."
 pubDate: 2026-05-21
 author: "The Blaksyd team"
 image: "/assets/blaksyd-four-pillars.png"
-imageAlt: "Blaksyd — your AI, your world, yours alone."
+imageAlt: "Blaksyd — your AI, your world, truly yours."
 ---
 
-The best things in your world are the ones that are truly *yours*. Your AI should be top of that list. On Blaksyd, [Blak](/blak/) and your [Persona](/persona/) are yours alone — and they stay that way.
+The best things in your world are the ones that are truly *yours*. Your AI should be top of that list. On Blaksyd, [Blak](/blak/) and your [Persona](/persona/) are truly yours — and they stay that way.
 
 ## Private by default, always
 
