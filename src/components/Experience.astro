@@ -182,7 +182,11 @@
 
     function load(p) {
       cur = p; busy = false; count = 0; var d = P[p];
-      card.className = 'exp-card exp-p-' + p; header(d); stream.innerHTML = ''; chips.innerHTML = '';
+      // swap ONLY the pillar colour class — must not clobber the reveal '.seen'
+      // class (set by the scroll-reveal), or the card drops back to opacity:0.
+      card.classList.remove('exp-p-blak', 'exp-p-persona', 'exp-p-minit', 'exp-p-nexus');
+      card.classList.add('exp-p-' + p);
+      header(d); stream.innerHTML = ''; chips.innerHTML = '';
       bubble('them', d.open);
       d.chips.forEach(function (c) { var b = el('button', 'exp-chip'); b.type = 'button'; b.textContent = c[1]; b.addEventListener('click', function () { act(p, c[0], c[1]); }); chips.appendChild(b); });
     }
