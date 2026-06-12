@@ -74,6 +74,11 @@ const organization = {
     'https://www.crunchbase.com/organization/blaksyd',
     'https://www.wikidata.org/wiki/Q140068113',
   ],
+  // The people behind Blaksyd — full Person nodes live in the @graph below.
+  founder: [
+    { '@id': 'https://blaksyd.com/#vishnu-sudagani' },
+    { '@id': 'https://blaksyd.com/#sindhuu-devarakonda' },
+  ],
 };
 
 const website = {
@@ -87,9 +92,41 @@ const website = {
   publisher: { '@id': ORG_ID },
 };
 
+// The two founders as Person entities — linked to the Organization (founder) and
+// to their verified profiles (sameAs). This is what lets search + AI engines
+// resolve "Vishnu Sudagani" / "Dr. Sindhuu Devarakonda" to Blaksyd. Add `image`
+// (headshot) and the Crunchbase URL to each sameAs once those are ready.
+const founderVishnu = {
+  '@type': 'Person',
+  '@id': 'https://blaksyd.com/#vishnu-sudagani',
+  name: 'Vishnu Sudagani',
+  jobTitle: 'Co-founder & CEO',
+  worksFor: { '@id': ORG_ID },
+  url: 'https://blaksyd.com/about/',
+  sameAs: [
+    'https://www.linkedin.com/in/vishnu-sudagani-88a848211',
+    'https://x.com/vishnusudagani_',
+    'https://www.instagram.com/vishnusudagani_',
+  ],
+};
+
+const founderSindhuu = {
+  '@type': 'Person',
+  '@id': 'https://blaksyd.com/#sindhuu-devarakonda',
+  name: 'Dr. Sindhuu Devarakonda',
+  jobTitle: 'Co-founder & CPO',
+  worksFor: { '@id': ORG_ID },
+  url: 'https://blaksyd.com/about/',
+  sameAs: [
+    'https://www.linkedin.com/in/dr-sindhuu-devarakonda-b62631224',
+    'https://x.com/dr_sindhuu',
+    'https://www.instagram.com/sindhuudevarakonda5',
+  ],
+};
+
 const jsonLd = JSON.stringify({
   '@context': 'https://schema.org',
-  '@graph': [organization, website, ...schema],
+  '@graph': [organization, website, founderVishnu, founderSindhuu, ...schema],
   // Escape "<" so the JSON can never break out of the <script> element.
 }).replace(/</g, '\\u003c');
 
