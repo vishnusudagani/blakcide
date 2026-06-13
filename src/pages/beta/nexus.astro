@@ -148,6 +148,10 @@ import AppLayout from '../../layouts/AppLayout.astro';
     .nx-start-card:hover { border-color: var(--aqua); color: var(--aqua); }
     .nx-start-card b { font-size: 1.5rem; }
     .nx-pulse-explain { margin: 1rem 0 0; font-size: var(--fs-sm); color: var(--ink-faint); max-width: 60ch; } .nx-pulse-explain b { color: #ffc46b; }
+    .nx-empty { grid-column: 1 / -1; display: flex; flex-direction: column; align-items: center; text-align: center; gap: .45rem; padding: 2.4rem 1.5rem; border-radius: var(--r-lg); border: 1px solid var(--line); background: var(--glass-strong); }
+    .nx-empty b { font-size: var(--fs-xl); font-weight: 650; color: var(--ink); }
+    .nx-empty span { font-size: var(--fs-sm); color: var(--ink-faint); max-width: 44ch; }
+    .nx-empty-orb { width: 54px; height: 54px; border-radius: 50%; margin-bottom: .4rem; background: radial-gradient(circle at 50% 45%, rgba(255,180,100,.28), rgba(255,120,80,.1) 60%, transparent 72%); box-shadow: 0 0 30px rgba(255,150,90,.22); animation: nx-glow 3.6s var(--ease-soft) infinite; }
 
     /* tribes */
     .nx-tribes-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px,1fr)); gap: .8rem; }
@@ -285,47 +289,53 @@ import AppLayout from '../../layouts/AppLayout.astro';
       let ROOMS = [];
       let TRIBES = [];
 
-      // ── lobby: rooms ──────────────────────────────────────────────────────
-      const isLive = (r) => r.here_now > 0 && (Date.now() - new Date(r.last_active_at).getTime() < 120000);
+      // ── lobby: rooms — a room exists ONLY while real people are in it ──────
+      // No seeded/mock rooms, ever. The lobby shows only rooms with someone here
+      // right now (fresh heartbeat); when the last person leaves, the room is gone.
+      const FRESH_MS = 90000;
+      const isActive = (r) => r.here_now > 0 && !r.archived_at && (Date.now() - new Date(r.last_active_at).getTime() < FRESH_MS);
       function roomCard(r) {
-        const live = isLive(r);
-        const heat = Math.min(0.10 + r.here_now / 24, 0.5);
-        return '<div class="nx-room-card' + (live ? '' : ' resting') + '" data-room="' + esc(r.id) + '" style="--heat:rgba(255,150,90,' + heat + ')">'
-          + '<div class="nx-rc-top">'
-          + (live ? '<span class="nx-livedot"></span><span class="nx-rc-live">live</span>' : '<span class="nx-rc-rest">resting</span>')
-          + '<span class="nx-rc-pulse"><span class="nx-flame' + (live ? '' : ' dim') + '"></span>' + r.pulse + ' · day ' + dayOf(r.created_at) + '</span></div>'
+        const heat = Math.min(0.12 + r.here_now / 22, 0.5);
+        return '<div class="nx-room-card" data-room="' + esc(r.id) + '" style="--heat:rgba(255,150,90,' + heat + ')">'
+          + '<div class="nx-rc-top"><span class="nx-livedot"></span><span class="nx-rc-live">live</span>'
+          + '<span class="nx-rc-pulse"><span class="nx-flame"></span>' + r.pulse + '</span></div>'
           + '<div class="nx-rc-title">' + esc(r.title) + '</div>'
           + '<div class="nx-rc-host">' + (r.topic ? esc(r.topic) : 'hosted by @' + esc(r.host_handle)) + '</div>'
-          + '<div class="nx-rc-bottom">'
-          + (live
-              ? '<span class="nx-faces">' + faces(Math.min(r.here_now, 5), hashIdx(r.id)) + '</span><span class="nx-here-n">' + r.here_now + ' here</span>'
-              : '<span class="nx-here-n">be the first in · peak ' + r.peak_here + '</span>')
-          + '<span class="nx-join-btn">' + (live ? 'Join' : 'Open') + '</span></div></div>';
+          + '<div class="nx-rc-bottom"><span class="nx-faces">' + faces(Math.min(r.here_now, 5), hashIdx(r.id)) + '</span>'
+          + '<span class="nx-here-n">' + r.here_now + ' here now</span><span class="nx-join-btn">Join</span></div></div>';
       }
       function renderRooms() {
-        const sorted = ROOMS.slice().sort((a, b) => (isLive(b) - isLive(a)) || (b.here_now - a.here_now) || (b.pulse - a.pulse));
-        const liveN = sorted.filter(isLive).length;
-        el('nx-rooms-sub').textContent = liveN ? (liveN + ' alive right now') : 'real-time · be the first in';
-        roomsEl.innerHTML = sorted.map(roomCard).join('') + '<div class="nx-start-card" data-start><b>+</b>Start a Live Room</div>';
+        const live = ROOMS.filter(isActive).sort((a, b) => (b.here_now - a.here_now) || (b.pulse - a.pulse));
+        el('nx-rooms-sub').textContent = live.length ? (live.length + (live.length === 1 ? ' room live now' : ' rooms live now')) : 'real-time';
+        const startCard = '<div class="nx-start-card" data-start><b>+</b>Start a Live Room</div>';
+        if (!live.length) {
+          roomsEl.innerHTML = '<div class="nx-empty"><span class="nx-empty-orb"></span><b>No rooms are live right now.</b>'
+            + '<span>Rooms exist only while people are in them — no fake crowds. Start one and it lights up the moment you arrive.</span></div>' + startCard;
+          return;
+        }
+        roomsEl.innerHTML = live.map(roomCard).join('') + startCard;
       }
       async function loadRooms() {
-        const { data, error } = await supabase.from('nexus_rooms').select('*').is('archived_at', null).order('last_active_at', { ascending: false }).limit(40);
-        if (error) { roomsEl.innerHTML = '<div class="nx-start-card" data-start><b>+</b>Start the first Live Room</div>'; return; }
-        ROOMS = data || []; renderRooms();
+        try { await supabase.rpc('nexus_sweep_rooms'); } catch (e) {}
+        const { data, error } = await supabase.from('nexus_rooms').select('*').is('archived_at', null).gt('here_now', 0).order('last_active_at', { ascending: false }).limit(40);
+        ROOMS = (error ? [] : (data || [])); renderRooms();
       }
 
-      // live lobby updates (rooms appear / counts change in real time)
+      // live lobby updates: rooms appear when occupied, vanish when the last leaves
       supabase.channel('nx-lobby')
         .on('postgres_changes', { event: '*', schema: 'public', table: 'nexus_rooms' }, (payload) => {
           const row = payload.new || payload.old; if (!row) return;
-          if (payload.eventType === 'DELETE') ROOMS = ROOMS.filter((r) => r.id !== row.id);
+          const gone = payload.eventType === 'DELETE' || (payload.new && (payload.new.here_now <= 0 || payload.new.archived_at));
+          if (gone) ROOMS = ROOMS.filter((r) => r.id !== row.id);
           else {
             const i = ROOMS.findIndex((r) => r.id === payload.new.id);
-            if (i >= 0) ROOMS[i] = payload.new;
-            else if (!payload.new.archived_at) ROOMS.push(payload.new);
+            if (i >= 0) ROOMS[i] = payload.new; else ROOMS.push(payload.new);
           }
           renderRooms();
         }).subscribe();
+
+      // prune ghosts + pick up rooms started elsewhere, periodically
+      setInterval(loadRooms, 30000);
 
       // ── lobby: tribes (real communities) ──────────────────────────────────
       async function loadTribes() {
@@ -345,7 +355,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
       }
 
       // ── in-room (the star): presence + broadcast + pulse ──────────────────
-      let chan = null, here = 0, sessionStart = 0, timer = null, hbAt = 0, curRoom = null;
+      let chan = null, here = 0, sessionStart = 0, timer = null, keepAlive = null, hbAt = 0, curRoom = null;
       const setPulse = (n) => { el('nx-pulse-big').textContent = n; el('nx-pulse-n').textContent = n; };
 
       async function heartbeat(h, msgDelta) {
@@ -358,8 +368,8 @@ import AppLayout from '../../layouts/AppLayout.astro';
       }
       function renderHere(state) {
         const metas = Object.values(state).map((a) => a && a[0]).filter(Boolean);
-        here = Object.keys(state).length;
-        el('nx-room-here').textContent = here + (here === 1 ? ' here' : ' here');
+        here = Math.max(Object.keys(state).length, 1); // I'm always here while in the room
+        el('nx-room-here').textContent = here + ' here';
         el('nx-stat-here').textContent = here;
         el('nx-here-faces').innerHTML = metas.slice(0, 12).map((m) => '<span style="background:' + g(m.color || 0) + '"></span>').join('') || faces(1, hashIdx(ME.id));
         const orb = el('nx-pulse-orb'); if (orb) orb.classList.toggle('resting', here === 0);
@@ -381,21 +391,20 @@ import AppLayout from '../../layouts/AppLayout.astro';
         el('nx-heat-fill').style.width = '20%';
         el('nx-pulse-orb').classList.remove('resting');
         el('nx-room-feed').innerHTML = '<div class="nx-rmsg"><span class="nx-rav" style="background:' + g(3) + '"></span><div><span class="nx-rh">blak · quiet moderator</span><p></p></div></div>';
-        el('nx-room-feed').querySelector('p').textContent = r.here_now > 0
-          ? 'Welcome in. People are here — say hello.'
-          : 'You opened this room. It glows as people gather and rests when everyone leaves. Say something to begin.';
+        el('nx-room-feed').querySelector('p').textContent = 'You’re in. Say something — the room glows while people are here, and rests when everyone leaves.';
         show('room');
-        sessionStart = Date.now(); clearInterval(timer);
+        sessionStart = Date.now(); clearInterval(timer); clearInterval(keepAlive);
         timer = setInterval(() => { el('nx-stat-time').textContent = Math.floor((Date.now() - sessionStart) / 60000) + 'm'; }, 5000);
+        keepAlive = setInterval(() => { if (chan) heartbeat(here, 0); }, 25000); // stay listed while occupied
 
         chan = supabase.channel('nx-room:' + r.id, { config: { presence: { key: ME.id }, broadcast: { self: false } } });
         chan
-          .on('presence', { event: 'sync' }, () => { const st = chan.presenceState(); renderHere(st); heartbeat(Object.keys(st).length, 0); })
+          .on('presence', { event: 'sync' }, () => { renderHere(chan.presenceState()); heartbeat(here, 0); })
           .on('broadcast', { event: 'msg' }, ({ payload }) => appendMsg(payload, false))
           .subscribe(async (status) => { if (status === 'SUBSCRIBED') await chan.track({ handle: ME.handle, color: ME.color, at: Date.now() }); });
       }
       async function leaveRoom() {
-        clearInterval(timer);
+        clearInterval(timer); clearInterval(keepAlive);
         const room = curRoom, leftHere = Math.max(0, here - 1);
         try { if (chan) { await chan.untrack(); await supabase.removeChannel(chan); } } catch (e) {}
         chan = null; curRoom = null;
