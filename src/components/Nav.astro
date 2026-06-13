@@ -31,8 +31,7 @@
         <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
       </svg>
     </button>
-    <button type="button" class="cta-ghost" data-open-auth data-tab="signin">Sign in</button>
-    <button type="button" class="cta" data-open-auth data-tab="signup">Get early access</button>
+    <button type="button" class="cta" data-open-auth>Try the beta</button>
   </div>
 
   <div class="nav-menu" id="nav-menu" hidden>
@@ -44,8 +43,7 @@
     <a href="/about/">About</a>
     <a href="/#faq">FAQ</a>
     <span class="nav-menu-div" aria-hidden="true"></span>
-    <a href="#" data-open-auth data-tab="signin">Sign in</a>
-    <a href="#" class="nav-menu-cta" data-open-auth data-tab="signup">Get early access</a>
+    <a href="#" class="nav-menu-cta" data-open-auth>Try the beta</a>
   </div>
 </nav>
 
@@ -125,13 +123,6 @@
   }
   .cta:hover { background-position: 100% 50%; transform: translateY(-1px); box-shadow: 0 12px 32px rgba(30, 99, 216, 0.5); }
 
-  .cta-ghost {
-    font-size: var(--fs-md); font-weight: 600; color: var(--ink-soft); white-space: nowrap;
-    padding: .55rem .9rem; border-radius: var(--r-pill);
-    background: transparent; border: 1px solid var(--line-strong);
-    transition: color var(--t-fast) var(--ease-out), border-color var(--t-fast) var(--ease-out), background var(--t-fast) var(--ease-out);
-  }
-  .cta-ghost:hover { color: var(--ink); border-color: var(--ink-faint); background: var(--surface); }
   /* primary auth row inside the mobile menu */
   .nav-menu-cta { text-align: center; font-weight: 600; color: var(--cta-ink) !important; background: var(--cta); margin-top: .15rem; }
   .nav-menu-cta:hover { color: var(--cta-ink) !important; filter: brightness(1.05); }
@@ -166,7 +157,7 @@
     .nav { padding-left: 18px; gap: .6rem; }
     /* #5: the hero CTAs + sticky bottom bar + the hamburger menu carry auth on
        phones — drop the desktop pill CTAs so the nav capsule stays compact. */
-    .cta, .cta-ghost { display: none; }
+    .cta { display: none; }
     /* #8: ≥44px touch targets for the icon buttons and menu rows */
     .toggle, .nav-burger { width: 44px; height: 44px; }
     .nav-menu a { padding: .75rem .9rem; }

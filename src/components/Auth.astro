@@ -24,8 +24,8 @@
 
     <span class="auth-dot" aria-hidden="true"></span>
 
-    <h2 class="auth-title" id="auth-title" data-auth-title>Step into a world that's yours</h2>
-    <p class="auth-sub" id="auth-sub" data-auth-sub>Passwordless — choose how you'd like to come in.</p>
+    <h2 class="auth-title" id="auth-title" data-auth-title>Try the Blaksyd beta</h2>
+    <p class="auth-sub" id="auth-sub" data-auth-sub>Continue with Google, or a magic link by email.</p>
 
     <div class="auth-views">
       {/* ── choose a door ── */}
@@ -364,13 +364,6 @@
     var busy = false;
     var redirectTo = window.location.origin + '/';
 
-    // The same passwordless modal serves both intents; only the framing changes.
-    var titleEl = modal.querySelector('[data-auth-title]');
-    var subEl = modal.querySelector('[data-auth-sub]');
-    var COPY = {
-      signin: { t: 'Welcome back', s: 'Sign in with Google or a magic link.' },
-      signup: { t: 'Get early access', s: 'Passwordless — choose how you’d like to come in.' }
-    };
 
     function clearNote() { note.hidden = true; note.textContent = ''; note.classList.remove('is-error', 'is-ok'); }
     function setNote(msg, kind) { note.innerHTML = msg; note.hidden = false; note.classList.remove('is-error', 'is-ok'); note.classList.add(kind === 'error' ? 'is-error' : 'is-ok'); }
@@ -386,9 +379,6 @@
     // ── open / close (preserved focus-trap + scroll-lock) ──
     function open(tab, trigger) {
       lastTrigger = trigger || null;
-      var c = COPY[tab] || COPY.signup;
-      if (titleEl) titleEl.textContent = c.t;
-      if (subEl) subEl.textContent = c.s;
       showView('methods');
       clearTimeout(closeTimer);
       modal.hidden = false;
