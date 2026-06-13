@@ -16,5 +16,8 @@
     "@astrojs/sitemap": "^3",
     "astro": "^5",
     "sharp": "^0.34"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.108.1"
   }
 }

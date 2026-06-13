@@ -25,37 +25,60 @@
     <span class="auth-dot" aria-hidden="true"></span>
 
     <h2 class="auth-title" id="auth-title" data-auth-title>Step into a world that's yours</h2>
-    <p class="auth-sub" id="auth-sub" data-auth-sub>Private waitlist — we'll email your invite. No spam.</p>
+    <p class="auth-sub" id="auth-sub" data-auth-sub>Passwordless — choose how you'd like to come in.</p>
 
-    <form class="auth-form" data-auth-form novalidate>
-      <label class="auth-field">
-        <span class="auth-label">Email</span>
-        <input
-          type="email"
-          name="email"
-          inputmode="email"
-          autocomplete="email"
-          placeholder="you@example.com"
-          required
-          data-auth-email
-        />
-      </label>
+    <div class="auth-views">
+      {/* ── choose a door ── */}
+      <div class="auth-view" data-auth-view="methods">
+        <button type="button" class="auth-social" data-auth-method="google">
+          <svg class="auth-ic" viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M22.5 12.2c0-.7-.1-1.4-.2-2H12v3.9h5.9a5 5 0 0 1-2.2 3.3v2.7h3.6c2.1-1.9 3.2-4.8 3.2-7.9z"/><path fill="#34A853" d="M12 23c2.9 0 5.4-1 7.2-2.7l-3.6-2.7c-1 .7-2.3 1.1-3.6 1.1-2.8 0-5.1-1.9-6-4.4H2.3v2.8A11 11 0 0 0 12 23z"/><path fill="#FBBC05" d="M6 14.3a6.6 6.6 0 0 1 0-4.2V7.3H2.3a11 11 0 0 0 0 9.8L6 14.3z"/><path fill="#EA4335" d="M12 5.5c1.6 0 3 .5 4.1 1.6l3.1-3.1A11 11 0 0 0 12 1 11 11 0 0 0 2.3 7.3L6 10.1c.9-2.6 3.2-4.6 6-4.6z"/></svg>
+          Continue with Google
+        </button>
 
-      <button type="submit" class="btn btn-primary auth-submit" data-auth-submit>
-        <span data-auth-cta>Get early access</span>
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
-      </button>
+        {/* WhatsApp parked until the Meta authentication template is approved.
+            Re-enable by un-commenting this button (the phone/otp views below stay):
+        <button type="button" class="auth-social auth-wa" data-auth-method="whatsapp">
+          <svg class="auth-ic" viewBox="0 0 24 24" aria-hidden="true"><path fill="#25D366" d="M12 2a10 10 0 0 0-8.6 15l-1.3 4.7 4.8-1.3A10 10 0 1 0 12 2zm5.8 14.2c-.2.7-1.4 1.3-2 1.4-.5.1-1.2.1-1.9-.1-.4-.1-1-.3-1.7-.6-3-1.3-5-4.3-5.1-4.5-.2-.2-1.2-1.6-1.2-3s.7-2.2 1-2.5c.2-.3.5-.4.7-.4h.5c.2 0 .4 0 .6.5l.8 1.9c.1.2.1.4 0 .5l-.3.5-.4.4c-.1.1-.3.3-.1.6.1.3.7 1.1 1.4 1.8 1 .9 1.8 1.1 2 1.3.3.1.4.1.6-.1l.7-.9c.2-.2.4-.2.6-.1l1.8.9c.2.1.4.2.5.3.1.2.1.7-.1 1.5z"/></svg>
+          Continue with WhatsApp
+        </button>
+        */}
 
-      <p class="auth-note" data-auth-note role="status" aria-live="polite" hidden></p>
-    </form>
+        <div class="auth-or" aria-hidden="true"><span>or</span></div>
 
-    {/* Pre-launch there are no real accounts yet — only the waitlist — so the
-        signup/login switch is hidden to keep one honest action. The login flow
-        still works underneath; remove `hidden` at launch to restore the toggle. */}
-    <p class="auth-switch" hidden>
-      <span data-auth-switch-text>Already have a world?</span>
-      <button type="button" class="auth-switch-btn" data-auth-switch>Log in</button>
-    </p>
+        <form class="auth-form" data-auth-form="email" novalidate>
+          <input type="email" name="email" inputmode="email" autocomplete="email" placeholder="you@example.com" required data-auth-email />
+          <button type="submit" class="btn btn-primary auth-submit"><span>Email me a sign-in link</span>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
+          </button>
+        </form>
+      </div>
+
+      {/* ── WhatsApp: phone entry ── */}
+      <form class="auth-view" data-auth-view="phone" data-auth-form="phone" hidden novalidate>
+        <p class="auth-step">We'll message a 6-digit code to your WhatsApp.</p>
+        <input type="tel" name="phone" inputmode="tel" autocomplete="tel" placeholder="+91 98765 43210" required data-auth-phone />
+        <button type="submit" class="btn btn-primary auth-submit"><span>Send code on WhatsApp</span></button>
+        <button type="button" class="auth-back" data-auth-back>← other ways to enter</button>
+      </form>
+
+      {/* ── OTP: code entry ── */}
+      <form class="auth-view" data-auth-view="otp" data-auth-form="otp" hidden novalidate>
+        <p class="auth-step">Enter the 6-digit code sent to <b data-auth-dest>your WhatsApp</b>.</p>
+        <input type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]*" placeholder="••••••" required data-auth-otp class="auth-otp" aria-label="6-digit code" />
+        <button type="submit" class="btn btn-primary auth-submit"><span>Verify &amp; enter</span></button>
+        <div class="auth-row">
+          <button type="button" class="auth-back" data-auth-resend>Resend code</button>
+          <button type="button" class="auth-back" data-auth-back>← back</button>
+        </div>
+      </form>
+
+      {/* ── done ── */}
+      <div class="auth-view" data-auth-view="done" hidden>
+        <p class="auth-step auth-done"><b>You're in — welcome to Blaksyd.</b><br />We'll open your world the moment we launch.</p>
+      </div>
+    </div>
+
+    <p class="auth-note" data-auth-note role="status" aria-live="polite" hidden></p>
 
     <p class="auth-fine">
       By continuing you agree to our <a href="/terms/">Terms</a> &amp; <a href="/privacy/">Privacy</a>.
@@ -269,78 +292,97 @@
     .auth-card { transition: none; }
     .auth-dot { animation: none; }
   }
+
+  /* ── multi-method auth (Google · WhatsApp · email) ── */
+  .auth-views { margin-top: .4rem; text-align: left; }
+  .auth-view { display: flex; flex-direction: column; gap: .7rem; }
+  .auth-view[hidden] { display: none; }
+
+  .auth-social {
+    display: inline-flex; align-items: center; justify-content: center; gap: .6rem;
+    width: 100%; padding: .85rem 1rem; border-radius: var(--r-pill);
+    font-family: inherit; font-size: var(--fs-md); font-weight: 600; color: var(--ink);
+    background: var(--surface-strong); border: 1px solid var(--line-strong); cursor: pointer;
+    transition: transform var(--t-fast) var(--ease-spring), border-color var(--t-fast) var(--ease-out), background var(--t-fast) var(--ease-out);
+  }
+  .auth-social:hover { transform: translateY(-1px); border-color: var(--ink-faint); }
+  .auth-social:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+  .auth-ic { width: 18px; height: 18px; flex: none; }
+  .auth-wa:hover { border-color: rgba(37, 211, 102, .55); }
+
+  .auth-or {
+    display: flex; align-items: center; gap: .8rem; margin: .15rem 0;
+    font-family: var(--font-mono); font-size: var(--fs-2xs); text-transform: uppercase; letter-spacing: .14em; color: var(--ink-faint);
+  }
+  .auth-or span { flex: none; }
+  .auth-or::before, .auth-or::after { content: ''; flex: 1; height: 1px; background: var(--line); }
+
+  .auth-form { display: flex; flex-direction: column; gap: .7rem; }
+  .auth-view input {
+    width: 100%; padding: .85rem 1rem; border-radius: var(--r-pill);
+    font-family: inherit; font-size: var(--fs-md); color: var(--ink); text-align: center;
+    background: var(--surface); border: 1px solid var(--line-strong);
+    transition: border-color var(--t-fast) var(--ease-out), background var(--t-fast) var(--ease-out), box-shadow var(--t-fast) var(--ease-out);
+  }
+  .auth-view input::placeholder { color: var(--ink-faint); }
+  .auth-view input:focus { outline: none; border-color: #1E63D8; background: var(--surface-strong); box-shadow: 0 0 0 3px rgba(30, 99, 216, .16); }
+  .auth-otp { letter-spacing: .45em; font-size: var(--fs-xl); font-weight: 600; padding-left: .45em; }
+
+  .auth-submit { width: 100%; justify-content: center; }
+  .auth-step { font-size: var(--fs-sm); color: var(--ink-soft); line-height: 1.5; }
+  .auth-step b { color: var(--ink); font-weight: 600; }
+  .auth-done { font-size: var(--fs-md); color: var(--ink); text-align: center; }
+  .auth-row { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+  .auth-back {
+    align-self: center; font-family: inherit; font-size: var(--fs-sm); color: var(--ink-faint); cursor: pointer;
+    transition: color var(--t-fast) var(--ease-out);
+  }
+  .auth-back:hover { color: var(--ink); }
 </style>
 
-<script is:inline>
+<script>
+  import { supabase, supabaseConfigured } from '../lib/supabaseClient';
+
   (function () {
     var modal = document.getElementById('auth');
     if (!modal) return;
 
-    var titleEl = modal.querySelector('[data-auth-title]');
-    var subEl = modal.querySelector('[data-auth-sub]');
-    var ctaEl = modal.querySelector('[data-auth-cta]');
-    var switchTextEl = modal.querySelector('[data-auth-switch-text]');
-    var switchBtn = modal.querySelector('[data-auth-switch]');
-    var form = modal.querySelector('[data-auth-form]');
-    var email = modal.querySelector('[data-auth-email]');
     var note = modal.querySelector('[data-auth-note]');
-    var submitBtn = modal.querySelector('[data-auth-submit]');
+    var views = {};
+    [].forEach.call(modal.querySelectorAll('[data-auth-view]'), function (v) { views[v.getAttribute('data-auth-view')] = v; });
+    var emailForm = modal.querySelector('[data-auth-form="email"]');
+    var emailInput = modal.querySelector('[data-auth-email]');
+    var phoneForm = modal.querySelector('[data-auth-form="phone"]');
+    var phoneInput = modal.querySelector('[data-auth-phone]');
+    var otpForm = modal.querySelector('[data-auth-form="otp"]');
+    var otpInput = modal.querySelector('[data-auth-otp]');
+    var destEl = modal.querySelector('[data-auth-dest]');
 
-    var mode = 'signup';
     var lastTrigger = null;
     var openTimer, closeTimer;
+    var pendingPhone = '';
+    var busy = false;
+    var redirectTo = window.location.origin + '/';
 
-    var COPY = {
-      signup: {
-        title: 'Step into a world that\'s yours',
-        sub: 'Private waitlist — we'll email your invite. No spam.',
-        cta: 'Get early access',
-        switchText: 'Already have a world?',
-        switchBtn: 'Log in',
-        ok: 'You\'re in — welcome to Blaksyd. We\'ll email you the moment we open. Meanwhile, <a href="/manifesto/">see why we\'re building this →</a>'
-      },
-      login: {
-        title: 'Welcome back',
-        sub: 'Your world is right where you left it.',
-        cta: 'Continue',
-        switchText: 'New here?',
-        switchBtn: 'Create your world',
-        ok: 'Welcome back — opening your world.'
-      }
-    };
+    function clearNote() { note.hidden = true; note.textContent = ''; note.classList.remove('is-error', 'is-ok'); }
+    function setNote(msg, kind) { note.innerHTML = msg; note.hidden = false; note.classList.remove('is-error', 'is-ok'); note.classList.add(kind === 'error' ? 'is-error' : 'is-ok'); }
 
-    function render() {
-      var c = COPY[mode];
-      titleEl.textContent = c.title;
-      subEl.textContent = c.sub;
-      ctaEl.textContent = c.cta;
-      switchTextEl.textContent = c.switchText;
-      switchBtn.textContent = c.switchBtn;
+    // ── view switching: methods -> phone -> otp -> done ──
+    function showView(name) {
+      for (var k in views) { if (views[k]) views[k].hidden = (k !== name); }
       clearNote();
-    }
-    function clearNote() {
-      note.hidden = true;
-      note.textContent = '';
-      note.classList.remove('is-error', 'is-ok');
-    }
-    function setNote(msg, kind) {
-      note.innerHTML = msg;
-      note.hidden = false;
-      note.classList.remove('is-error', 'is-ok');
-      note.classList.add(kind === 'error' ? 'is-error' : 'is-ok');
+      var first = views[name] && views[name].querySelector('input, button');
+      if (first) setTimeout(function () { try { first.focus(); } catch (e) {} }, 60);
     }
 
+    // ── open / close (preserved focus-trap + scroll-lock) ──
     function open(tab, trigger) {
-      mode = tab === 'login' ? 'login' : 'signup';
       lastTrigger = trigger || null;
-      render();
+      showView('methods');
       clearTimeout(closeTimer);
       modal.hidden = false;
       document.body.style.overflow = 'hidden';
-      requestAnimationFrame(function () {
-        requestAnimationFrame(function () { modal.classList.add('is-open'); });
-      });
-      openTimer = setTimeout(function () { if (email) email.focus(); }, 140);
+      requestAnimationFrame(function () { requestAnimationFrame(function () { modal.classList.add('is-open'); }); });
       document.addEventListener('keydown', onKey);
     }
     function close() {
@@ -349,9 +391,9 @@
       document.body.style.overflow = '';
       document.removeEventListener('keydown', onKey);
       closeTimer = setTimeout(function () {
-        modal.hidden = true;
-        clearNote();
-        if (form) form.reset();
+        modal.hidden = true; clearNote();
+        if (emailForm) emailForm.reset(); if (phoneForm) phoneForm.reset(); if (otpForm) otpForm.reset();
+        showView('methods');
         if (lastTrigger && typeof lastTrigger.focus === 'function') lastTrigger.focus();
       }, 380);
     }
@@ -360,9 +402,7 @@
       if (e.key === 'Tab') trapFocus(e);
     }
     function trapFocus(e) {
-      var f = [].slice.call(modal.querySelectorAll('button, input, a[href]')).filter(function (el) {
-        return !el.disabled && el.offsetParent !== null;
-      });
+      var f = [].slice.call(modal.querySelectorAll('button, input, a[href]')).filter(function (el) { return !el.disabled && el.offsetParent !== null; });
       if (!f.length) return;
       var first = f[0], last = f[f.length - 1];
       if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
@@ -377,51 +417,91 @@
       if (closer) { e.preventDefault(); close(); }
     });
 
-    switchBtn.addEventListener('click', function () {
-      mode = mode === 'signup' ? 'login' : 'signup';
-      render();
-      if (email) email.focus();
-    });
+    function setBusy(b) {
+      busy = b;
+      [].forEach.call(modal.querySelectorAll('button, input'), function (el) { if (el.hasAttribute('data-auth-close')) return; el.disabled = b; });
+    }
 
+    // ── method picks + back buttons ──
+    [].forEach.call(modal.querySelectorAll('[data-auth-method]'), function (btn) {
+      btn.addEventListener('click', function () {
+        var m = btn.getAttribute('data-auth-method');
+        if (m === 'whatsapp') { showView('phone'); }
+        else if (m === 'google') { googleSignIn(); }
+      });
+    });
+    [].forEach.call(modal.querySelectorAll('[data-auth-back]'), function (b) { b.addEventListener('click', function () { showView('methods'); }); });
+
+    // ── Google OAuth ──
+    function googleSignIn() {
+      if (!supabaseConfigured || !supabase) { setNote('Google sign-in is being set up — try email or WhatsApp.', 'error'); return; }
+      setBusy(true); setNote('Opening Google…', 'ok');
+      supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: redirectTo } })
+        .then(function (r) { if (r.error) { setBusy(false); setNote(r.error.message || 'Could not start Google sign-in.', 'error'); } })
+        .catch(function () { setBusy(false); setNote('Could not start Google sign-in.', 'error'); });
+    }
+
+    // ── email (passwordless link); graceful waitlist fallback until auth env is set ──
     var EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    var submitting = false;
-    form.addEventListener('submit', function (e) {
-      e.preventDefault();
-      if (submitting) return;
-      var val = (email.value || '').trim();
-      if (!EMAIL_RE.test(val)) {
-        setNote('Enter a valid email to continue.', 'error');
-        email.focus();
+    if (emailForm) emailForm.addEventListener('submit', function (e) {
+      e.preventDefault(); if (busy) return;
+      var val = (emailInput.value || '').trim();
+      if (!EMAIL_RE.test(val)) { setNote('Enter a valid email.', 'error'); emailInput.focus(); return; }
+      setBusy(true); setNote('Sending your link…', 'ok');
+      if (!supabaseConfigured || !supabase) {
+        fetch('/api/waitlist', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: val }) })
+          .then(function (res) { return res.json().catch(function () { return {}; }).then(function (d) { return res.ok && d && d.ok; }); })
+          .then(function (ok) { setBusy(false); if (ok) { setNote('You are on the list — we will email you. ✨', 'ok'); emailForm.reset(); } else { setNote('Could not save right now — please try again.', 'error'); } })
+          .catch(function () { setBusy(false); setNote('Network error — please try again.', 'error'); });
         return;
       }
-      submitting = true;
-      if (submitBtn) submitBtn.disabled = true;
-      setNote('One moment…', 'ok');
-      fetch('/api/waitlist', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: val })
-      })
-        .then(function (res) {
-          return res.json().catch(function () { return {}; }).then(function (data) {
-            return { ok: res.ok, data: data };
-          });
-        })
-        .then(function (r) {
-          if (r.ok && r.data && r.data.ok) {
-            setNote(COPY[mode].ok, 'ok');
-            form.reset();
-          } else {
-            setNote((r.data && r.data.error) || 'Could not save right now. Please try again.', 'error');
-          }
-        })
-        .catch(function () {
-          setNote('Network error — please try again.', 'error');
-        })
-        .then(function () {
-          submitting = false;
-          if (submitBtn) submitBtn.disabled = false;
-        });
+      supabase.auth.signInWithOtp({ email: val, options: { emailRedirectTo: redirectTo } })
+        .then(function (r) { setBusy(false); if (r.error) { setNote(r.error.message || 'Could not send the link.', 'error'); } else { setNote('Check your inbox — a sign-in link is on its way to <b>' + val + '</b>.', 'ok'); } })
+        .catch(function () { setBusy(false); setNote('Network error — please try again.', 'error'); });
     });
+
+    // ── WhatsApp: send code (Supabase phone OTP, delivered by the Meta hook) ──
+    if (phoneForm) phoneForm.addEventListener('submit', function (e) {
+      e.preventDefault(); if (busy) return;
+      var raw = (phoneInput.value || '').trim().replace(/[^\d+]/g, '');
+      if (!/^\+\d{8,15}$/.test(raw)) { setNote('Enter your number with country code, e.g. +91…', 'error'); phoneInput.focus(); return; }
+      if (!supabaseConfigured || !supabase) { setNote('WhatsApp sign-in is being set up — try email.', 'error'); return; }
+      setBusy(true); setNote('Sending a code to your WhatsApp…', 'ok');
+      supabase.auth.signInWithOtp({ phone: raw })
+        .then(function (r) { setBusy(false); if (r.error) { setNote(r.error.message || 'Could not send the code.', 'error'); } else { pendingPhone = raw; if (destEl) destEl.textContent = raw; showView('otp'); } })
+        .catch(function () { setBusy(false); setNote('Network error — please try again.', 'error'); });
+    });
+
+    // ── WhatsApp: verify code -> real Supabase session ──
+    if (otpForm) otpForm.addEventListener('submit', function (e) {
+      e.preventDefault(); if (busy) return;
+      var code = (otpInput.value || '').trim();
+      if (!/^\d{4,8}$/.test(code)) { setNote('Enter the 6-digit code.', 'error'); otpInput.focus(); return; }
+      if (!supabase) return;
+      setBusy(true); setNote('Verifying…', 'ok');
+      supabase.auth.verifyOtp({ phone: pendingPhone, token: code, type: 'sms' })
+        .then(function (r) { setBusy(false); if (r.error) { setNote(r.error.message || 'That code did not match — try again.', 'error'); } else { onSignedIn(); } })
+        .catch(function () { setBusy(false); setNote('Network error — please try again.', 'error'); });
+    });
+
+    // ── resend ──
+    [].forEach.call(modal.querySelectorAll('[data-auth-resend]'), function (b) {
+      b.addEventListener('click', function () {
+        if (!supabase || !pendingPhone) return;
+        setBusy(true); setNote('Resending…', 'ok');
+        supabase.auth.signInWithOtp({ phone: pendingPhone })
+          .then(function (r) { setBusy(false); setNote(r.error ? (r.error.message || 'Could not resend.') : 'A new code is on its way.', r.error ? 'error' : 'ok'); })
+          .catch(function () { setBusy(false); setNote('Could not resend.', 'error'); });
+      });
+    });
+
+    function onSignedIn() { showView('done'); }
+
+    // reflect a session arriving from the Google / email-link redirect, if the modal is open
+    if (supabase) {
+      supabase.auth.onAuthStateChange(function (evt, session) {
+        if (session && evt === 'SIGNED_IN' && !modal.hidden) onSignedIn();
+      });
+    }
   })();
 </script>
