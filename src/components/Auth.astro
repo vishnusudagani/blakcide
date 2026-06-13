@@ -364,6 +364,14 @@
     var busy = false;
     var redirectTo = window.location.origin + '/';
 
+    // The same passwordless modal serves both intents; only the framing changes.
+    var titleEl = modal.querySelector('[data-auth-title]');
+    var subEl = modal.querySelector('[data-auth-sub]');
+    var COPY = {
+      signin: { t: 'Welcome back', s: 'Sign in with Google or a magic link.' },
+      signup: { t: 'Get early access', s: 'Passwordless — choose how you’d like to come in.' }
+    };
+
     function clearNote() { note.hidden = true; note.textContent = ''; note.classList.remove('is-error', 'is-ok'); }
     function setNote(msg, kind) { note.innerHTML = msg; note.hidden = false; note.classList.remove('is-error', 'is-ok'); note.classList.add(kind === 'error' ? 'is-error' : 'is-ok'); }
 
@@ -378,6 +386,9 @@
     // ── open / close (preserved focus-trap + scroll-lock) ──
     function open(tab, trigger) {
       lastTrigger = trigger || null;
+      var c = COPY[tab] || COPY.signup;
+      if (titleEl) titleEl.textContent = c.t;
+      if (subEl) subEl.textContent = c.s;
       showView('methods');
       clearTimeout(closeTimer);
       modal.hidden = false;
@@ -495,18 +506,31 @@
       });
     });
 
+    var APP = '/beta/';
+    function goToApp() { window.location.replace(APP); }
     function onSignedIn() { showView('done'); }
+
     // Did this page load carry fresh auth params? (Google / email-link redirect back.)
     var hadAuthInUrl = /[#&?](access_token|code|token_hash)=/.test(location.hash + location.search);
 
-    // On a real sign-in — in-modal OTP, or returning from the Google/email redirect —
-    // send the person into their beta app. A returning visitor with an existing
-    // session (INITIAL_SESSION, no auth params in the URL) is left free to browse.
     if (supabase) {
+      // 1) Returning from the Google / magic-link redirect. detectSessionInUrl
+      //    exchanges the code asynchronously, and that SIGNED_IN can resolve BEFORE
+      //    we subscribe below (then it replays as INITIAL_SESSION, which the old
+      //    code ignored — so the user got stranded on the landing page). Poll for
+      //    the session instead and forward into the app the moment it exists.
+      if (hadAuthInUrl) {
+        var tries = 0;
+        var iv = setInterval(function () {
+          supabase.auth.getSession().then(function (r) {
+            if (r && r.data && r.data.session) { clearInterval(iv); goToApp(); }
+            else if (++tries > 40) { clearInterval(iv); } // ~10s, then stop quietly
+          }).catch(function () {});
+        }, 250);
+      }
+      // 2) Sign-in completed while the modal is open (in-modal OTP, or a fast OAuth).
       supabase.auth.onAuthStateChange(function (evt, session) {
-        if (session && evt === 'SIGNED_IN' && (!modal.hidden || hadAuthInUrl)) {
-          window.location.replace('/beta/');
-        }
+        if (session && evt === 'SIGNED_IN' && !modal.hidden) goToApp();
       });
     }
   })();

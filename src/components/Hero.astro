@@ -95,18 +95,17 @@ import Greeting from './Greeting.astro';
       A world that's yours, and only yours.
     </p>
 
-    <form class="hero-form" data-wl novalidate>
-      <input type="email" class="hero-email" name="email" inputmode="email" autocomplete="email" placeholder="Enter your email" aria-label="Your email" required />
-      <button type="submit" class="btn btn-primary">
+    <div class="hero-form" role="group" aria-label="Get started with Blaksyd">
+      <button type="button" class="btn btn-primary" data-open-auth data-tab="signup">
         <span>Get early access</span>
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
       </button>
-    </form>
-    <p class="hero-wl-note" data-wl-note role="status" aria-live="polite" hidden></p>
+      <button type="button" class="btn btn-ghost" data-open-auth data-tab="signin">Sign in</button>
+    </div>
     <a href="#ai" class="hero-explore">Explore the world
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M6 13l6 6 6-6" /></svg>
     </a>
-    <p class="hero-microcopy">Private waitlist · we'll email your invite · no spam, ever.</p>
+    <p class="hero-microcopy">Free during beta · continue with Google or email · no spam, ever.</p>
   </div>
 
   {/* ── trust bar — four pillars, warm→cool ─────────────────────────── */}
