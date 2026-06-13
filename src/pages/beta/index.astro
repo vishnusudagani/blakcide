@@ -2,9 +2,9 @@
 import AppLayout from '../../layouts/AppLayout.astro';
 
 const pillars = [
-  { id: 'blak',    href: '/beta/blak/',    name: 'Blak',    c: 'coral', tag: 'your AI friend',    line: 'Here before you ask. Text it anything.', snip: '“Your 4pm shifted — want me to move the run to morning?”' },
-  { id: 'persona', href: '/beta/persona/', name: 'Persona', c: 'lav',   tag: 'your digital self', line: 'A you that thinks. And anyone you build.', snip: '“Hype me before the pitch.” → “Walk in like it’s yours.”' },
-  { id: 'minit',   href: '/beta/minit/',   name: 'Minit',   c: 'mint',  tag: 'real people',       line: 'A real, friendly person in about a minute.', snip: 'Aria · available now · connects in ~28s' },
+  { id: 'blak',    href: '/beta/blak/',    name: 'Blak',    c: 'coral', soon: true, tag: 'your AI friend',    line: 'Here before you ask. Text it anything.', snip: '“Your 4pm shifted — want me to move the run to morning?”' },
+  { id: 'persona', href: '/beta/persona/', name: 'Persona', c: 'lav',   soon: true, tag: 'your digital self', line: 'A you that thinks. And anyone you build.', snip: '“Hype me before the pitch.” → “Walk in like it’s yours.”' },
+  { id: 'minit',   href: '/beta/minit/',   name: 'Minit',   c: 'mint',  soon: true, tag: 'real people',       line: 'A real, friendly person in about a minute.', snip: 'Aria · available now · connects in ~28s' },
   { id: 'nexus',   href: '/beta/nexus/',   name: 'Nexus',   c: 'aqua',  tag: 'your community',    line: 'The few who genuinely resonate with you.', snip: 'Starting Over · 840 here · “day 1, terrified, here anyway.”' },
 ];
 ---
@@ -20,6 +20,7 @@ const pillars = [
           <div class="home-card-top">
             <span class="home-orb"></span>
             <span class="home-who"><b>{p.name}</b><i>{p.tag}</i></span>
+            <span class={`home-badge ${p.soon ? 'soon' : 'live'}`}>{p.soon ? 'Soon' : 'Live'}</span>
             <span class="home-go" aria-hidden="true">→</span>
           </div>
           <p class="home-line">{p.line}</p>
@@ -58,7 +59,12 @@ const pillars = [
     .home-who { display: flex; flex-direction: column; line-height: 1.2; }
     .home-who b { font-size: var(--fs-xl); font-weight: 650; }
     .home-who i { font-style: normal; font-size: var(--fs-sm); color: var(--ink-faint); }
-    .home-go { margin-left: auto; font-size: 1.3rem; color: var(--ink-faint); }
+    .home-go { margin-left: .5rem; font-size: 1.3rem; color: var(--ink-faint); }
+    .home-badge { margin-left: auto; align-self: center; font-family: var(--font-mono); font-size: var(--fs-3xs); letter-spacing: .08em; text-transform: uppercase; padding: .2rem .5rem; border-radius: 999px; white-space: nowrap; }
+    .home-badge.soon { color: var(--gold); background: rgba(255, 210, 122, .12); border: 1px solid rgba(255, 210, 122, .25); }
+    .home-badge.live { color: var(--mint); background: rgba(106, 211, 184, .14); border: 1px solid rgba(106, 211, 184, .28); }
+    html[data-theme="light"] .home-badge.soon { color: var(--gold-ink); border-color: rgba(138, 100, 16, .3); }
+    html[data-theme="light"] .home-badge.live { color: var(--mint-ink); border-color: rgba(30, 125, 98, .3); }
     .home-line { margin: .9rem 0 .5rem; font-size: var(--fs-lg); color: var(--ink); }
     .home-snip { margin: 0; font-size: var(--fs-sm); color: var(--ink-soft); padding: .55rem .7rem; border-radius: var(--r-sm); background: var(--surface); border: 1px solid var(--line); }
 
