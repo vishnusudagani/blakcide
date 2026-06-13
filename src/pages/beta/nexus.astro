@@ -2,86 +2,298 @@
 import AppLayout from '../../layouts/AppLayout.astro';
 ---
 <AppLayout active="nexus" title="Nexus">
-  <div class="ap-page nx">
+  <!-- ════════ HOME ════════ -->
+  <div class="ap-page nx-view" id="nx-home">
     <p class="ap-kicker">Nexus · your community</p>
-    <h1 class="ap-h1">Find where you fit. <span class="nx-accent">No performance needed.</span></h1>
-    <p class="ap-sub">Tribes, live rooms, and the few who genuinely resonate with you — a feed built around you, not engagement.</p>
+    <h1 class="ap-h1">Where you belong. <span class="nx-accent">No performance needed.</span></h1>
+    <p class="ap-sub">Tribes to settle into, and Live Rooms that glow while you're in them.</p>
 
-    <div class="nx-tribes" id="nx-tribes">
-      <button class="nx-tribe is-on" data-t="founders"><i></i>Founders Who Overthink</button>
-      <button class="nx-tribe" data-t="starting"><i></i>Starting Over</button>
-      <button class="nx-tribe" data-t="today"><i></i>Made It Through Today <span class="nx-live">live</span></button>
-      <button class="nx-tribe nx-reso-btn" data-t="reso"><i></i>Resonance</button>
+    <!-- ── LIVE ROOMS (the star) ── -->
+    <div class="nx-sec-head">
+      <h2 class="nx-sec-title"><span class="nx-livedot"></span>Live Rooms <span class="nx-sec-sub">alive right now</span></h2>
+      <button type="button" class="nx-start" id="nx-start">+ Start a room</button>
     </div>
 
-    <div class="nx-feed ap-card" id="nx-feed"></div>
+    <div class="nx-rooms" id="nx-rooms">
+      <!-- cards injected -->
+    </div>
 
-    <form class="nx-composer" id="nx-form">
-      <input type="text" id="nx-input" placeholder="Share something — anonymous by default…" autocomplete="off" />
-      <button type="submit">Post</button>
-    </form>
-    <p class="nx-note">Beta preview — rooms are sample content for now. Real tribes, live discussion rooms, and resonance matching come next.</p>
+    <p class="nx-pulse-explain">A room's <b>Pulse</b> rises the longer real people gather and talk — and rests when the last person leaves. No timers, no FOMO. Just warmth while you're here.</p>
+
+    <!-- ── TRIBES ── -->
+    <div class="nx-sec-head" style="margin-top:2.2rem">
+      <h2 class="nx-sec-title">Your Tribes</h2>
+      <button type="button" class="nx-start ghost" id="nx-newtribe">+ Create a tribe</button>
+    </div>
+    <div class="nx-tribes-grid" id="nx-tribes-grid"></div>
+
+    <h2 class="nx-sec-title" style="margin-top:1.8rem">Discover</h2>
+    <div class="nx-tribes-grid discover" id="nx-discover"></div>
   </div>
 
-  <style>
+  <!-- ════════ IN-ROOM ════════ -->
+  <div class="nx-view nx-room" id="nx-room" hidden>
+    <header class="nx-room-top">
+      <button type="button" class="nx-back" data-home>← Leave</button>
+      <div class="nx-room-id"><span class="nx-livedot"></span><b id="nx-room-title">—</b><i id="nx-room-here">— here</i></div>
+      <div class="nx-room-pulse" id="nx-room-pulse" title="Room pulse"><span class="nx-flame"></span><b id="nx-pulse-n">0</b></div>
+    </header>
+
+    <div class="nx-room-body">
+      <div class="nx-room-main">
+        <div class="nx-room-feed" id="nx-room-feed" aria-live="polite"></div>
+        <form class="nx-room-composer" id="nx-room-form">
+          <input type="text" id="nx-room-input" placeholder="Say something to the room…" autocomplete="off" />
+          <button type="submit" aria-label="Send"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+        </form>
+      </div>
+
+      <aside class="nx-room-side">
+        <div class="nx-pulse-card ap-card">
+          <p class="nx-pulse-k">Room pulse</p>
+          <div class="nx-pulse-orb" id="nx-pulse-orb"><span class="nx-pulse-num" id="nx-pulse-big">247</span></div>
+          <div class="nx-pulse-stats">
+            <div><b id="nx-stat-day">day 4</b><span>alive</span></div>
+            <div><b id="nx-stat-time">3h 12m</b><span>this session</span></div>
+            <div><b id="nx-stat-here">14</b><span>here now</span></div>
+          </div>
+          <div class="nx-heat"><span id="nx-heat-fill"></span></div>
+          <p class="nx-pulse-note">Glowing because you're all here. It rests when the last person leaves.</p>
+        </div>
+
+        <div class="nx-here-card ap-card">
+          <p class="nx-pulse-k">Here now</p>
+          <div class="nx-here-faces" id="nx-here-faces"></div>
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <!-- ════════ TRIBE ════════ -->
+  <div class="ap-page nx-view nx-tribe" id="nx-tribe" hidden>
+    <button type="button" class="nx-back" data-home>← All of Nexus</button>
+    <div class="nx-tribe-head">
+      <span class="nx-tribe-mark" id="nx-tribe-mark"></span>
+      <div>
+        <h1 class="ap-h1" id="nx-tribe-name">—</h1>
+        <p class="nx-tribe-meta" id="nx-tribe-meta">—</p>
+      </div>
+      <button type="button" class="nx-joined" id="nx-tribe-join">Joined ✓</button>
+    </div>
+    <p class="nx-tribe-desc" id="nx-tribe-desc"></p>
+
+    <div class="nx-tribe-live ap-card" id="nx-tribe-live"></div>
+
+    <form class="nx-room-composer nx-disc-composer" id="nx-disc-form">
+      <input type="text" id="nx-disc-input" placeholder="Start a discussion…" autocomplete="off" />
+      <button type="submit">Post</button>
+    </form>
+    <div class="nx-discussions" id="nx-discussions"></div>
+  </div>
+
+  <style is:global>
+    /* global (not scoped): room/tribe cards are built in JS at runtime and would
+       miss Astro's scope attribute. Everything is .nx-* namespaced. */
+    .nx-view[hidden] { display: none !important; }
+    .nx-view { animation: nx-fade .3s var(--ease-out) both; }
+    @keyframes nx-fade { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:none} }
     .nx-accent { font-family: var(--font-serif); font-style: italic; font-weight: 400; background: linear-gradient(110deg, var(--mint), var(--aqua)); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
-    .nx-tribes { display: flex; flex-wrap: wrap; gap: .5rem; margin: clamp(1.1rem,3vh,1.6rem) 0 1rem; }
-    .nx-tribe { display: inline-flex; align-items: center; gap: .45rem; font: inherit; font-size: var(--fs-sm); color: var(--ink-soft); background: var(--surface); border: 1px solid var(--line-strong); border-radius: var(--r-pill); padding: .5rem .85rem; cursor: pointer; transition: .16s; min-height: 44px; }
-    .nx-tribe i { width: 8px; height: 8px; border-radius: 50%; background: linear-gradient(135deg, var(--aqua), var(--mint-deep)); }
-    .nx-tribe:hover { color: var(--ink); transform: translateY(-1px); }
-    .nx-tribe.is-on { color: var(--ink); background: var(--surface-strong); box-shadow: inset 0 0 0 1px rgba(91,192,255,.5); }
-    .nx-live { font-family: var(--font-mono); font-size: var(--fs-3xs); letter-spacing: .1em; text-transform: uppercase; color: var(--aqua); border: 1px solid rgba(91,192,255,.4); border-radius: 999px; padding: .05rem .35rem; }
-    .nx-reso-btn i { background: radial-gradient(circle at 40% 40%, #BFE9FF, var(--aqua)); box-shadow: 0 0 8px rgba(91,192,255,.6); }
+    .nx-livedot { width: 9px; height: 9px; border-radius: 50%; background: #ff5a6e; box-shadow: 0 0 0 0 rgba(255,90,110,.6); animation: nx-beat 1.8s infinite; display: inline-block; }
+    @keyframes nx-beat { 0%{box-shadow:0 0 0 0 rgba(255,90,110,.55)} 70%{box-shadow:0 0 0 8px rgba(255,90,110,0)} 100%{box-shadow:0 0 0 0 rgba(255,90,110,0)} }
 
-    .nx-feed { padding: 1.1rem 1.2rem; min-height: 240px; }
-    .nx-room-head { display: flex; align-items: center; gap: .6rem; margin-bottom: 1rem; }
-    .nx-room-head b { font-size: var(--fs-lg); } .nx-here { margin-left: auto; font-family: var(--font-mono); font-size: var(--fs-2xs); color: var(--ink-faint); display: inline-flex; align-items: center; gap: .35rem; } .nx-here i { width: 6px; height: 6px; border-radius: 50%; background: var(--aqua); box-shadow: 0 0 8px var(--aqua); }
-    .nx-msg { display: flex; gap: .6rem; align-items: flex-start; margin-bottom: .9rem; animation: nx-in .35s ease both; }
-    @keyframes nx-in { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:none} }
-    .nx-anon { width: 30px; height: 30px; border-radius: 50%; flex: none; margin-top: .1rem; }
-    .nx-a1{background:linear-gradient(135deg,var(--aqua),var(--aqua-ink))} .nx-a2{background:linear-gradient(135deg,var(--mint),var(--mint-deep))} .nx-a3{background:linear-gradient(135deg,var(--lavender),var(--lavender-deep))} .nx-a4{background:linear-gradient(135deg,var(--peach-deep),var(--gold))}
-    .nx-handle { font-family: var(--font-mono); font-size: var(--fs-3xs); text-transform: lowercase; letter-spacing: .04em; color: var(--aqua); } .nx-text { font-size: var(--fs-md); color: var(--ink-soft); line-height: 1.45; margin: .1rem 0 0; }
-    .nx-feels { margin-left: auto; flex: none; font-family: var(--font-mono); font-size: var(--fs-3xs); color: var(--aqua); background: rgba(91,192,255,.12); border: 1px solid rgba(91,192,255,.24); border-radius: 999px; padding: .2rem .5rem; }
+    .nx-sec-head { display: flex; align-items: center; gap: 1rem; margin: clamp(1.4rem,4vh,2.2rem) 0 1rem; }
+    .nx-sec-title { font-family: var(--font-display); font-weight: 600; font-size: var(--fs-xl); display: inline-flex; align-items: center; gap: .55rem; margin: 0; }
+    .nx-sec-sub { font-family: var(--font-mono); font-size: var(--fs-2xs); text-transform: uppercase; letter-spacing: .12em; color: var(--ink-faint); font-weight: 400; }
+    .nx-start { margin-left: auto; font: inherit; font-size: var(--fs-sm); font-weight: 600; color: #06231C; background: linear-gradient(135deg, var(--mint), var(--aqua)); border: 0; border-radius: var(--r-pill); padding: .55rem 1rem; cursor: pointer; transition: transform .2s var(--ease-spring); }
+    .nx-start:hover { transform: translateY(-1px); }
+    .nx-start.ghost { color: var(--ink-soft); background: var(--surface); border: 1px solid var(--line-strong); }
 
-    .nx-composer { display: flex; gap: .5rem; margin-top: 1rem; }
-    .nx-composer input { flex: 1; min-width: 0; padding: .8rem 1.05rem; border-radius: var(--r-pill); background: var(--surface); border: 1px solid var(--line-strong); color: var(--ink); font: inherit; font-size: var(--fs-md); }
-    .nx-composer input:focus { outline: none; border-color: var(--aqua); }
-    .nx-composer button { flex: none; padding: 0 1.2rem; border-radius: var(--r-pill); border: 0; cursor: pointer; font: inherit; font-weight: 650; color: #06231C; background: linear-gradient(135deg, var(--aqua), var(--mint-deep)); }
-    .nx-note { margin: .9rem .2rem 0; font-size: var(--fs-xs); color: var(--ink-faint); text-align: center; }
+    /* live room cards */
+    .nx-rooms { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px,1fr)); gap: 1rem; }
+    .nx-room-card { position: relative; overflow: hidden; padding: 1.1rem 1.2rem 1.2rem; border-radius: var(--r-lg); border: 1px solid var(--line-strong); background: var(--glass-strong); cursor: pointer; transition: transform .25s var(--ease-spring), border-color .2s; }
+    .nx-room-card::before { content:''; position:absolute; inset:0; background: radial-gradient(80% 60% at 80% -10%, var(--heat, rgba(255,150,90,.16)), transparent 70%); pointer-events:none; }
+    .nx-room-card:hover { transform: translateY(-3px); border-color: rgba(91,192,255,.4); }
+    .nx-rc-top { display: flex; align-items: center; gap: .5rem; position: relative; }
+    .nx-rc-live { font-family: var(--font-mono); font-size: var(--fs-3xs); letter-spacing: .12em; text-transform: uppercase; color: #ff8a96; }
+    .nx-rc-pulse { margin-left: auto; display: inline-flex; align-items: center; gap: .3rem; font-size: var(--fs-sm); font-weight: 700; color: #ffc46b; }
+    .nx-flame { width: 13px; height: 13px; flex: none; border-radius: 50% 50% 50% 0; transform: rotate(45deg); background: radial-gradient(circle at 60% 60%, #ffd27a, #ff7a4d); box-shadow: 0 0 10px rgba(255,150,90,.7); }
+    .nx-rc-title { font-size: var(--fs-xl); font-weight: 650; margin: .7rem 0 .1rem; position: relative; }
+    .nx-rc-host { font-size: var(--fs-sm); color: var(--ink-faint); position: relative; }
+    .nx-rc-bottom { display: flex; align-items: center; gap: .6rem; margin-top: .9rem; position: relative; }
+    .nx-faces { display: inline-flex; } .nx-faces span { width: 26px; height: 26px; border-radius: 50%; margin-left: -8px; border: 2px solid var(--bg); display: inline-block; }
+    .nx-faces span:first-child { margin-left: 0; }
+    .nx-here-n { font-size: var(--fs-sm); color: var(--ink-soft); }
+    .nx-join-btn { margin-left: auto; font: inherit; font-size: var(--fs-sm); font-weight: 600; color: var(--aqua-ink); background: rgba(91,192,255,.14); border: 1px solid rgba(91,192,255,.3); border-radius: var(--r-pill); padding: .4rem .9rem; }
+    html[data-theme="dark"] .nx-join-btn { color: #BFE9FF; }
+    .nx-start-card { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .4rem; min-height: 150px; border: 1.5px dashed var(--line-strong); border-radius: var(--r-lg); color: var(--ink-faint); cursor: pointer; transition: .2s; }
+    .nx-start-card:hover { border-color: var(--aqua); color: var(--aqua); }
+    .nx-start-card b { font-size: 1.5rem; }
+    .nx-pulse-explain { margin: 1rem 0 0; font-size: var(--fs-sm); color: var(--ink-faint); max-width: 60ch; } .nx-pulse-explain b { color: #ffc46b; }
+
+    /* tribes */
+    .nx-tribes-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px,1fr)); gap: .8rem; }
+    .nx-tribe-card { display: flex; align-items: center; gap: .7rem; padding: .9rem 1rem; border-radius: var(--r-md); border: 1px solid var(--line-strong); background: var(--glass-strong); cursor: pointer; transition: transform .2s var(--ease-spring), border-color .2s; }
+    .nx-tribe-card:hover { transform: translateY(-2px); border-color: rgba(91,192,255,.4); }
+    .nx-tc-mark { width: 38px; height: 38px; border-radius: 12px; flex: none; }
+    .nx-tc-who b { font-size: var(--fs-md); display: block; } .nx-tc-who span { font-size: var(--fs-sm); color: var(--ink-faint); }
+    .nx-tc-new { margin-left: auto; font-size: var(--fs-3xs); font-family: var(--font-mono); color: var(--aqua); background: rgba(91,192,255,.14); border-radius: 999px; padding: .15rem .45rem; }
+
+    /* in-room */
+    .nx-room { display: flex; flex-direction: column; height: 100vh; height: 100svh; }
+    @media (max-width: 820px) { .nx-room { height: calc(100svh - 124px); } }
+    .nx-room-top { display: flex; align-items: center; gap: .8rem; padding: 1rem clamp(1rem,3vw,1.6rem); border-bottom: 1px solid var(--line); }
+    .nx-back { font: inherit; font-size: var(--fs-md); color: var(--ink-soft); background: var(--surface); border: 1px solid var(--line-strong); border-radius: var(--r-pill); padding: .4rem .8rem; cursor: pointer; }
+    .nx-back:hover { color: var(--ink); }
+    .nx-room-id { display: flex; align-items: center; gap: .5rem; } .nx-room-id b { font-size: var(--fs-lg); } .nx-room-id i { font-style: normal; font-size: var(--fs-sm); color: var(--ink-faint); }
+    .nx-room-pulse { margin-left: auto; display: inline-flex; align-items: center; gap: .35rem; font-weight: 700; color: #ffc46b; font-size: var(--fs-lg); }
+    .nx-room-body { flex: 1; display: grid; grid-template-columns: 1fr 300px; gap: 1rem; min-height: 0; padding: 1rem clamp(1rem,3vw,1.6rem); }
+    @media (max-width: 900px) { .nx-room-body { grid-template-columns: 1fr; } .nx-room-side { display: none; } }
+    .nx-room-main { display: flex; flex-direction: column; min-height: 0; }
+    .nx-room-feed { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: .7rem; padding: .4rem; }
+    .nx-rmsg { display: flex; gap: .6rem; align-items: flex-start; animation: nx-fade .3s ease both; max-width: 90%; }
+    .nx-rmsg .nx-rav { width: 28px; height: 28px; border-radius: 50%; flex: none; margin-top: .15rem; }
+    .nx-rmsg .nx-rh { font-family: var(--font-mono); font-size: var(--fs-3xs); color: var(--aqua); } .nx-rmsg p { margin: .1rem 0 0; font-size: var(--fs-md); color: var(--ink); line-height: 1.45; }
+    .nx-rmsg.me { margin-left: auto; flex-direction: row-reverse; } .nx-rmsg.me p { color: var(--ink-soft); }
+    .nx-room-composer { display: flex; gap: .5rem; padding-top: .6rem; }
+    .nx-room-composer input { flex: 1; min-width: 0; padding: .8rem 1.05rem; border-radius: var(--r-pill); background: var(--surface); border: 1px solid var(--line-strong); color: var(--ink); font: inherit; font-size: var(--fs-md); }
+    .nx-room-composer input:focus { outline: none; border-color: var(--aqua); }
+    .nx-room-composer button { flex: none; padding: 0 1.1rem; min-width: 46px; border-radius: var(--r-pill); border: 0; cursor: pointer; color: #06231C; font: inherit; font-weight: 650; background: linear-gradient(135deg, var(--mint), var(--aqua)); } .nx-room-composer button svg { width: 18px; height: 18px; }
+
+    .nx-room-side { display: flex; flex-direction: column; gap: 1rem; overflow-y: auto; }
+    .nx-pulse-card { padding: 1.2rem; text-align: center; }
+    .nx-pulse-k { font-family: var(--font-mono); font-size: var(--fs-2xs); letter-spacing: .14em; text-transform: uppercase; color: var(--ink-faint); margin: 0 0 .8rem; }
+    .nx-pulse-orb { position: relative; width: 130px; height: 130px; margin: 0 auto; border-radius: 50%; display: grid; place-items: center;
+      background: radial-gradient(circle at 50% 45%, rgba(255,180,100,.28), rgba(255,120,80,.12) 60%, transparent 72%);
+      box-shadow: 0 0 50px rgba(255,150,90,.35); animation: nx-glow 3.2s var(--ease-soft) infinite; }
+    @keyframes nx-glow { 0%,100%{transform:scale(1);box-shadow:0 0 44px rgba(255,150,90,.3)} 50%{transform:scale(1.05);box-shadow:0 0 64px rgba(255,150,90,.5)} }
+    .nx-pulse-num { font-family: var(--font-display); font-weight: 700; font-size: 2.6rem; color: #ffd9a8; text-shadow: 0 0 24px rgba(255,170,100,.6); }
+    .nx-pulse-stats { display: flex; justify-content: space-around; margin-top: 1rem; }
+    .nx-pulse-stats b { display: block; font-size: var(--fs-lg); color: var(--ink); } .nx-pulse-stats span { font-size: var(--fs-2xs); color: var(--ink-faint); }
+    .nx-heat { height: 6px; border-radius: 999px; background: rgba(255,255,255,.08); overflow: hidden; margin-top: 1rem; } .nx-heat span { display: block; height: 100%; width: 72%; border-radius: 999px; background: linear-gradient(90deg, #ff7a4d, #ffd27a); transition: width 1.2s var(--ease-out); }
+    .nx-pulse-note { margin: .9rem 0 0; font-size: var(--fs-xs); color: var(--ink-faint); }
+    .nx-here-card { padding: 1rem 1.2rem; } .nx-here-faces { display: flex; flex-wrap: wrap; gap: .4rem; } .nx-here-faces span { width: 30px; height: 30px; border-radius: 50%; }
+
+    /* tribe view */
+    .nx-tribe-head { display: flex; align-items: center; gap: 1rem; margin: 1rem 0 .6rem; }
+    .nx-tribe-mark { width: 56px; height: 56px; border-radius: 16px; flex: none; }
+    .nx-tribe-meta { color: var(--ink-faint); font-size: var(--fs-md); margin: .2rem 0 0; }
+    .nx-joined { margin-left: auto; font: inherit; font-size: var(--fs-sm); font-weight: 600; color: var(--mint); background: rgba(106,211,184,.14); border: 1px solid rgba(106,211,184,.3); border-radius: var(--r-pill); padding: .45rem 1rem; cursor: pointer; }
+    .nx-tribe-desc { color: var(--ink-soft); max-width: 60ch; margin: 0 0 1.2rem; }
+    .nx-tribe-live { padding: 1rem 1.2rem; margin-bottom: 1.2rem; }
+    .nx-disc-composer { margin-bottom: 1.2rem; }
+    .nx-disc { padding: 1rem 1.1rem; border-radius: var(--r-md); border: 1px solid var(--line); background: var(--glass-strong); margin-bottom: .7rem; animation: nx-fade .3s ease both; }
+    .nx-disc-top { display: flex; align-items: center; gap: .5rem; font-size: var(--fs-sm); color: var(--ink-faint); margin-bottom: .4rem; } .nx-disc-av { width: 22px; height: 22px; border-radius: 50%; }
+    .nx-disc-text { font-size: var(--fs-lg); color: var(--ink); line-height: 1.5; }
+    .nx-disc-foot { display: flex; gap: 1rem; margin-top: .7rem; font-size: var(--fs-sm); color: var(--ink-faint); } .nx-reso { color: var(--aqua); }
   </style>
 
   <script is:inline>
     (function () {
-      var ROOMS = {
-        founders: { name: 'Founders Who Overthink', here: '1.2k here', msgs: [['a1','3am brain','shipped the thing. immediately found nine problems with it.'],['a2','still building',"anyone else rehearse conversations that'll never happen?"],['a3','ramen szn','overthinking is just caring with the volume turned up.']] },
-        starting: { name: 'Starting Over', here: '840 here', msgs: [['a3','first week','day 1 of the rest of it. terrified. here anyway.'],['a1','been there',"you showed up. that's the whole job today."]] },
-        today:    { name: 'Made It Through Today', here: '122 here · live', msgs: [['a4','rough one',"barely. but I'm here and that counts for something."],['a2','night shift','genuinely proud of you. no notes.']] },
-        reso:     { name: 'Resonance match', here: 'for you', reso: true, msgs: [['a3','also starting over','resonates'],['a1','quiet, like you','resonates'],['a2','one step ahead','resonates']] },
-      };
-      var feed = document.getElementById('nx-feed'), tribes = document.getElementById('nx-tribes'),
-          form = document.getElementById('nx-form'), input = document.getElementById('nx-input');
-      function render(k) {
-        var r = ROOMS[k];
-        var head = '<div class="nx-room-head"><b>' + r.name + '</b><span class="nx-here"><i></i>' + r.here + '</span></div>';
-        var body = r.msgs.map(function (m) {
-          var feels = r.reso ? '<span class="nx-feels">' + m[2] + '</span>' : '';
-          var text = r.reso ? '' : '<p class="nx-text">' + m[2] + '</p>';
-          return '<div class="nx-msg"><span class="nx-anon nx-' + m[0] + '"></span><div style="flex:1"><span class="nx-handle">' + m[1] + '</span>' + text + '</div>' + feels + '</div>';
-        }).join('');
-        feed.innerHTML = head + body;
+      var grad = ['linear-gradient(135deg,#5BC0FF,#1872B0)','linear-gradient(135deg,#6AD3B8,#1E7D62)','linear-gradient(135deg,#C9B8FF,#7459CE)','linear-gradient(135deg,#FFD27A,#FF9B6C)','linear-gradient(135deg,#FF6B9D,#7459CE)'];
+      function g(i){ return grad[i % grad.length]; }
+      function faces(n){ var s=''; for(var i=0;i<n;i++) s+='<span style="background:'+g(i)+'"></span>'; return s; }
+
+      var ROOMS = [
+        { id:'r1', title:'3am Founders Club', host:'@nightowl', here:14, pulse:247, day:4, heat:72, msgs:[['ship anyway','3am brain says ship it. anyone awake to talk me out of it?'],['half-built','do it. you can fix it tomorrow with coffee.'],['quiet one','this room is weirdly the most productive part of my day']] },
+        { id:'r2', title:'Made It Through Today', host:'@stillhere', here:31, pulse:512, day:9, heat:88, msgs:[['rough one','barely. but I showed up here and that counts.'],['nightshift','genuinely proud of you. no notes.']] },
+        { id:'r3', title:'Late Night Study', host:'@focusmode', here:8, pulse:96, day:2, heat:44, msgs:[['exam szn','25-min sprint starting now — anyone in?'],['caffeine','in. timer set.']] },
+        { id:'r4', title:'Just Vibing', host:'@lofi', here:22, pulse:178, day:3, heat:60, msgs:[['chill','put on something calm, just here to coexist'],['same','presence > conversation sometimes']] },
+      ];
+      var TRIBES = [
+        { id:'t1', name:'Founders Who Overthink', members:'12.4k', mark:g(0), neu:'3 new', desc:'For builders whose minds never quite clock out. Honest talk about the doubt behind the launch posts.', disc:[['3am brain','shipped the thing. immediately found nine problems with it.'],['still building','anyone else rehearse conversations that\'ll never happen?']] },
+        { id:'t2', name:'Starting Over', members:'8.8k', mark:g(1), neu:'live', desc:'Whatever you\'re beginning again — a city, a career, a self. Day one is allowed to be scary here.', disc:[['first week','day 1 of the rest of it. terrified. here anyway.'],['been there','you showed up. that\'s the whole job today.']] },
+        { id:'t3', name:'Quiet Minds', members:'5.1k', mark:g(2), neu:'', desc:'A calmer corner. Low-pressure, low-noise, for the introverts and the overstimulated.', disc:[['soft hours','reminder that resting is also doing something.']] },
+      ];
+      var DISCOVER = [
+        { id:'d1', name:'Make It Through Monday', members:'19k', mark:g(3) },
+        { id:'d2', name:'Creative Block Club', members:'6.7k', mark:g(4) },
+        { id:'d3', name:'Plant Parents', members:'4.2k', mark:g(1) },
+      ];
+
+      var views = { home: document.getElementById('nx-home'), room: document.getElementById('nx-room'), tribe: document.getElementById('nx-tribe') };
+      function show(v){ for (var k in views){ views[k].hidden = (k !== v); } window.scrollTo(0,0); }
+
+      // ── home: render rooms + tribes ──
+      var roomsEl = document.getElementById('nx-rooms');
+      roomsEl.innerHTML = ROOMS.map(function(r){
+        return '<div class="nx-room-card" data-room="'+r.id+'" style="--heat:rgba(255,150,90,'+(0.10+r.heat/400)+')">'
+          + '<div class="nx-rc-top"><span class="nx-livedot"></span><span class="nx-rc-live">live</span>'
+          + '<span class="nx-rc-pulse"><span class="nx-flame"></span>'+r.pulse+' · day '+r.day+'</span></div>'
+          + '<div class="nx-rc-title">'+r.title+'</div><div class="nx-rc-host">hosted by '+r.host+'</div>'
+          + '<div class="nx-rc-bottom"><span class="nx-faces">'+faces(Math.min(r.here,5))+'</span>'
+          + '<span class="nx-here-n">'+r.here+' here</span><span class="nx-join-btn">Join</span></div></div>';
+      }).join('') + '<div class="nx-start-card" data-start><b>+</b>Start a Live Room</div>';
+
+      document.getElementById('nx-tribes-grid').innerHTML = TRIBES.map(function(t){
+        return '<div class="nx-tribe-card" data-tribe="'+t.id+'"><span class="nx-tc-mark" style="background:'+t.mark+'"></span>'
+          + '<span class="nx-tc-who"><b>'+t.name+'</b><span>'+t.members+' members</span></span>'
+          + (t.neu?'<span class="nx-tc-new">'+t.neu+'</span>':'')+'</div>';
+      }).join('');
+      document.getElementById('nx-discover').innerHTML = DISCOVER.map(function(t){
+        return '<div class="nx-tribe-card" data-tribe-new style="cursor:default"><span class="nx-tc-mark" style="background:'+t.mark+'"></span>'
+          + '<span class="nx-tc-who"><b>'+t.name+'</b><span>'+t.members+' members</span></span>'
+          + '<span class="nx-tc-new" style="background:rgba(255,255,255,.06);color:var(--ink-soft)">Join</span></div>';
+      }).join('');
+
+      // ── open a room ──
+      var pulseTimer;
+      function openRoom(r){
+        document.getElementById('nx-room-title').textContent = r.title;
+        document.getElementById('nx-room-here').textContent = r.here + ' here';
+        document.getElementById('nx-pulse-n').textContent = r.pulse;
+        document.getElementById('nx-pulse-big').textContent = r.pulse;
+        document.getElementById('nx-stat-day').textContent = 'day ' + r.day;
+        document.getElementById('nx-stat-here').textContent = r.here;
+        document.getElementById('nx-stat-time').textContent = '0m';
+        document.getElementById('nx-heat-fill').style.width = r.heat + '%';
+        document.getElementById('nx-here-faces').innerHTML = faces(Math.min(r.here, 12));
+        var feed = document.getElementById('nx-room-feed');
+        feed.innerHTML = r.msgs.map(function(m,i){ return '<div class="nx-rmsg"><span class="nx-rav" style="background:'+g(i+1)+'"></span><div><span class="nx-rh">'+m[0]+'</span><p>'+m[1]+'</p></div></div>'; }).join('');
+        feed.scrollTop = feed.scrollHeight;
+        show('room');
+        // gentle "alive" feel: pulse ticks up slowly as the room stays active (no FOMO, just warmth)
+        clearInterval(pulseTimer); var p = r.pulse, mins = 0;
+        pulseTimer = setInterval(function(){ p += 1; mins += 1; document.getElementById('nx-pulse-big').textContent = p; document.getElementById('nx-pulse-n').textContent = p; document.getElementById('nx-stat-time').textContent = mins + 'm'; }, 4000);
       }
-      tribes.addEventListener('click', function (e) {
-        var b = e.target.closest('.nx-tribe'); if (!b) return;
-        [].forEach.call(tribes.children, function (x) { x.classList.remove('is-on'); }); b.classList.add('is-on');
-        render(b.getAttribute('data-t'));
+      function startNew(){ openRoom({ title:'Your new room', host:'you', here:1, pulse:1, day:1, heat:8, msgs:[['blak · moderator','Room\'s open. It\'ll glow as people join and talk. You\'re the first — say hi 👋']] }); }
+
+      roomsEl.addEventListener('click', function(e){
+        var card = e.target.closest('[data-room]'); var start = e.target.closest('[data-start]');
+        if (start) return startNew();
+        if (card) { var r = ROOMS.filter(function(x){return x.id===card.getAttribute('data-room');})[0]; if (r) openRoom(r); }
       });
-      form.addEventListener('submit', function (e) {
-        e.preventDefault(); var v = input.value.trim(); if (!v) return; input.value = '';
-        var msg = document.createElement('div'); msg.className = 'nx-msg';
-        msg.innerHTML = '<span class="nx-anon nx-a2"></span><div style="flex:1"><span class="nx-handle">you · anon</span><p class="nx-text">' + v.replace(/</g,'&lt;') + '</p></div>';
-        var first = feed.querySelector('.nx-msg'); if (first) feed.insertBefore(msg, first); else feed.appendChild(msg);
+      document.getElementById('nx-start').addEventListener('click', startNew);
+
+      // room composer
+      document.getElementById('nx-room-form').addEventListener('submit', function(e){
+        e.preventDefault(); var inp = document.getElementById('nx-room-input'); var v = inp.value.trim(); if(!v) return; inp.value='';
+        var feed = document.getElementById('nx-room-feed');
+        var d = document.createElement('div'); d.className='nx-rmsg me'; d.innerHTML = '<span class="nx-rav" style="background:var(--cta-grad)"></span><div><span class="nx-rh">you</span><p></p></div>';
+        d.querySelector('p').textContent = v; feed.appendChild(d); feed.scrollTop = feed.scrollHeight;
       });
-      render('founders');
+
+      // ── open a tribe ──
+      function openTribe(t){
+        document.getElementById('nx-tribe-name').textContent = t.name;
+        document.getElementById('nx-tribe-meta').textContent = t.members + ' members · ' + (t.disc.length+2) + ' talking now';
+        document.getElementById('nx-tribe-mark').style.background = t.mark;
+        document.getElementById('nx-tribe-desc').textContent = t.desc;
+        document.getElementById('nx-tribe-live').innerHTML = '<div style="display:flex;align-items:center;gap:.6rem"><span class="nx-livedot"></span><b>'+t.name+' · live room</b><span class="nx-here-n" style="margin-left:auto">'+ (8 + (t.id.charCodeAt(1)%20)) +' here</span><span class="nx-join-btn" data-start>Join</span></div>';
+        var disc = document.getElementById('nx-discussions');
+        disc.innerHTML = t.disc.map(function(m,i){ return '<div class="nx-disc"><div class="nx-disc-top"><span class="nx-disc-av" style="background:'+g(i)+'"></span>'+m[0]+' · 2h</div><div class="nx-disc-text">'+m[1]+'</div><div class="nx-disc-foot"><span class="nx-reso">◈ '+(40+i*13)+' resonate</span><span>'+(3+i)+' replies</span></div></div>'; }).join('');
+        show('tribe');
+      }
+      document.getElementById('nx-tribes-grid').addEventListener('click', function(e){ var c = e.target.closest('[data-tribe]'); if(c){ var t=TRIBES.filter(function(x){return x.id===c.getAttribute('data-tribe');})[0]; if(t) openTribe(t); } });
+      document.getElementById('nx-tribe-live').addEventListener('click', function(e){ if(e.target.closest('[data-start]')) startNew(); });
+      document.getElementById('nx-disc-form').addEventListener('submit', function(e){
+        e.preventDefault(); var inp=document.getElementById('nx-disc-input'); var v=inp.value.trim(); if(!v) return; inp.value='';
+        var disc=document.getElementById('nx-discussions');
+        var d=document.createElement('div'); d.className='nx-disc'; d.innerHTML='<div class="nx-disc-top"><span class="nx-disc-av" style="background:var(--cta-grad)"></span>you · anon · now</div><div class="nx-disc-text"></div><div class="nx-disc-foot"><span class="nx-reso">◈ 0 resonate</span><span>0 replies</span></div>';
+        d.querySelector('.nx-disc-text').textContent=v; disc.insertBefore(d, disc.firstChild);
+      });
+
+      // back buttons
+      [].forEach.call(document.querySelectorAll('[data-home]'), function(b){ b.addEventListener('click', function(){ clearInterval(pulseTimer); show('home'); }); });
     })();
   </script>
 </AppLayout>
