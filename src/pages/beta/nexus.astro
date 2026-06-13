@@ -193,13 +193,20 @@ import AppLayout from '../../layouts/AppLayout.astro';
     .nx-pulse-note { margin: .9rem 0 0; font-size: var(--fs-xs); color: var(--ink-faint); }
     .nx-here-card { padding: 1rem 1.2rem; } .nx-here-faces { display: flex; flex-wrap: wrap; gap: .4rem; } .nx-here-faces span { width: 30px; height: 30px; border-radius: 50%; }
 
-    /* ── mobile in-room: flow vertically, feed scrolls, Pulse sits below ── */
+    /* ── mobile in-room: feed fills the screen; Pulse is a slim vibe bar ── */
     @media (max-width: 900px) {
-      .nx-room { height: auto; min-height: calc(100svh - 130px); }
-      .nx-room-body { display: flex; flex-direction: column; gap: 1rem; }
-      .nx-room-feed { min-height: 200px; max-height: 50vh; }
-      .nx-pulse-orb { width: 112px; height: 112px; }
-      .nx-pulse-num { font-size: 2.1rem; }
+      .nx-room { height: calc(100svh - 124px); }
+      #nx-room-here, .nx-room-pulse { display: none; }   /* carried by the vibe bar */
+      .nx-room-body { display: flex; flex-direction: column; gap: .7rem; padding-top: .7rem; }
+      .nx-room-main { flex: 1; min-height: 0; order: 1; }
+      .nx-room-side { order: 0; flex-direction: row; align-items: center; overflow: visible; }
+      .nx-pulse-card { flex: 1; display: flex; align-items: center; gap: .6rem; padding: .5rem .85rem; text-align: left; }
+      .nx-pulse-k, .nx-pulse-note, .nx-heat, .nx-here-card { display: none; }
+      .nx-pulse-orb { width: 34px; height: 34px; margin: 0; box-shadow: 0 0 14px rgba(255,150,90,.45); animation: none; }
+      .nx-pulse-num { font-size: .85rem; text-shadow: none; }
+      .nx-pulse-stats { margin: 0 0 0 auto; gap: 1.1rem; }
+      .nx-pulse-stats b { font-size: var(--fs-md); }
+      .nx-pulse-stats span { font-size: 9px; }
     }
 
     /* tribe view */
