@@ -1,0 +1,171 @@
+---
+// AppLayout — the logged-in Blaksyd BETA app shell (UI only for now).
+// "First Light" dark warm-dawn aesthetic, distinct from the cream marketing site
+// so signing in *feels* like entering the product. Sidebar on desktop, bottom
+// tab-bar on mobile. Not indexed. Real auth-gating + functionality land per-pillar.
+import '../styles/fonts.css';
+import '../styles/tokens.css';
+
+interface Props { active?: 'home' | 'blak' | 'persona' | 'minit' | 'nexus'; title?: string; }
+const { active = 'home', title = 'Home' } = Astro.props;
+
+const nav = [
+  { id: 'home',    href: '/beta/',         label: 'Home',    c: 'gold',  d: 'M3 11l9-7 9 7M5 10v10h14V10' },
+  { id: 'blak',    href: '/beta/blak/',    label: 'Blak',    c: 'coral', d: 'M4 5h16v11H8l-4 4z' },
+  { id: 'persona', href: '/beta/persona/', label: 'Persona', c: 'lav',   d: 'M12 12a4 4 0 100-8 4 4 0 000 8zM5 20a7 7 0 0114 0' },
+  { id: 'minit',   href: '/beta/minit/',   label: 'Minit',   c: 'mint',  d: 'M9 11a3 3 0 100-6 3 3 0 000 6zM2.5 19a6.5 6.5 0 0113 0M16 5.5a3 3 0 010 6M21.5 19a6.5 6.5 0 00-3-5.5' },
+  { id: 'nexus',   href: '/beta/nexus/',   label: 'Nexus',   c: 'aqua',  d: 'M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5L18 18M18 6l-2.5 2.5M8.5 15.5L6 18' },
+];
+---
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="robots" content="noindex, nofollow" />
+  <meta name="theme-color" content="#0B0D1F" />
+  <title>{title} · Blaksyd beta</title>
+  <link rel="icon" href="/favicon.ico" />
+</head>
+<body>
+  <div class="ap-atmos" aria-hidden="true"></div>
+
+  <div class="ap">
+    <!-- ── side / brand rail ── -->
+    <aside class="ap-rail">
+      <a href="/beta/" class="ap-brand" aria-label="Blaksyd beta">
+        <span class="ap-mark"></span><span class="ap-beta">beta</span>
+      </a>
+      <nav class="ap-nav" aria-label="Blaksyd">
+        {nav.map((n) => (
+          <a href={n.href} class={`ap-link c-${n.c} ${active === n.id ? 'is-on' : ''}`} aria-current={active === n.id ? 'page' : undefined}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d={n.d} /></svg>
+            <span>{n.label}</span>
+          </a>
+        ))}
+      </nav>
+      <div class="ap-me">
+        <button type="button" class="ap-avatar" id="ap-avatar" aria-label="Your account">Y</button>
+        <button type="button" class="ap-signout" id="ap-signout">Sign out</button>
+      </div>
+    </aside>
+
+    <!-- ── content ── -->
+    <main class="ap-main" id="main">
+      <slot />
+    </main>
+  </div>
+
+  <style is:global>
+    :root { color-scheme: dark; }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; }
+    body {
+      font-family: var(--font-body); color: var(--ink); background: var(--bg);
+      -webkit-font-smoothing: antialiased;
+    }
+    .ap-atmos {
+      position: fixed; inset: 0; z-index: 0; pointer-events: none;
+      background:
+        radial-gradient(70% 50% at 18% -8%, rgba(255, 150, 120, .16), transparent 60%),
+        radial-gradient(60% 50% at 92% 4%, rgba(201, 184, 255, .12), transparent 60%),
+        radial-gradient(80% 60% at 50% 120%, rgba(91, 192, 255, .10), transparent 60%);
+    }
+
+    .ap { position: relative; z-index: 1; display: grid; grid-template-columns: 248px 1fr; min-height: 100vh; min-height: 100svh; }
+
+    /* rail */
+    .ap-rail {
+      position: sticky; top: 0; height: 100vh; height: 100svh;
+      display: flex; flex-direction: column; gap: 1.4rem;
+      padding: 1.5rem 1.1rem; border-right: 1px solid var(--line);
+      background: rgba(8, 9, 26, .45); backdrop-filter: blur(12px);
+    }
+    .ap-brand { display: inline-flex; align-items: center; gap: .5rem; }
+    .ap-mark { display: block; height: 24px; width: 84px; background: url('/assets/blaksyd-white.webp') left center / contain no-repeat; }
+    .ap-beta {
+      font-family: var(--font-mono); font-size: 9px; letter-spacing: .14em; text-transform: uppercase;
+      color: var(--gold); border: 1px solid rgba(255, 210, 122, .4); border-radius: 999px; padding: 2px 6px;
+    }
+    .ap-nav { display: flex; flex-direction: column; gap: .25rem; margin-top: .5rem; }
+    .ap-link {
+      display: flex; align-items: center; gap: .75rem;
+      padding: .6rem .7rem; border-radius: var(--r-md);
+      color: var(--ink-soft); font-size: var(--fs-lg); font-weight: 500;
+      transition: background var(--t-fast) var(--ease-out), color var(--t-fast) var(--ease-out);
+    }
+    .ap-link svg { width: 20px; height: 20px; flex: none; opacity: .85; }
+    .ap-link:hover { background: var(--surface); color: var(--ink); }
+    .ap-link.is-on { color: var(--ink); background: var(--surface-strong); }
+    .c-coral.is-on { box-shadow: inset 3px 0 0 var(--coral); color: var(--coral); }
+    .c-lav.is-on   { box-shadow: inset 3px 0 0 var(--lavender); color: var(--lavender); }
+    .c-mint.is-on  { box-shadow: inset 3px 0 0 var(--mint-deep); color: var(--mint); }
+    .c-aqua.is-on  { box-shadow: inset 3px 0 0 var(--aqua); color: var(--aqua); }
+    .c-gold.is-on  { box-shadow: inset 3px 0 0 var(--gold); color: var(--gold); }
+
+    .ap-me { margin-top: auto; display: flex; align-items: center; gap: .6rem; padding-top: 1rem; border-top: 1px solid var(--line); }
+    .ap-avatar {
+      width: 38px; height: 38px; border-radius: 50%; flex: none; cursor: pointer; border: 0;
+      background: var(--cta-grad); color: #1b1030; font-weight: 700; font-size: var(--fs-md);
+      box-shadow: 0 0 16px rgba(255, 107, 157, .4);
+    }
+    .ap-signout { background: none; border: 0; color: var(--ink-faint); font-size: var(--fs-sm); cursor: pointer; font-family: inherit; }
+    .ap-signout:hover { color: var(--ink-soft); }
+
+    /* main */
+    .ap-main { position: relative; z-index: 1; min-width: 0; }
+
+    /* ── mobile: rail becomes top brand + bottom tab bar ── */
+    @media (max-width: 820px) {
+      .ap { grid-template-columns: 1fr; }
+      .ap-rail {
+        position: sticky; top: 0; height: auto; flex-direction: row; align-items: center; justify-content: space-between;
+        padding: .7rem 1rem; gap: .5rem; border-right: 0; border-bottom: 1px solid var(--line); z-index: 20;
+      }
+      .ap-nav {
+        position: fixed; bottom: 0; left: 0; right: 0; margin: 0;
+        flex-direction: row; justify-content: space-around;
+        padding: .4rem .3rem calc(.4rem + env(safe-area-inset-bottom, 0)); gap: 0;
+        background: rgba(8, 9, 26, .92); backdrop-filter: blur(16px); border-top: 1px solid var(--line-strong); z-index: 30;
+      }
+      .ap-link { flex-direction: column; gap: 2px; padding: .35rem .5rem; font-size: var(--fs-2xs); border-radius: var(--r-sm); }
+      .ap-link.is-on { box-shadow: none !important; background: transparent; }
+      .ap-link svg { width: 22px; height: 22px; opacity: 1; }
+      .ap-me { margin-top: 0; padding-top: 0; border-top: 0; }
+      .ap-signout { display: none; }
+      .ap-main { padding-bottom: 72px; }
+    }
+
+    /* shared content primitives */
+    .ap-page { max-width: 960px; margin-inline: auto; padding: clamp(1.4rem, 4vw, 2.4rem) clamp(1rem, 4vw, 2rem) 3rem; }
+    .ap-h1 { font-family: var(--font-display); font-weight: 600; font-size: clamp(1.6rem, 1.1rem + 2vw, 2.4rem); letter-spacing: -.02em; margin: 0; }
+    .ap-sub { color: var(--ink-soft); margin: .4rem 0 0; font-size: var(--fs-lg); }
+    .ap-kicker { font-family: var(--font-mono); font-size: var(--fs-2xs); letter-spacing: .16em; text-transform: uppercase; color: var(--ink-faint); margin: 0 0 .4rem; }
+    .ap-card {
+      background: var(--glass-strong); border: 1px solid var(--line-strong); border-radius: var(--r-lg);
+      box-shadow: var(--shadow-soft), inset 0 1px 0 rgba(255, 255, 255, .06); backdrop-filter: blur(16px);
+    }
+  </style>
+
+  <script is:inline>
+    (function () {
+      // Light session awareness (UI only): set the avatar initial from the signed-in
+      // email if a Supabase session exists; wire sign-out. Real gating comes later.
+      var av = document.getElementById('ap-avatar');
+      var out = document.getElementById('ap-signout');
+      try {
+        var keys = Object.keys(localStorage).filter(function (k) { return k.indexOf('-auth-token') > -1 || k.indexOf('supabase.auth') > -1; });
+        if (keys.length) {
+          var sess = JSON.parse(localStorage.getItem(keys[0]) || '{}');
+          var email = (sess && (sess.user && sess.user.email)) || (sess && sess.currentSession && sess.currentSession.user && sess.currentSession.user.email);
+          if (email && av) av.textContent = email[0].toUpperCase();
+        }
+      } catch (e) {}
+      if (out) out.addEventListener('click', function () {
+        try { Object.keys(localStorage).forEach(function (k) { if (k.indexOf('supabase') > -1 || k.indexOf('-auth-token') > -1) localStorage.removeItem(k); }); } catch (e) {}
+        window.location.href = '/';
+      });
+    })();
+  </script>
+</body>
+</html>

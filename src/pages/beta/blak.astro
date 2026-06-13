@@ -1,0 +1,94 @@
+---
+import AppLayout from '../../layouts/AppLayout.astro';
+---
+<AppLayout active="blak" title="Blak">
+  <div class="bx">
+    <header class="bx-head">
+      <span class="bx-orb"></span>
+      <span class="bx-who"><b>Blak</b><i><span class="bx-live"></span>with you · always</i></span>
+      <span class="bx-tag">AI · beta</span>
+    </header>
+
+    <div class="bx-stream" id="bx-stream" aria-live="polite">
+      <div class="bx-row them"><span class="bx-av"></span><div class="bx-bub">Hey — good to see you. What's going on for you right now?</div></div>
+      <div class="bx-row me"><div class="bx-bub">a bit all over the place honestly</div></div>
+      <div class="bx-row them"><span class="bx-av"></span><div class="bx-bub">Totally fair. Let's make today smaller — I'll move everything non-urgent to tomorrow and keep just the one thing that matters. Want me to?</div></div>
+      <div class="bx-row me"><div class="bx-bub">yeah do that</div></div>
+      <div class="bx-row them"><span class="bx-av"></span><div class="bx-bub">Done. Calendar's cleared till 2, your one task is pinned, and I'll nudge you at 1:45. Breathe — I've got the rest. 🤍</div></div>
+    </div>
+
+    <div class="bx-chips" id="bx-chips">
+      <button type="button" class="bx-chip" data-msg="I'm overwhelmed">I'm overwhelmed</button>
+      <button type="button" class="bx-chip" data-msg="Plan my weekend">Plan my weekend</button>
+      <button type="button" class="bx-chip" data-msg="Help me focus">Help me focus</button>
+    </div>
+
+    <form class="bx-composer" id="bx-form">
+      <input type="text" id="bx-input" placeholder="Message Blak…" autocomplete="off" />
+      <button type="submit" aria-label="Send"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+    </form>
+    <p class="bx-note">Beta preview — replies are scripted for now. The real Blak (your model) lands next.</p>
+  </div>
+
+  <style>
+    .bx { display: flex; flex-direction: column; height: calc(100vh - 0px); height: calc(100svh - 0px); max-width: 820px; margin-inline: auto; padding: 0 clamp(.8rem, 3vw, 1.5rem); }
+    @media (max-width: 820px) { .bx { height: calc(100svh - 124px); } }
+    .bx-head { display: flex; align-items: center; gap: .7rem; padding: 1rem .3rem .9rem; border-bottom: 1px solid var(--line); }
+    .bx-orb { width: 38px; height: 38px; border-radius: 50%; flex: none; background: var(--cta-grad); box-shadow: 0 0 16px rgba(255,107,157,.45); animation: bx-breathe 5s ease-in-out infinite; }
+    @keyframes bx-breathe { 0%,100%{transform:scale(1)} 50%{transform:scale(1.06)} }
+    .bx-who { display: flex; flex-direction: column; line-height: 1.25; }
+    .bx-who b { font-size: var(--fs-lg); font-weight: 650; }
+    .bx-who i { font-style: normal; font-size: var(--fs-sm); color: var(--ink-faint); display: inline-flex; align-items: center; gap: .35rem; }
+    .bx-live { width: 7px; height: 7px; border-radius: 50%; background: var(--mint-deep); box-shadow: 0 0 8px var(--mint-deep); }
+    .bx-tag { margin-left: auto; font-family: var(--font-mono); font-size: var(--fs-3xs); letter-spacing: .14em; text-transform: uppercase; color: var(--coral); border: 1px solid rgba(255,107,157,.3); border-radius: 999px; padding: .2rem .55rem; }
+
+    .bx-stream { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: .55rem; padding: 1.1rem .3rem; scrollbar-width: thin; }
+    .bx-row { display: flex; align-items: flex-end; gap: .5rem; max-width: 82%; animation: bx-in .34s var(--ease-out) both; }
+    .bx-row.them { align-self: flex-start; } .bx-row.me { align-self: flex-end; flex-direction: row-reverse; }
+    @keyframes bx-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+    .bx-av { width: 26px; height: 26px; border-radius: 50%; flex: none; background: var(--cta-grad); }
+    .bx-bub { padding: .7rem .95rem; border-radius: 16px; font-size: var(--fs-base); line-height: 1.5; }
+    .bx-row.them .bx-bub { background: rgba(255,107,157,.12); border: 1px solid rgba(255,107,157,.2); border-bottom-left-radius: 5px; color: var(--ink); }
+    .bx-row.me .bx-bub { background: var(--surface-strong); border: 1px solid var(--line-strong); border-bottom-right-radius: 5px; color: var(--ink-soft); }
+    .bx-typing { display: inline-flex; gap: 4px; } .bx-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--coral); animation: bx-blink 1.2s infinite; } .bx-dot:nth-child(2){animation-delay:.18s} .bx-dot:nth-child(3){animation-delay:.36s}
+    @keyframes bx-blink { 0%,100%{opacity:.3} 50%{opacity:1} }
+
+    .bx-chips { display: flex; flex-wrap: wrap; gap: .5rem; padding: 0 .3rem .6rem; }
+    .bx-chip { font-family: inherit; font-size: var(--fs-sm); color: var(--ink-soft); background: var(--surface); border: 1px solid var(--line-strong); border-radius: var(--r-pill); padding: .5rem .85rem; cursor: pointer; transition: .16s; }
+    .bx-chip:hover { color: var(--ink); border-color: var(--coral); transform: translateY(-1px); }
+
+    .bx-composer { display: flex; gap: .5rem; padding: 0 .3rem .5rem; }
+    .bx-composer input { flex: 1; min-width: 0; padding: .85rem 1.1rem; border-radius: var(--r-pill); background: var(--surface); border: 1px solid var(--line-strong); color: var(--ink); font: inherit; font-size: var(--fs-lg); }
+    .bx-composer input:focus { outline: none; border-color: var(--coral); background: var(--surface-strong); }
+    .bx-composer button { flex: none; width: 48px; border-radius: 50%; border: 0; cursor: pointer; color: var(--cta-ink); background: var(--cta); box-shadow: var(--shadow-cta); }
+    .bx-composer button svg { width: 20px; height: 20px; }
+    .bx-note { margin: 0 .3rem; padding-bottom: .8rem; font-size: var(--fs-xs); color: var(--ink-faint); text-align: center; }
+  </style>
+
+  <script is:inline>
+    (function () {
+      var stream = document.getElementById('bx-stream'), form = document.getElementById('bx-form'),
+          input = document.getElementById('bx-input'), chips = document.getElementById('bx-chips');
+      var REPLIES = {
+        "I'm overwhelmed": "Then let's make today smaller. One thing that matters, the rest moved to tomorrow. I've got it.",
+        "Plan my weekend": "There's a quiet trail 20 min away and Saturday's clear. Want me to pencil it in and sort lunch after?",
+        "Help me focus": "Notifications off for an hour, your two needle-movers lined up, and I'll nudge you when the block's done.",
+        "_default": "I hear you. Tell me a little more — I'm right here."
+      };
+      function row(side, text, typing) {
+        var r = document.createElement('div'); r.className = 'bx-row ' + side;
+        var inner = side === 'them' ? '<span class="bx-av"></span>' : '';
+        inner += '<div class="bx-bub">' + (typing ? '<span class="bx-typing"><span class="bx-dot"></span><span class="bx-dot"></span><span class="bx-dot"></span></span>' : '') + '</div>';
+        r.innerHTML = inner; if (!typing) r.querySelector('.bx-bub').textContent = text;
+        stream.appendChild(r); stream.scrollTop = stream.scrollHeight; return r;
+      }
+      function send(text) {
+        if (!text) return; row('me', text);
+        var t = row('them', '', true);
+        setTimeout(function () { stream.removeChild(t); row('them', REPLIES[text] || REPLIES._default); }, 750);
+      }
+      form.addEventListener('submit', function (e) { e.preventDefault(); var v = input.value.trim(); input.value = ''; send(v); });
+      chips.addEventListener('click', function (e) { var b = e.target.closest('.bx-chip'); if (b) send(b.getAttribute('data-msg')); });
+    })();
+  </script>
+</AppLayout>

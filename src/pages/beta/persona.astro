@@ -1,0 +1,101 @@
+---
+import AppLayout from '../../layouts/AppLayout.astro';
+---
+<AppLayout active="persona" title="Persona">
+  <div class="ap-page px">
+    <p class="ap-kicker">Persona · your digital selves</p>
+    <h1 class="ap-h1">A you that thinks. <span class="px-accent">And anyone you build.</span></h1>
+    <p class="ap-sub">Switch between a clone of you and characters you create — each one sounds like its own person.</p>
+
+    <div class="px-selves" id="px-selves" role="tablist">
+      <button class="px-self c-lav is-on" data-self="clone"><span class="px-dot"></span>You · clone</button>
+      <button class="px-self c-gold" data-self="hype"><span class="px-dot"></span>Hype</button>
+      <button class="px-self c-coral" data-self="critic"><span class="px-dot"></span>Critic</button>
+      <button class="px-self c-aqua" data-self="study"><span class="px-dot"></span>Study buddy</button>
+      <button class="px-self px-new" data-self="new"><span class="px-plus">+</span>Build new</button>
+    </div>
+
+    <div class="px-stage ap-card" id="px-stage">
+      <div class="px-stage-head">
+        <span class="px-avatar" id="px-avatar"></span>
+        <span class="px-who"><b id="px-name">You · clone</b><i id="px-role">looks and speaks as you</i></span>
+        <span class="px-badge" id="px-badge">clone</span>
+      </div>
+      <div class="px-bubble" id="px-bubble">I kept your people close today — drafted a reply to Maya in your style, and a July window seat is on hold. All waiting for your okay.</div>
+      <div class="px-meter-wrap" id="px-meter-wrap" hidden><span class="px-meter-l">confidence</span><div class="px-meter"><span></span></div></div>
+      <form class="px-composer" id="px-form">
+        <input type="text" id="px-input" placeholder="Say something to this persona…" autocomplete="off" />
+        <button type="submit" aria-label="Send"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+      </form>
+    </div>
+    <p class="px-note">Beta preview — personas are scripted for now. Training + your real clone come next. Nothing is ever sent as you without your approval.</p>
+  </div>
+
+  <style>
+    .px-accent { font-family: var(--font-serif); font-style: italic; font-weight: 400; background: linear-gradient(110deg, var(--lavender), var(--lavender-deep)); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+    .px-selves { display: flex; flex-wrap: wrap; gap: .55rem; margin: clamp(1.2rem,3vh,1.8rem) 0 1.1rem; }
+    .px-self { display: inline-flex; align-items: center; gap: .5rem; font: inherit; font-size: var(--fs-md); font-weight: 500; color: var(--ink-soft); background: var(--surface); border: 1px solid var(--line-strong); border-radius: var(--r-pill); padding: .55rem .9rem; cursor: pointer; transition: .18s; }
+    .px-self:hover { color: var(--ink); transform: translateY(-1px); }
+    .px-self.is-on { color: var(--ink); background: var(--surface-strong); }
+    .px-dot { width: 9px; height: 9px; border-radius: 50%; }
+    .c-lav .px-dot { background: var(--lavender); } .c-gold .px-dot { background: var(--gold); } .c-coral .px-dot { background: var(--coral); } .c-aqua .px-dot { background: var(--aqua); }
+    .px-self.is-on.c-lav { box-shadow: inset 0 0 0 1px var(--lavender); } .px-self.is-on.c-gold { box-shadow: inset 0 0 0 1px var(--gold); } .px-self.is-on.c-coral { box-shadow: inset 0 0 0 1px var(--coral); } .px-self.is-on.c-aqua { box-shadow: inset 0 0 0 1px var(--aqua); }
+    .px-new { border-style: dashed; color: var(--ink-faint); } .px-plus { font-size: 1.1em; line-height: 1; }
+
+    .px-stage { padding: 1.2rem 1.3rem 1.3rem; }
+    .px-stage-head { display: flex; align-items: center; gap: .7rem; padding-bottom: 1rem; border-bottom: 1px solid var(--line); }
+    .px-avatar { width: 40px; height: 40px; border-radius: 50%; flex: none; background: linear-gradient(135deg, var(--lavender), var(--lavender-deep)); box-shadow: 0 0 16px rgba(201,184,255,.5); transition: background .3s; }
+    .px-who { display: flex; flex-direction: column; line-height: 1.25; }
+    .px-who b { font-size: var(--fs-lg); font-weight: 650; }
+    .px-who i { font-style: normal; font-size: var(--fs-sm); color: var(--ink-faint); }
+    .px-badge { margin-left: auto; font-family: var(--font-mono); font-size: var(--fs-3xs); letter-spacing: .14em; text-transform: uppercase; color: var(--lavender); border: 1px solid rgba(201,184,255,.4); border-radius: 999px; padding: .2rem .55rem; }
+    .px-bubble { margin: 1rem 0 0; padding: .85rem 1rem; border-radius: 6px 16px 16px 16px; background: rgba(201,184,255,.12); border: 1px solid rgba(201,184,255,.22); font-size: var(--fs-base); line-height: 1.55; }
+    .px-meter-wrap { margin-top: .8rem; } .px-meter-l { font-size: var(--fs-xs); color: var(--ink-faint); }
+    .px-meter { height: 7px; border-radius: 999px; background: rgba(255,255,255,.08); overflow: hidden; margin-top: .35rem; } .px-meter span { display: block; height: 100%; width: 82%; border-radius: 999px; background: linear-gradient(90deg, var(--gold), var(--peach-deep)); }
+    .px-composer { display: flex; gap: .5rem; margin-top: 1.1rem; }
+    .px-composer input { flex: 1; min-width: 0; padding: .8rem 1.05rem; border-radius: var(--r-pill); background: var(--surface); border: 1px solid var(--line-strong); color: var(--ink); font: inherit; font-size: var(--fs-md); }
+    .px-composer input:focus { outline: none; border-color: var(--lavender); }
+    .px-composer button { flex: none; width: 46px; border-radius: 50%; border: 0; cursor: pointer; color: #fff; background: linear-gradient(135deg, var(--lavender-deep), var(--lavender)); }
+    .px-composer button svg { width: 19px; height: 19px; }
+    .px-note { margin: .9rem .2rem 0; font-size: var(--fs-xs); color: var(--ink-faint); text-align: center; }
+  </style>
+
+  <script is:inline>
+    (function () {
+      var DATA = {
+        clone:  { name: 'You · clone', role: 'looks and speaks as you', badge: 'clone', av: 'linear-gradient(135deg,#C9B8FF,#9683E6)',
+                  msg: "I kept your people close today — drafted a reply to Maya in your style, and a July window seat is on hold. All waiting for your okay.", meter: false,
+                  reply: "On it — I'll draft it in your voice and hold it for your okay. Never sent without you." },
+        hype:   { name: 'Hype', role: 'in your corner', badge: 'character', av: 'linear-gradient(135deg,#FFD27A,#FF9B6C)', meter: true,
+                  msg: "You've got this. You've done harder things half-asleep — walk in like the room's already yours.",
+                  reply: "That nervous energy? That's just proof you care. Channel it. You're ready." },
+        critic: { name: 'Critic', role: 'sharp, on your side', badge: 'character', av: 'linear-gradient(135deg,#FF6B9D,#F4458C)', meter: false,
+                  msg: "Solid start. But slide 3 is doing two jobs — cut it in half and the whole thing gets sharper.",
+                  reply: "Better. Now say it in one sentence — if you can't, it's not clear yet." },
+        study:  { name: 'Study buddy', role: 'keeps you focused', badge: 'character', av: 'linear-gradient(135deg,#9FD9FF,#5BC0FF)', meter: false,
+                  msg: "Okay — 25-minute sprint, just the first problem set. I'll quiz you the second the timer's done.",
+                  reply: "Timer's running. Phone face-down. I'll check in at 25 — go." },
+        new:    { name: 'Build new', role: 'design a character', badge: 'new', av: 'linear-gradient(135deg,#2a2c4a,#3a3d63)', meter: false,
+                  msg: "Tell me who you want — a mentor, a gym hype-coach, a calm late-night voice — and I'll become them. (Builder lands in beta soon.)",
+                  reply: "Love it. Give me a name + a vibe and I'll take shape. (Full builder coming soon.)" },
+      };
+      var selves = document.getElementById('px-selves');
+      var avatar = document.getElementById('px-avatar'), name = document.getElementById('px-name'),
+          role = document.getElementById('px-role'), badge = document.getElementById('px-badge'),
+          bubble = document.getElementById('px-bubble'), meterWrap = document.getElementById('px-meter-wrap');
+      var input = document.getElementById('px-input'), form = document.getElementById('px-form');
+      var cur = 'clone';
+      function load(k) {
+        cur = k; var d = DATA[k];
+        avatar.style.background = d.av; name.textContent = d.name; role.textContent = d.role; badge.textContent = d.badge;
+        bubble.textContent = d.msg; meterWrap.hidden = !d.meter;
+      }
+      selves.addEventListener('click', function (e) {
+        var b = e.target.closest('.px-self'); if (!b) return;
+        [].forEach.call(selves.children, function (x) { x.classList.remove('is-on'); }); b.classList.add('is-on');
+        load(b.getAttribute('data-self'));
+      });
+      form.addEventListener('submit', function (e) { e.preventDefault(); if (!input.value.trim()) return; input.value = ''; bubble.textContent = DATA[cur].reply; });
+    })();
+  </script>
+</AppLayout>

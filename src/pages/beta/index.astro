@@ -1,0 +1,79 @@
+---
+import AppLayout from '../../layouts/AppLayout.astro';
+
+const pillars = [
+  { id: 'blak',    href: '/beta/blak/',    name: 'Blak',    c: 'coral', tag: 'your AI friend',    line: 'Here before you ask. Text it anything.', snip: '“Your 4pm shifted — want me to move the run to morning?”' },
+  { id: 'persona', href: '/beta/persona/', name: 'Persona', c: 'lav',   tag: 'your digital self', line: 'A you that thinks. And anyone you build.', snip: '“Hype me before the pitch.” → “Walk in like it’s yours.”' },
+  { id: 'minit',   href: '/beta/minit/',   name: 'Minit',   c: 'mint',  tag: 'real people',       line: 'A real, friendly person in about a minute.', snip: 'Aria · available now · connects in ~28s' },
+  { id: 'nexus',   href: '/beta/nexus/',   name: 'Nexus',   c: 'aqua',  tag: 'your community',    line: 'The few who genuinely resonate with you.', snip: 'Starting Over · 840 here · “day 1, terrified, here anyway.”' },
+];
+---
+<AppLayout active="home" title="Home">
+  <div class="ap-page home">
+    <p class="ap-kicker" id="greet">your world · beta</p>
+    <h1 class="ap-h1">Welcome in. <span class="home-accent">It revolves around you.</span></h1>
+    <p class="ap-sub">Four ways Blaksyd shows up — pick where to begin. <span class="home-soft">(Beta: the rooms are taking shape; tap in to look around.)</span></p>
+
+    <div class="home-grid">
+      {pillars.map((p) => (
+        <a href={p.href} class={`home-card ap-card c-${p.c}`}>
+          <div class="home-card-top">
+            <span class="home-orb"></span>
+            <span class="home-who"><b>{p.name}</b><i>{p.tag}</i></span>
+            <span class="home-go" aria-hidden="true">→</span>
+          </div>
+          <p class="home-line">{p.line}</p>
+          <p class="home-snip">{p.snip}</p>
+        </a>
+      ))}
+    </div>
+
+    <div class="home-blak ap-card">
+      <span class="home-blak-orb"></span>
+      <div>
+        <p class="home-blak-k">Blak, just now</p>
+        <p class="home-blak-msg">Good to see you. Want me to catch you up, or should we just talk?</p>
+      </div>
+      <a href="/beta/blak/" class="home-blak-cta">Open Blak</a>
+    </div>
+  </div>
+
+  <style>
+    .home-accent { font-family: var(--font-serif); font-style: italic; font-weight: 400;
+      background: var(--accent-grad); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+    .home-soft { color: var(--ink-faint); }
+    .home-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: clamp(1.4rem, 4vh, 2.2rem); }
+    @media (max-width: 700px) { .home-grid { grid-template-columns: 1fr; } }
+
+    .home-card { display: block; padding: 1.2rem 1.3rem 1.3rem; transition: transform .25s var(--ease-spring), border-color .2s; }
+    .home-card:hover { transform: translateY(-3px); }
+    .c-coral:hover { border-color: rgba(255,107,157,.45); } .c-lav:hover { border-color: rgba(201,184,255,.45); }
+    .c-mint:hover { border-color: rgba(106,211,184,.45); } .c-aqua:hover { border-color: rgba(91,192,255,.45); }
+    .home-card-top { display: flex; align-items: center; gap: .7rem; }
+    .home-orb { width: 34px; height: 34px; border-radius: 50%; flex: none; }
+    .c-coral .home-orb { background: radial-gradient(circle at 35% 30%, #fff, var(--coral)); box-shadow: 0 0 14px var(--coral); }
+    .c-lav .home-orb   { background: radial-gradient(circle at 35% 30%, #fff, var(--lavender)); box-shadow: 0 0 14px var(--lavender); }
+    .c-mint .home-orb  { background: radial-gradient(circle at 35% 30%, #fff, var(--mint-deep)); box-shadow: 0 0 14px var(--mint-deep); }
+    .c-aqua .home-orb  { background: radial-gradient(circle at 35% 30%, #fff, var(--aqua)); box-shadow: 0 0 14px var(--aqua); }
+    .home-who { display: flex; flex-direction: column; line-height: 1.2; }
+    .home-who b { font-size: var(--fs-xl); font-weight: 650; }
+    .home-who i { font-style: normal; font-size: var(--fs-sm); color: var(--ink-faint); }
+    .home-go { margin-left: auto; font-size: 1.3rem; color: var(--ink-faint); }
+    .home-line { margin: .9rem 0 .5rem; font-size: var(--fs-lg); color: var(--ink); }
+    .home-snip { margin: 0; font-size: var(--fs-sm); color: var(--ink-soft); padding: .55rem .7rem; border-radius: var(--r-sm); background: var(--surface); border: 1px solid var(--line); }
+
+    .home-blak { display: flex; align-items: center; gap: 1rem; margin-top: 1rem; padding: 1rem 1.2rem; }
+    .home-blak-orb { width: 30px; height: 30px; border-radius: 50%; flex: none; background: var(--cta-grad); box-shadow: 0 0 14px rgba(255,107,157,.5); }
+    .home-blak-k { margin: 0 0 .15rem; font-family: var(--font-mono); font-size: var(--fs-3xs); letter-spacing: .08em; text-transform: uppercase; color: var(--coral); }
+    .home-blak-msg { margin: 0; font-size: var(--fs-md); color: var(--ink); }
+    .home-blak-cta { margin-left: auto; flex: none; font-size: var(--fs-md); font-weight: 600; color: var(--cta-ink); background: var(--cta); padding: .5rem 1rem; border-radius: var(--r-pill); white-space: nowrap; }
+  </style>
+
+  <script is:inline>
+    (function () {
+      var h = new Date().getHours();
+      var g = h < 12 ? 'good morning' : h < 17 ? 'good afternoon' : 'good evening';
+      var el = document.getElementById('greet'); if (el) el.textContent = g + ' · beta';
+    })();
+  </script>
+</AppLayout>

@@ -1,0 +1,84 @@
+---
+import AppLayout from '../../layouts/AppLayout.astro';
+---
+<AppLayout active="minit" title="Minit">
+  <div class="ap-page mx">
+    <p class="ap-kicker">Minit · real people</p>
+    <h1 class="ap-h1">Someone real. <span class="mx-accent">In a minute.</span></h1>
+    <p class="ap-sub">Hand-picked, friendly people — anonymous by default, both sides cared for.</p>
+
+    <div class="mx-presence">
+      <span class="mx-faces"><i></i><i></i><i></i><i></i><span class="mx-more">+</span></span>
+      <span class="mx-presence-txt"><b>Real people</b> · around the clock</span>
+    </div>
+
+    <div class="mx-stage ap-card">
+      <div class="mx-feed" id="mx-feed">
+        <p class="mx-lead">Pick how you'd like to connect — your way. Anonymous unless you say otherwise.</p>
+      </div>
+      <div class="mx-modes" id="mx-modes">
+        <button type="button" class="mx-mode go" data-mode="talk">Talk now</button>
+        <button type="button" class="mx-mode" data-mode="smart">Smart match</button>
+        <button type="button" class="mx-mode" data-mode="book">Book for later</button>
+        <button type="button" class="mx-mode" data-mode="spec">Find a specialist</button>
+      </div>
+    </div>
+    <p class="mx-note">Beta preview — connections are simulated for now. Live listeners + the Blak co-pilot brief (“context, not content”) come next.</p>
+  </div>
+
+  <style>
+    .mx-accent { font-family: var(--font-serif); font-style: italic; font-weight: 400; background: linear-gradient(110deg, var(--mint), var(--mint-deep) 45%, var(--aqua)); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+    .mx-presence { display: flex; align-items: center; gap: .7rem; margin: clamp(1.1rem,3vh,1.6rem) 0 1rem; }
+    .mx-faces { display: inline-flex; } .mx-faces i, .mx-more { width: 28px; height: 28px; border-radius: 50%; margin-left: -8px; border: 2px solid var(--bg); display: inline-block; }
+    .mx-faces i:first-child { margin-left: 0; }
+    .mx-faces i:nth-child(1){background:linear-gradient(135deg,var(--mint),var(--mint-deep))} .mx-faces i:nth-child(2){background:linear-gradient(135deg,var(--aqua),var(--lavender))} .mx-faces i:nth-child(3){background:linear-gradient(135deg,var(--gold),var(--peach-deep))} .mx-faces i:nth-child(4){background:linear-gradient(135deg,var(--coral),var(--lavender-deep))}
+    .mx-more { display: inline-flex; align-items: center; justify-content: center; background: var(--surface-strong); color: var(--ink-soft); font-family: var(--font-mono); font-size: var(--fs-2xs); }
+    .mx-presence-txt { font-size: var(--fs-md); color: var(--ink-soft); } .mx-presence-txt b { color: var(--ink); }
+
+    .mx-stage { padding: 1.1rem 1.2rem 1.2rem; }
+    .mx-feed { min-height: 150px; }
+    .mx-lead { font-size: var(--fs-base); color: var(--ink-soft); padding: .3rem .2rem; }
+    .mx-connect { display: flex; align-items: center; gap: .9rem; padding: .8rem .2rem; animation: mx-in .3s ease both; }
+    .mx-ripple { position: relative; width: 38px; height: 38px; flex: none; } .mx-ripple i { position: absolute; inset: 0; border-radius: 50%; border: 1.5px solid var(--mint-deep); animation: mx-rip 1.7s ease-out infinite; } .mx-ripple i:nth-child(2){animation-delay:.6s} .mx-ripple::after { content:''; position:absolute; inset:12px; border-radius:50%; background:linear-gradient(135deg,var(--mint),var(--aqua)); }
+    @keyframes mx-rip { 0%{transform:scale(.4);opacity:.9} 100%{transform:scale(1);opacity:0} }
+    @keyframes mx-in { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:none} }
+    .mx-listener { animation: mx-in .4s var(--ease-spring) both; }
+    .mx-l-top { display: flex; align-items: center; gap: .7rem; }
+    .mx-pic { width: 44px; height: 44px; border-radius: 50%; flex: none; background: linear-gradient(135deg, var(--mint), var(--aqua)); box-shadow: 0 0 14px rgba(106,211,184,.45); }
+    .mx-l-who b { font-size: var(--fs-lg); } .mx-l-who span { display: block; font-size: var(--fs-sm); color: var(--ink-faint); }
+    .mx-rate { margin-left: auto; color: var(--gold); font-weight: 650; }
+    .mx-tags { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .8rem; } .mx-tag { font-family: var(--font-mono); font-size: var(--fs-3xs); color: var(--mint); background: rgba(106,211,184,.14); border: 1px solid rgba(106,211,184,.22); border-radius: 999px; padding: .22rem .55rem; }
+    .mx-st { font-size: var(--fs-sm); color: var(--ink-soft); margin-top: .8rem; display: flex; align-items: center; gap: .4rem; } .mx-st i { width: 7px; height: 7px; border-radius: 50%; background: var(--mint-deep); box-shadow: 0 0 8px var(--mint-deep); }
+    .mx-go-btn { display: block; width: 100%; margin-top: 1rem; padding: .7rem; border: 0; border-radius: var(--r-pill); cursor: pointer; font: inherit; font-weight: 650; color: #06231C; background: linear-gradient(135deg, var(--mint), var(--mint-deep) 70%, var(--aqua)); }
+
+    .mx-modes { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: 1rem; padding-top: .9rem; border-top: 1px solid var(--line); }
+    .mx-mode { font: inherit; font-size: var(--fs-md); color: var(--ink-soft); background: var(--surface); border: 1px solid var(--line-strong); border-radius: var(--r-pill); padding: .55rem .9rem; cursor: pointer; transition: .16s; min-height: 44px; }
+    .mx-mode:hover { color: var(--ink); transform: translateY(-1px); }
+    .mx-mode.go { color: #06231C; border: 0; background: linear-gradient(135deg, var(--mint), var(--mint-deep) 70%, var(--aqua)); font-weight: 650; }
+    .mx-note { margin: .9rem .2rem 0; font-size: var(--fs-xs); color: var(--ink-faint); text-align: center; }
+  </style>
+
+  <script is:inline>
+    (function () {
+      var feed = document.getElementById('mx-feed'), modes = document.getElementById('mx-modes');
+      var D = {
+        talk: { c: "Finding your <b>person</b>, right now…", name: 'Aria M.', meta: 'warm · funny · great company', rate: '★ 4.9', tags: ['trip planning','pep talks','big ideas'], st: 'available now · connects in ~28s · anonymous' },
+        smart:{ c: "Reading your <b>vibe</b> and matching…", name: 'Sol K.', meta: 'steady · great brainstorm buddy', rate: '★ 4.9', tags: ['ideas','plans','motivation'], st: 'matched to you · connects in ~40s' },
+        book: { c: "Holding a time for you…", name: 'Priya', meta: 'calm, easy to talk to', rate: '★ 5.0', tags: ['evenings','wind-down'], st: 'booked · 9:00 tonight · we’ll nudge you' },
+        spec: { c: "Finding someone with a <b>specialty</b>…", name: 'Specialist', meta: 'knows your world inside out', rate: '★ 5.0', tags: ['deep dives','your niche'], st: 'available · connects in ~2 min' },
+      };
+      var busy = false;
+      function connect(k) {
+        if (busy) return; busy = true; var d = D[k];
+        feed.innerHTML = '<div class="mx-connect"><span class="mx-ripple"><i></i><i></i></span><span>' + d.c + '</span></div>';
+        setTimeout(function () {
+          feed.innerHTML = '<div class="mx-listener"><div class="mx-l-top"><span class="mx-pic"></span><span class="mx-l-who"><b>' + d.name + '</b><span>' + d.meta + '</span></span><span class="mx-rate">' + d.rate + '</span></div>'
+            + '<div class="mx-tags">' + d.tags.map(function (t) { return '<span class="mx-tag">' + t + '</span>'; }).join('') + '</div>'
+            + '<div class="mx-st"><i></i>' + d.st + '</div><button type="button" class="mx-go-btn">Start talking</button></div>';
+          busy = false;
+        }, 1100);
+      }
+      modes.addEventListener('click', function (e) { var b = e.target.closest('.mx-mode'); if (b) connect(b.getAttribute('data-mode')); });
+    })();
+  </script>
+</AppLayout>

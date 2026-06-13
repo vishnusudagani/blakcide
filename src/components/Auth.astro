@@ -496,11 +496,17 @@
     });
 
     function onSignedIn() { showView('done'); }
+    // Did this page load carry fresh auth params? (Google / email-link redirect back.)
+    var hadAuthInUrl = /[#&?](access_token|code|token_hash)=/.test(location.hash + location.search);
 
-    // reflect a session arriving from the Google / email-link redirect, if the modal is open
+    // On a real sign-in — in-modal OTP, or returning from the Google/email redirect —
+    // send the person into their beta app. A returning visitor with an existing
+    // session (INITIAL_SESSION, no auth params in the URL) is left free to browse.
     if (supabase) {
       supabase.auth.onAuthStateChange(function (evt, session) {
-        if (session && evt === 'SIGNED_IN' && !modal.hidden) onSignedIn();
+        if (session && evt === 'SIGNED_IN' && (!modal.hidden || hadAuthInUrl)) {
+          window.location.replace('/beta/');
+        }
       });
     }
   })();
