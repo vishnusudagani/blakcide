@@ -4,9 +4,8 @@ import AppLayout from '../../layouts/AppLayout.astro';
 <AppLayout active="nexus" title="Nexus">
   <!-- ════════ HOME ════════ -->
   <div class="ap-page nx-view" id="nx-home">
-    <p class="ap-kicker">Nexus · your community</p>
-    <h1 class="ap-h1">Where you belong. <span class="nx-accent">No performance needed.</span></h1>
-    <p class="ap-sub">Tribes to settle into, and Live Rooms that glow while you're in them.</p>
+    <p class="ap-kicker">Nexus</p>
+    <h1 class="ap-h1" id="nx-greet">Welcome back.</h1>
 
     <!-- ── LIVE ROOMS (the star) ── -->
     <div class="nx-sec-head">
@@ -18,7 +17,6 @@ import AppLayout from '../../layouts/AppLayout.astro';
       <div class="nx-start-card" style="cursor:default;opacity:.6">Loading rooms…</div>
     </div>
 
-    <p class="nx-pulse-explain">A room's <b>Pulse</b> rises the longer real people gather and talk — and rests when the last person leaves. No timers, no FOMO. Just warmth while you're here.</p>
 
     <!-- ── TRIBES ── -->
     <div class="nx-sec-head" style="margin-top:2.2rem">
@@ -57,7 +55,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
             <div><b id="nx-stat-here">1</b><span>here now</span></div>
           </div>
           <div class="nx-heat"><span id="nx-heat-fill"></span></div>
-          <p class="nx-pulse-note">Glowing because you're all here. It rests when the last person leaves.</p>
+          <p class="nx-pulse-note">Glows while you're here.</p>
         </div>
 
         <div class="nx-here-card ap-card">
@@ -102,7 +100,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
           <button type="button" class="nx-modal-cancel" id="nx-create-cancel">Cancel</button>
           <button type="submit" class="nx-modal-go">Open the room</button>
         </div>
-        <p class="nx-modal-note">It starts resting and glows as people gather — and rests again when everyone leaves. No timers, no pressure.</p>
+        <p class="nx-modal-note">Lights up as people gather. No timers, no pressure.</p>
       </form>
     </div>
   </div>
@@ -163,14 +161,12 @@ import AppLayout from '../../layouts/AppLayout.astro';
 
     /* in-room */
     .nx-room { display: flex; flex-direction: column; height: 100vh; height: 100svh; }
-    @media (max-width: 820px) { .nx-room { height: calc(100svh - 124px); } }
     .nx-room-top { display: flex; align-items: center; gap: .8rem; padding: 1rem clamp(1rem,3vw,1.6rem); border-bottom: 1px solid var(--line); }
     .nx-back { font: inherit; font-size: var(--fs-md); color: var(--ink-soft); background: var(--surface); border: 1px solid var(--line-strong); border-radius: var(--r-pill); padding: .4rem .8rem; cursor: pointer; }
     .nx-back:hover { color: var(--ink); }
     .nx-room-id { display: flex; align-items: center; gap: .5rem; } .nx-room-id b { font-size: var(--fs-lg); } .nx-room-id i { font-style: normal; font-size: var(--fs-sm); color: var(--ink-faint); }
     .nx-room-pulse { margin-left: auto; display: inline-flex; align-items: center; gap: .35rem; font-weight: 700; color: #ffc46b; font-size: var(--fs-lg); }
     .nx-room-body { flex: 1; display: grid; grid-template-columns: 1fr 300px; gap: 1rem; min-height: 0; padding: 1rem clamp(1rem,3vw,1.6rem); }
-    @media (max-width: 900px) { .nx-room-body { grid-template-columns: 1fr; } .nx-room-side { display: none; } }
     .nx-room-main { display: flex; flex-direction: column; min-height: 0; }
     .nx-room-feed { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: .7rem; padding: .4rem; }
     .nx-rmsg { display: flex; gap: .6rem; align-items: flex-start; animation: nx-fade .3s ease both; max-width: 90%; }
@@ -196,6 +192,15 @@ import AppLayout from '../../layouts/AppLayout.astro';
     .nx-heat { height: 6px; border-radius: 999px; background: rgba(255,255,255,.08); overflow: hidden; margin-top: 1rem; } .nx-heat span { display: block; height: 100%; width: 8%; border-radius: 999px; background: linear-gradient(90deg, #ff7a4d, #ffd27a); transition: width 1.2s var(--ease-out); }
     .nx-pulse-note { margin: .9rem 0 0; font-size: var(--fs-xs); color: var(--ink-faint); }
     .nx-here-card { padding: 1rem 1.2rem; } .nx-here-faces { display: flex; flex-wrap: wrap; gap: .4rem; } .nx-here-faces span { width: 30px; height: 30px; border-radius: 50%; }
+
+    /* ── mobile in-room: flow vertically, feed scrolls, Pulse sits below ── */
+    @media (max-width: 900px) {
+      .nx-room { height: auto; min-height: calc(100svh - 130px); }
+      .nx-room-body { display: flex; flex-direction: column; gap: 1rem; }
+      .nx-room-feed { min-height: 200px; max-height: 50vh; }
+      .nx-pulse-orb { width: 112px; height: 112px; }
+      .nx-pulse-num { font-size: 2.1rem; }
+    }
 
     /* tribe view */
     .nx-tribe-head { display: flex; align-items: center; gap: 1rem; margin: 1rem 0 .6rem; }
@@ -323,8 +328,8 @@ import AppLayout from '../../layouts/AppLayout.astro';
         el('nx-rooms-sub').textContent = live.length ? (live.length + (live.length === 1 ? ' room live now' : ' rooms live now')) : 'real-time';
         const startCard = '<div class="nx-start-card" data-start><b>+</b>Start a Live Room</div>';
         if (!live.length) {
-          roomsEl.innerHTML = '<div class="nx-empty"><span class="nx-empty-orb"></span><b>No rooms are live right now.</b>'
-            + '<span>Rooms exist only while people are in them — no fake crowds. Start one and it lights up the moment you arrive.</span></div>' + startCard;
+          roomsEl.innerHTML = '<div class="nx-empty"><span class="nx-empty-orb"></span><b>No rooms live right now</b>'
+            + '<span>Start one — it lights up the moment you arrive.</span></div>' + startCard;
           return;
         }
         roomsEl.innerHTML = live.map(roomCard).join('') + startCard;
@@ -405,7 +410,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
         el('nx-heat-fill').style.width = '20%';
         el('nx-pulse-orb').classList.remove('resting');
         el('nx-room-feed').innerHTML = '<div class="nx-rmsg"><span class="nx-rav" style="background:' + g(3) + '"></span><div><span class="nx-rh">blak · quiet moderator</span><p></p></div></div>';
-        el('nx-room-feed').querySelector('p').textContent = 'You’re in. Say something — the room glows while people are here, and rests when everyone leaves.';
+        el('nx-room-feed').querySelector('p').textContent = 'You’re in — say hello 👋';
         show('room');
         sessionStart = Date.now(); clearInterval(timer); clearInterval(keepAlive);
         timer = setInterval(() => { el('nx-stat-time').textContent = Math.floor((Date.now() - sessionStart) / 60000) + 'm'; }, 5000);
@@ -525,9 +530,25 @@ import AppLayout from '../../layouts/AppLayout.astro';
       document.querySelectorAll('[data-home]').forEach((b) => b.addEventListener('click', () => { if (chan) leaveRoom(); else show('home'); }));
       window.addEventListener('beforeunload', () => { if (chan && curRoom) { try { navigator.sendBeacon; } catch (e) {} } });
 
+      // ── greeting: they're logged in, so greet them (don't explain Nexus) ──
+      function setGreeting() {
+        const h = new Date().getHours();
+        const g = h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening';
+        let name = '';
+        try { const u = SESSION && SESSION.user; name = (u && u.user_metadata && (u.user_metadata.full_name || u.user_metadata.name)) || (u && u.email ? u.email.split('@')[0] : ''); } catch (e) {}
+        name = (name || '').trim().split(/[ .@]/)[0];
+        name = name ? name.charAt(0).toUpperCase() + name.slice(1) : '';
+        const gEl = el('nx-greet'); if (!gEl) return;
+        gEl.textContent = '';
+        if (name) gEl.appendChild(document.createTextNode(g + ', '));
+        const s = document.createElement('span'); s.className = 'nx-accent'; s.textContent = name || g;
+        gEl.appendChild(s); gEl.appendChild(document.createTextNode('.'));
+      }
+
       // ── go ──
       (async () => {
         try { const { data } = await supabase.auth.getSession(); SESSION = data.session || null; if (SESSION && SESSION.user && SESSION.user.email) ME.handle = SESSION.user.email.split('@')[0]; } catch (e) {}
+        setGreeting();
         await Promise.all([loadRooms(), loadTribes()]);
       })();
     }
