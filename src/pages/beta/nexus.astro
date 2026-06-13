@@ -10,25 +10,24 @@ import AppLayout from '../../layouts/AppLayout.astro';
 
     <!-- ── LIVE ROOMS (the star) ── -->
     <div class="nx-sec-head">
-      <h2 class="nx-sec-title"><span class="nx-livedot"></span>Live Rooms <span class="nx-sec-sub">alive right now</span></h2>
+      <h2 class="nx-sec-title"><span class="nx-livedot"></span>Live Rooms <span class="nx-sec-sub" id="nx-rooms-sub">real-time</span></h2>
       <button type="button" class="nx-start" id="nx-start">+ Start a room</button>
     </div>
 
     <div class="nx-rooms" id="nx-rooms">
-      <!-- cards injected -->
+      <div class="nx-start-card" style="cursor:default;opacity:.6">Loading rooms…</div>
     </div>
 
     <p class="nx-pulse-explain">A room's <b>Pulse</b> rises the longer real people gather and talk — and rests when the last person leaves. No timers, no FOMO. Just warmth while you're here.</p>
 
     <!-- ── TRIBES ── -->
     <div class="nx-sec-head" style="margin-top:2.2rem">
-      <h2 class="nx-sec-title">Your Tribes</h2>
+      <h2 class="nx-sec-title">Tribes</h2>
       <button type="button" class="nx-start ghost" id="nx-newtribe">+ Create a tribe</button>
     </div>
-    <div class="nx-tribes-grid" id="nx-tribes-grid"></div>
-
-    <h2 class="nx-sec-title" style="margin-top:1.8rem">Discover</h2>
-    <div class="nx-tribes-grid discover" id="nx-discover"></div>
+    <div class="nx-tribes-grid" id="nx-tribes-grid">
+      <div class="nx-tribe-card" style="cursor:default;opacity:.6"><span class="nx-tc-mark" style="background:var(--surface-strong)"></span><span class="nx-tc-who"><b>Loading tribes…</b></span></div>
+    </div>
   </div>
 
   <!-- ════════ IN-ROOM ════════ -->
@@ -51,11 +50,11 @@ import AppLayout from '../../layouts/AppLayout.astro';
       <aside class="nx-room-side">
         <div class="nx-pulse-card ap-card">
           <p class="nx-pulse-k">Room pulse</p>
-          <div class="nx-pulse-orb" id="nx-pulse-orb"><span class="nx-pulse-num" id="nx-pulse-big">247</span></div>
+          <div class="nx-pulse-orb" id="nx-pulse-orb"><span class="nx-pulse-num" id="nx-pulse-big">0</span></div>
           <div class="nx-pulse-stats">
-            <div><b id="nx-stat-day">day 4</b><span>alive</span></div>
-            <div><b id="nx-stat-time">3h 12m</b><span>this session</span></div>
-            <div><b id="nx-stat-here">14</b><span>here now</span></div>
+            <div><b id="nx-stat-day">day 1</b><span>alive</span></div>
+            <div><b id="nx-stat-time">0m</b><span>this session</span></div>
+            <div><b id="nx-stat-here">1</b><span>here now</span></div>
           </div>
           <div class="nx-heat"><span id="nx-heat-fill"></span></div>
           <p class="nx-pulse-note">Glowing because you're all here. It rests when the last person leaves.</p>
@@ -78,7 +77,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
         <h1 class="ap-h1" id="nx-tribe-name">—</h1>
         <p class="nx-tribe-meta" id="nx-tribe-meta">—</p>
       </div>
-      <button type="button" class="nx-joined" id="nx-tribe-join">Joined ✓</button>
+      <button type="button" class="nx-joined" id="nx-tribe-join">Join</button>
     </div>
     <p class="nx-tribe-desc" id="nx-tribe-desc"></p>
 
@@ -89,6 +88,23 @@ import AppLayout from '../../layouts/AppLayout.astro';
       <button type="submit">Post</button>
     </form>
     <div class="nx-discussions" id="nx-discussions"></div>
+  </div>
+
+  <!-- ════════ CREATE-ROOM MODAL ════════ -->
+  <div class="nx-modal" id="nx-modal" hidden>
+    <div class="nx-modal-card ap-card">
+      <p class="nx-pulse-k">Start a Live Room</p>
+      <h3 class="nx-modal-title">What are you gathering around?</h3>
+      <form id="nx-create-form">
+        <input id="nx-create-title" maxlength="80" placeholder="e.g. Late-night writing sprint" autocomplete="off" required />
+        <input id="nx-create-topic" maxlength="140" placeholder="one line on the vibe (optional)" autocomplete="off" />
+        <div class="nx-modal-actions">
+          <button type="button" class="nx-modal-cancel" id="nx-create-cancel">Cancel</button>
+          <button type="submit" class="nx-modal-go">Open the room</button>
+        </div>
+        <p class="nx-modal-note">It starts resting and glows as people gather — and rests again when everyone leaves. No timers, no pressure.</p>
+      </form>
+    </div>
   </div>
 
   <style is:global>
@@ -113,17 +129,20 @@ import AppLayout from '../../layouts/AppLayout.astro';
     .nx-room-card { position: relative; overflow: hidden; padding: 1.1rem 1.2rem 1.2rem; border-radius: var(--r-lg); border: 1px solid var(--line-strong); background: var(--glass-strong); cursor: pointer; transition: transform .25s var(--ease-spring), border-color .2s; }
     .nx-room-card::before { content:''; position:absolute; inset:0; background: radial-gradient(80% 60% at 80% -10%, var(--heat, rgba(255,150,90,.16)), transparent 70%); pointer-events:none; }
     .nx-room-card:hover { transform: translateY(-3px); border-color: rgba(91,192,255,.4); }
+    .nx-room-card.resting::before { opacity: .35; }
     .nx-rc-top { display: flex; align-items: center; gap: .5rem; position: relative; }
     .nx-rc-live { font-family: var(--font-mono); font-size: var(--fs-3xs); letter-spacing: .12em; text-transform: uppercase; color: #ff8a96; }
+    .nx-rc-rest { font-family: var(--font-mono); font-size: var(--fs-3xs); letter-spacing: .12em; text-transform: uppercase; color: var(--ink-faint); }
     .nx-rc-pulse { margin-left: auto; display: inline-flex; align-items: center; gap: .3rem; font-size: var(--fs-sm); font-weight: 700; color: #ffc46b; }
     .nx-flame { width: 13px; height: 13px; flex: none; border-radius: 50% 50% 50% 0; transform: rotate(45deg); background: radial-gradient(circle at 60% 60%, #ffd27a, #ff7a4d); box-shadow: 0 0 10px rgba(255,150,90,.7); }
+    .nx-flame.dim { background: radial-gradient(circle at 60% 60%, #cbc4bb, #8b8178); box-shadow: none; opacity: .65; }
     .nx-rc-title { font-size: var(--fs-xl); font-weight: 650; margin: .7rem 0 .1rem; position: relative; }
     .nx-rc-host { font-size: var(--fs-sm); color: var(--ink-faint); position: relative; }
     .nx-rc-bottom { display: flex; align-items: center; gap: .6rem; margin-top: .9rem; position: relative; }
     .nx-faces { display: inline-flex; } .nx-faces span { width: 26px; height: 26px; border-radius: 50%; margin-left: -8px; border: 2px solid var(--bg); display: inline-block; }
     .nx-faces span:first-child { margin-left: 0; }
     .nx-here-n { font-size: var(--fs-sm); color: var(--ink-soft); }
-    .nx-join-btn { margin-left: auto; font: inherit; font-size: var(--fs-sm); font-weight: 600; color: var(--aqua-ink); background: rgba(91,192,255,.14); border: 1px solid rgba(91,192,255,.3); border-radius: var(--r-pill); padding: .4rem .9rem; }
+    .nx-join-btn { margin-left: auto; font: inherit; font-size: var(--fs-sm); font-weight: 600; color: var(--aqua-ink); background: rgba(91,192,255,.14); border: 1px solid rgba(91,192,255,.3); border-radius: var(--r-pill); padding: .4rem .9rem; cursor: pointer; }
     html[data-theme="dark"] .nx-join-btn { color: #BFE9FF; }
     .nx-start-card { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .4rem; min-height: 150px; border: 1.5px dashed var(--line-strong); border-radius: var(--r-lg); color: var(--ink-faint); cursor: pointer; transition: .2s; }
     .nx-start-card:hover { border-color: var(--aqua); color: var(--aqua); }
@@ -164,12 +183,13 @@ import AppLayout from '../../layouts/AppLayout.astro';
     .nx-pulse-k { font-family: var(--font-mono); font-size: var(--fs-2xs); letter-spacing: .14em; text-transform: uppercase; color: var(--ink-faint); margin: 0 0 .8rem; }
     .nx-pulse-orb { position: relative; width: 130px; height: 130px; margin: 0 auto; border-radius: 50%; display: grid; place-items: center;
       background: radial-gradient(circle at 50% 45%, rgba(255,180,100,.28), rgba(255,120,80,.12) 60%, transparent 72%);
-      box-shadow: 0 0 50px rgba(255,150,90,.35); animation: nx-glow 3.2s var(--ease-soft) infinite; }
+      box-shadow: 0 0 50px rgba(255,150,90,.35); animation: nx-glow 3.2s var(--ease-soft) infinite; transition: filter .6s, box-shadow .6s; }
+    .nx-pulse-orb.resting { animation: none; box-shadow: 0 0 18px rgba(255,150,90,.10); filter: saturate(.55) brightness(.82); }
     @keyframes nx-glow { 0%,100%{transform:scale(1);box-shadow:0 0 44px rgba(255,150,90,.3)} 50%{transform:scale(1.05);box-shadow:0 0 64px rgba(255,150,90,.5)} }
     .nx-pulse-num { font-family: var(--font-display); font-weight: 700; font-size: 2.6rem; color: #ffd9a8; text-shadow: 0 0 24px rgba(255,170,100,.6); }
     .nx-pulse-stats { display: flex; justify-content: space-around; margin-top: 1rem; }
     .nx-pulse-stats b { display: block; font-size: var(--fs-lg); color: var(--ink); } .nx-pulse-stats span { font-size: var(--fs-2xs); color: var(--ink-faint); }
-    .nx-heat { height: 6px; border-radius: 999px; background: rgba(255,255,255,.08); overflow: hidden; margin-top: 1rem; } .nx-heat span { display: block; height: 100%; width: 72%; border-radius: 999px; background: linear-gradient(90deg, #ff7a4d, #ffd27a); transition: width 1.2s var(--ease-out); }
+    .nx-heat { height: 6px; border-radius: 999px; background: rgba(255,255,255,.08); overflow: hidden; margin-top: 1rem; } .nx-heat span { display: block; height: 100%; width: 8%; border-radius: 999px; background: linear-gradient(90deg, #ff7a4d, #ffd27a); transition: width 1.2s var(--ease-out); }
     .nx-pulse-note { margin: .9rem 0 0; font-size: var(--fs-xs); color: var(--ink-faint); }
     .nx-here-card { padding: 1rem 1.2rem; } .nx-here-faces { display: flex; flex-wrap: wrap; gap: .4rem; } .nx-here-faces span { width: 30px; height: 30px; border-radius: 50%; }
 
@@ -184,116 +204,309 @@ import AppLayout from '../../layouts/AppLayout.astro';
     .nx-disc { padding: 1rem 1.1rem; border-radius: var(--r-md); border: 1px solid var(--line); background: var(--glass-strong); margin-bottom: .7rem; animation: nx-fade .3s ease both; }
     .nx-disc-top { display: flex; align-items: center; gap: .5rem; font-size: var(--fs-sm); color: var(--ink-faint); margin-bottom: .4rem; } .nx-disc-av { width: 22px; height: 22px; border-radius: 50%; }
     .nx-disc-text { font-size: var(--fs-lg); color: var(--ink); line-height: 1.5; }
-    .nx-disc-foot { display: flex; gap: 1rem; margin-top: .7rem; font-size: var(--fs-sm); color: var(--ink-faint); } .nx-reso { color: var(--aqua); }
+    .nx-disc-foot { display: flex; gap: 1rem; margin-top: .7rem; font-size: var(--fs-sm); color: var(--ink-faint); } .nx-reso { color: var(--aqua); cursor: pointer; } .nx-reso.on { color: #ffd9a8; }
+
+    /* create-room modal */
+    .nx-modal { position: fixed; inset: 0; z-index: 60; display: grid; place-items: center; padding: 1.2rem; background: rgba(6,7,18,.62); backdrop-filter: blur(6px); animation: nx-fade .2s ease both; }
+    .nx-modal[hidden] { display: none !important; }
+    .nx-modal-card { width: min(460px, 100%); padding: 1.4rem; }
+    .nx-modal-title { font-family: var(--font-display); font-weight: 600; font-size: var(--fs-xl); margin: .2rem 0 1rem; }
+    #nx-create-form { display: flex; flex-direction: column; gap: .6rem; }
+    #nx-create-form input { padding: .8rem 1rem; border-radius: var(--r-md); background: var(--surface); border: 1px solid var(--line-strong); color: var(--ink); font: inherit; font-size: var(--fs-md); }
+    #nx-create-form input:focus { outline: none; border-color: var(--aqua); }
+    .nx-modal-actions { display: flex; gap: .6rem; justify-content: flex-end; margin-top: .4rem; }
+    .nx-modal-cancel { font: inherit; color: var(--ink-soft); background: var(--surface); border: 1px solid var(--line-strong); border-radius: var(--r-pill); padding: .55rem 1rem; cursor: pointer; }
+    .nx-modal-go { font: inherit; font-weight: 650; color: #06231C; background: linear-gradient(135deg, var(--mint), var(--aqua)); border: 0; border-radius: var(--r-pill); padding: .55rem 1.1rem; cursor: pointer; }
+    .nx-modal-note { font-size: var(--fs-xs); color: var(--ink-faint); margin: .6rem 0 0; line-height: 1.5; }
+
+    /* toast */
+    .nx-toast { position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%) translateY(20px); z-index: 70; background: var(--surface-strong); color: var(--ink); border: 1px solid var(--line-strong); border-radius: var(--r-pill); padding: .6rem 1.1rem; font-size: var(--fs-sm); box-shadow: var(--shadow-soft); opacity: 0; pointer-events: none; transition: opacity .25s, transform .25s; }
+    .nx-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
   </style>
 
-  <script is:inline>
-    (function () {
-      var grad = ['linear-gradient(135deg,#5BC0FF,#1872B0)','linear-gradient(135deg,#6AD3B8,#1E7D62)','linear-gradient(135deg,#C9B8FF,#7459CE)','linear-gradient(135deg,#FFD27A,#FF9B6C)','linear-gradient(135deg,#FF6B9D,#7459CE)'];
-      function g(i){ return grad[i % grad.length]; }
-      function faces(n){ var s=''; for(var i=0;i<n;i++) s+='<span style="background:'+g(i)+'"></span>'; return s; }
+  <script>
+    // ── Nexus, wired ──────────────────────────────────────────────────────────
+    // Live Rooms (the star) are genuinely real-time: Supabase Realtime carries
+    // PRESENCE (who's here) + BROADCAST (live chat); the nexus_rooms table is the
+    // persistent registry + Pulse history. Tribes read the real nexus_communities
+    // / nexus_posts. Works for anonymous beta visitors (anon key, RLS-safe) and
+    // uses your real identity if signed in.
+    import { supabase, supabaseConfigured } from '../../lib/supabaseClient';
 
-      var ROOMS = [
-        { id:'r1', title:'3am Founders Club', host:'@nightowl', here:14, pulse:247, day:4, heat:72, msgs:[['ship anyway','3am brain says ship it. anyone awake to talk me out of it?'],['half-built','do it. you can fix it tomorrow with coffee.'],['quiet one','this room is weirdly the most productive part of my day']] },
-        { id:'r2', title:'Made It Through Today', host:'@stillhere', here:31, pulse:512, day:9, heat:88, msgs:[['rough one','barely. but I showed up here and that counts.'],['nightshift','genuinely proud of you. no notes.']] },
-        { id:'r3', title:'Late Night Study', host:'@focusmode', here:8, pulse:96, day:2, heat:44, msgs:[['exam szn','25-min sprint starting now — anyone in?'],['caffeine','in. timer set.']] },
-        { id:'r4', title:'Just Vibing', host:'@lofi', here:22, pulse:178, day:3, heat:60, msgs:[['chill','put on something calm, just here to coexist'],['same','presence > conversation sometimes']] },
-      ];
-      var TRIBES = [
-        { id:'t1', name:'Founders Who Overthink', members:'12.4k', mark:g(0), neu:'3 new', desc:'For builders whose minds never quite clock out. Honest talk about the doubt behind the launch posts.', disc:[['3am brain','shipped the thing. immediately found nine problems with it.'],['still building','anyone else rehearse conversations that\'ll never happen?']] },
-        { id:'t2', name:'Starting Over', members:'8.8k', mark:g(1), neu:'live', desc:'Whatever you\'re beginning again — a city, a career, a self. Day one is allowed to be scary here.', disc:[['first week','day 1 of the rest of it. terrified. here anyway.'],['been there','you showed up. that\'s the whole job today.']] },
-        { id:'t3', name:'Quiet Minds', members:'5.1k', mark:g(2), neu:'', desc:'A calmer corner. Low-pressure, low-noise, for the introverts and the overstimulated.', disc:[['soft hours','reminder that resting is also doing something.']] },
-      ];
-      var DISCOVER = [
-        { id:'d1', name:'Make It Through Monday', members:'19k', mark:g(3) },
-        { id:'d2', name:'Creative Block Club', members:'6.7k', mark:g(4) },
-        { id:'d3', name:'Plant Parents', members:'4.2k', mark:g(1) },
-      ];
+    const grad = [
+      'linear-gradient(135deg,#5BC0FF,#1872B0)','linear-gradient(135deg,#6AD3B8,#1E7D62)',
+      'linear-gradient(135deg,#C9B8FF,#7459CE)','linear-gradient(135deg,#FFD27A,#FF9B6C)',
+      'linear-gradient(135deg,#FF6B9D,#7459CE)'
+    ];
+    const g = (i) => grad[((i % grad.length) + grad.length) % grad.length];
+    const hashIdx = (s) => { let h = 0; s = s || ''; for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0; return h; };
+    const faces = (n, seed = 0) => { let s = ''; for (let i = 0; i < n; i++) s += '<span style="background:' + g(seed + i) + '"></span>'; return s; };
+    const el = (id) => document.getElementById(id);
+    const esc = (t) => { const d = document.createElement('div'); d.textContent = (t == null ? '' : String(t)); return d.innerHTML; };
+    const rel = (ts) => { if (!ts) return 'now'; let s = Math.max(1, Math.floor((Date.now() - new Date(ts).getTime()) / 1000)); if (s < 60) return s + 's'; let m = Math.floor(s / 60); if (m < 60) return m + 'm'; let h = Math.floor(m / 60); if (h < 24) return h + 'h'; return Math.floor(h / 24) + 'd'; };
+    const dayOf = (ts) => Math.max(1, Math.round((Date.now() - new Date(ts).getTime()) / 86400000));
 
-      var views = { home: document.getElementById('nx-home'), room: document.getElementById('nx-room'), tribe: document.getElementById('nx-tribe') };
-      function show(v){ for (var k in views){ views[k].hidden = (k !== v); } window.scrollTo(0,0); }
+    let toastT;
+    function toast(msg) {
+      let t = el('nx-toast');
+      if (!t) { t = document.createElement('div'); t.id = 'nx-toast'; t.className = 'nx-toast'; document.body.appendChild(t); }
+      t.textContent = msg; t.classList.add('show');
+      clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), 2600);
+    }
 
-      // ── home: render rooms + tribes ──
-      var roomsEl = document.getElementById('nx-rooms');
-      roomsEl.innerHTML = ROOMS.map(function(r){
-        return '<div class="nx-room-card" data-room="'+r.id+'" style="--heat:rgba(255,150,90,'+(0.10+r.heat/400)+')">'
-          + '<div class="nx-rc-top"><span class="nx-livedot"></span><span class="nx-rc-live">live</span>'
-          + '<span class="nx-rc-pulse"><span class="nx-flame"></span>'+r.pulse+' · day '+r.day+'</span></div>'
-          + '<div class="nx-rc-title">'+r.title+'</div><div class="nx-rc-host">hosted by '+r.host+'</div>'
-          + '<div class="nx-rc-bottom"><span class="nx-faces">'+faces(Math.min(r.here,5))+'</span>'
-          + '<span class="nx-here-n">'+r.here+' here</span><span class="nx-join-btn">Join</span></div></div>';
-      }).join('') + '<div class="nx-start-card" data-start><b>+</b>Start a Live Room</div>';
+    // ── identity: anonymous-by-default friendly handle, real email if signed in ──
+    const ADJ = ['quiet','warm','steady','night','soft','open','kind','calm','bright','still','easy','true'];
+    const NOUN = ['harbor','signal','ember','meadow','tide','comet','willow','lantern','river','pine','spark','haven'];
+    const ME = (() => {
+      let id, handle, color;
+      try { id = localStorage.getItem('nx_id'); handle = localStorage.getItem('nx_handle'); color = localStorage.getItem('nx_color'); } catch (e) {}
+      if (!id) id = 'g' + hashIdx(String(Math.random()) + performance.now()).toString(36);
+      if (!handle) handle = ADJ[hashIdx(id) % ADJ.length] + '-' + NOUN[hashIdx(id + 'n') % NOUN.length];
+      if (color == null) color = String(hashIdx(id) % grad.length);
+      try { localStorage.setItem('nx_id', id); localStorage.setItem('nx_handle', handle); localStorage.setItem('nx_color', color); } catch (e) {}
+      return { id, handle, color: +color };
+    })();
+    let SESSION = null;
 
-      document.getElementById('nx-tribes-grid').innerHTML = TRIBES.map(function(t){
-        return '<div class="nx-tribe-card" data-tribe="'+t.id+'"><span class="nx-tc-mark" style="background:'+t.mark+'"></span>'
-          + '<span class="nx-tc-who"><b>'+t.name+'</b><span>'+t.members+' members</span></span>'
-          + (t.neu?'<span class="nx-tc-new">'+t.neu+'</span>':'')+'</div>';
-      }).join('');
-      document.getElementById('nx-discover').innerHTML = DISCOVER.map(function(t){
-        return '<div class="nx-tribe-card" data-tribe-new style="cursor:default"><span class="nx-tc-mark" style="background:'+t.mark+'"></span>'
-          + '<span class="nx-tc-who"><b>'+t.name+'</b><span>'+t.members+' members</span></span>'
-          + '<span class="nx-tc-new" style="background:rgba(255,255,255,.06);color:var(--ink-soft)">Join</span></div>';
-      }).join('');
+    const views = { home: el('nx-home'), room: el('nx-room'), tribe: el('nx-tribe') };
+    function show(v) { for (const k in views) views[k].hidden = (k !== v); window.scrollTo(0, 0); }
 
-      // ── open a room ──
-      var pulseTimer;
-      function openRoom(r){
-        document.getElementById('nx-room-title').textContent = r.title;
-        document.getElementById('nx-room-here').textContent = r.here + ' here';
-        document.getElementById('nx-pulse-n').textContent = r.pulse;
-        document.getElementById('nx-pulse-big').textContent = r.pulse;
-        document.getElementById('nx-stat-day').textContent = 'day ' + r.day;
-        document.getElementById('nx-stat-here').textContent = r.here;
-        document.getElementById('nx-stat-time').textContent = '0m';
-        document.getElementById('nx-heat-fill').style.width = r.heat + '%';
-        document.getElementById('nx-here-faces').innerHTML = faces(Math.min(r.here, 12));
-        var feed = document.getElementById('nx-room-feed');
-        feed.innerHTML = r.msgs.map(function(m,i){ return '<div class="nx-rmsg"><span class="nx-rav" style="background:'+g(i+1)+'"></span><div><span class="nx-rh">'+m[0]+'</span><p>'+m[1]+'</p></div></div>'; }).join('');
-        feed.scrollTop = feed.scrollHeight;
+    const roomsEl = el('nx-rooms');
+    const tribesEl = el('nx-tribes-grid');
+
+    // graceful degrade if env vars missing
+    if (!supabaseConfigured || !supabase) {
+      roomsEl.innerHTML = '<div class="nx-start-card" style="cursor:default">Live data needs the Supabase env vars (PUBLIC_SUPABASE_URL / _ANON_KEY).</div>';
+    } else {
+      boot();
+    }
+
+    function boot() {
+      let ROOMS = [];
+      let TRIBES = [];
+
+      // ── lobby: rooms ──────────────────────────────────────────────────────
+      const isLive = (r) => r.here_now > 0 && (Date.now() - new Date(r.last_active_at).getTime() < 120000);
+      function roomCard(r) {
+        const live = isLive(r);
+        const heat = Math.min(0.10 + r.here_now / 24, 0.5);
+        return '<div class="nx-room-card' + (live ? '' : ' resting') + '" data-room="' + esc(r.id) + '" style="--heat:rgba(255,150,90,' + heat + ')">'
+          + '<div class="nx-rc-top">'
+          + (live ? '<span class="nx-livedot"></span><span class="nx-rc-live">live</span>' : '<span class="nx-rc-rest">resting</span>')
+          + '<span class="nx-rc-pulse"><span class="nx-flame' + (live ? '' : ' dim') + '"></span>' + r.pulse + ' · day ' + dayOf(r.created_at) + '</span></div>'
+          + '<div class="nx-rc-title">' + esc(r.title) + '</div>'
+          + '<div class="nx-rc-host">' + (r.topic ? esc(r.topic) : 'hosted by @' + esc(r.host_handle)) + '</div>'
+          + '<div class="nx-rc-bottom">'
+          + (live
+              ? '<span class="nx-faces">' + faces(Math.min(r.here_now, 5), hashIdx(r.id)) + '</span><span class="nx-here-n">' + r.here_now + ' here</span>'
+              : '<span class="nx-here-n">be the first in · peak ' + r.peak_here + '</span>')
+          + '<span class="nx-join-btn">' + (live ? 'Join' : 'Open') + '</span></div></div>';
+      }
+      function renderRooms() {
+        const sorted = ROOMS.slice().sort((a, b) => (isLive(b) - isLive(a)) || (b.here_now - a.here_now) || (b.pulse - a.pulse));
+        const liveN = sorted.filter(isLive).length;
+        el('nx-rooms-sub').textContent = liveN ? (liveN + ' alive right now') : 'real-time · be the first in';
+        roomsEl.innerHTML = sorted.map(roomCard).join('') + '<div class="nx-start-card" data-start><b>+</b>Start a Live Room</div>';
+      }
+      async function loadRooms() {
+        const { data, error } = await supabase.from('nexus_rooms').select('*').is('archived_at', null).order('last_active_at', { ascending: false }).limit(40);
+        if (error) { roomsEl.innerHTML = '<div class="nx-start-card" data-start><b>+</b>Start the first Live Room</div>'; return; }
+        ROOMS = data || []; renderRooms();
+      }
+
+      // live lobby updates (rooms appear / counts change in real time)
+      supabase.channel('nx-lobby')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'nexus_rooms' }, (payload) => {
+          const row = payload.new || payload.old; if (!row) return;
+          if (payload.eventType === 'DELETE') ROOMS = ROOMS.filter((r) => r.id !== row.id);
+          else {
+            const i = ROOMS.findIndex((r) => r.id === payload.new.id);
+            if (i >= 0) ROOMS[i] = payload.new;
+            else if (!payload.new.archived_at) ROOMS.push(payload.new);
+          }
+          renderRooms();
+        }).subscribe();
+
+      // ── lobby: tribes (real communities) ──────────────────────────────────
+      async function loadTribes() {
+        const { data: comms } = await supabase.from('nexus_communities').select('id,slug,name,description,visibility').eq('visibility', 'public').order('created_at');
+        if (!comms) { tribesEl.innerHTML = '<p class="nx-pulse-explain">Could not load tribes.</p>'; return; }
+        const counts = {};
+        const { data: posts } = await supabase.from('nexus_posts').select('community_id').eq('is_soft_hidden', false);
+        if (posts) posts.forEach((p) => { counts[p.community_id] = (counts[p.community_id] || 0) + 1; });
+        TRIBES = comms;
+        tribesEl.innerHTML = comms.length
+          ? comms.map((c) => {
+              const n = counts[c.id] || 0;
+              return '<div class="nx-tribe-card" data-tribe="' + esc(c.id) + '"><span class="nx-tc-mark" style="background:' + g(hashIdx(c.id)) + '"></span>'
+                + '<span class="nx-tc-who"><b>' + esc(c.name) + '</b><span>' + n + ' discussion' + (n === 1 ? '' : 's') + '</span></span></div>';
+            }).join('')
+          : '<p class="nx-pulse-explain">No public tribes yet — they’re being curated during the beta.</p>';
+      }
+
+      // ── in-room (the star): presence + broadcast + pulse ──────────────────
+      let chan = null, here = 0, sessionStart = 0, timer = null, hbAt = 0, curRoom = null;
+      const setPulse = (n) => { el('nx-pulse-big').textContent = n; el('nx-pulse-n').textContent = n; };
+
+      async function heartbeat(h, msgDelta) {
+        if (!curRoom) return;
+        const now = Date.now();
+        if (!msgDelta && now - hbAt < 2500) return;
+        hbAt = now;
+        const { data } = await supabase.rpc('nexus_room_heartbeat', { p_room_id: curRoom.id, p_here: h, p_msg_delta: msgDelta || 0 });
+        if (data) { curRoom = data; setPulse(data.pulse); }
+      }
+      function renderHere(state) {
+        const metas = Object.values(state).map((a) => a && a[0]).filter(Boolean);
+        here = Object.keys(state).length;
+        el('nx-room-here').textContent = here + (here === 1 ? ' here' : ' here');
+        el('nx-stat-here').textContent = here;
+        el('nx-here-faces').innerHTML = metas.slice(0, 12).map((m) => '<span style="background:' + g(m.color || 0) + '"></span>').join('') || faces(1, hashIdx(ME.id));
+        const orb = el('nx-pulse-orb'); if (orb) orb.classList.toggle('resting', here === 0);
+        el('nx-heat-fill').style.width = Math.min(8 + here * 12, 100) + '%';
+      }
+      function appendMsg(m, me) {
+        const feed = el('nx-room-feed');
+        const d = document.createElement('div'); d.className = 'nx-rmsg' + (me ? ' me' : '');
+        d.innerHTML = '<span class="nx-rav" style="background:' + g(me ? ME.color : (m.color || 0)) + '"></span><div><span class="nx-rh"></span><p></p></div>';
+        d.querySelector('.nx-rh').textContent = me ? 'you' : (m.handle || 'someone');
+        d.querySelector('p').textContent = m.text;
+        feed.appendChild(d); feed.scrollTop = feed.scrollHeight;
+      }
+      function openRoom(r) {
+        curRoom = r;
+        el('nx-room-title').textContent = r.title;
+        el('nx-stat-day').textContent = 'day ' + dayOf(r.created_at);
+        setPulse(r.pulse); el('nx-stat-here').textContent = 1; el('nx-stat-time').textContent = '0m';
+        el('nx-heat-fill').style.width = '20%';
+        el('nx-pulse-orb').classList.remove('resting');
+        el('nx-room-feed').innerHTML = '<div class="nx-rmsg"><span class="nx-rav" style="background:' + g(3) + '"></span><div><span class="nx-rh">blak · quiet moderator</span><p></p></div></div>';
+        el('nx-room-feed').querySelector('p').textContent = r.here_now > 0
+          ? 'Welcome in. People are here — say hello.'
+          : 'You opened this room. It glows as people gather and rests when everyone leaves. Say something to begin.';
         show('room');
-        // gentle "alive" feel: pulse ticks up slowly as the room stays active (no FOMO, just warmth)
-        clearInterval(pulseTimer); var p = r.pulse, mins = 0;
-        pulseTimer = setInterval(function(){ p += 1; mins += 1; document.getElementById('nx-pulse-big').textContent = p; document.getElementById('nx-pulse-n').textContent = p; document.getElementById('nx-stat-time').textContent = mins + 'm'; }, 4000);
+        sessionStart = Date.now(); clearInterval(timer);
+        timer = setInterval(() => { el('nx-stat-time').textContent = Math.floor((Date.now() - sessionStart) / 60000) + 'm'; }, 5000);
+
+        chan = supabase.channel('nx-room:' + r.id, { config: { presence: { key: ME.id }, broadcast: { self: false } } });
+        chan
+          .on('presence', { event: 'sync' }, () => { const st = chan.presenceState(); renderHere(st); heartbeat(Object.keys(st).length, 0); })
+          .on('broadcast', { event: 'msg' }, ({ payload }) => appendMsg(payload, false))
+          .subscribe(async (status) => { if (status === 'SUBSCRIBED') await chan.track({ handle: ME.handle, color: ME.color, at: Date.now() }); });
       }
-      function startNew(){ openRoom({ title:'Your new room', host:'you', here:1, pulse:1, day:1, heat:8, msgs:[['blak · moderator','Room\'s open. It\'ll glow as people join and talk. You\'re the first — say hi 👋']] }); }
+      async function leaveRoom() {
+        clearInterval(timer);
+        const room = curRoom, leftHere = Math.max(0, here - 1);
+        try { if (chan) { await chan.untrack(); await supabase.removeChannel(chan); } } catch (e) {}
+        chan = null; curRoom = null;
+        if (room) { try { await supabase.rpc('nexus_room_heartbeat', { p_room_id: room.id, p_here: leftHere, p_msg_delta: 0 }); } catch (e) {} }
+        show('home'); loadRooms();
+      }
 
-      roomsEl.addEventListener('click', function(e){
-        var card = e.target.closest('[data-room]'); var start = e.target.closest('[data-start]');
-        if (start) return startNew();
-        if (card) { var r = ROOMS.filter(function(x){return x.id===card.getAttribute('data-room');})[0]; if (r) openRoom(r); }
+      el('nx-room-form').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const inp = el('nx-room-input'); const v = inp.value.trim(); if (!v || !chan) return; inp.value = '';
+        chan.send({ type: 'broadcast', event: 'msg', payload: { handle: ME.handle, color: ME.color, text: v } });
+        appendMsg({ text: v }, true); heartbeat(here, 1);
       });
-      document.getElementById('nx-start').addEventListener('click', startNew);
 
-      // room composer
-      document.getElementById('nx-room-form').addEventListener('submit', function(e){
-        e.preventDefault(); var inp = document.getElementById('nx-room-input'); var v = inp.value.trim(); if(!v) return; inp.value='';
-        var feed = document.getElementById('nx-room-feed');
-        var d = document.createElement('div'); d.className='nx-rmsg me'; d.innerHTML = '<span class="nx-rav" style="background:var(--cta-grad)"></span><div><span class="nx-rh">you</span><p></p></div>';
-        d.querySelector('p').textContent = v; feed.appendChild(d); feed.scrollTop = feed.scrollHeight;
+      // ── create room (modal) ───────────────────────────────────────────────
+      const modal = el('nx-modal');
+      const openCreate = () => { modal.hidden = false; setTimeout(() => el('nx-create-title').focus(), 30); };
+      const closeCreate = () => { modal.hidden = true; el('nx-create-form').reset(); };
+      el('nx-create-cancel').addEventListener('click', closeCreate);
+      modal.addEventListener('click', (e) => { if (e.target === modal) closeCreate(); });
+      document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !modal.hidden) closeCreate(); });
+      el('nx-create-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const title = el('nx-create-title').value.trim(); if (!title) return;
+        const topic = el('nx-create-topic').value.trim();
+        const { data, error } = await supabase.rpc('nexus_create_room', { p_title: title, p_topic: topic || null, p_emoji: null, p_host_handle: ME.handle });
+        closeCreate();
+        if (error || !data) { toast('Could not start the room — try again.'); return; }
+        openRoom(data);
       });
 
-      // ── open a tribe ──
-      function openTribe(t){
-        document.getElementById('nx-tribe-name').textContent = t.name;
-        document.getElementById('nx-tribe-meta').textContent = t.members + ' members · ' + (t.disc.length+2) + ' talking now';
-        document.getElementById('nx-tribe-mark').style.background = t.mark;
-        document.getElementById('nx-tribe-desc').textContent = t.desc;
-        document.getElementById('nx-tribe-live').innerHTML = '<div style="display:flex;align-items:center;gap:.6rem"><span class="nx-livedot"></span><b>'+t.name+' · live room</b><span class="nx-here-n" style="margin-left:auto">'+ (8 + (t.id.charCodeAt(1)%20)) +' here</span><span class="nx-join-btn" data-start>Join</span></div>';
-        var disc = document.getElementById('nx-discussions');
-        disc.innerHTML = t.disc.map(function(m,i){ return '<div class="nx-disc"><div class="nx-disc-top"><span class="nx-disc-av" style="background:'+g(i)+'"></span>'+m[0]+' · 2h</div><div class="nx-disc-text">'+m[1]+'</div><div class="nx-disc-foot"><span class="nx-reso">◈ '+(40+i*13)+' resonate</span><span>'+(3+i)+' replies</span></div></div>'; }).join('');
+      roomsEl.addEventListener('click', (e) => {
+        if (e.target.closest('[data-start]')) return openCreate();
+        const c = e.target.closest('[data-room]'); if (!c) return;
+        const r = ROOMS.find((x) => x.id === c.getAttribute('data-room')); if (r) openRoom(r);
+      });
+      el('nx-start').addEventListener('click', openCreate);
+
+      // ── tribe view (real communities + posts) ─────────────────────────────
+      let curTribe = null;
+      async function openTribe(c) {
+        curTribe = c;
+        el('nx-tribe-name').textContent = c.name;
+        el('nx-tribe-mark').style.background = g(hashIdx(c.id));
+        el('nx-tribe-desc').textContent = c.description || 'A Blaksyd tribe.';
+        el('nx-tribe-meta').textContent = 'community';
+        el('nx-tribe-join').textContent = SESSION ? 'Join' : 'Sign in to join';
+        el('nx-tribe-live').innerHTML = '<div style="display:flex;align-items:center;gap:.6rem;flex-wrap:wrap"><span class="nx-livedot"></span><b>' + esc(c.name) + ' · live room</b><span class="nx-here-n" style="margin-left:auto">gather in real time</span><span class="nx-join-btn" data-tribe-room>Start a room</span></div>';
+        const disc = el('nx-discussions'); disc.innerHTML = '<p class="nx-pulse-explain">Loading discussions…</p>';
         show('tribe');
+        const { data: posts } = await supabase.from('nexus_posts')
+          .select('id,title,body,impact_count,comment_count,created_at')
+          .eq('community_id', c.id).eq('is_soft_hidden', false).order('created_at', { ascending: false });
+        if (!posts || !posts.length) { disc.innerHTML = '<p class="nx-pulse-explain">No discussions yet — be the first.</p>'; return; }
+        disc.innerHTML = posts.map((p) =>
+          '<div class="nx-disc" data-post="' + esc(p.id) + '"><div class="nx-disc-top"><span class="nx-disc-av" style="background:' + g(hashIdx(p.id)) + '"></span>member · ' + rel(p.created_at) + '</div>'
+          + (p.title ? '<div class="nx-disc-text" style="font-weight:650">' + esc(p.title) + '</div>' : '')
+          + '<div class="nx-disc-text">' + esc(p.body) + '</div>'
+          + '<div class="nx-disc-foot"><span class="nx-reso" data-reso>◈ <b>' + (p.impact_count || 0) + '</b> resonate</span><span>' + (p.comment_count || 0) + ' replies</span></div></div>'
+        ).join('');
       }
-      document.getElementById('nx-tribes-grid').addEventListener('click', function(e){ var c = e.target.closest('[data-tribe]'); if(c){ var t=TRIBES.filter(function(x){return x.id===c.getAttribute('data-tribe');})[0]; if(t) openTribe(t); } });
-      document.getElementById('nx-tribe-live').addEventListener('click', function(e){ if(e.target.closest('[data-start]')) startNew(); });
-      document.getElementById('nx-disc-form').addEventListener('submit', function(e){
-        e.preventDefault(); var inp=document.getElementById('nx-disc-input'); var v=inp.value.trim(); if(!v) return; inp.value='';
-        var disc=document.getElementById('nx-discussions');
-        var d=document.createElement('div'); d.className='nx-disc'; d.innerHTML='<div class="nx-disc-top"><span class="nx-disc-av" style="background:var(--cta-grad)"></span>you · anon · now</div><div class="nx-disc-text"></div><div class="nx-disc-foot"><span class="nx-reso">◈ 0 resonate</span><span>0 replies</span></div>';
-        d.querySelector('.nx-disc-text').textContent=v; disc.insertBefore(d, disc.firstChild);
+      tribesEl.addEventListener('click', (e) => { const c = e.target.closest('[data-tribe]'); if (!c) return; const t = TRIBES.find((x) => x.id === c.getAttribute('data-tribe')); if (t) openTribe(t); });
+
+      el('nx-tribe-live').addEventListener('click', async (e) => {
+        if (!e.target.closest('[data-tribe-room]') || !curTribe) return;
+        const { data } = await supabase.rpc('nexus_create_room', { p_title: curTribe.name, p_topic: 'live room · ' + curTribe.name, p_emoji: null, p_host_handle: ME.handle });
+        if (data) openRoom(data); else toast('Could not open the room — try again.');
       });
+
+      el('nx-discussions').addEventListener('click', async (e) => {
+        const r = e.target.closest('[data-reso]'); if (!r) return;
+        if (!SESSION) { toast('Sign in to resonate.'); return; }
+        if (r.classList.contains('on')) return;
+        const post = e.target.closest('[data-post]'); const id = post && post.getAttribute('data-post'); if (!id) return;
+        const b = r.querySelector('b'); b.textContent = (+b.textContent + 1); r.classList.add('on');
+        await supabase.from('nexus_impacts').insert({ post_id: id, user_id: SESSION.user.id, impact_type: 'resonate' });
+      });
+
+      el('nx-disc-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const inp = el('nx-disc-input'); const v = inp.value.trim(); if (!v) return;
+        if (!SESSION) { toast('Sign in to post a discussion.'); return; }
+        inp.value = '';
+        const disc = el('nx-discussions');
+        const d = document.createElement('div'); d.className = 'nx-disc';
+        d.innerHTML = '<div class="nx-disc-top"><span class="nx-disc-av" style="background:var(--cta-grad)"></span>you · now</div><div class="nx-disc-text"></div><div class="nx-disc-foot"><span class="nx-reso">◈ <b>0</b> resonate</span><span>0 replies</span></div>';
+        d.querySelector('.nx-disc-text').textContent = v;
+        if (disc.firstChild && disc.firstChild.classList && disc.firstChild.classList.contains('nx-disc')) disc.insertBefore(d, disc.firstChild);
+        else { disc.innerHTML = ''; disc.appendChild(d); }
+        const { error } = await supabase.from('nexus_posts').insert({ community_id: curTribe.id, author_user_id: SESSION.user.id, body: v });
+        if (error) toast('Posted locally, but the server rejected it.');
+      });
+
+      el('nx-tribe-join').addEventListener('click', async () => {
+        if (!SESSION) { toast('Sign in to join this tribe.'); return; }
+        const { error } = await supabase.from('nexus_community_members').insert({ community_id: curTribe.id, user_id: SESSION.user.id });
+        el('nx-tribe-join').textContent = 'Joined ✓';
+        if (error && error.code !== '23505') toast('Could not join — try again.');
+      });
+
+      el('nx-newtribe').addEventListener('click', () => toast('New tribes are curated during the beta. Live Rooms are open — start one above.'));
 
       // back buttons
-      [].forEach.call(document.querySelectorAll('[data-home]'), function(b){ b.addEventListener('click', function(){ clearInterval(pulseTimer); show('home'); }); });
-    })();
+      document.querySelectorAll('[data-home]').forEach((b) => b.addEventListener('click', () => { if (chan) leaveRoom(); else show('home'); }));
+      window.addEventListener('beforeunload', () => { if (chan && curRoom) { try { navigator.sendBeacon; } catch (e) {} } });
+
+      // ── go ──
+      (async () => {
+        try { const { data } = await supabase.auth.getSession(); SESSION = data.session || null; if (SESSION && SESSION.user && SESSION.user.email) ME.handle = SESSION.user.email.split('@')[0]; } catch (e) {}
+        await Promise.all([loadRooms(), loadTribes()]);
+      })();
+    }
   </script>
 </AppLayout>
