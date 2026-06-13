@@ -67,6 +67,9 @@ const pillars = [
     .home-blak-k { margin: 0 0 .15rem; font-family: var(--font-mono); font-size: var(--fs-3xs); letter-spacing: .08em; text-transform: uppercase; color: var(--coral); }
     .home-blak-msg { margin: 0; font-size: var(--fs-md); color: var(--ink); }
     .home-blak-cta { margin-left: auto; flex: none; font-size: var(--fs-md); font-weight: 600; color: var(--cta-ink); background: var(--cta); padding: .5rem 1rem; border-radius: var(--r-pill); white-space: nowrap; }
+    /* LIGHT theme: deepen accent text so it reads on cream */
+    html[data-theme="light"] .home-accent { background: linear-gradient(110deg, var(--gold-ink) 0%, var(--coral-ink) 50%, var(--lavender-ink) 95%); -webkit-background-clip: text; background-clip: text; }
+    html[data-theme="light"] .home-blak-k { color: var(--coral-ink); }
   </style>
 
   <script is:inline>

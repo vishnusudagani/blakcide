@@ -63,6 +63,8 @@ import AppLayout from '../../layouts/AppLayout.astro';
     .bx-composer button { flex: none; width: 48px; border-radius: 50%; border: 0; cursor: pointer; color: var(--cta-ink); background: var(--cta); box-shadow: var(--shadow-cta); }
     .bx-composer button svg { width: 20px; height: 20px; }
     .bx-note { margin: 0 .3rem; padding-bottom: .8rem; font-size: var(--fs-xs); color: var(--ink-faint); text-align: center; }
+    /* LIGHT theme: deepen accent text so it reads on cream */
+    html[data-theme="light"] .bx-tag { color: var(--coral-ink); }
   </style>
 
   <script is:inline>

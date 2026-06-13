@@ -58,6 +58,9 @@ import AppLayout from '../../layouts/AppLayout.astro';
     .px-composer button { flex: none; width: 46px; border-radius: 50%; border: 0; cursor: pointer; color: #fff; background: linear-gradient(135deg, var(--lavender-deep), var(--lavender)); }
     .px-composer button svg { width: 19px; height: 19px; }
     .px-note { margin: .9rem .2rem 0; font-size: var(--fs-xs); color: var(--ink-faint); text-align: center; }
+    /* LIGHT theme: deepen accent text so it reads on cream */
+    html[data-theme="light"] .px-accent { background: linear-gradient(110deg, var(--lavender-ink), #5b46ad); -webkit-background-clip: text; background-clip: text; }
+    html[data-theme="light"] .px-badge { color: var(--lavender-ink); }
   </style>
 
   <script is:inline>

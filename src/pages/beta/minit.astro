@@ -56,6 +56,9 @@ import AppLayout from '../../layouts/AppLayout.astro';
     .mx-mode:hover { color: var(--ink); transform: translateY(-1px); }
     .mx-mode.go { color: #06231C; border: 0; background: linear-gradient(135deg, var(--mint), var(--mint-deep) 70%, var(--aqua)); font-weight: 650; }
     .mx-note { margin: .9rem .2rem 0; font-size: var(--fs-xs); color: var(--ink-faint); text-align: center; }
+    /* LIGHT theme: deepen accent text so it reads on cream */
+    html[data-theme="light"] .mx-accent { background: linear-gradient(110deg, var(--mint-ink), var(--aqua-ink)); -webkit-background-clip: text; background-clip: text; }
+    html[data-theme="light"] .mx-rate { color: var(--gold-ink); }
   </style>
 
   <script is:inline>

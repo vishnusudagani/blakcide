@@ -26,6 +26,19 @@ const nav = [
   <meta name="theme-color" content="#0B0D1F" />
   <title>{title} · Blaksyd beta</title>
   <link rel="icon" href="/favicon.ico" />
+  <script is:inline>
+    /* Match the OS (or an explicit choice shared with the marketing site) before
+       paint, so the app isn't locked to dark. Priority: stored toggle → OS → dark. */
+    (function () {
+      try {
+        var t = localStorage.getItem('theme');
+        if (t !== 'light' && t !== 'dark') t = (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
+        document.documentElement.setAttribute('data-theme', t);
+        var m = document.querySelector('meta[name="theme-color"]');
+        if (m) m.setAttribute('content', t === 'light' ? '#FAF4EC' : '#0B0D1F');
+      } catch (e) {}
+    })();
+  </script>
 </head>
 <body>
   <div class="ap-atmos" aria-hidden="true"></div>
@@ -57,7 +70,7 @@ const nav = [
   </div>
 
   <style is:global>
-    :root { color-scheme: dark; }
+    /* color-scheme follows the theme via tokens.css (:root = dark, [data-theme=light] = light) */
     * { box-sizing: border-box; }
     html, body { margin: 0; height: 100%; }
     body {
@@ -71,6 +84,12 @@ const nav = [
         radial-gradient(60% 50% at 92% 4%, rgba(201, 184, 255, .12), transparent 60%),
         radial-gradient(80% 60% at 50% 120%, rgba(91, 192, 255, .10), transparent 60%);
     }
+    html[data-theme="light"] .ap-atmos {
+      background:
+        radial-gradient(70% 50% at 18% -8%, rgba(255, 138, 108, .16), transparent 60%),
+        radial-gradient(60% 50% at 92% 4%, rgba(150, 131, 230, .12), transparent 60%),
+        radial-gradient(80% 60% at 50% 120%, rgba(70, 180, 192, .10), transparent 60%);
+    }
 
     .ap { position: relative; z-index: 1; display: grid; grid-template-columns: 248px 1fr; min-height: 100vh; min-height: 100svh; }
 
@@ -81,12 +100,15 @@ const nav = [
       padding: 1.5rem 1.1rem; border-right: 1px solid var(--line);
       background: rgba(8, 9, 26, .45); backdrop-filter: blur(12px);
     }
+    html[data-theme="light"] .ap-rail { background: rgba(255, 252, 244, .6); }
     .ap-brand { display: inline-flex; align-items: center; gap: .5rem; }
     .ap-mark { display: block; height: 24px; width: 84px; background: url('/assets/blaksyd-white.webp') left center / contain no-repeat; }
+    html[data-theme="light"] .ap-mark { background-image: url('/assets/blaksyd-black.webp'); }
     .ap-beta {
       font-family: var(--font-mono); font-size: 9px; letter-spacing: .14em; text-transform: uppercase;
       color: var(--gold); border: 1px solid rgba(255, 210, 122, .4); border-radius: 999px; padding: 2px 6px;
     }
+    html[data-theme="light"] .ap-beta { color: var(--gold-ink); border-color: rgba(138, 100, 16, .4); }
     .ap-nav { display: flex; flex-direction: column; gap: .25rem; margin-top: .5rem; }
     .ap-link {
       display: flex; align-items: center; gap: .75rem;
@@ -128,6 +150,7 @@ const nav = [
         padding: .4rem .3rem calc(.4rem + env(safe-area-inset-bottom, 0)); gap: 0;
         background: rgba(8, 9, 26, .92); backdrop-filter: blur(16px); border-top: 1px solid var(--line-strong); z-index: 30;
       }
+      html[data-theme="light"] .ap-nav { background: rgba(255, 252, 244, .94); }
       .ap-link { flex-direction: column; gap: 2px; padding: .35rem .5rem; font-size: var(--fs-2xs); border-radius: var(--r-sm); }
       .ap-link.is-on { box-shadow: none !important; background: transparent; }
       .ap-link svg { width: 22px; height: 22px; opacity: 1; }
@@ -165,6 +188,17 @@ const nav = [
         try { Object.keys(localStorage).forEach(function (k) { if (k.indexOf('supabase') > -1 || k.indexOf('-auth-token') > -1) localStorage.removeItem(k); }); } catch (e) {}
         window.location.href = '/';
       });
+      // Follow OS light/dark changes live (unless a theme was explicitly chosen on the site).
+      try {
+        var mq = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)');
+        if (mq && mq.addEventListener) mq.addEventListener('change', function (e) {
+          if (localStorage.getItem('theme')) return;
+          var t = e.matches ? 'dark' : 'light';
+          document.documentElement.setAttribute('data-theme', t);
+          var mc = document.querySelector('meta[name="theme-color"]');
+          if (mc) mc.setAttribute('content', t === 'light' ? '#FAF4EC' : '#0B0D1F');
+        });
+      } catch (e) {}
     })();
   </script>
 </body>
