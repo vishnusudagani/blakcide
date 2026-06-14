@@ -1,0 +1,95 @@
+---
+import Page from '../layouts/Page.astro';
+
+const faqs = [
+  {
+    q: 'What is Blaksyd?',
+    a: 'Blaksyd is a Human + AI life platform built around you. It combines Blak, your AI friend; Persona, your digital self; Minit, trained human listeners; and Nexus, a living community into one system that learns around your life.',
+  },
+  {
+    q: 'Is Blaksyd just an AI chatbot?',
+    a: 'No. Blaksyd includes AI conversation through Blak, but it also includes Persona for digital identity, Minit for trained human listeners, and Nexus for community. It is a Human + AI life platform, not a standalone chatbot.',
+  },
+  {
+    q: 'Is Blaksyd a therapy app?',
+    a: 'No. Blaksyd is not a therapy app. Minit listeners provide human conversation and support, but they do not diagnose, prescribe, or replace licensed mental health care.',
+  },
+];
+
+const schema = [
+  {
+    '@type': 'AboutPage',
+    '@id': 'https://blaksyd.com/what-is-blaksyd/#webpage',
+    url: 'https://blaksyd.com/what-is-blaksyd/',
+    name: 'What is Blaksyd?',
+    description: 'Blaksyd is a Human + AI life platform built around Blak, Persona, Minit, and Nexus.',
+    isPartOf: { '@id': 'https://blaksyd.com/#website' },
+    about: { '@id': 'https://blaksyd.com/#organization' },
+    mainEntity: { '@id': 'https://blaksyd.com/#organization' },
+    breadcrumb: { '@id': 'https://blaksyd.com/what-is-blaksyd/#breadcrumb' },
+    primaryImageOfPage: {
+      '@type': 'ImageObject',
+      url: 'https://blaksyd.com/assets/blaksyd-four-pillars.png',
+      caption: 'The four pillars of Blaksyd: Blak, Persona, Minit, and Nexus.',
+    },
+  },
+  {
+    '@type': 'FAQPage',
+    '@id': 'https://blaksyd.com/what-is-blaksyd/#faq',
+    mainEntity: faqs.map((f) => ({
+      '@type': 'Question',
+      name: f.q,
+      acceptedAnswer: { '@type': 'Answer', text: f.a },
+    })),
+  },
+];
+---
+
+<Page
+  title="What Is Blaksyd? | Human + AI Life Platform"
+  description="Blaksyd is a Human + AI life platform built around Blak, Persona, Minit, and Nexus: an AI friend, digital self, trained listeners, and community."
+  image="/assets/blaksyd-four-pillars.png"
+  kicker="Definition · Blaksyd"
+  kickerClass="k-gold"
+  heading="What is"
+  accent="Blaksyd?"
+  lede="Blaksyd is a Human + AI life platform built around you. It brings together Blak, your AI friend; Persona, your digital self; Minit, trained human listeners; and Nexus, a living community."
+  heroImage="/assets/blaksyd-four-pillars.webp"
+  heroAlt="The four pillars of Blaksyd: Blak, Persona, Minit, and Nexus arranged around the user."
+  breadcrumb={[{ name: 'Home', href: '/' }, { name: 'What is Blaksyd?', href: '/what-is-blaksyd/' }]}
+  schema={schema}
+>
+  <section>
+    <h2>Direct answer</h2>
+    <p>
+      <b>Blaksyd is a Human + AI life platform built around you.</b> It combines four pillars:
+      <a href="/blak/">Blak</a>, your AI friend; <a href="/persona/">Persona</a>, your digital self;
+      <a href="/minit/">Minit</a>, trained human listeners; and <a href="/nexus/">Nexus</a>, a
+      living community. Together they form one system that learns around your life.
+    </p>
+  </section>
+
+  <section>
+    <h2>The four pillars</h2>
+    <ul>
+      <li><b>Blak</b> is your proactive AI friend and the connective spine of Blaksyd.</li>
+      <li><b>Persona</b> is your digital self: Real Persona plus Fantasy Personas you create.</li>
+      <li><b>Minit</b> connects you with trained human listeners by text or voice.</li>
+      <li><b>Nexus</b> is the community world of Tribes, Discussion Rooms, anonymous connection, and Resonance.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>What Blaksyd is not</h2>
+    <p>
+      Blaksyd is not a generic AI chatbot, not a dating or romantic-companion app, and not an emergency
+      service. Minit is not therapy and does not diagnose, prescribe, or replace licensed care.
+    </p>
+  </section>
+
+  <section>
+    <h2>Questions</h2>
+    {faqs.map((f) => (<><h3>{f.q}</h3><p>{f.a}</p></>))}
+  </section>
+</Page>
+

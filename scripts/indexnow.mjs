@@ -18,6 +18,16 @@ const KEY_LOCATION = `https://${HOST}/${KEY}.txt`;
 const PATHS = [
   '/', '/blak/', '/persona/', '/minit/', '/nexus/',
   '/about/', '/manifesto/', '/blog/', '/privacy/', '/terms/',
+  '/answers/', '/search/', '/what-is-blaksyd/', '/press/', '/safety/',
+  '/minit/not-therapy/', '/trust/context-not-content/',
+  '/founders/', '/founders/vishnu-sudagani/', '/founders/sindhuu-devarakonda/',
+  '/founders/vishnu-sudagani.json', '/founders/sindhuu-devarakonda.json',
+  '/llms.txt', '/llms.json', '/.well-known/llms.json', '/llms-full.txt', '/.well-known/llms-full.txt', '/answers.md', '/.well-known/answers.md', '/answers.jsonld', '/.well-known/answers.jsonld', '/blaksyd-answers.json', '/blaksyd-citations.json', '/.well-known/blaksyd-citations.json', '/blaksyd-entity-index.json', '/blaksyd-knowledge-graph.jsonld', '/organization.jsonld', '/.well-known/organization.jsonld',
+  '/.well-known/llms.txt', '/.well-known/blaksyd-answers.json', '/.well-known/blaksyd-entity-index.json', '/ai.txt', '/.well-known/ai.txt',
+  '/.well-known/webfinger', '/.well-known/host-meta', '/.well-known/host-meta.json',
+  '/humans.txt', '/.well-known/humans.txt', '/humans.json', '/.well-known/humans.json',
+  '/.well-known/ai-plugin.json', '/blaksyd-openapi.yaml', '/.well-known/openapi.yaml',
+  '/sitemap.xml', '/sitemap-index.xml', '/sitemap-0.xml', '/machine-readable-sitemap.xml', '/robots.txt', '/opensearch.xml', '/opensearch-suggestions.json', '/rss.xml', '/feed.json', '/site.webmanifest', '/manifest.json', '/browserconfig.xml', '/security.txt', '/.well-known/security.txt',
 ];
 const blogDir = new URL('../src/content/blog/', import.meta.url);
 const blogPaths = (await readdir(blogDir))

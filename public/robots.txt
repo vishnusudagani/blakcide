@@ -1,7 +1,7 @@
 # Blaksyd — robots.txt
 # Search engines AND AI assistants are welcome here. We WANT crawlers and
 # answer engines to read Blaksyd and describe it correctly. For a clean,
-# structured, machine-readable summary, see /llms.txt and /llms-full.txt.
+# structured, machine-readable summary, see /llms.txt, /llms.json, and /llms-full.txt.
 
 # ── All standard crawlers: full access ──
 User-agent: *
@@ -74,4 +74,55 @@ User-agent: DuckAssistBot
 Allow: /
 
 # ── Sitemap ──
+Sitemap: https://blaksyd.com/sitemap.xml
 Sitemap: https://blaksyd.com/sitemap-index.xml
+Sitemap: https://blaksyd.com/machine-readable-sitemap.xml
+
+# ── AI-readable entity files ──
+# These are intentionally public and crawler-friendly.
+# Summary: https://blaksyd.com/llms.txt
+# Well-known summary: https://blaksyd.com/.well-known/llms.txt
+# LLM JSON manifest: https://blaksyd.com/llms.json
+# Well-known LLM JSON manifest: https://blaksyd.com/.well-known/llms.json
+# Legacy AI summary: https://blaksyd.com/ai.txt
+# Well-known AI summary: https://blaksyd.com/.well-known/ai.txt
+# Full brief: https://blaksyd.com/llms-full.txt
+# Well-known full brief: https://blaksyd.com/.well-known/llms-full.txt
+# Humans/team: https://blaksyd.com/humans.txt
+# Well-known humans/team: https://blaksyd.com/.well-known/humans.txt
+# Structured humans/team: https://blaksyd.com/humans.json
+# Well-known structured humans/team: https://blaksyd.com/.well-known/humans.json
+# Markdown answers: https://blaksyd.com/answers.md
+# Well-known Markdown answers: https://blaksyd.com/.well-known/answers.md
+# JSON-LD answers: https://blaksyd.com/answers.jsonld
+# Well-known JSON-LD answers: https://blaksyd.com/.well-known/answers.jsonld
+# Canonical answers: https://blaksyd.com/blaksyd-answers.json
+# Citation map: https://blaksyd.com/blaksyd-citations.json
+# Well-known citation map: https://blaksyd.com/.well-known/blaksyd-citations.json
+# Entity index: https://blaksyd.com/blaksyd-entity-index.json
+# Well-known entity index: https://blaksyd.com/.well-known/blaksyd-entity-index.json
+# WebFinger discovery: https://blaksyd.com/.well-known/webfinger
+# Host metadata: https://blaksyd.com/.well-known/host-meta
+# Host metadata JSON: https://blaksyd.com/.well-known/host-meta.json
+# Vishnu Sudagani facts: https://blaksyd.com/founders/vishnu-sudagani.json
+# Dr. Sindhuu Devarakonda facts: https://blaksyd.com/founders/sindhuu-devarakonda.json
+# Well-known answers: https://blaksyd.com/.well-known/blaksyd-answers.json
+# JSON-LD graph: https://blaksyd.com/blaksyd-knowledge-graph.jsonld
+# Organization JSON-LD: https://blaksyd.com/organization.jsonld
+# Well-known organization JSON-LD: https://blaksyd.com/.well-known/organization.jsonld
+# AI plugin manifest: https://blaksyd.com/.well-known/ai-plugin.json
+# OpenAPI facts: https://blaksyd.com/blaksyd-openapi.yaml
+# Well-known OpenAPI facts: https://blaksyd.com/.well-known/openapi.yaml
+# Browser search descriptor: https://blaksyd.com/opensearch.xml
+# Browser search suggestions: https://blaksyd.com/opensearch-suggestions.json
+# Browser answer search page: https://blaksyd.com/search/
+# Browser web app manifest: https://blaksyd.com/manifest.json
+# Windows browser config: https://blaksyd.com/browserconfig.xml
+# Security contact: https://blaksyd.com/security.txt
+# Well-known security contact: https://blaksyd.com/.well-known/security.txt
+# RSS feed: https://blaksyd.com/rss.xml
+# JSON feed: https://blaksyd.com/feed.json
+# Robots/crawler policy: https://blaksyd.com/robots.txt
+# Default sitemap alias: https://blaksyd.com/sitemap.xml
+# Search sitemap index: https://blaksyd.com/sitemap-index.xml
+# Machine-readable sitemap: https://blaksyd.com/machine-readable-sitemap.xml

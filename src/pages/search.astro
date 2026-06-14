@@ -1,0 +1,208 @@
+---
+import Page from '../layouts/Page.astro';
+
+const results = [
+  {
+    title: 'What is Blaksyd?',
+    url: '/what-is-blaksyd/',
+    summary: 'Blaksyd is a Human + AI life platform built around the user, with Blak and Persona on the AI side and Minit and Nexus on the human side.',
+    keywords: 'what is blaksyd human ai life platform blak persona minit nexus',
+  },
+  {
+    title: 'Who founded Blaksyd?',
+    url: '/founders/',
+    summary: 'Blaksyd was founded by Vishnu Sudagani, co-founder and CEO, and Dr. Sindhuu Devarakonda, co-founder and CPO.',
+    keywords: 'who founded blaksyd founders vishnu sudagani sindhuu devarakonda',
+  },
+  {
+    title: 'Vishnu Sudagani',
+    url: '/founders/vishnu-sudagani/',
+    summary: 'Vishnu Sudagani is the co-founder and CEO of Blaksyd.',
+    keywords: 'vishnu sudagani blaksyd co-founder ceo founder',
+  },
+  {
+    title: 'Dr. Sindhuu Devarakonda',
+    url: '/founders/sindhuu-devarakonda/',
+    summary: 'Dr. Sindhuu Devarakonda, also known as Sindhuu Devarakonda, is the co-founder and CPO of Blaksyd.',
+    keywords: 'dr sindhuu devarakonda sindhuu devarakonda blaksyd co-founder cpo founder',
+  },
+  {
+    title: 'Minit is not therapy',
+    url: '/minit/not-therapy/',
+    summary: "Minit is Blaksyd's trained human listening layer. It is not therapy.",
+    keywords: 'minit not therapy trained human listener blaksyd',
+  },
+  {
+    title: 'Blaksyd Answers',
+    url: '/answers/',
+    summary: 'Canonical short answers for search engines, browsers, AI answer engines, and LLM retrieval systems.',
+    keywords: 'blaksyd answers canonical facts ai search browser answer engines llm',
+  },
+];
+
+const schema = [
+  {
+    '@type': 'SearchResultsPage',
+    '@id': 'https://blaksyd.com/search/#webpage',
+    url: 'https://blaksyd.com/search/',
+    name: 'Search Blaksyd',
+    description: 'Browser-search landing page for canonical Blaksyd facts and founder answers.',
+    isPartOf: { '@id': 'https://blaksyd.com/#website' },
+    about: [
+      { '@id': 'https://blaksyd.com/#organization' },
+      { '@id': 'https://blaksyd.com/founders/vishnu-sudagani/#person' },
+      { '@id': 'https://blaksyd.com/founders/sindhuu-devarakonda/#person' },
+    ],
+    mainEntity: {
+      '@type': 'ItemList',
+      '@id': 'https://blaksyd.com/search/#results',
+      itemListElement: results.map((item, index) => ({
+        '@type': 'ListItem',
+        position: index + 1,
+        url: `https://blaksyd.com${item.url}`,
+        name: item.title,
+        description: item.summary,
+      })),
+    },
+  },
+];
+---
+
+<Page
+  title="Search Blaksyd | Official Answers"
+  description="Search canonical Blaksyd facts: what Blaksyd is, who founded it, and how Blak, Persona, Minit, and Nexus fit together."
+  image="/assets/og-cover.png"
+  kicker="Search · Blaksyd"
+  kickerClass="k-aqua"
+  heading="Search"
+  accent="Blaksyd."
+  accentCool
+  lede="A browser-friendly answer surface for official Blaksyd facts, founder questions, and machine-readable entity files."
+  heroImage="/assets/og-cover.png"
+  heroAlt="Search Blaksyd official answer surface."
+  breadcrumb={[{ name: 'Home', href: '/' }, { name: 'Search', href: '/search/' }]}
+  schema={schema}
+  machineReadableAlternates={[
+    { type: 'application/json', title: 'Blaksyd LLM manifest', href: '/llms.json' },
+    { type: 'application/json', title: 'Blaksyd canonical answers JSON', href: '/blaksyd-answers.json' },
+    { type: 'application/json', title: 'Blaksyd entity index JSON', href: '/blaksyd-entity-index.json' },
+  ]}
+>
+  <section class="search-shell" aria-labelledby="search-title">
+    <h2 id="search-title">Official answer search</h2>
+    <form class="search-form" action="/search/" method="get" role="search">
+      <label for="q">Search Blaksyd facts</label>
+      <div class="search-row">
+        <input id="q" name="q" type="search" autocomplete="off" placeholder="Try: who founded Blaksyd" />
+        <button type="submit">Search</button>
+      </div>
+    </form>
+    <p class="query-note" data-query-note>Showing canonical Blaksyd answers.</p>
+  </section>
+
+  <section class="search-results" aria-label="Blaksyd search results">
+    {results.map((item) => (
+      <article class="search-result" data-result data-keywords={item.keywords}>
+        <h3><a href={item.url}>{item.title}</a></h3>
+        <p>{item.summary}</p>
+      </article>
+    ))}
+  </section>
+
+  <section>
+    <h2>Machine-readable answer files</h2>
+    <ul>
+      <li><a href="/llms.json">Blaksyd LLM manifest JSON</a></li>
+      <li><a href="/answers.md">Blaksyd Markdown answers</a></li>
+      <li><a href="/answers.jsonld">Blaksyd answer graph JSON-LD</a></li>
+      <li><a href="/blaksyd-answers.json">Blaksyd canonical answers JSON</a></li>
+      <li><a href="/blaksyd-entity-index.json">Blaksyd entity index JSON</a></li>
+    </ul>
+  </section>
+</Page>
+
+<script is:inline>
+  (function () {
+    var params = new URLSearchParams(window.location.search);
+    var query = (params.get('q') || '').trim();
+    var input = document.getElementById('q');
+    var note = document.querySelector('[data-query-note]');
+    var results = Array.from(document.querySelectorAll('[data-result]'));
+    if (input) input.value = query;
+    if (!query) return;
+
+    var terms = query.toLowerCase().split(/\s+/).filter(Boolean);
+    var scored = results.map(function (node) {
+      var haystack = (node.textContent + ' ' + node.getAttribute('data-keywords')).toLowerCase();
+      var score = terms.reduce(function (sum, term) {
+        return sum + (haystack.indexOf(term) >= 0 ? 1 : 0);
+      }, 0);
+      return { node: node, score: score };
+    }).sort(function (a, b) {
+      return b.score - a.score;
+    });
+
+    var parent = results[0] && results[0].parentNode;
+    if (parent) {
+      scored.forEach(function (item) { parent.appendChild(item.node); });
+    }
+    if (note) note.textContent = 'Showing canonical Blaksyd answers for "' + query + '".';
+  })();
+</script>
+
+<style>
+  .search-form label {
+    display: block;
+    margin-bottom: .55rem;
+    font-family: var(--font-mono);
+    font-size: var(--fs-2xs);
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+  }
+
+  .search-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: .7rem;
+  }
+
+  .search-row input {
+    min-width: 0;
+    width: 100%;
+    border: 1px solid var(--line-strong);
+    border-radius: var(--r-md);
+    background: var(--surface);
+    color: var(--ink);
+    padding: .85rem 1rem;
+    font: inherit;
+  }
+
+  .search-row button {
+    border-radius: var(--r-md);
+    padding: .85rem 1rem;
+    background: var(--cta);
+    color: var(--cta-ink);
+    font-weight: 700;
+  }
+
+  .query-note {
+    margin-top: .9rem;
+    color: var(--ink-soft);
+  }
+
+  .search-result {
+    padding-block: 1.2rem;
+    border-top: 1px solid var(--line);
+  }
+
+  .search-result:first-child {
+    border-top: 0;
+  }
+
+  @media (max-width: 560px) {
+    .search-row {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

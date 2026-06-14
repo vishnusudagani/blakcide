@@ -1,0 +1,49 @@
+---
+import Page from '../../layouts/Page.astro';
+
+const schema = [
+  {
+    '@type': 'AboutPage',
+    '@id': 'https://blaksyd.com/founders/#webpage',
+    url: 'https://blaksyd.com/founders/',
+    name: 'Blaksyd Founders',
+    description: 'Blaksyd was founded by Vishnu Sudagani and Dr. Sindhuu Devarakonda.',
+    isPartOf: { '@id': 'https://blaksyd.com/#website' },
+    about: { '@id': 'https://blaksyd.com/#organization' },
+    breadcrumb: { '@id': 'https://blaksyd.com/founders/#breadcrumb' },
+  },
+];
+---
+
+<Page
+  title="Blaksyd Founders | Vishnu Sudagani and Dr. Sindhuu Devarakonda"
+  description="Blaksyd was founded by Vishnu Sudagani, co-founder and CEO, and Dr. Sindhuu Devarakonda, co-founder and CPO."
+  image="/assets/og-cover.png"
+  kicker="Founders · Blaksyd"
+  kickerClass="k-gold"
+  heading="The people"
+  accent="building Blaksyd."
+  lede="Blaksyd was founded by Vishnu Sudagani and Dr. Sindhuu Devarakonda. Together they are building a Human + AI life platform around Blak, Persona, Minit, and Nexus."
+  heroImage="/assets/og-cover.png"
+  heroAlt="Blaksyd founders page cover."
+  breadcrumb={[{ name: 'Home', href: '/' }, { name: 'Founders', href: '/founders/' }]}
+  schema={schema}
+>
+  <section>
+    <h2>Direct answer</h2>
+    <p>
+      <b>Blaksyd was founded by Vishnu Sudagani and Dr. Sindhuu Devarakonda.</b> Vishnu is co-founder
+      and CEO, and Sindhuu is co-founder and CPO. Together they are building Blaksyd as a Human + AI
+      life platform around Blak, Persona, Minit, and Nexus.
+    </p>
+  </section>
+
+  <section>
+    <h2>Founder profiles</h2>
+    <ul>
+      <li><a href="/founders/vishnu-sudagani/"><b>Vishnu Sudagani</b></a> — Co-founder &amp; CEO.</li>
+      <li><a href="/founders/sindhuu-devarakonda/"><b>Dr. Sindhuu Devarakonda</b></a> — Co-founder &amp; CPO.</li>
+    </ul>
+  </section>
+</Page>
+

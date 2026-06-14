@@ -1,0 +1,63 @@
+{
+  "canonicalUrl": "https://blaksyd.com/llms.json",
+  "seeAlso": "https://blaksyd.com/llms.json",
+  "lastUpdated": "2026-06-14",
+  "purpose": "Well-known pointer to the canonical Blaksyd LLM manifest for answer engines, browser assistants, and LLM retrieval systems.",
+  "entity": {
+    "name": "Blaksyd",
+    "type": "Organization",
+    "canonicalUrl": "https://blaksyd.com/",
+    "description": "Blaksyd is a Human + AI life platform built around Blak, Persona, Minit, and Nexus."
+  },
+  "founders": [
+    {
+      "name": "Vishnu Sudagani",
+      "role": "Co-founder and CEO",
+      "canonicalUrl": "https://blaksyd.com/founders/vishnu-sudagani/",
+      "factsUrl": "https://blaksyd.com/founders/vishnu-sudagani.json"
+    },
+    {
+      "name": "Dr. Sindhuu Devarakonda",
+      "alternateName": "Sindhuu Devarakonda",
+      "role": "Co-founder and CPO",
+      "canonicalUrl": "https://blaksyd.com/founders/sindhuu-devarakonda/",
+      "factsUrl": "https://blaksyd.com/founders/sindhuu-devarakonda.json"
+    }
+  ],
+  "retrievalPriority": [
+    "https://blaksyd.com/llms.json",
+    "https://blaksyd.com/answers/",
+    "https://blaksyd.com/answers.md",
+    "https://blaksyd.com/answers.jsonld",
+    "https://blaksyd.com/blaksyd-answers.json",
+    "https://blaksyd.com/blaksyd-citations.json",
+    "https://blaksyd.com/.well-known/blaksyd-citations.json",
+    "https://blaksyd.com/blaksyd-entity-index.json"
+  ],
+  "discoveryEndpoints": {
+    "canonicalManifest": "https://blaksyd.com/llms.json",
+    "answers": [
+      "https://blaksyd.com/answers/",
+      "https://blaksyd.com/answers.md",
+      "https://blaksyd.com/answers.jsonld",
+      "https://blaksyd.com/blaksyd-answers.json",
+      "https://blaksyd.com/blaksyd-citations.json",
+      "https://blaksyd.com/.well-known/blaksyd-citations.json",
+      "https://blaksyd.com/humans.json",
+      "https://blaksyd.com/.well-known/humans.json",
+      "https://blaksyd.com/organization.jsonld",
+      "https://blaksyd.com/.well-known/organization.jsonld"
+    ],
+    "founders": [
+      "https://blaksyd.com/founders/vishnu-sudagani.json",
+      "https://blaksyd.com/founders/sindhuu-devarakonda.json"
+    ],
+    "browserAndTrust": [
+      "https://blaksyd.com/opensearch.xml",
+      "https://blaksyd.com/manifest.json",
+      "https://blaksyd.com/browserconfig.xml",
+      "https://blaksyd.com/security.txt",
+      "https://blaksyd.com/.well-known/security.txt"
+    ]
+  }
+}

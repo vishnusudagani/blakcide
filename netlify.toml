@@ -51,6 +51,14 @@
   status = 301
   force = true
 
+# Default crawler convention: many bots try /sitemap.xml before reading robots.txt.
+# Astro emits /sitemap-index.xml, so rewrite /sitemap.xml to the generated index.
+[[redirects]]
+  from = "/sitemap.xml"
+  to = "/sitemap-index.xml"
+  status = 200
+  force = true
+
 [[redirects]]
   from = "/api/chat"
   to = "/.netlify/functions/app"

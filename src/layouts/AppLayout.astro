@@ -244,17 +244,39 @@ const nav = [
   </script>
 
   <script>
-    // OAuth / magic-link landings: importing the Supabase client runs
-    // detectSessionInUrl, which consumes the #access_token (implicit) or ?code from
-    // the redirect and stores the session — the user is already in the app, no bounce.
+    // Beta auth gate — ONE login (on the landing page) unlocks EVERY /beta/ feature.
+    // Not signed in → bounce to the landing login, remembering where you were headed;
+    // after sign-in you're returned to that exact page. Importing the Supabase client
+    // also runs detectSessionInUrl, which consumes the #access_token / ?code on return.
     import { supabase } from '../lib/supabaseClient';
     (async () => {
-      if (!supabase) return;
+      if (!supabase) return; // auth env not set → don't lock anyone out
+
+      const here = () => location.pathname + location.search;
+      const safeBeta = (p) => (typeof p === 'string' && /^\/beta\//.test(p) && p.indexOf('//') !== 0) ? p : null;
+      const getSession = async () => { try { return (await supabase.auth.getSession()).data.session; } catch (e) { return null; } };
+
+      let session = await getSession();
+
+      // Just back from sign-in? Tokens are still being exchanged — poll before deciding.
+      const authInUrl = /[#?&](access_token|code|token_hash)=/.test(location.hash + location.search);
+      for (let i = 0; !session && authInUrl && i < 40; i++) { await new Promise((r) => setTimeout(r, 250)); session = await getSession(); }
+
+      if (!session) {
+        try { sessionStorage.setItem('blk_redirect', here()); } catch (e) {}
+        location.replace('/?auth=1');
+        return;
+      }
+
+      // Signed in — if a destination was stashed before login, go there once.
       try {
-        const { data } = await supabase.auth.getSession();
-        const email = data && data.session && data.session.user && data.session.user.email;
-        if (email) { const av = document.getElementById('ap-avatar'); if (av) av.textContent = email[0].toUpperCase(); }
+        const want = safeBeta(sessionStorage.getItem('blk_redirect'));
+        sessionStorage.removeItem('blk_redirect');
+        if (want && want !== location.pathname && want !== here()) { location.replace(want); return; }
       } catch (e) {}
+
+      const email = session.user && session.user.email;
+      if (email) { const av = document.getElementById('ap-avatar'); if (av) av.textContent = email[0].toUpperCase(); }
     })();
   </script>
 </body>

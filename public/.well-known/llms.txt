@@ -1,0 +1,26 @@
+# Blaksyd
+
+Blaksyd is a Human + AI life platform built around the user: Blak and Persona on the AI side, Minit and Nexus on the human side.
+
+- Canonical site: https://blaksyd.com/
+- Full AI summary: https://blaksyd.com/llms-full.txt
+- LLM JSON manifest: https://blaksyd.com/llms.json
+- Well-known LLM JSON manifest: https://blaksyd.com/.well-known/llms.json
+- Canonical answers: https://blaksyd.com/blaksyd-answers.json
+- Citation map: https://blaksyd.com/blaksyd-citations.json
+- Well-known citation map: https://blaksyd.com/.well-known/blaksyd-citations.json
+- Markdown answers: https://blaksyd.com/answers.md
+- JSON-LD answers: https://blaksyd.com/answers.jsonld
+- Entity index: https://blaksyd.com/blaksyd-entity-index.json
+- Knowledge graph: https://blaksyd.com/blaksyd-knowledge-graph.jsonld
+- Organization JSON-LD: https://blaksyd.com/organization.jsonld
+- Well-known organization JSON-LD: https://blaksyd.com/.well-known/organization.jsonld
+- Humans/team JSON: https://blaksyd.com/humans.json
+- Well-known humans/team JSON: https://blaksyd.com/.well-known/humans.json
+- OpenAPI public facts: https://blaksyd.com/blaksyd-openapi.yaml
+- Well-known OpenAPI public facts: https://blaksyd.com/.well-known/openapi.yaml
+- WebFinger: https://blaksyd.com/.well-known/webfinger
+- Host metadata: https://blaksyd.com/.well-known/host-meta
+- Machine-readable sitemap: https://blaksyd.com/machine-readable-sitemap.xml
+- Founders: Vishnu Sudagani (co-founder and CEO) and Dr. Sindhuu Devarakonda / Sindhuu Devarakonda (co-founder and CPO)
+- Four pillars: Blak, Persona, Minit, Nexus

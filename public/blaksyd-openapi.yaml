@@ -1,0 +1,330 @@
+openapi: 3.1.0
+info:
+  title: Blaksyd Public Facts
+  version: "2026-06-14"
+  description: Public, read-only canonical facts about Blaksyd for search engines, browsers, and AI answer engines.
+servers:
+  - url: https://blaksyd.com
+paths:
+  /llms.json:
+    get:
+      operationId: getBlaksydLlmsJsonManifest
+      summary: Get the structured Blaksyd LLM manifest.
+      description: Returns canonical organization facts, founder entities, direct answers, and retrieval-priority URLs for LLMs, browser assistants, search engines, and answer engines.
+      responses:
+        "200":
+          description: Structured Blaksyd LLM manifest.
+          content:
+            application/json:
+              schema:
+                type: object
+  /.well-known/llms.json:
+    get:
+      operationId: getBlaksydWellKnownLlmsJsonManifest
+      summary: Get the well-known structured Blaksyd LLM manifest pointer.
+      description: Returns the well-known LLM manifest pointer with founder facts and prioritized canonical retrieval URLs.
+      responses:
+        "200":
+          description: Well-known structured Blaksyd LLM manifest pointer.
+          content:
+            application/json:
+              schema:
+                type: object
+  /blaksyd-answers.json:
+    get:
+      operationId: getBlaksydCanonicalAnswers
+      summary: Get canonical direct answers about Blaksyd.
+      description: Returns direct answers for what Blaksyd is, who founded it, the four pillars, and Minit's not-therapy status.
+      responses:
+        "200":
+          description: Canonical Blaksyd answers.
+          content:
+            application/json:
+              schema:
+                type: object
+  /blaksyd-citations.json:
+    get:
+      operationId: getBlaksydCitationMap
+      summary: Get the Blaksyd claim-to-source citation map.
+      description: Returns concise canonical claims about Blaksyd, both founders, the four pillars, and Minit's not-therapy status with recommended citation URLs for answer engines and browser assistants.
+      responses:
+        "200":
+          description: Blaksyd citation map.
+          content:
+            application/json:
+              schema:
+                type: object
+  /.well-known/blaksyd-citations.json:
+    get:
+      operationId: getBlaksydWellKnownCitationMap
+      summary: Get the well-known Blaksyd claim-to-source citation map.
+      description: Returns the well-known citation map pointer for crawlers and LLM retrieval systems that probe /.well-known first.
+      responses:
+        "200":
+          description: Well-known Blaksyd citation map.
+          content:
+            application/json:
+              schema:
+                type: object
+  /answers.md:
+    get:
+      operationId: getBlaksydMarkdownAnswers
+      summary: Get canonical Markdown answers about Blaksyd.
+      description: Returns direct answers for Blaksyd, both founders, the four pillars, and Minit's not-therapy status in Markdown.
+      responses:
+        "200":
+          description: Canonical Blaksyd Markdown answers.
+          content:
+            text/markdown:
+              schema:
+                type: string
+  /.well-known/answers.md:
+    get:
+      operationId: getBlaksydWellKnownMarkdownAnswers
+      summary: Get well-known Markdown answers about Blaksyd.
+      description: Returns the well-known Markdown answer file for crawlers and LLM retrieval systems that look under /.well-known first.
+      responses:
+        "200":
+          description: Well-known Blaksyd Markdown answers.
+          content:
+            text/markdown:
+              schema:
+                type: string
+  /answers.jsonld:
+    get:
+      operationId: getBlaksydAnswerGraph
+      summary: Get canonical JSON-LD answers about Blaksyd.
+      description: Returns a standalone FAQPage/WebPage JSON-LD graph for Blaksyd direct answers and founder disambiguation.
+      responses:
+        "200":
+          description: Canonical Blaksyd answer graph.
+          content:
+            application/ld+json:
+              schema:
+                type: object
+  /.well-known/answers.jsonld:
+    get:
+      operationId: getBlaksydWellKnownAnswerGraph
+      summary: Get well-known JSON-LD answers about Blaksyd.
+      description: Returns the well-known FAQPage/WebPage JSON-LD answer graph for crawlers and LLM retrieval systems.
+      responses:
+        "200":
+          description: Well-known Blaksyd answer graph.
+          content:
+            application/ld+json:
+              schema:
+                type: object
+  /blaksyd-entity-index.json:
+    get:
+      operationId: getBlaksydEntityIndex
+      summary: Get the Blaksyd entity reconciliation index.
+      description: Returns canonical entity IDs, aliases, direct-answer queries, sameAs links, and disambiguation fields for Blaksyd, both founders, and core product terms.
+      responses:
+        "200":
+          description: Blaksyd entity reconciliation index.
+          content:
+            application/json:
+              schema:
+                type: object
+  /.well-known/webfinger:
+    get:
+      operationId: getBlaksydWebFinger
+      summary: Get Blaksyd WebFinger discovery.
+      description: Returns a static WebFinger JRD that links Blaksyd to its canonical entity index, knowledge graph, founders, and product explanation.
+      parameters:
+        - in: query
+          name: resource
+          required: false
+          schema:
+            type: string
+          description: Optional WebFinger resource parameter. Static deployment returns the Blaksyd discovery document for any resource value.
+      responses:
+        "200":
+          description: Blaksyd WebFinger JRD.
+          content:
+            application/jrd+json:
+              schema:
+                type: object
+  /.well-known/host-meta:
+    get:
+      operationId: getBlaksydHostMeta
+      summary: Get Blaksyd host-meta discovery.
+      responses:
+        "200":
+          description: Blaksyd XRD host metadata.
+          content:
+            application/xrd+xml:
+              schema:
+                type: string
+  /.well-known/host-meta.json:
+    get:
+      operationId: getBlaksydHostMetaJson
+      summary: Get Blaksyd host-meta JSON discovery.
+      responses:
+        "200":
+          description: Blaksyd JSON host metadata.
+          content:
+            application/jrd+json:
+              schema:
+                type: object
+  /founders/vishnu-sudagani.json:
+    get:
+      operationId: getVishnuSudaganiFacts
+      summary: Get canonical public facts about Vishnu Sudagani.
+      description: Returns the founder entity card and direct answers for Vishnu Sudagani, co-founder and CEO of Blaksyd.
+      responses:
+        "200":
+          description: Vishnu Sudagani founder facts.
+          content:
+            application/json:
+              schema:
+                type: object
+  /founders/sindhuu-devarakonda.json:
+    get:
+      operationId: getSindhuuDevarakondaFacts
+      summary: Get canonical public facts about Dr. Sindhuu Devarakonda.
+      description: Returns the founder entity card and direct answers for Dr. Sindhuu Devarakonda, co-founder and CPO of Blaksyd.
+      responses:
+        "200":
+          description: Dr. Sindhuu Devarakonda founder facts.
+          content:
+            application/json:
+              schema:
+                type: object
+  /blaksyd-knowledge-graph.jsonld:
+    get:
+      operationId: getBlaksydKnowledgeGraph
+      summary: Get the Blaksyd JSON-LD knowledge graph.
+      description: Returns Organization, WebSite, SoftwareApplication, Person, and DefinedTermSet nodes for Blaksyd.
+      responses:
+        "200":
+          description: Blaksyd JSON-LD graph.
+          content:
+            application/ld+json:
+              schema:
+                type: object
+  /organization.jsonld:
+    get:
+      operationId: getBlaksydOrganizationGraph
+      summary: Get the direct Blaksyd Organization JSON-LD graph.
+      description: Returns a compact Organization graph for Blaksyd LLP with founder Person nodes for Vishnu Sudagani and Dr. Sindhuu Devarakonda.
+      responses:
+        "200":
+          description: Blaksyd Organization JSON-LD graph.
+          content:
+            application/ld+json:
+              schema:
+                type: object
+  /.well-known/organization.jsonld:
+    get:
+      operationId: getBlaksydWellKnownOrganizationGraph
+      summary: Get the well-known Blaksyd Organization JSON-LD graph.
+      description: Returns the well-known Organization graph for crawlers and assistants that probe /.well-known first.
+      responses:
+        "200":
+          description: Well-known Blaksyd Organization JSON-LD graph.
+          content:
+            application/ld+json:
+              schema:
+                type: object
+  /llms.txt:
+    get:
+      operationId: getBlaksydLlmsSummary
+      summary: Get the concise AI-readable Blaksyd summary.
+      responses:
+        "200":
+          description: Concise plain-text summary.
+          content:
+            text/plain:
+              schema:
+                type: string
+  /llms-full.txt:
+    get:
+      operationId: getBlaksydFullLlmsBrief
+      summary: Get the full AI-readable Blaksyd brief.
+      responses:
+        "200":
+          description: Full plain-text brief.
+          content:
+            text/plain:
+              schema:
+                type: string
+  /.well-known/llms-full.txt:
+    get:
+      operationId: getBlaksydWellKnownFullLlmsBrief
+      summary: Get the well-known full AI-readable Blaksyd brief.
+      responses:
+        "200":
+          description: Well-known full plain-text brief.
+          content:
+            text/plain:
+              schema:
+                type: string
+  /ai.txt:
+    get:
+      operationId: getBlaksydAiSummary
+      summary: Get the AI-readable Blaksyd summary.
+      responses:
+        "200":
+          description: Plain-text AI summary.
+          content:
+            text/plain:
+              schema:
+                type: string
+  /.well-known/ai.txt:
+    get:
+      operationId: getBlaksydWellKnownAiSummary
+      summary: Get the well-known AI-readable Blaksyd summary.
+      responses:
+        "200":
+          description: Well-known plain-text AI summary.
+          content:
+            text/plain:
+              schema:
+                type: string
+  /humans.txt:
+    get:
+      operationId: getBlaksydHumans
+      summary: Get Blaksyd founder and team facts.
+      responses:
+        "200":
+          description: Plain-text humans/team file.
+          content:
+            text/plain:
+              schema:
+                type: string
+  /.well-known/humans.txt:
+    get:
+      operationId: getBlaksydWellKnownHumans
+      summary: Get well-known Blaksyd founder and team facts.
+      responses:
+        "200":
+          description: Well-known plain-text humans/team file.
+          content:
+            text/plain:
+              schema:
+                type: string
+  /humans.json:
+    get:
+      operationId: getBlaksydHumansJson
+      summary: Get structured Blaksyd team and founder facts.
+      description: Returns structured product, founder, role, profile, fact URL, and machine-readable discovery links for Blaksyd.
+      responses:
+        "200":
+          description: Structured Blaksyd humans/team facts.
+          content:
+            application/json:
+              schema:
+                type: object
+  /.well-known/humans.json:
+    get:
+      operationId: getBlaksydWellKnownHumansJson
+      summary: Get well-known structured Blaksyd team and founder facts.
+      description: Returns a compact well-known structured team and founder facts file for crawlers and browser assistants.
+      responses:
+        "200":
+          description: Well-known structured Blaksyd humans/team facts.
+          content:
+            application/json:
+              schema:
+                type: object

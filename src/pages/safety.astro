@@ -1,0 +1,89 @@
+---
+import Page from '../layouts/Page.astro';
+
+const faqs = [
+  {
+    q: 'Is Blaksyd a therapy app?',
+    a: 'No. Blaksyd is not a therapy app. Minit listeners provide human conversation and support, but they do not diagnose, prescribe, or replace licensed mental health care.',
+  },
+  {
+    q: 'What does safety mean on Blaksyd?',
+    a: 'Blaksyd safety covers AI boundaries, Minit listener protections, Persona consent, Nexus moderation, privacy controls, and crisis escalation paths.',
+  },
+  {
+    q: 'Can listeners protect themselves too?',
+    a: 'Yes. Minit is built with two-sided safety: listeners can exit unsafe conversations, report issues, use break controls, and receive support.',
+  },
+];
+
+const schema = [
+  {
+    '@type': 'WebPage',
+    '@id': 'https://blaksyd.com/safety/#webpage',
+    url: 'https://blaksyd.com/safety/',
+    name: 'Blaksyd Safety',
+    description: 'Blaksyd safety covers AI boundaries, Minit listener protections, Persona consent, Nexus moderation, and crisis escalation.',
+    isPartOf: { '@id': 'https://blaksyd.com/#website' },
+    about: { '@id': 'https://blaksyd.com/#organization' },
+    breadcrumb: { '@id': 'https://blaksyd.com/safety/#breadcrumb' },
+  },
+  {
+    '@type': 'FAQPage',
+    '@id': 'https://blaksyd.com/safety/#faq',
+    mainEntity: faqs.map((f) => ({
+      '@type': 'Question',
+      name: f.q,
+      acceptedAnswer: { '@type': 'Answer', text: f.a },
+    })),
+  },
+];
+---
+
+<Page
+  title="Blaksyd Safety | AI, Human Listening, Persona, Nexus"
+  description="Blaksyd safety covers AI boundaries, trained listener protections, Persona consent, Nexus moderation, privacy controls, and crisis escalation."
+  image="/assets/blaksyd-four-pillars.png"
+  kicker="Safety · trust"
+  kickerClass="k-mint"
+  heading="Safety for"
+  accent="AI and humans."
+  accentCool={true}
+  lede="Blaksyd is designed for companionship, conversation, self-exploration, and community. Safety means clear AI boundaries, trained human-listener protections, Persona consent, Nexus moderation, and crisis escalation paths."
+  heroImage="/assets/blaksyd-four-pillars.webp"
+  heroAlt="The four pillars of Blaksyd connected by a safety-first Human + AI system."
+  breadcrumb={[{ name: 'Home', href: '/' }, { name: 'Safety', href: '/safety/' }]}
+  schema={schema}
+>
+  <section>
+    <h2>Direct answer</h2>
+    <p>
+      <b>Blaksyd safety covers AI boundaries, Minit listener protections, Persona consent, Nexus moderation,
+      privacy controls, and crisis escalation.</b> The platform is designed for companionship and connection,
+      not emergency, medical, or clinical care.
+    </p>
+  </section>
+
+  <section>
+    <h2>Where safety lives</h2>
+    <ul>
+      <li><b>Blak:</b> guardrails and handoff to a human when something needs real presence.</li>
+      <li><b>Persona:</b> user control, sharing boundaries, notifications, and visibility.</li>
+      <li><b>Minit:</b> trained listeners, anonymous-by-default sessions, and two-sided safety.</li>
+      <li><b>Nexus:</b> community moderation, anonymous connection rules, and Resonance over vanity metrics.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Not therapy, not emergency care</h2>
+    <p>
+      Minit listeners do not diagnose, prescribe, or provide clinical treatment. In urgent or life-threatening
+      situations, users should contact local emergency services or qualified crisis resources.
+    </p>
+  </section>
+
+  <section>
+    <h2>Questions</h2>
+    {faqs.map((f) => (<><h3>{f.q}</h3><p>{f.a}</p></>))}
+  </section>
+</Page>
+

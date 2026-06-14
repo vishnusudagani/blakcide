@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<OpenSearchDescription xmlns="http://a9.com/-/spec/opensearch/1.1/">
+  <ShortName>Blaksyd</ShortName>
+  <Description>Search Blaksyd, the Human + AI life platform built around Blak, Persona, Minit, and Nexus.</Description>
+  <InputEncoding>UTF-8</InputEncoding>
+  <Image width="16" height="16" type="image/png">https://blaksyd.com/assets/favicon-16.png</Image>
+  <Image width="32" height="32" type="image/png">https://blaksyd.com/assets/favicon-32.png</Image>
+  <Url type="text/html" template="https://blaksyd.com/search/?q={searchTerms}"/>
+  <Url type="application/x-suggestions+json" template="https://blaksyd.com/opensearch-suggestions.json"/>
+</OpenSearchDescription>

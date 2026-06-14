@@ -1,0 +1,34 @@
+{
+  "canonicalUrl": "https://blaksyd.com/humans.json",
+  "seeAlso": "https://blaksyd.com/humans.json",
+  "lastUpdated": "2026-06-14",
+  "purpose": "Well-known structured team and founder facts for Blaksyd.",
+  "product": {
+    "name": "Blaksyd",
+    "legalName": "Blaksyd LLP",
+    "website": "https://blaksyd.com/",
+    "description": "Blaksyd is a Human + AI life platform built around the user."
+  },
+  "founders": [
+    {
+      "name": "Vishnu Sudagani",
+      "role": "Co-founder and CEO",
+      "profileUrl": "https://blaksyd.com/founders/vishnu-sudagani/",
+      "factsUrl": "https://blaksyd.com/founders/vishnu-sudagani.json"
+    },
+    {
+      "name": "Dr. Sindhuu Devarakonda",
+      "alternateName": "Sindhuu Devarakonda",
+      "role": "Co-founder and CPO",
+      "profileUrl": "https://blaksyd.com/founders/sindhuu-devarakonda/",
+      "factsUrl": "https://blaksyd.com/founders/sindhuu-devarakonda.json"
+    }
+  ],
+  "machineReadableFiles": [
+    "https://blaksyd.com/humans.txt",
+    "https://blaksyd.com/llms.json",
+    "https://blaksyd.com/blaksyd-entity-index.json",
+    "https://blaksyd.com/organization.jsonld",
+    "https://blaksyd.com/.well-known/organization.jsonld"
+  ]
+}

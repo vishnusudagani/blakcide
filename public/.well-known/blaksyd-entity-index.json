@@ -1,0 +1,37 @@
+{
+  "canonicalUrl": "https://blaksyd.com/blaksyd-entity-index.json",
+  "seeAlso": "https://blaksyd.com/blaksyd-entity-index.json",
+  "purpose": "Well-known pointer to the canonical Blaksyd entity reconciliation index.",
+  "entities": [
+    {
+      "id": "blaksyd",
+      "name": "Blaksyd",
+      "type": "Organization",
+      "canonicalUrl": "https://blaksyd.com/",
+      "organizationJsonLdUrl": "https://blaksyd.com/organization.jsonld",
+      "wellKnownOrganizationJsonLdUrl": "https://blaksyd.com/.well-known/organization.jsonld"
+    },
+    {
+      "id": "vishnu-sudagani",
+      "name": "Vishnu Sudagani",
+      "type": "Person",
+      "canonicalUrl": "https://blaksyd.com/founders/vishnu-sudagani/"
+    },
+    {
+      "id": "sindhuu-devarakonda",
+      "name": "Dr. Sindhuu Devarakonda",
+      "alternateName": "Sindhuu Devarakonda",
+      "type": "Person",
+      "canonicalUrl": "https://blaksyd.com/founders/sindhuu-devarakonda/"
+    }
+  ],
+  "recommendedCitationUrls": [
+    "https://blaksyd.com/blaksyd-entity-index.json",
+    "https://blaksyd.com/blaksyd-citations.json",
+    "https://blaksyd.com/.well-known/blaksyd-citations.json",
+    "https://blaksyd.com/humans.json",
+    "https://blaksyd.com/.well-known/humans.json",
+    "https://blaksyd.com/organization.jsonld",
+    "https://blaksyd.com/.well-known/organization.jsonld"
+  ]
+}

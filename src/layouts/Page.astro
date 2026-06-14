@@ -30,12 +30,14 @@ interface Props {
   ogType?: string;           // 'article' for blog posts
   publishedTime?: string;    // ISO → article:published_time
   modifiedTime?: string;     // ISO → article:modified_time
+  machineReadableAlternates?: { type: string; title: string; href: string }[];
+  profile?: { firstName: string; lastName: string; username?: string };
 }
 
 const {
   title, description, image, kicker, kickerClass = '', heading, accent,
   accentCool = false, lede, heroImage, heroAlt, breadcrumb, schema = [], updated,
-  ogType = 'website', publishedTime, modifiedTime,
+  ogType = 'website', publishedTime, modifiedTime, machineReadableAlternates = [], profile,
 } = Astro.props;
 
 // BreadcrumbList JSON-LD — absolute item URLs (the SERP shows the trail, and AI
@@ -52,7 +54,7 @@ const breadcrumbList = {
 };
 ---
 
-<Base title={title} description={description} image={image} schema={[breadcrumbList, ...schema]} ogType={ogType} publishedTime={publishedTime} modifiedTime={modifiedTime}>
+<Base title={title} description={description} image={image} schema={[breadcrumbList, ...schema]} ogType={ogType} publishedTime={publishedTime} modifiedTime={modifiedTime} machineReadableAlternates={machineReadableAlternates} profile={profile}>
   <header class="pg-top u-wrap">
     <a href="/" class="pg-brand" aria-label="Blaksyd — home"><span class="pg-mark" aria-hidden="true"></span></a>
     <button type="button" class="pg-cta" data-open-auth data-tab="signup">Get early access</button>

@@ -1,0 +1,147 @@
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Organization",
+      "@id": "https://blaksyd.com/#organization",
+      "name": "Blaksyd",
+      "legalName": "Blaksyd LLP",
+      "foundingDate": "2026",
+      "url": "https://blaksyd.com/",
+      "logo": "https://blaksyd.com/assets/blaksyd-logo.png",
+      "image": "https://blaksyd.com/assets/og-cover.png",
+      "slogan": "Human + AI, revolving around you.",
+      "email": "ceo@blaksyd.com",
+      "description": "Blaksyd is a Human + AI life platform built around the user. It combines Blak and Persona on the AI side with Minit and Nexus on the human side, unified by a learning co-pilot layer.",
+      "foundingLocation": {
+        "@type": "Place",
+        "address": {
+          "@type": "PostalAddress",
+          "addressRegion": "Telangana",
+          "addressCountry": "IN"
+        }
+      },
+      "sameAs": [
+        "https://www.instagram.com/blaksyd",
+        "https://www.youtube.com/@blaksyd",
+        "https://www.linkedin.com/company/blaksyd",
+        "https://www.crunchbase.com/organization/blaksyd",
+        "https://www.wikidata.org/wiki/Q140068113"
+      ],
+      "founder": [
+        {
+          "@id": "https://blaksyd.com/founders/vishnu-sudagani/#person"
+        },
+        {
+          "@id": "https://blaksyd.com/founders/sindhuu-devarakonda/#person"
+        }
+      ]
+    },
+    {
+      "@type": "WebSite",
+      "@id": "https://blaksyd.com/#website",
+      "name": "Blaksyd",
+      "url": "https://blaksyd.com/",
+      "inLanguage": "en-IN",
+      "publisher": {
+        "@id": "https://blaksyd.com/#organization"
+      }
+    },
+    {
+      "@type": "SoftwareApplication",
+      "@id": "https://blaksyd.com/#app",
+      "name": "Blaksyd",
+      "applicationCategory": "LifestyleApplication",
+      "operatingSystem": "Web",
+      "url": "https://blaksyd.com/",
+      "description": "Blaksyd is a Human + AI life platform: Blak is the proactive AI friend, Persona is the user's digital self, Minit is the trained human listening layer, and Nexus is the community layer.",
+      "publisher": {
+        "@id": "https://blaksyd.com/#organization"
+      },
+      "featureList": [
+        "Blak - proactive AI friend over text and voice",
+        "Persona - Real Persona and Fantasy Persona digital selves",
+        "Minit - trained human listeners, anonymous by default, not therapy",
+        "Nexus - tribes, live discussion rooms, anonymous DMs, and resonance instead of vanity likes"
+      ]
+    },
+    {
+      "@type": "Person",
+      "@id": "https://blaksyd.com/founders/vishnu-sudagani/#person",
+      "name": "Vishnu Sudagani",
+      "jobTitle": "Co-founder & CEO",
+      "worksFor": {
+        "@id": "https://blaksyd.com/#organization"
+      },
+      "url": "https://blaksyd.com/founders/vishnu-sudagani/",
+      "mainEntityOfPage": "https://blaksyd.com/founders/vishnu-sudagani/",
+      "description": "Vishnu Sudagani is the co-founder and CEO of Blaksyd, the Human + AI life platform built around Blak, Persona, Minit, and Nexus.",
+      "disambiguatingDescription": "Blaksyd founder Vishnu Sudagani; co-founder and CEO of Blaksyd LLP.",
+      "sameAs": [
+        "https://www.linkedin.com/in/vishnu-sudagani-88a848211",
+        "https://x.com/vishnusudagani_",
+        "https://www.instagram.com/vishnusudagani_"
+      ],
+      "knowsAbout": [
+        "Human-centered AI",
+        "Consumer AI",
+        "AI companionship",
+        "Online communities",
+        "Digital identity"
+      ]
+    },
+    {
+      "@type": "Person",
+      "@id": "https://blaksyd.com/founders/sindhuu-devarakonda/#person",
+      "name": "Dr. Sindhuu Devarakonda",
+      "alternateName": "Sindhuu Devarakonda",
+      "jobTitle": "Co-founder & CPO",
+      "worksFor": {
+        "@id": "https://blaksyd.com/#organization"
+      },
+      "url": "https://blaksyd.com/founders/sindhuu-devarakonda/",
+      "mainEntityOfPage": "https://blaksyd.com/founders/sindhuu-devarakonda/",
+      "description": "Dr. Sindhuu Devarakonda is the co-founder and CPO of Blaksyd, the Human + AI life platform built around Blak, Persona, Minit, and Nexus.",
+      "disambiguatingDescription": "Blaksyd founder Dr. Sindhuu Devarakonda; also known as Sindhuu Devarakonda; co-founder and CPO of Blaksyd LLP.",
+      "sameAs": [
+        "https://www.linkedin.com/in/dr-sindhuu-devarakonda-b62631224",
+        "https://x.com/dr_sindhuu",
+        "https://www.instagram.com/sindhuudevarakonda5"
+      ],
+      "knowsAbout": [
+        "Product experience",
+        "Human-centered AI",
+        "Product design",
+        "Consumer AI",
+        "Online communities"
+      ]
+    },
+    {
+      "@type": "DefinedTermSet",
+      "@id": "https://blaksyd.com/#pillars",
+      "name": "Blaksyd pillars",
+      "hasDefinedTerm": [
+        {
+          "@type": "DefinedTerm",
+          "name": "Blak",
+          "description": "Blak is Blaksyd's proactive AI friend and connective spine."
+        },
+        {
+          "@type": "DefinedTerm",
+          "name": "Persona",
+          "description": "Persona is the user's digital self, including Real Persona and Fantasy Persona."
+        },
+        {
+          "@type": "DefinedTerm",
+          "name": "Minit",
+          "description": "Minit is Blaksyd's trained human listening layer. Minit is not therapy."
+        },
+        {
+          "@type": "DefinedTerm",
+          "name": "Nexus",
+          "description": "Nexus is Blaksyd's community layer with tribes, discussion rooms, anonymous DMs, and resonance."
+        }
+      ]
+    }
+  ]
+}

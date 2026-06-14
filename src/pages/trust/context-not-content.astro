@@ -1,0 +1,79 @@
+---
+import Page from '../../layouts/Page.astro';
+
+const faqs = [
+  {
+    q: 'What does context, not content mean?',
+    a: 'Context, not content means Blak can brief a Minit listener on the shape of a conversation without exposing private conversation content.',
+  },
+  {
+    q: 'Why does Blaksyd use context, not content?',
+    a: 'It helps a listener start warm while protecting the user from having to share private details again before they choose to.',
+  },
+  {
+    q: 'Does the listener get my full Blak chat?',
+    a: 'No. The principle is to share the shape of the conversation, not the private content itself.',
+  },
+];
+
+const schema = [
+  {
+    '@type': 'WebPage',
+    '@id': 'https://blaksyd.com/trust/context-not-content/#webpage',
+    url: 'https://blaksyd.com/trust/context-not-content/',
+    name: 'Context, Not Content',
+    description: 'Context, not content is Blaksyd’s Minit handoff principle: shape of conversation without private content.',
+    isPartOf: { '@id': 'https://blaksyd.com/#website' },
+    about: { '@id': 'https://blaksyd.com/#organization' },
+    breadcrumb: { '@id': 'https://blaksyd.com/trust/context-not-content/#breadcrumb' },
+  },
+  {
+    '@type': 'FAQPage',
+    '@id': 'https://blaksyd.com/trust/context-not-content/#faq',
+    mainEntity: faqs.map((f) => ({
+      '@type': 'Question',
+      name: f.q,
+      acceptedAnswer: { '@type': 'Answer', text: f.a },
+    })),
+  },
+];
+---
+
+<Page
+  title="Context, Not Content | Blaksyd Trust"
+  description="Context, not content is Blaksyd’s Minit handoff principle: Blak can brief a listener on the shape of a conversation without exposing private content."
+  image="/assets/blaksyd-four-pillars.png"
+  kicker="Trust · Minit handoff"
+  kickerClass="k-aqua"
+  heading="Context,"
+  accent="not content."
+  accentCool={true}
+  lede="Before a Minit session, Blak can help the listener understand the shape of the conversation without exposing the private conversation itself. That is Blaksyd’s context, not content principle."
+  heroImage="/assets/blaksyd-four-pillars.webp"
+  heroAlt="Blaksyd context not content handoff between Blak and Minit."
+  breadcrumb={[{ name: 'Home', href: '/' }, { name: 'Trust', href: '/trust/context-not-content/' }, { name: 'Context, not content', href: '/trust/context-not-content/' }]}
+  schema={schema}
+>
+  <section>
+    <h2>Direct answer</h2>
+    <p>
+      <b>Context, not content</b> is Blaksyd’s Minit handoff principle. Before a Minit session, Blak can brief
+      the listener on the shape of the conversation without exposing the user’s private conversation content,
+      so the listener starts warm and the user does not have to re-explain everything.
+    </p>
+  </section>
+
+  <section>
+    <h2>Why it matters</h2>
+    <p>
+      Human support works better when the listener is not walking in cold. Privacy works better when the user
+      stays in control of what is shared. Context, not content is the bridge between those two needs.
+    </p>
+  </section>
+
+  <section>
+    <h2>Questions</h2>
+    {faqs.map((f) => (<><h3>{f.q}</h3><p>{f.a}</p></>))}
+  </section>
+</Page>
+

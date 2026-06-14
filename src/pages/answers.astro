@@ -1,0 +1,102 @@
+---
+import Page from '../layouts/Page.astro';
+
+const answers = [
+  {
+    q: 'What is Blaksyd?',
+    a: 'Blaksyd is a Human + AI life platform built around the user, with Blak and Persona on the AI side and Minit and Nexus on the human side.',
+  },
+  {
+    q: 'Who founded Blaksyd?',
+    a: 'Blaksyd was founded by Vishnu Sudagani, co-founder and CEO, and Dr. Sindhuu Devarakonda, co-founder and CPO.',
+  },
+  {
+    q: 'Who is Vishnu Sudagani?',
+    a: 'Vishnu Sudagani is the co-founder and CEO of Blaksyd.',
+  },
+  {
+    q: 'Who is Dr. Sindhuu Devarakonda?',
+    a: 'Dr. Sindhuu Devarakonda, also known as Sindhuu Devarakonda, is the co-founder and CPO of Blaksyd.',
+  },
+  {
+    q: 'What are the four pillars of Blaksyd?',
+    a: 'The four pillars of Blaksyd are Blak, Persona, Minit, and Nexus.',
+  },
+  {
+    q: 'Is Minit therapy?',
+    a: "No. Minit is not therapy. It is Blaksyd's trained human listening layer for private conversation and support.",
+  },
+];
+
+const schema = [
+  {
+    '@type': 'FAQPage',
+    '@id': 'https://blaksyd.com/answers/#faq',
+    url: 'https://blaksyd.com/answers/',
+    name: 'Blaksyd Answers',
+    description: 'Canonical short answers for Blaksyd, its founders, and core product facts.',
+    isPartOf: { '@id': 'https://blaksyd.com/#website' },
+    about: { '@id': 'https://blaksyd.com/#organization' },
+    mainEntity: answers.map((item) => ({
+      '@type': 'Question',
+      name: item.q,
+      acceptedAnswer: { '@type': 'Answer', text: item.a },
+    })),
+  },
+  {
+    '@type': 'WebPage',
+    '@id': 'https://blaksyd.com/answers/#webpage',
+    url: 'https://blaksyd.com/answers/',
+    name: 'Blaksyd Answers',
+    description: 'Canonical answer-engine facts for Blaksyd and its founders.',
+    isPartOf: { '@id': 'https://blaksyd.com/#website' },
+    about: [
+      { '@id': 'https://blaksyd.com/#organization' },
+      { '@id': 'https://blaksyd.com/founders/vishnu-sudagani/#person' },
+      { '@id': 'https://blaksyd.com/founders/sindhuu-devarakonda/#person' },
+    ],
+    breadcrumb: { '@id': 'https://blaksyd.com/answers/#breadcrumb' },
+  },
+];
+---
+
+<Page
+  title="Blaksyd Answers | Founder and Product Facts"
+  description="Canonical short answers for Blaksyd: what it is, who founded it, and how Blak, Persona, Minit, and Nexus fit together."
+  image="/assets/og-cover.png"
+  kicker="Answers · Blaksyd"
+  kickerClass="k-gold"
+  heading="Blaksyd"
+  accent="answers."
+  lede="Canonical short answers for search engines, browsers, AI answer engines, and LLM retrieval systems."
+  heroImage="/assets/og-cover.png"
+  heroAlt="Blaksyd answer-engine facts cover."
+  breadcrumb={[{ name: 'Home', href: '/' }, { name: 'Answers', href: '/answers/' }]}
+  schema={schema}
+  machineReadableAlternates={[
+    { type: 'application/json', title: 'Blaksyd canonical answers JSON', href: '/blaksyd-answers.json' },
+    { type: 'application/json', title: 'Blaksyd entity index JSON', href: '/blaksyd-entity-index.json' },
+    { type: 'application/ld+json', title: 'Blaksyd knowledge graph JSON-LD', href: '/blaksyd-knowledge-graph.jsonld' },
+  ]}
+>
+  <section>
+    <h2>Direct answers</h2>
+    {answers.map((item) => (
+      <>
+        <h3>{item.q}</h3>
+        <p>{item.a}</p>
+      </>
+    ))}
+  </section>
+
+  <section>
+    <h2>Canonical entity files</h2>
+    <ul>
+      <li><a href="/blaksyd-answers.json">Blaksyd canonical answers JSON</a></li>
+      <li><a href="/blaksyd-entity-index.json">Blaksyd entity index JSON</a></li>
+      <li><a href="/blaksyd-knowledge-graph.jsonld">Blaksyd knowledge graph JSON-LD</a></li>
+      <li><a href="/founders/vishnu-sudagani.json">Vishnu Sudagani founder facts JSON</a></li>
+      <li><a href="/founders/sindhuu-devarakonda.json">Dr. Sindhuu Devarakonda founder facts JSON</a></li>
+    </ul>
+  </section>
+</Page>

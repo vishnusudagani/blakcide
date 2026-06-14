@@ -44,6 +44,8 @@ export default defineConfig({
 
         const IMG = {
           '/': { file: 'og-cover.png', caption: 'Blaksyd — Human + AI, revolving around you.' },
+          '/answers/': { file: 'og-cover.png', caption: 'Canonical Blaksyd answers for AI search, browsers, and answer engines.' },
+          '/search/': { file: 'og-cover.png', caption: 'Search Blaksyd official answers for browsers and answer engines.' },
           '/blak/': { file: 'blaksyd-blak.png', caption: 'Blak — Blaksyd’s proactive AI friend.' },
           '/persona/': { file: 'blaksyd-persona.png', caption: 'Persona — your digital self on Blaksyd.' },
           '/minit/': { file: 'blaksyd-minit.png', caption: 'Minit — real human listeners, 24/7.' },
@@ -56,8 +58,15 @@ export default defineConfig({
           item.img = [{ url: `https://blaksyd.com/assets/${hit.file}`, title: 'Blaksyd', caption: hit.caption }];
         }
 
+        if (['/', '/answers/', '/search/', '/what-is-blaksyd/', '/founders/'].includes(path)) {
+          item.changefreq = 'daily';
+        }
+
         if (path === '/') item.priority = 1.0;
         else if (['/blak/', '/persona/', '/minit/', '/nexus/', '/about/'].includes(path)) item.priority = 0.9;
+        else if (path === '/answers/' || path === '/search/') item.priority = 0.9;
+        else if (['/what-is-blaksyd/', '/press/', '/safety/', '/founders/'].includes(path)) item.priority = 0.8;
+        else if (path.startsWith('/founders/') || path.startsWith('/trust/') || path === '/minit/not-therapy/') item.priority = 0.7;
         else if (path === '/manifesto/' || path.startsWith('/blog')) item.priority = 0.7;
         else item.priority = 0.5; // privacy / terms
 

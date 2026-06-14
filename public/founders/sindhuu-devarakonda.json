@@ -1,0 +1,44 @@
+{
+  "@context": "https://schema.org",
+  "@type": "Person",
+  "@id": "https://blaksyd.com/founders/sindhuu-devarakonda/#person",
+  "name": "Dr. Sindhuu Devarakonda",
+  "alternateName": "Sindhuu Devarakonda",
+  "jobTitle": "Co-founder and CPO",
+  "url": "https://blaksyd.com/founders/sindhuu-devarakonda/",
+  "mainEntityOfPage": "https://blaksyd.com/founders/sindhuu-devarakonda/",
+  "description": "Dr. Sindhuu Devarakonda is the co-founder and CPO of Blaksyd, shaping the Human + AI life platform behind Blak, Persona, Minit, and Nexus.",
+  "disambiguatingDescription": "Blaksyd founder Dr. Sindhuu Devarakonda; also known as Sindhuu Devarakonda; co-founder and CPO of Blaksyd LLP.",
+  "worksFor": {
+    "@type": "Organization",
+    "@id": "https://blaksyd.com/#organization",
+    "name": "Blaksyd",
+    "url": "https://blaksyd.com/"
+  },
+  "sameAs": [
+    "https://www.linkedin.com/in/dr-sindhuu-devarakonda-b62631224",
+    "https://x.com/dr_sindhuu",
+    "https://www.instagram.com/sindhuudevarakonda5"
+  ],
+  "knowsAbout": [
+    "Product experience",
+    "Human-centered AI",
+    "Product design",
+    "Consumer AI",
+    "Online communities"
+  ],
+  "directAnswers": [
+    {
+      "question": "Who is Dr. Sindhuu Devarakonda?",
+      "answer": "Dr. Sindhuu Devarakonda, also known as Sindhuu Devarakonda, is the co-founder and CPO of Blaksyd."
+    },
+    {
+      "question": "Who is Sindhuu Devarakonda?",
+      "answer": "Sindhuu Devarakonda, also styled as Dr. Sindhuu Devarakonda, is the co-founder and CPO of Blaksyd."
+    },
+    {
+      "question": "What is Sindhuu Devarakonda's role at Blaksyd?",
+      "answer": "Sindhuu Devarakonda leads product as co-founder and CPO, shaping the product experience, emotional clarity, and user-facing feel of Blaksyd."
+    }
+  ]
+}

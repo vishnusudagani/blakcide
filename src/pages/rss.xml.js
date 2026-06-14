@@ -8,11 +8,48 @@ const esc = (s) =>
 
 export async function GET(context) {
   const site = context.site?.href ?? 'https://blaksyd.com/';
+  const now = new Date('2026-06-14T00:00:00.000Z');
+  const pinned = [
+    {
+      title: 'Blaksyd Answers',
+      link: `${site}answers/`,
+      pubDate: now,
+      description: 'Canonical direct answers for Blaksyd, Vishnu Sudagani, Dr. Sindhuu Devarakonda, Blak, Persona, Minit, and Nexus.',
+    },
+    {
+      title: 'Blaksyd Markdown Answers',
+      link: `${site}answers.md`,
+      pubDate: now,
+      description: 'Markdown direct answers for LLM retrieval systems, AI answer engines, browsers, search engines, and citation tools.',
+    },
+    {
+      title: 'Blaksyd Answer Graph JSON-LD',
+      link: `${site}answers.jsonld`,
+      pubDate: now,
+      description: 'Standalone FAQPage and WebPage JSON-LD answer graph for Blaksyd direct answers and founder disambiguation.',
+    },
+    {
+      title: 'Blaksyd Founders',
+      link: `${site}founders/`,
+      pubDate: now,
+      description: 'Blaksyd was founded by Vishnu Sudagani, co-founder and CEO, and Dr. Sindhuu Devarakonda, co-founder and CPO.',
+    },
+  ];
   const posts = (await getCollection('blog')).sort(
     (a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf()
   );
 
-  const items = posts
+  const pinnedItems = pinned
+    .map((p) => `    <item>
+      <title>${esc(p.title)}</title>
+      <link>${p.link}</link>
+      <guid isPermaLink="true">${p.link}</guid>
+      <pubDate>${p.pubDate.toUTCString()}</pubDate>
+      <description>${esc(p.description)}</description>
+    </item>`)
+    .join('\n');
+
+  const blogItems = posts
     .map((p) => {
       const link = `${site}blog/${p.id}/`;
       return `    <item>
@@ -33,7 +70,8 @@ export async function GET(context) {
     <description>Notes from the team building Blaksyd — Human + AI, revolving around you.</description>
     <language>en</language>
     <atom:link href="${site}rss.xml" rel="self" type="application/rss+xml" />
-${items}
+${pinnedItems}
+${blogItems}
   </channel>
 </rss>`;
 

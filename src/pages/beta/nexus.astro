@@ -105,6 +105,23 @@ import AppLayout from '../../layouts/AppLayout.astro';
     </div>
   </div>
 
+  <!-- ════════ CREATE-TRIBE MODAL ════════ -->
+  <div class="nx-modal" id="nx-tribe-modal" hidden>
+    <div class="nx-modal-card ap-card">
+      <p class="nx-pulse-k">Start a Tribe</p>
+      <h3 class="nx-modal-title">Name your community</h3>
+      <form id="nx-tribe-form">
+        <input id="nx-tribe-name-in" maxlength="60" placeholder="e.g. Founders Who Overthink" autocomplete="off" required />
+        <input id="nx-tribe-desc-in" maxlength="160" placeholder="one line on what it's about (optional)" autocomplete="off" />
+        <div class="nx-modal-actions">
+          <button type="button" class="nx-modal-cancel" id="nx-tribe-cancel">Cancel</button>
+          <button type="submit" class="nx-modal-go">Create tribe</button>
+        </div>
+        <p class="nx-modal-note">A persistent space others can join and post in — you'll be its first member.</p>
+      </form>
+    </div>
+  </div>
+
   <style is:global>
     /* global (not scoped): room/tribe cards are built in JS at runtime and would
        miss Astro's scope attribute. Everything is .nx-* namespaced. */
@@ -227,9 +244,9 @@ import AppLayout from '../../layouts/AppLayout.astro';
     .nx-modal[hidden] { display: none !important; }
     .nx-modal-card { width: min(460px, 100%); padding: 1.4rem; }
     .nx-modal-title { font-family: var(--font-display); font-weight: 600; font-size: var(--fs-xl); margin: .2rem 0 1rem; }
-    #nx-create-form { display: flex; flex-direction: column; gap: .6rem; }
-    #nx-create-form input { padding: .8rem 1rem; border-radius: var(--r-md); background: var(--surface); border: 1px solid var(--line-strong); color: var(--ink); font: inherit; font-size: var(--fs-md); }
-    #nx-create-form input:focus { outline: none; border-color: var(--aqua); }
+    #nx-create-form, #nx-tribe-form { display: flex; flex-direction: column; gap: .6rem; }
+    #nx-create-form input, #nx-tribe-form input { padding: .8rem 1rem; border-radius: var(--r-md); background: var(--surface); border: 1px solid var(--line-strong); color: var(--ink); font: inherit; font-size: var(--fs-md); }
+    #nx-create-form input:focus, #nx-tribe-form input:focus { outline: none; border-color: var(--aqua); }
     .nx-modal-actions { display: flex; gap: .6rem; justify-content: flex-end; margin-top: .4rem; }
     .nx-modal-cancel { font: inherit; color: var(--ink-soft); background: var(--surface); border: 1px solid var(--line-strong); border-radius: var(--r-pill); padding: .55rem 1rem; cursor: pointer; }
     .nx-modal-go { font: inherit; font-weight: 650; color: #06231C; background: linear-gradient(135deg, var(--mint), var(--aqua)); border: 0; border-radius: var(--r-pill); padding: .55rem 1.1rem; cursor: pointer; }
@@ -284,14 +301,19 @@ import AppLayout from '../../layouts/AppLayout.astro';
       clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), 2600);
     }
 
-    // ── identity: anonymous-by-default friendly handle, real email if signed in ──
-    const ADJ = ['quiet','warm','steady','night','soft','open','kind','calm','bright','still','easy','true'];
-    const NOUN = ['harbor','signal','ember','meadow','tide','comet','willow','lantern','river','pine','spark','haven'];
+    // ── identity: anonymous ALWAYS — never the person's email ──
+    // A calm adjective-noun-NN handle (e.g. "quiet-harbor-47"). Derived from a stable
+    // seed but revealing nothing about who you are — anonymity is a core Nexus promise.
+    // The numeric tail lifts the space from 144 to ~52k combos so two people rarely
+    // collide. anonHandle() is reused for signed-in users (seeded by account id).
+    const ADJ = ['quiet','warm','steady','night','soft','open','kind','calm','bright','still','easy','true','gentle','lucid','amber','golden','hidden','distant','velvet','lunar','drifting','slow','mellow','wandering'];
+    const NOUN = ['harbor','signal','ember','meadow','tide','comet','willow','lantern','river','pine','spark','haven','cedar','orchard','thicket','current','beacon','hollow','summit','delta','cove','aurora','marsh','dune'];
+    const anonHandle = (seed) => ADJ[hashIdx(seed) % ADJ.length] + '-' + NOUN[hashIdx(seed + 'n') % NOUN.length] + '-' + (hashIdx(seed + 'x') % 90 + 10);
     const ME = (() => {
       let id, handle, color;
       try { id = localStorage.getItem('nx_id'); handle = localStorage.getItem('nx_handle'); color = localStorage.getItem('nx_color'); } catch (e) {}
       if (!id) id = 'g' + hashIdx(String(Math.random()) + performance.now()).toString(36);
-      if (!handle) handle = ADJ[hashIdx(id) % ADJ.length] + '-' + NOUN[hashIdx(id + 'n') % NOUN.length];
+      if (!handle) handle = anonHandle(id);
       if (color == null) color = String(hashIdx(id) % grad.length);
       try { localStorage.setItem('nx_id', id); localStorage.setItem('nx_handle', handle); localStorage.setItem('nx_color', color); } catch (e) {}
       return { id, handle, color: +color };
@@ -427,6 +449,15 @@ import AppLayout from '../../layouts/AppLayout.astro';
         chan
           .on('presence', { event: 'sync' }, () => { renderHere(chan.presenceState()); heartbeat(here, 0); })
           .on('broadcast', { event: 'msg' }, ({ payload }) => appendMsg(payload, false))
+          // Pulse is server-authoritative and SHARED: when ANY participant's heartbeat
+          // updates the room row, every client here gets the new value pushed in real
+          // time — so the Pulse reads the SAME number for everyone, instead of drifting
+          // because each client only saw its own heartbeat's response.
+          .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'nexus_rooms', filter: 'id=eq.' + r.id }, (payload) => {
+            const row = payload.new; if (!row || row.id !== r.id) return;
+            curRoom = row; setPulse(row.pulse);
+            el('nx-heat-fill').style.width = Math.min(8 + (row.here_now || 0) * 12, 100) + '%';
+          })
           .subscribe(async (status) => { if (status === 'SUBSCRIBED') await chan.track({ handle: ME.handle, color: ME.color, at: Date.now() }); });
       }
       async function leaveRoom() {
@@ -531,7 +562,31 @@ import AppLayout from '../../layouts/AppLayout.astro';
         if (error && error.code !== '23505') toast('Could not join — try again.');
       });
 
-      el('nx-newtribe').addEventListener('click', () => toast('New tribes are curated during the beta. Live Rooms are open — start one above.'));
+      // ── create tribe (persistent community; signed-in only) ───────────────
+      const tribeModal = el('nx-tribe-modal');
+      const openTribeCreate = () => {
+        if (!SESSION) { toast('Sign in to create a tribe.'); return; }
+        tribeModal.hidden = false; setTimeout(() => el('nx-tribe-name-in').focus(), 30);
+      };
+      const closeTribeCreate = () => { tribeModal.hidden = true; el('nx-tribe-form').reset(); };
+      el('nx-newtribe').addEventListener('click', openTribeCreate);
+      el('nx-tribe-cancel').addEventListener('click', closeTribeCreate);
+      tribeModal.addEventListener('click', (e) => { if (e.target === tribeModal) closeTribeCreate(); });
+      document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !tribeModal.hidden) closeTribeCreate(); });
+      el('nx-tribe-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        if (!SESSION) { toast('Sign in to create a tribe.'); return; }
+        const name = el('nx-tribe-name-in').value.trim(); if (!name) return;
+        const desc = el('nx-tribe-desc-in').value.trim();
+        const goBtn = el('nx-tribe-form').querySelector('.nx-modal-go'); if (goBtn) goBtn.disabled = true;
+        const { data, error } = await supabase.rpc('nexus_create_tribe', { p_name: name, p_description: desc || null });
+        if (goBtn) goBtn.disabled = false;
+        if (error || !data) { toast(error && error.code === '42501' ? 'Sign in to create a tribe.' : 'Could not create the tribe — try again.'); return; }
+        closeTribeCreate();
+        TRIBES.unshift(data);
+        openTribe(data);
+        loadTribes();
+      });
 
       // back buttons
       document.querySelectorAll('[data-home]').forEach((b) => b.addEventListener('click', () => { if (chan) leaveRoom(); else show('home'); }));
@@ -554,7 +609,9 @@ import AppLayout from '../../layouts/AppLayout.astro';
 
       // ── go ──
       (async () => {
-        try { const { data } = await supabase.auth.getSession(); SESSION = data.session || null; if (SESSION && SESSION.user && SESSION.user.email) ME.handle = SESSION.user.email.split('@')[0]; } catch (e) {}
+        // Stay ANONYMOUS even when signed in: derive a stable handle from the account
+        // id (consistent across devices) instead of leaking the email's username.
+        try { const { data } = await supabase.auth.getSession(); SESSION = data.session || null; if (SESSION && SESSION.user) ME.handle = anonHandle(SESSION.user.id); } catch (e) {}
         setGreeting();
         await Promise.all([loadRooms(), loadTribes()]);
       })();
