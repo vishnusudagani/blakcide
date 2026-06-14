@@ -370,7 +370,10 @@
     var openTimer, closeTimer;
     var pendingPhone = '';
     var busy = false;
-    var redirectTo = window.location.origin + '/';
+    // Send OAuth / magic-link straight to the app. /beta/ loads the Supabase client
+    // (see AppLayout) which consumes the token and establishes the session right
+    // there — no homepage round-trip / redirect-timing to get wrong.
+    var redirectTo = window.location.origin + '/beta/';
 
 
     function clearNote() { note.hidden = true; note.textContent = ''; note.classList.remove('is-error', 'is-ok'); }

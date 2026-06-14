@@ -242,5 +242,20 @@ const nav = [
       } catch (e) {}
     })();
   </script>
+
+  <script>
+    // OAuth / magic-link landings: importing the Supabase client runs
+    // detectSessionInUrl, which consumes the #access_token (implicit) or ?code from
+    // the redirect and stores the session — the user is already in the app, no bounce.
+    import { supabase } from '../lib/supabaseClient';
+    (async () => {
+      if (!supabase) return;
+      try {
+        const { data } = await supabase.auth.getSession();
+        const email = data && data.session && data.session.user && data.session.user.email;
+        if (email) { const av = document.getElementById('ap-avatar'); if (av) av.textContent = email[0].toUpperCase(); }
+      } catch (e) {}
+    })();
+  </script>
 </body>
 </html>
