@@ -23,7 +23,11 @@ export const supabase: SupabaseClient | null = supabaseConfigured
         persistSession: true,
         autoRefreshToken: true,
         detectSessionInUrl: true, // completes the Google OAuth / magic-link redirect
-        flowType: 'pkce',
+        // Implicit flow: Supabase returns the session tokens directly in the URL
+        // hash, so there's no PKCE code↔verifier handshake to break across the
+        // redirect/multi-click/stale-storage cases that were failing the exchange
+        // (codes were issued but never became sessions). Tokens land, session sticks.
+        flowType: 'implicit',
       },
     })
   : null;
