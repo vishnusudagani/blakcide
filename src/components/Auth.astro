@@ -499,26 +499,37 @@
     var APP = '/beta/';
     function goToApp() { window.location.replace(APP); }
     function onSignedIn() { showView('done'); }
+    function showAuthError(msg) { try { open(null, null); setNote(msg, 'error'); } catch (e) {} }
 
-    // Did this page load carry fresh auth params? (Google / email-link redirect back.)
-    var hadAuthInUrl = /[#&?](access_token|code|token_hash)=/.test(location.hash + location.search);
+    // Auth params come back in the hash (implicit) or the query (PKCE / magic link).
+    var authStr = (location.hash || '').replace(/^#/, '') + '&' + (location.search || '').replace(/^\?/, '');
+    var hadAuthInUrl = /(^|&)(access_token|code|token_hash)=/.test(authStr);
+    var hadAuthError = /(^|&)error(_description|_code)?=/.test(authStr);
+
+    if (hadAuthError) {
+      // The provider / Supabase bounced the sign-in (commonly a Redirect-URL or
+      // Site-URL mismatch). Surface it instead of silently dropping the user here.
+      var ep = new URLSearchParams(authStr);
+      var em = (ep.get('error_description') || ep.get('error') || 'Sign-in could not be completed.').replace(/\+/g, ' ');
+      setTimeout(function () { showAuthError('Sign-in failed: ' + em); }, 60);
+    } else if (supabase && hadAuthInUrl) {
+      // Returning from Google / magic link: detectSessionInUrl exchanges the code
+      // asynchronously (and SIGNED_IN may replay as INITIAL_SESSION before we
+      // subscribe). Poll for the session, then forward into the app.
+      var tries = 0;
+      var iv = setInterval(function () {
+        supabase.auth.getSession().then(function (r) {
+          if (r && r.data && r.data.session) { clearInterval(iv); goToApp(); }
+          else if (++tries > 40) { // ~10s with auth params but no session = exchange didn't land
+            clearInterval(iv);
+            setTimeout(function () { showAuthError('You signed in, but the session didn’t land in this browser — usually the Supabase Site URL / Redirect URLs don’t match ' + location.host + '.'); }, 0);
+          }
+        }).catch(function () {});
+      }, 250);
+    }
 
     if (supabase) {
-      // 1) Returning from the Google / magic-link redirect. detectSessionInUrl
-      //    exchanges the code asynchronously, and that SIGNED_IN can resolve BEFORE
-      //    we subscribe below (then it replays as INITIAL_SESSION, which the old
-      //    code ignored — so the user got stranded on the landing page). Poll for
-      //    the session instead and forward into the app the moment it exists.
-      if (hadAuthInUrl) {
-        var tries = 0;
-        var iv = setInterval(function () {
-          supabase.auth.getSession().then(function (r) {
-            if (r && r.data && r.data.session) { clearInterval(iv); goToApp(); }
-            else if (++tries > 40) { clearInterval(iv); } // ~10s, then stop quietly
-          }).catch(function () {});
-        }, 250);
-      }
-      // 2) Sign-in completed while the modal is open (in-modal OTP, or a fast OAuth).
+      // Sign-in completed while the modal is open (in-modal OTP, or a fast OAuth).
       supabase.auth.onAuthStateChange(function (evt, session) {
         if (session && evt === 'SIGNED_IN' && !modal.hidden) goToApp();
       });
