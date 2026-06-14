@@ -34,7 +34,7 @@ exports.handler = async function(event) {
         const buffer = Buffer.from(audioBase64, 'base64');
         const form   = new FormData();
         form.append('file',  new Blob([buffer], { type: contentType }), filename);
-        form.append('model', 'whisper-1');
+        form.append('model', process.env.GROQ_WHISPER_MODEL || 'whisper-large-v3');
         // If we already know the user's language (te/hi), pass it as a hint.
         // This makes Whisper output NATIVE SCRIPT (తెలుగు / हिंदी) instead of Romanized Latin.
         // Without a hint, Whisper often outputs "nenu bagunnanu" instead of "నేను బాగున్నాను".
@@ -44,9 +44,12 @@ exports.handler = async function(event) {
         // verbose_json returns the detected language code alongside the transcript
         form.append('response_format', 'verbose_json');
 
-        const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+        // Open-source STT via Groq's OpenAI-compatible Whisper endpoint.
+        // whisper-large-v3 = strong Telugu/Hindi accuracy; set GROQ_WHISPER_MODEL
+        // to whisper-large-v3-turbo for lower latency. No OpenAI.
+        const response = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
             method:  'POST',
-            headers: { 'Authorization': `Bearer ${process.env.BLAKCIDE_OPENAI_KEY || process.env.OPENAI_API_KEY}` },
+            headers: { 'Authorization': `Bearer ${process.env.GROQ_API_KEY}` },
             body:    form
         });
 

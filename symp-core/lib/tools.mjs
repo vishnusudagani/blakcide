@@ -14,9 +14,9 @@
 //                                   late on a Tuesday — long day?").
 //
 //   3. search_web(query)          — fallback for live data the model wouldn't
-//                                   know (cricket scores, news, prices). Sub-
-//                                   calls gpt-4o-search-preview internally so
-//                                   answers stay grounded in real sources.
+//                                   know (cricket scores, news, prices). Routes
+//                                   through OpenRouter's open-source `:online`
+//                                   web plugin so answers stay grounded.
 //
 // Each tool ships its OpenAI JSONSchema definition + an async `execute(args)`
 // that returns a STRING (since the chat model receives tool results as the
@@ -35,6 +35,7 @@ import {
     SET_PERSONA_FACT_TOOL_DEF,
     isValidPersona,
 } from './persona-engine.mjs';
+import { chatCompleteFailover } from './llm-providers.mjs';
 
 // ── 1. search_vault ────────────────────────────────────────────────────────
 
@@ -165,8 +166,9 @@ function weatherCodeLabel(code) {
 }
 
 // ── 3. search_web ──────────────────────────────────────────────────────────
-// Sub-calls gpt-4o-search-preview to ground the answer. We keep the call
-// non-streaming and short; the parent chat model paraphrases the result.
+// Grounds the answer via OpenRouter's open-source `:online` web plugin (falls
+// back to the model's own knowledge, clearly hedged, if no OpenRouter key).
+// Non-streaming and short; the parent chat model paraphrases the result.
 
 export const SEARCH_WEB_DEF = {
     type: 'function',
@@ -193,33 +195,20 @@ async function execSearchWeb({ args }) {
     const query = String(args?.query || '').trim();
     if (!query) return 'No query provided.';
 
-    const key = process.env.BLAKCIDE_OPENAI_KEY || process.env.OPENAI_API_KEY;
-    if (!key) return 'search_web unavailable: no OpenAI key configured.';
-
+    // Open-source web grounding: route through OpenRouter's `:online` web plugin
+    // when OPENROUTER_API_KEY is present. Without it, fall back to the
+    // open-source model's own knowledge (clearly hedged) — never OpenAI.
     try {
-        const res = await fetch('https://api.openai.com/v1/chat/completions', {
-            method:  'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
-            body:    JSON.stringify({
-                model:    'gpt-4o-search-preview',
-                messages: [
-                    { role: 'system', content: 'Answer concisely (≤120 words) and ground the answer in live search results. Cite sources inline.' },
-                    { role: 'user',   content: query },
-                ],
-                max_tokens: 350,
-                web_search_options: { search_context_size: 'low' },
-            }),
-            signal: AbortSignal.timeout(15000),
-        });
-        if (!res.ok) {
-            const txt = await res.text().catch(() => '');
-            return `search_web failed (${res.status}): ${txt.slice(0, 200)}`;
-        }
-        const data = await res.json();
-        const content = data?.choices?.[0]?.message?.content || '';
-        return content || 'No result.';
+        const { text } = await chatCompleteFailover(
+            [
+                { role: 'system', content: 'Answer concisely (≤120 words). If live web results are available, ground the answer in them and cite sources inline. If you are not certain the information is current, say so briefly rather than guessing.' },
+                { role: 'user',   content: query },
+            ],
+            { online: true, maxTokens: 350, temperature: 0.2, timeoutMs: 15000 },
+        );
+        return text || 'No result.';
     } catch (e) {
-        return `search_web error: ${e.message || e}`;
+        return `search_web unavailable: ${e.message || e}`;
     }
 }
 
