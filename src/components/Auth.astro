@@ -340,6 +340,14 @@
   .auth-back:hover { color: var(--ink); }
 </style>
 
+<script is:inline>
+  /* Runs at parse time — BEFORE the Supabase client module below initialises and
+     strips the URL. Implicit flow clears the #access_token hash almost instantly
+     (no network round-trip), faster than the deferred module can read it, so we
+     latch the "just returned from sign-in" signal here. */
+  window.__blkAuthReturn = /[#?&](access_token|code|token_hash)=/.test(location.hash + location.search);
+</script>
+
 <script>
   import { supabase, supabaseConfigured } from '../lib/supabaseClient';
 
@@ -503,7 +511,7 @@
 
     // Auth params come back in the hash (implicit) or the query (PKCE / magic link).
     var authStr = (location.hash || '').replace(/^#/, '') + '&' + (location.search || '').replace(/^\?/, '');
-    var hadAuthInUrl = /(^|&)(access_token|code|token_hash)=/.test(authStr);
+    var hadAuthInUrl = !!window.__blkAuthReturn || /(^|&)(access_token|code|token_hash)=/.test(authStr);
     var hadAuthError = /(^|&)error(_description|_code)?=/.test(authStr);
 
     if (hadAuthError) {
@@ -529,9 +537,11 @@
     }
 
     if (supabase) {
-      // Sign-in completed while the modal is open (in-modal OTP, or a fast OAuth).
+      // A session appearing after an auth-return (implicit flow fires this once the
+      // hash is read) OR while the modal is open → forward into the app. A returning
+      // visitor with an existing session and no auth params is left to browse.
       supabase.auth.onAuthStateChange(function (evt, session) {
-        if (session && evt === 'SIGNED_IN' && !modal.hidden) goToApp();
+        if (session && (window.__blkAuthReturn || (evt === 'SIGNED_IN' && !modal.hidden))) goToApp();
       });
     }
   })();
