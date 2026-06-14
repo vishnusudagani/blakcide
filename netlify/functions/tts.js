@@ -1,28 +1,28 @@
-// ─── BLAKCIDE TTS proxy — OpenAI neural TTS, language-aware ─────────────────
+// ─── BLAKCIDE TTS proxy — open-source voice-infer (OmniVoice / Indic Parler) ──
 //
-// POST { text, voice?, language? }
+// POST { text, language?, voice?, referenceUrl?, referenceTranscript? }
 // → audio/mpeg (base64-encoded)
 //
-// Voice + speed matrix:
-//   English  → nova,   speed 1.00  (warm, natural pace)
-//   Hindi    → nova,   speed 0.95  (slight slowdown — Devanagari is dense)
-//   Telugu   → shimmer, speed 0.92 (softer voice, slower — Telugu phonemes
-//                                    need more time to sound natural)
-//   fallback → nova,   speed 1.00
+// Routes to the self-hosted voice-infer service (all engines Apache-2.0 / MIT).
+// No OpenAI.
+//   - Default: mode 'preset'  → Blak's designed voice (Indic Parler), per language.
+//   - referenceUrl supplied: mode 'clone' → the user's own voice (Real Persona).
 //
-// Why shimmer for Telugu?
-//   Nova's phoneme mapping for Telugu script is accurate but sounds slightly
-//   clipped at 1.0x. Shimmer's softer attack matches the breathy quality of
-//   spoken Telugu better, and 0.92x gives vowel-heavy syllables room to land.
+// Requires env:
+//   VOICE_INFER_URL     — base URL of the deployed voice-infer service (Modal)
+//   VOICE_INFER_SECRET  — shared secret, sent as the X-Infer-Secret header
+//
+// Until voice-infer is deployed, this returns 503 by design — we do NOT fall
+// back to OpenAI. Voice output is open-source or nothing.
 
 exports.handler = async function (event) {
     if (event.httpMethod !== 'POST') {
         return { statusCode: 405, body: 'Method Not Allowed' };
     }
 
-    let text, voice, language;
+    let text, voice, language, referenceUrl, referenceTranscript;
     try {
-        ({ text, voice, language = 'en' } = JSON.parse(event.body || '{}'));
+        ({ text, voice, language = 'en', referenceUrl, referenceTranscript } = JSON.parse(event.body || '{}'));
     } catch {
         return { statusCode: 400, body: JSON.stringify({ error: 'Invalid JSON' }) };
     }
@@ -31,47 +31,44 @@ exports.handler = async function (event) {
         return { statusCode: 400, body: JSON.stringify({ error: 'No text provided' }) };
     }
 
-    // ── Language-aware voice + speed ──────────────────────────────────────────
-    const LANG_CONFIG = {
-        te: { voice: 'shimmer', speed: 0.92 },  // Telugu: softer, slower
-        hi: { voice: 'nova',    speed: 0.95 },  // Hindi:  warm, slightly slower
-        en: { voice: 'nova',    speed: 1.00 },  // English: default
-    };
-    const cfg      = LANG_CONFIG[language] || LANG_CONFIG.en;
-    const ttsVoice = voice || cfg.voice;  // caller can override
-    const ttsSpeed = cfg.speed;
-
-    // Trim to safe length — very long inputs are split upstream
-    const trimmed = text.trim().substring(0, 500);
-
-    const apiKey = process.env.BLAKCIDE_OPENAI_KEY || process.env.OPENAI_API_KEY;
-    if (!apiKey) {
-        return { statusCode: 500, body: JSON.stringify({ error: 'TTS key not configured' }) };
+    const VOICE_INFER_URL    = process.env.VOICE_INFER_URL;
+    const VOICE_INFER_SECRET = process.env.VOICE_INFER_SECRET || '';
+    if (!VOICE_INFER_URL) {
+        return {
+            statusCode: 503,
+            body: JSON.stringify({
+                error:  'TTS not configured',
+                detail: 'VOICE_INFER_URL is not set — deploy the voice-infer service (Modal) to enable open-source voice output.',
+            }),
+        };
     }
 
+    // Blak's designed voice (Indic Parler description). Override via env / caller.
+    const blakVoice = voice || process.env.BLAK_VOICE_DESCRIPTION ||
+        'A warm, friendly young adult with a calm, reassuring, conversational tone, speaking clearly at a natural pace in a quiet room.';
+
+    // voice-infer caps at 2000 chars; long replies are chunked upstream.
+    const trimmed = text.trim().substring(0, 2000);
+    const isClone = !!referenceUrl;
+
+    const payload = isClone
+        ? { language, text: trimmed, format: 'mp3', mode: 'clone', reference_url: referenceUrl, reference_transcript: referenceTranscript }
+        : { language, text: trimmed, format: 'mp3', mode: 'preset', preset_description: blakVoice };
+
     try {
-        const res = await fetch('https://api.openai.com/v1/audio/speech', {
+        const res = await fetch(`${VOICE_INFER_URL.replace(/\/$/, '')}/synthesize`, {
             method:  'POST',
-            headers: {
-                'Authorization': `Bearer ${apiKey}`,
-                'Content-Type':  'application/json'
-            },
-            body: JSON.stringify({
-                model:           'tts-1',
-                input:           trimmed,
-                voice:           ttsVoice,
-                response_format: 'mp3',
-                speed:           ttsSpeed
-            })
+            headers: { 'Content-Type': 'application/json', 'X-Infer-Secret': VOICE_INFER_SECRET },
+            body:    JSON.stringify(payload),
         });
 
         if (!res.ok) {
-            const err = await res.text();
-            console.error('[TTS] OpenAI error:', res.status, err);
-            return { statusCode: 502, body: JSON.stringify({ error: 'TTS unavailable', detail: err }) };
+            const err = await res.text().catch(() => '');
+            console.error('[TTS] voice-infer error:', res.status, err);
+            return { statusCode: 502, body: JSON.stringify({ error: 'TTS unavailable', detail: err.slice(0, 200) }) };
         }
 
-        const buffer     = await res.arrayBuffer();
+        const buffer      = await res.arrayBuffer();
         const base64Audio = Buffer.from(buffer).toString('base64');
 
         return {
@@ -79,16 +76,15 @@ exports.handler = async function (event) {
             headers: {
                 'Content-Type':  'audio/mpeg',
                 'Cache-Control': 'no-store',
-                'X-Language':    language,   // useful for debugging
-                'X-Voice':       ttsVoice,
-                'X-Speed':       String(ttsSpeed)
+                'X-Language':    language,
+                'X-Voice-Mode':  isClone ? 'clone' : 'preset',
             },
             body:            base64Audio,
-            isBase64Encoded: true
+            isBase64Encoded: true,
         };
 
     } catch (e) {
         console.error('[TTS] Handler error:', e);
-        return { statusCode: 500, body: JSON.stringify({ error: e.message }) };
+        return { statusCode: 502, body: JSON.stringify({ error: e.message }) };
     }
 };

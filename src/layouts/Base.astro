@@ -17,6 +17,8 @@ interface Props {
   ogType?: string;
   publishedTime?: string;   // ISO; emitted as article:published_time when ogType=article
   modifiedTime?: string;    // ISO; emitted as article:modified_time when ogType=article
+  machineReadableAlternates?: { type: string; title: string; href: string }[];
+  profile?: { firstName: string; lastName: string; username?: string };
 }
 
 const {
@@ -28,6 +30,8 @@ const {
   ogType = 'website',
   publishedTime,
   modifiedTime,
+  machineReadableAlternates = [],
+  profile,
 } = Astro.props;
 
 // Absolute URLs for canonical + link-preview cards (Astro.site = https://blaksyd.com).
@@ -76,8 +80,8 @@ const organization = {
   ],
   // The people behind Blaksyd — full Person nodes live in the @graph below.
   founder: [
-    { '@id': 'https://blaksyd.com/#vishnu-sudagani' },
-    { '@id': 'https://blaksyd.com/#sindhuu-devarakonda' },
+    { '@id': 'https://blaksyd.com/founders/vishnu-sudagani/#person' },
+    { '@id': 'https://blaksyd.com/founders/sindhuu-devarakonda/#person' },
   ],
 };
 
@@ -90,6 +94,14 @@ const website = {
     'Human + AI, together, revolving around you. Blak, Persona, Minit, and Nexus — one world, and all of it yours.',
   inLanguage: 'en',
   publisher: { '@id': ORG_ID },
+  potentialAction: {
+    '@type': 'SearchAction',
+    target: {
+      '@type': 'EntryPoint',
+      urlTemplate: 'https://blaksyd.com/search/?q={search_term_string}',
+    },
+    'query-input': 'required name=search_term_string',
+  },
 };
 
 // The two founders as Person entities — linked to the Organization (founder) and
@@ -98,11 +110,16 @@ const website = {
 // (headshot) and the Crunchbase URL to each sameAs once those are ready.
 const founderVishnu = {
   '@type': 'Person',
-  '@id': 'https://blaksyd.com/#vishnu-sudagani',
+  '@id': 'https://blaksyd.com/founders/vishnu-sudagani/#person',
   name: 'Vishnu Sudagani',
   jobTitle: 'Co-founder & CEO',
   worksFor: { '@id': ORG_ID },
-  url: 'https://blaksyd.com/about/',
+  url: 'https://blaksyd.com/founders/vishnu-sudagani/',
+  mainEntityOfPage: 'https://blaksyd.com/founders/vishnu-sudagani/',
+  description:
+    'Vishnu Sudagani is the co-founder and CEO of Blaksyd, the Human + AI life platform built around Blak, Persona, Minit, and Nexus.',
+  disambiguatingDescription:
+    'Blaksyd founder Vishnu Sudagani; co-founder and CEO of Blaksyd LLP.',
   sameAs: [
     'https://www.linkedin.com/in/vishnu-sudagani-88a848211',
     'https://x.com/vishnusudagani_',
@@ -112,11 +129,17 @@ const founderVishnu = {
 
 const founderSindhuu = {
   '@type': 'Person',
-  '@id': 'https://blaksyd.com/#sindhuu-devarakonda',
+  '@id': 'https://blaksyd.com/founders/sindhuu-devarakonda/#person',
   name: 'Dr. Sindhuu Devarakonda',
+  alternateName: 'Sindhuu Devarakonda',
   jobTitle: 'Co-founder & CPO',
   worksFor: { '@id': ORG_ID },
-  url: 'https://blaksyd.com/about/',
+  url: 'https://blaksyd.com/founders/sindhuu-devarakonda/',
+  mainEntityOfPage: 'https://blaksyd.com/founders/sindhuu-devarakonda/',
+  description:
+    'Dr. Sindhuu Devarakonda is the co-founder and CPO of Blaksyd, the Human + AI life platform built around Blak, Persona, Minit, and Nexus.',
+  disambiguatingDescription:
+    'Blaksyd founder Dr. Sindhuu Devarakonda; also known as Sindhuu Devarakonda; co-founder and CPO of Blaksyd LLP.',
   sameAs: [
     'https://www.linkedin.com/in/dr-sindhuu-devarakonda-b62631224',
     'https://x.com/dr_sindhuu',
@@ -153,7 +176,33 @@ const jsonLd = JSON.stringify({
     <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png" />
     <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png" />
     <link rel="manifest" href="/site.webmanifest" />
+    <meta name="msapplication-config" content="/browserconfig.xml" />
+    <meta name="msapplication-TileColor" content="#08091A" />
+    <meta name="msapplication-TileImage" content="/assets/icon-192.png" />
+    <link rel="search" type="application/opensearchdescription+xml" title="Blaksyd" href="/opensearch.xml" />
     <link rel="canonical" href={canonicalURL} />
+    {/* AI / answer-engine discovery. `robots.txt` already points crawlers to these,
+        and these head links make them discoverable from every HTML page too. */}
+    <link rel="alternate" type="text/plain" title="Blaksyd AI summary" href="/llms.txt" />
+    <link rel="alternate" type="text/plain" title="Blaksyd full AI-readable brief" href="/llms-full.txt" />
+    <link rel="alternate" type="application/json" title="Blaksyd LLM manifest" href="/llms.json" />
+    <link rel="alternate" type="text/markdown" title="Blaksyd Markdown answers" href="/answers.md" />
+    <link rel="alternate" type="application/ld+json" title="Blaksyd answer graph" href="/answers.jsonld" />
+    <link rel="alternate" type="application/json" title="Blaksyd canonical answers" href="/blaksyd-answers.json" />
+    <link rel="alternate" type="application/json" title="Blaksyd citation map" href="/blaksyd-citations.json" />
+    <link rel="alternate" type="application/json" title="Blaksyd entity index" href="/blaksyd-entity-index.json" />
+    <link rel="alternate" type="application/ld+json" title="Blaksyd knowledge graph" href="/blaksyd-knowledge-graph.jsonld" />
+    <link rel="alternate" type="application/ld+json" title="Blaksyd organization graph" href="/organization.jsonld" />
+    <link rel="alternate" type="application/json" title="Blaksyd humans/team facts" href="/humans.json" />
+    <link rel="alternate" type="application/yaml" title="Blaksyd OpenAPI public facts" href="/blaksyd-openapi.yaml" />
+    <link rel="describedby" type="application/jrd+json" title="Blaksyd WebFinger discovery" href="/.well-known/webfinger" />
+    <link rel="describedby" type="application/xrd+xml" title="Blaksyd host metadata" href="/.well-known/host-meta" />
+    <link rel="author" type="text/plain" title="Blaksyd humans.txt" href="/humans.txt" />
+    <link rel="author" type="application/json" title="Blaksyd humans JSON" href="/humans.json" />
+    <link rel="security" type="text/plain" title="Blaksyd security contact" href="/.well-known/security.txt" />
+    {machineReadableAlternates.map((alternate) => (
+      <link rel="alternate" type={alternate.type} title={alternate.title} href={alternate.href} />
+    ))}
     {/* hreflang — one English page served globally to an India-first audience.
         Every variant points to the same canonical URL (no separate localized URLs
         exist), the correct signal for a single-language site: it nudges Google
@@ -164,9 +213,13 @@ const jsonLd = JSON.stringify({
     {/* RSS autodiscovery — the blog feed (a real discovery channel for readers,
         aggregators, and some AI ingestion pipelines). */}
     <link rel="alternate" type="application/rss+xml" title="The Blaksyd Blog" href="/rss.xml" />
+    <link rel="alternate" type="application/feed+json" title="Blaksyd JSON Feed" href="/feed.json" />
 
     {/* Open Graph — link previews (iMessage, Slack, LinkedIn, Facebook…) */}
     <meta property="og:type" content={ogType} />
+    {ogType === 'profile' && profile && <meta property="profile:first_name" content={profile.firstName} />}
+    {ogType === 'profile' && profile && <meta property="profile:last_name" content={profile.lastName} />}
+    {ogType === 'profile' && profile?.username && <meta property="profile:username" content={profile.username} />}
     {ogType === 'article' && publishedTime && <meta property="article:published_time" content={publishedTime} />}
     {ogType === 'article' && modifiedTime && <meta property="article:modified_time" content={modifiedTime} />}
     {ogType === 'article' && <meta property="article:author" content="Blaksyd LLP" />}

@@ -1,0 +1,119 @@
+---
+import Page from '../../layouts/Page.astro';
+
+const faqs = [
+  {
+    q: 'Who is Vishnu Sudagani?',
+    a: 'Vishnu Sudagani is the co-founder and CEO of Blaksyd, a Human + AI life platform built around Blak, Persona, Minit, and Nexus.',
+  },
+  {
+    q: 'What is Vishnu Sudagani building?',
+    a: 'Vishnu Sudagani is building Blaksyd as a Human + AI life platform where Blak, Persona, Minit, and Nexus revolve around the user.',
+  },
+  {
+    q: 'What is Vishnu Sudagani’s role at Blaksyd?',
+    a: 'Vishnu Sudagani leads Blaksyd as co-founder and CEO, shaping the platform vision and category story.',
+  },
+];
+
+const schema = [
+  {
+    '@type': 'Person',
+    '@id': 'https://blaksyd.com/founders/vishnu-sudagani/#person',
+    name: 'Vishnu Sudagani',
+    jobTitle: 'Co-founder & CEO',
+    worksFor: { '@id': 'https://blaksyd.com/#organization' },
+    url: 'https://blaksyd.com/founders/vishnu-sudagani/',
+    mainEntityOfPage: 'https://blaksyd.com/founders/vishnu-sudagani/',
+    description: 'Vishnu Sudagani is the co-founder and CEO of Blaksyd, the Human + AI life platform built around Blak, Persona, Minit, and Nexus.',
+    disambiguatingDescription: 'Blaksyd founder Vishnu Sudagani; co-founder and CEO of Blaksyd LLP.',
+    sameAs: [
+      'https://www.linkedin.com/in/vishnu-sudagani-88a848211',
+      'https://x.com/vishnusudagani_',
+      'https://www.instagram.com/vishnusudagani_',
+    ],
+    knowsAbout: ['Human-centered AI', 'Consumer AI', 'AI companionship', 'Online communities', 'Digital identity'],
+  },
+  {
+    '@type': 'ProfilePage',
+    '@id': 'https://blaksyd.com/founders/vishnu-sudagani/#webpage',
+    url: 'https://blaksyd.com/founders/vishnu-sudagani/',
+    name: 'Vishnu Sudagani',
+    mainEntity: { '@id': 'https://blaksyd.com/founders/vishnu-sudagani/#person' },
+    isPartOf: { '@id': 'https://blaksyd.com/#website' },
+    breadcrumb: { '@id': 'https://blaksyd.com/founders/vishnu-sudagani/#breadcrumb' },
+  },
+  {
+    '@type': 'FAQPage',
+    '@id': 'https://blaksyd.com/founders/vishnu-sudagani/#faq',
+    mainEntity: faqs.map((item) => ({
+      '@type': 'Question',
+      name: item.q,
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: item.a,
+      },
+    })),
+  },
+];
+---
+
+<Page
+  title="Vishnu Sudagani | Co-founder & CEO of Blaksyd"
+  description="Vishnu Sudagani is the co-founder and CEO of Blaksyd, the Human + AI life platform behind Blak, Persona, Minit, and Nexus."
+  image="/assets/og-cover.png"
+  kicker="Founder · CEO"
+  kickerClass="k-gold"
+  heading="Vishnu"
+  accent="Sudagani."
+  lede="Vishnu Sudagani is the co-founder and CEO of Blaksyd, a Human + AI life platform built around Blak, Persona, Minit, and Nexus."
+  heroImage="/assets/og-cover.png"
+  heroAlt="Vishnu Sudagani, co-founder and CEO of Blaksyd."
+  breadcrumb={[{ name: 'Home', href: '/' }, { name: 'Founders', href: '/founders/' }, { name: 'Vishnu Sudagani', href: '/founders/vishnu-sudagani/' }]}
+  machineReadableAlternates={[{ type: 'application/json', title: 'Vishnu Sudagani founder entity facts', href: '/founders/vishnu-sudagani.json' }]}
+  ogType="profile"
+  profile={{ firstName: 'Vishnu', lastName: 'Sudagani', username: 'vishnusudagani_' }}
+  schema={schema}
+>
+  <section>
+    <h2>Direct answer</h2>
+    <p>
+      <b>Vishnu Sudagani is the co-founder and CEO of Blaksyd</b>, a Human + AI life platform built
+      around <a href="/blak/">Blak</a>, <a href="/persona/">Persona</a>, <a href="/minit/">Minit</a>,
+      and <a href="/nexus/">Nexus</a>. His public founder work centers on building technology that
+      revolves around people rather than extracting attention from them.
+    </p>
+  </section>
+
+  <section>
+    <h2>Role at Blaksyd</h2>
+    <p>
+      Vishnu leads Blaksyd as co-founder and CEO, shaping the Human + AI platform vision and the
+      category story behind Blak, Persona, Minit, and Nexus.
+    </p>
+  </section>
+
+  <section>
+    <h2>Founder FAQ</h2>
+    {faqs.map((item) => (
+      <details>
+        <summary>{item.q}</summary>
+        <p>{item.a}</p>
+      </details>
+    ))}
+  </section>
+
+  <section>
+    <h2>Official links</h2>
+    <ul>
+      <li><a href="https://www.linkedin.com/in/vishnu-sudagani-88a848211" target="_blank" rel="noopener">LinkedIn</a></li>
+      <li><a href="https://x.com/vishnusudagani_" target="_blank" rel="noopener">X</a></li>
+      <li><a href="https://www.instagram.com/vishnusudagani_" target="_blank" rel="noopener">Instagram</a></li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Related</h2>
+    <p><a href="/about/">About Blaksyd</a> · <a href="/press/">Press kit</a> · <a href="/what-is-blaksyd/">What is Blaksyd?</a></p>
+  </section>
+</Page>

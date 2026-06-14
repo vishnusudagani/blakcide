@@ -28,16 +28,17 @@ import {
 import { buildChatSystemStack } from '../../symp-core/lib/system-prompt.mjs';
 import { TOOL_DEFS, executeTool } from '../../symp-core/lib/tools.mjs';
 import { runStreamingChatWithTools } from '../../symp-core/lib/chat-runner.mjs';
+import { chatProviders } from '../../symp-core/lib/llm-providers.mjs';
 import { recordEventAsync } from '../../symp-core/lib/vibe-tracker.mjs';
 import { analyseTurn } from '../../symp-core/lib/diagnostic.mjs';
 import SympContract from '../../symp-core/contract/endpoints.js';
 
 const { ENDPOINTS, ERROR_CODES, SYMP_REQUEST_ID_HEADER } = SympContract;
 
-// Plain gpt-4o for chat (search-preview doesn't support function-calling).
-// Live web data is now exposed via the search_web tool, which sub-calls
-// search-preview internally.
-const MODEL = 'gpt-4o';
+// Open-source brain: Qwen 2.5 72B (Together / Fireworks / DeepInfra / OpenRouter)
+// with Groq + Llama 3.3 70B as the always-free downtime floor. The active model
+// is chosen per-request by the provider router (llm-providers.mjs) based on which
+// keys are configured. Live web data is exposed via the search_web tool.
 
 export default async (req) => {
     if (req.method === 'OPTIONS') return corsPreflight();
@@ -69,10 +70,10 @@ export default async (req) => {
         return jsonError(ERROR_CODES.BAD_REQUEST, 'messages[] is required and must be non-empty', 400, requestId);
     }
 
-    const openaiKey = process.env.BLAKCIDE_OPENAI_KEY || process.env.OPENAI_API_KEY;
-    if (!openaiKey) {
+    const providers = chatProviders();
+    if (providers.length === 0) {
         logAccess({ requestId, endpoint: ENDPOINTS.CHAT, statusCode: 500, latencyMs: Date.now() - t0, errorCode: 'INTERNAL_ERROR', userId: user_id });
-        return jsonError(ERROR_CODES.INTERNAL_ERROR, 'OpenAI key not configured', 500, requestId);
+        return jsonError(ERROR_CODES.INTERNAL_ERROR, 'No open-source LLM providers configured', 500, requestId);
     }
 
     // ── Build the layered system stack ───────────────────────────────────
@@ -115,7 +116,7 @@ export default async (req) => {
 
         try {
             await runStreamingChatWithTools({
-                openaiKey, model: MODEL, tools: TOOL_DEFS, executeTool,
+                providers, tools: TOOL_DEFS, executeTool,
                 toolCtx: { userId: user_id }, writer: captureWriter, encoder,
                 messages: finalMessages, maxTokens: 600,
             });
@@ -176,7 +177,7 @@ export default async (req) => {
     (async () => {
         try {
             await runStreamingChatWithTools({
-                openaiKey, model: MODEL, tools: TOOL_DEFS, executeTool,
+                providers, tools: TOOL_DEFS, executeTool,
                 toolCtx: { userId: user_id }, writer: teeWriter, encoder,
                 messages: finalMessages, maxTokens: 600,
             });

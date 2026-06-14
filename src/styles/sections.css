@@ -288,6 +288,9 @@ html[data-theme="light"] .s-title .accent.cool {
 .prose a { color: var(--coral); text-decoration: underline; text-underline-offset: 2px; }
 .prose a:hover { color: var(--coral-deep); }
 html[data-theme="light"] .prose a { color: var(--coral-ink); }
+/* numbered-list markers are coral TEXT — deepen to the ink variant on cream so the
+   numerals clear WCAG AA (the bright --coral is reserved for dark-base / decoration). */
+html[data-theme="light"] .prose ol li::before { color: var(--coral-ink); }
 .prose blockquote { margin: 1.5rem 0; padding: 1rem 1.4rem; border-left: 3px solid var(--coral); background: var(--surface); border-radius: var(--r-sm); font-family: var(--font-serif); font-style: italic; font-size: var(--fs-2xl); line-height: 1.45; color: var(--ink); }
 html[data-theme="light"] .prose blockquote { border-left-color: var(--coral-ink); }
 .prose blockquote p { font-size: inherit; max-width: none; margin: 0; }

@@ -1,0 +1,44 @@
+{
+  "subject": "https://blaksyd.com/",
+  "aliases": [
+    "acct:blaksyd@blaksyd.com",
+    "https://blaksyd.com/what-is-blaksyd/"
+  ],
+  "links": [
+    {
+      "rel": "lrdd",
+      "type": "application/jrd+json",
+      "template": "https://blaksyd.com/.well-known/webfinger?resource={uri}"
+    },
+    {
+      "rel": "describedby",
+      "type": "application/json",
+      "href": "https://blaksyd.com/blaksyd-entity-index.json"
+    },
+    {
+      "rel": "describedby",
+      "type": "application/ld+json",
+      "href": "https://blaksyd.com/blaksyd-knowledge-graph.jsonld"
+    },
+    {
+      "rel": "describedby",
+      "type": "application/ld+json",
+      "href": "https://blaksyd.com/organization.jsonld"
+    },
+    {
+      "rel": "describedby",
+      "type": "application/ld+json",
+      "href": "https://blaksyd.com/.well-known/organization.jsonld"
+    },
+    {
+      "rel": "https://schema.org/founder",
+      "type": "text/html",
+      "href": "https://blaksyd.com/founders/vishnu-sudagani/"
+    },
+    {
+      "rel": "https://schema.org/founder",
+      "type": "text/html",
+      "href": "https://blaksyd.com/founders/sindhuu-devarakonda/"
+    }
+  ]
+}

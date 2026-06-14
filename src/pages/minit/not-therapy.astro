@@ -1,0 +1,90 @@
+---
+import Page from '../../layouts/Page.astro';
+
+const faqs = [
+  {
+    q: 'Is Minit therapy?',
+    a: 'No. Minit is not therapy. Minit listeners provide trained human listening, conversation, and emotional support, but they do not diagnose, prescribe, or replace licensed mental health care.',
+  },
+  {
+    q: 'Who are Minit listeners?',
+    a: 'Minit listeners are real people who are screened and trained by Blaksyd. They are there to listen, ask thoughtful questions, and provide human presence.',
+  },
+  {
+    q: 'What should I do in an emergency?',
+    a: 'Minit is not an emergency service. In urgent or life-threatening situations, contact local emergency services or qualified crisis resources immediately.',
+  },
+];
+
+const schema = [
+  {
+    '@type': 'WebPage',
+    '@id': 'https://blaksyd.com/minit/not-therapy/#webpage',
+    url: 'https://blaksyd.com/minit/not-therapy/',
+    name: 'Is Minit therapy?',
+    description: 'Minit is not therapy. It is Blaksyd’s trained human listening layer for private conversation and support.',
+    isPartOf: { '@id': 'https://blaksyd.com/#website' },
+    about: { '@id': 'https://blaksyd.com/#organization' },
+    breadcrumb: { '@id': 'https://blaksyd.com/minit/not-therapy/#breadcrumb' },
+  },
+  {
+    '@type': 'FAQPage',
+    '@id': 'https://blaksyd.com/minit/not-therapy/#faq',
+    mainEntity: faqs.map((f) => ({
+      '@type': 'Question',
+      name: f.q,
+      acceptedAnswer: { '@type': 'Answer', text: f.a },
+    })),
+  },
+];
+---
+
+<Page
+  title="Is Minit Therapy? | Blaksyd"
+  description="Minit is not therapy. Minit is Blaksyd’s trained human listening layer for private conversation, emotional support, and human presence."
+  image="/assets/blaksyd-minit.png"
+  kicker="Minit · clear boundaries"
+  kickerClass="k-mint"
+  heading="Minit is"
+  accent="not therapy."
+  accentCool={true}
+  lede="Minit is Blaksyd’s trained human listening layer. It gives people a private space for conversation and human presence, but it does not diagnose, prescribe, or replace licensed mental health care."
+  heroImage="/assets/blaksyd-minit.webp"
+  heroAlt="Minit on Blaksyd, showing trained human listening support with clear non-therapy boundaries."
+  breadcrumb={[{ name: 'Home', href: '/' }, { name: 'Minit', href: '/minit/' }, { name: 'Not therapy', href: '/minit/not-therapy/' }]}
+  schema={schema}
+>
+  <section>
+    <h2>Direct answer</h2>
+    <p>
+      <b>No. Minit is not therapy.</b> Minit connects users with trained human listeners for private conversation,
+      emotional support, and real human presence. Minit listeners do not diagnose, prescribe, or provide clinical
+      treatment, and Minit is not an emergency service.
+    </p>
+  </section>
+
+  <section>
+    <h2>What Minit does</h2>
+    <ul>
+      <li>Gives you someone real to talk to by text or voice.</li>
+      <li>Offers listening, perspective, and human presence.</li>
+      <li>Lets you stay anonymous by default.</li>
+      <li>Uses Blak for context, not private conversation content, before a session.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>What Minit does not do</h2>
+    <ul>
+      <li>It does not diagnose.</li>
+      <li>It does not prescribe.</li>
+      <li>It does not replace licensed therapy, psychiatry, medical care, or emergency services.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Questions</h2>
+    {faqs.map((f) => (<><h3>{f.q}</h3><p>{f.a}</p></>))}
+  </section>
+</Page>
+

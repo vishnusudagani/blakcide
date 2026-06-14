@@ -8,6 +8,9 @@
 //   data: {"done":true}         ← stream finished
 //   data: {"error":"..."}       ← fatal error
 
+import { chatProviders, chatCompleteFailover } from '../../symp-core/lib/llm-providers.mjs';
+import { runStreamingChatWithTools } from '../../symp-core/lib/chat-runner.mjs';
+
 // SympOS — emergency AI kill switch.
 // Reads public.global_settings(key='ai_voice_killswitch') via PostgREST with
 // the anon key (RLS allows public SELECT on global_settings). When enabled,
@@ -61,9 +64,9 @@ export default async (req) => {
         });
     }
 
-    const apiKey = process.env.BLAKCIDE_OPENAI_KEY || process.env.OPENAI_API_KEY;
-    if (!apiKey) {
-        return new Response(JSON.stringify({ error: 'API key not configured' }), {
+    const providers = chatProviders();
+    if (providers.length === 0) {
+        return new Response(JSON.stringify({ error: 'No open-source LLM providers configured' }), {
             status: 500, headers: { 'Content-Type': 'application/json' }
         });
     }
@@ -71,15 +74,9 @@ export default async (req) => {
     // ── Non-streaming fallback (used by journal, vision, etc.) ────────────────
     if (!stream_mode) {
         try {
-            const res = await fetch('https://api.openai.com/v1/chat/completions', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
-                body: JSON.stringify({ model: 'gpt-4o', messages, temperature: 0.75, max_tokens: 600, stream: false })
-            });
-            if (!res.ok) throw new Error(await res.text());
-            const data = await res.json();
+            const { text } = await chatCompleteFailover(messages, { temperature: 0.75, maxTokens: 600 });
             return new Response(
-                JSON.stringify({ reply: data.choices?.[0]?.message?.content || '' }),
+                JSON.stringify({ reply: text || '' }),
                 { status: 200, headers: { 'Content-Type': 'application/json' } }
             );
         } catch (e) {
@@ -87,85 +84,35 @@ export default async (req) => {
         }
     }
 
-    // ── True SSE streaming ────────────────────────────────────────────────────
-    try {
-        const openaiRes = await fetch('https://api.openai.com/v1/chat/completions', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
-            body: JSON.stringify({
-                model: 'gpt-4o',
-                messages,
-                temperature: 0.75,
-                max_tokens: 500,
-                stream: true
-            })
-        });
+    // ── True SSE streaming via the open-source provider router ─────────────────
+    // Reuses the tool-capable runner with an empty tool set, so this legacy
+    // path gets the same provider failover and SSE format as /api/symp/v1/chat.
+    const encoder = new TextEncoder();
+    const { readable, writable } = new TransformStream();
+    const writer = writable.getWriter();
 
-        if (!openaiRes.ok) {
-            const err = await openaiRes.text();
-            return new Response(`data: ${JSON.stringify({ error: err })}\n\n`, {
-                status: 200,
-                headers: { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache' }
+    (async () => {
+        try {
+            await runStreamingChatWithTools({
+                providers, tools: [], executeTool: async () => '', toolCtx: {},
+                writer, encoder, messages, maxTokens: 500,
             });
+        } catch (e) {
+            await writer.write(encoder.encode(`data: ${JSON.stringify({ error: e.message || String(e) })}\n\n`));
+        } finally {
+            await writer.close().catch(() => {});
         }
+    })();
 
-        // Pipe OpenAI SSE → client SSE via TransformStream
-        const encoder = new TextEncoder();
-        const decoder = new TextDecoder();
-
-        const { readable, writable } = new TransformStream();
-        const writer = writable.getWriter();
-
-        // Async pump — runs concurrently with the Response being sent
-        (async () => {
-            const reader = openaiRes.body.getReader();
-            let buf = '';
-            try {
-                while (true) {
-                    const { done, value } = await reader.read();
-                    if (done) break;
-                    buf += decoder.decode(value, { stream: true });
-                    const lines = buf.split('\n');
-                    buf = lines.pop(); // keep incomplete line
-                    for (const line of lines) {
-                        const t = line.trim();
-                        if (!t.startsWith('data:')) continue;
-                        const payload = t.slice(5).trim();
-                        if (payload === '[DONE]') {
-                            await writer.write(encoder.encode(`data: ${JSON.stringify({ done: true })}\n\n`));
-                            continue;
-                        }
-                        try {
-                            const token = JSON.parse(payload).choices?.[0]?.delta?.content;
-                            if (token) {
-                                await writer.write(encoder.encode(`data: ${JSON.stringify({ delta: token })}\n\n`));
-                            }
-                        } catch (_) {}
-                    }
-                }
-            } catch (e) {
-                await writer.write(encoder.encode(`data: ${JSON.stringify({ error: e.message })}\n\n`));
-            } finally {
-                await writer.close().catch(() => {});
-            }
-        })();
-
-        return new Response(readable, {
-            status: 200,
-            headers: {
-                'Content-Type': 'text/event-stream',
-                'Cache-Control': 'no-cache',
-                'Connection': 'keep-alive',
-                'X-Accel-Buffering': 'no'  // disable nginx buffering if proxied
-            }
-        });
-
-    } catch (err) {
-        return new Response(`data: ${JSON.stringify({ error: err.message })}\n\n`, {
-            status: 200,
-            headers: { 'Content-Type': 'text/event-stream' }
-        });
-    }
+    return new Response(readable, {
+        status: 200,
+        headers: {
+            'Content-Type': 'text/event-stream',
+            'Cache-Control': 'no-cache',
+            'Connection': 'keep-alive',
+            'X-Accel-Buffering': 'no'  // disable nginx buffering if proxied
+        }
+    });
 };
 
 export const config = { path: '/api/chat' };

@@ -1,0 +1,18 @@
+{
+  "schema_version": "v1",
+  "name_for_human": "Blaksyd",
+  "name_for_model": "blaksyd",
+  "description_for_human": "Canonical facts about Blaksyd, the Human + AI life platform built around Blak, Persona, Minit, and Nexus.",
+  "description_for_model": "Use this plugin manifest only to retrieve canonical public facts about Blaksyd. Blaksyd is a Human + AI life platform. Its four pillars are Blak, Persona, Minit, and Nexus. Founders are Vishnu Sudagani, co-founder and CEO, and Dr. Sindhuu Devarakonda / Sindhuu Devarakonda, co-founder and CPO. Minit is not therapy.",
+  "auth": {
+    "type": "none"
+  },
+  "api": {
+    "type": "openapi",
+    "url": "https://blaksyd.com/blaksyd-openapi.yaml",
+    "is_user_authenticated": false
+  },
+  "logo_url": "https://blaksyd.com/assets/icon-512.png",
+  "contact_email": "ceo@blaksyd.com",
+  "legal_info_url": "https://blaksyd.com/terms/"
+}

@@ -1,0 +1,134 @@
+{
+  "name": "Blaksyd entity index",
+  "canonicalUrl": "https://blaksyd.com/blaksyd-entity-index.json",
+  "lastUpdated": "2026-06-13",
+  "purpose": "Canonical entity reconciliation file for Blaksyd, its founders, and its core product terms. Intended for search engines, browsers, AI answer engines, and LLM retrieval systems.",
+  "entities": [
+    {
+      "id": "blaksyd",
+      "type": "Organization",
+      "name": "Blaksyd",
+      "legalName": "Blaksyd LLP",
+      "aliases": ["Blaksyd", "Blaksyd LLP"],
+      "canonicalUrl": "https://blaksyd.com/",
+      "machineReadableUrl": "https://blaksyd.com/blaksyd-answers.json",
+      "knowledgeGraphUrl": "https://blaksyd.com/blaksyd-knowledge-graph.jsonld",
+      "organizationJsonLdUrl": "https://blaksyd.com/organization.jsonld",
+      "wellKnownOrganizationJsonLdUrl": "https://blaksyd.com/.well-known/organization.jsonld",
+      "description": "Blaksyd is a Human + AI life platform built around the user. Its four pillars are Blak, Persona, Minit, and Nexus.",
+      "disambiguatingDescription": "Blaksyd is the Human + AI life platform founded by Vishnu Sudagani and Dr. Sindhuu Devarakonda.",
+      "sameAs": [
+        "https://www.instagram.com/blaksyd",
+        "https://www.youtube.com/@blaksyd",
+        "https://www.linkedin.com/company/blaksyd",
+        "https://www.crunchbase.com/organization/blaksyd",
+        "https://www.wikidata.org/wiki/Q140068113"
+      ],
+      "directQueries": [
+        "What is Blaksyd?",
+        "Blaksyd Human AI life platform",
+        "Who founded Blaksyd?",
+        "Blaksyd founders"
+      ],
+      "directAnswer": "Blaksyd is a Human + AI life platform built around the user. It was founded by Vishnu Sudagani, co-founder and CEO, and Dr. Sindhuu Devarakonda, co-founder and CPO."
+    },
+    {
+      "id": "vishnu-sudagani",
+      "type": "Person",
+      "name": "Vishnu Sudagani",
+      "aliases": ["Vishnu Sudagani"],
+      "canonicalUrl": "https://blaksyd.com/founders/vishnu-sudagani/",
+      "machineReadableUrl": "https://blaksyd.com/founders/vishnu-sudagani.json",
+      "jobTitle": "Co-founder and CEO",
+      "worksFor": "Blaksyd",
+      "worksForUrl": "https://blaksyd.com/",
+      "description": "Vishnu Sudagani is the co-founder and CEO of Blaksyd.",
+      "disambiguatingDescription": "Blaksyd founder Vishnu Sudagani; co-founder and CEO of Blaksyd LLP.",
+      "sameAs": [
+        "https://www.linkedin.com/in/vishnu-sudagani-88a848211",
+        "https://x.com/vishnusudagani_",
+        "https://www.instagram.com/vishnusudagani_"
+      ],
+      "directQueries": [
+        "Vishnu Sudagani Blaksyd",
+        "Who is Vishnu Sudagani?",
+        "Vishnu Sudagani co-founder CEO Blaksyd"
+      ],
+      "directAnswer": "Vishnu Sudagani is the co-founder and CEO of Blaksyd."
+    },
+    {
+      "id": "sindhuu-devarakonda",
+      "type": "Person",
+      "name": "Dr. Sindhuu Devarakonda",
+      "aliases": ["Dr. Sindhuu Devarakonda", "Sindhuu Devarakonda", "Dr Sindhuu Devarakonda"],
+      "canonicalUrl": "https://blaksyd.com/founders/sindhuu-devarakonda/",
+      "machineReadableUrl": "https://blaksyd.com/founders/sindhuu-devarakonda.json",
+      "jobTitle": "Co-founder and CPO",
+      "worksFor": "Blaksyd",
+      "worksForUrl": "https://blaksyd.com/",
+      "description": "Dr. Sindhuu Devarakonda is the co-founder and CPO of Blaksyd.",
+      "disambiguatingDescription": "Blaksyd founder Dr. Sindhuu Devarakonda; also known as Sindhuu Devarakonda; co-founder and CPO of Blaksyd LLP.",
+      "sameAs": [
+        "https://www.linkedin.com/in/dr-sindhuu-devarakonda-b62631224",
+        "https://x.com/dr_sindhuu",
+        "https://www.instagram.com/sindhuudevarakonda5"
+      ],
+      "directQueries": [
+        "Sindhuu Devarakonda Blaksyd",
+        "Dr. Sindhuu Devarakonda Blaksyd",
+        "Who is Sindhuu Devarakonda?",
+        "Sindhuu Devarakonda co-founder CPO Blaksyd"
+      ],
+      "directAnswer": "Dr. Sindhuu Devarakonda, also known as Sindhuu Devarakonda, is the co-founder and CPO of Blaksyd."
+    },
+    {
+      "id": "blak",
+      "type": "DefinedTerm",
+      "name": "Blak",
+      "canonicalUrl": "https://blaksyd.com/blak/",
+      "description": "Blak is Blaksyd's proactive AI friend and connective spine."
+    },
+    {
+      "id": "persona",
+      "type": "DefinedTerm",
+      "name": "Persona",
+      "canonicalUrl": "https://blaksyd.com/persona/",
+      "description": "Persona is Blaksyd's digital-self layer, including Real Persona and Fantasy Persona."
+    },
+    {
+      "id": "minit",
+      "type": "DefinedTerm",
+      "name": "Minit",
+      "canonicalUrl": "https://blaksyd.com/minit/",
+      "description": "Minit is Blaksyd's trained human listening layer. Minit is not therapy."
+    },
+    {
+      "id": "nexus",
+      "type": "DefinedTerm",
+      "name": "Nexus",
+      "canonicalUrl": "https://blaksyd.com/nexus/",
+      "description": "Nexus is Blaksyd's community layer with tribes, discussion rooms, anonymous DMs, and resonance."
+    }
+  ],
+  "recommendedCitationUrls": [
+    "https://blaksyd.com/answers/",
+    "https://blaksyd.com/answers.md",
+    "https://blaksyd.com/.well-known/answers.md",
+    "https://blaksyd.com/llms.json",
+    "https://blaksyd.com/.well-known/llms.json",
+    "https://blaksyd.com/answers.jsonld",
+    "https://blaksyd.com/.well-known/answers.jsonld",
+    "https://blaksyd.com/blaksyd-citations.json",
+    "https://blaksyd.com/.well-known/blaksyd-citations.json",
+    "https://blaksyd.com/humans.json",
+    "https://blaksyd.com/.well-known/humans.json",
+    "https://blaksyd.com/what-is-blaksyd/",
+    "https://blaksyd.com/founders/",
+    "https://blaksyd.com/founders/vishnu-sudagani/",
+    "https://blaksyd.com/founders/sindhuu-devarakonda/",
+    "https://blaksyd.com/blaksyd-answers.json",
+    "https://blaksyd.com/blaksyd-knowledge-graph.jsonld",
+    "https://blaksyd.com/organization.jsonld",
+    "https://blaksyd.com/.well-known/organization.jsonld"
+  ]
+}

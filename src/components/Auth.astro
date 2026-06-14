@@ -46,17 +46,28 @@
         <div class="auth-or" aria-hidden="true"><span>or</span></div>
 
         <form class="auth-form" data-auth-form="email" novalidate>
-          <input type="email" name="email" inputmode="email" autocomplete="email" placeholder="you@example.com" required data-auth-email />
+          <input type="email" name="email" inputmode="email" autocomplete="email" placeholder="you@example.com" required aria-label="Email address" data-auth-email />
           <button type="submit" class="btn btn-primary auth-submit"><span>Email me a sign-in link</span>
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
           </button>
+        </form>
+
+        {/* Local-dev only (revealed by the script when on localhost): email + password
+            sign-in. signInWithPassword returns a session directly — NO OAuth/magic-link
+            redirect — so it works on localhost without touching Supabase's redirect
+            allowlist. Production stays passwordless (this form stays hidden off-localhost). */}
+        <form class="auth-form auth-dev" data-auth-form="password" hidden novalidate>
+          <div class="auth-or" aria-hidden="true"><span>local dev</span></div>
+          <input type="email" name="dev-email" value="connect@blaksyd.com" inputmode="email" autocomplete="email" aria-label="Email (local dev)" data-auth-dev-email />
+          <input type="password" name="dev-password" autocomplete="current-password" placeholder="password" aria-label="Password (local dev)" data-auth-dev-pass />
+          <button type="submit" class="btn btn-primary auth-submit"><span>Sign in with password</span></button>
         </form>
       </div>
 
       {/* ── WhatsApp: phone entry ── */}
       <form class="auth-view" data-auth-view="phone" data-auth-form="phone" hidden novalidate>
         <p class="auth-step">We'll message a 6-digit code to your WhatsApp.</p>
-        <input type="tel" name="phone" inputmode="tel" autocomplete="tel" placeholder="+91 98765 43210" required data-auth-phone />
+        <input type="tel" name="phone" inputmode="tel" autocomplete="tel" placeholder="+91 98765 43210" required aria-label="Phone number" data-auth-phone />
         <button type="submit" class="btn btn-primary auth-submit"><span>Send code on WhatsApp</span></button>
         <button type="button" class="auth-back" data-auth-back>← other ways to enter</button>
       </form>
@@ -91,8 +102,12 @@
     position: fixed;
     inset: 0;
     z-index: 1000;
-    display: grid;
-    place-items: center;
+    display: flex;
+    /* Scroll instead of clipping when the card is taller than the viewport (the
+       local-dev password form, or a short laptop window). The old grid +
+       place-items:center cut the card's TOP — including the × close — off-screen
+       with no way to scroll to it, so the modal looked broken / "not working". */
+    overflow-y: auto;
     padding: var(--gutter);
   }
   .auth[hidden] { display: none; }
@@ -114,6 +129,7 @@
     isolation: isolate;
     width: 100%;
     max-width: 420px;
+    margin: auto;   /* centers when it fits; with .auth overflow-y:auto it stays fully scrollable when taller */
     padding: clamp(1.7rem, 1rem + 2.2vw, 2.5rem);
     background: var(--bg-warm);
     border: 1px solid var(--line-strong);
@@ -472,6 +488,23 @@
         .catch(function () { setBusy(false); setNote('Network error — please try again.', 'error'); });
     });
 
+    // ── local-dev only: email + password sign-in (no redirect; for testing on localhost) ──
+    var devForm = modal.querySelector('[data-auth-form="password"]');
+    var devEmail = modal.querySelector('[data-auth-dev-email]');
+    var devPass = modal.querySelector('[data-auth-dev-pass]');
+    var IS_LOCAL = /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname);
+    if (IS_LOCAL && devForm) devForm.hidden = false;   // reveal only on localhost
+    if (devForm) devForm.addEventListener('submit', function (e) {
+      e.preventDefault(); if (busy) return;
+      if (!supabaseConfigured || !supabase) { setNote('Supabase env vars are not set.', 'error'); return; }
+      var em = (devEmail.value || '').trim(), pw = (devPass.value || '');
+      if (!EMAIL_RE.test(em) || !pw) { setNote('Enter the dev email and password.', 'error'); if (!pw) devPass.focus(); return; }
+      setBusy(true); setNote('Signing in…', 'ok');
+      supabase.auth.signInWithPassword({ email: em, password: pw })
+        .then(function (r) { setBusy(false); if (r.error) { setNote(r.error.message || 'Could not sign in.', 'error'); } else { setNote('Signed in — entering…', 'ok'); goToApp(); } })
+        .catch(function () { setBusy(false); setNote('Network error — please try again.', 'error'); });
+    });
+
     // ── WhatsApp: send code (Supabase phone OTP, delivered by the Meta hook) ──
     if (phoneForm) phoneForm.addEventListener('submit', function (e) {
       e.preventDefault(); if (busy) return;
@@ -508,7 +541,14 @@
     });
 
     var APP = '/beta/';
-    function goToApp() { window.location.replace(APP); }
+    function safeBeta(p) { return (typeof p === 'string' && /^\/beta\//.test(p) && p.indexOf('//') !== 0) ? p : null; }
+    // Return the visitor to the exact /beta/ page that bounced them here (stashed by
+    // AppLayout before login), else the app home.
+    function goToApp() {
+      var dest = APP;
+      try { var w = safeBeta(sessionStorage.getItem('blk_redirect')); if (w) dest = w; sessionStorage.removeItem('blk_redirect'); } catch (e) {}
+      window.location.replace(dest);
+    }
     function onSignedIn() { showView('done'); }
     function showAuthError(msg) { try { open(null, null); setNote(msg, 'error'); } catch (e) {} }
 
@@ -547,5 +587,13 @@
         if (session && (window.__blkAuthReturn || (evt === 'SIGNED_IN' && !modal.hidden))) goToApp();
       });
     }
+
+    // Arrived from a gated /beta/ page (AppLayout sent a logged-out visitor here with
+    // ?auth=1) → open the login immediately so there's nothing to hunt for.
+    try {
+      if (!hadAuthInUrl && !hadAuthError && new URLSearchParams(location.search).get('auth') === '1') {
+        setTimeout(function () { open(null, null); }, 0);
+      }
+    } catch (e) {}
   })();
 </script>

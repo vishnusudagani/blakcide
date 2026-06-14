@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<XRD xmlns="http://docs.oasis-open.org/ns/xri/xrd-1.0">
+  <Subject>https://blaksyd.com/</Subject>
+  <Alias>acct:blaksyd@blaksyd.com</Alias>
+  <Alias>https://blaksyd.com/what-is-blaksyd/</Alias>
+  <Link rel="lrdd" type="application/jrd+json" template="https://blaksyd.com/.well-known/webfinger?resource={uri}" />
+  <Link rel="describedby" type="application/json" href="https://blaksyd.com/blaksyd-entity-index.json" />
+  <Link rel="describedby" type="application/ld+json" href="https://blaksyd.com/blaksyd-knowledge-graph.jsonld" />
+  <Link rel="describedby" type="application/ld+json" href="https://blaksyd.com/organization.jsonld" />
+  <Link rel="describedby" type="application/ld+json" href="https://blaksyd.com/.well-known/organization.jsonld" />
+  <Link rel="https://schema.org/founder" type="text/html" href="https://blaksyd.com/founders/vishnu-sudagani/" />
+  <Link rel="https://schema.org/founder" type="text/html" href="https://blaksyd.com/founders/sindhuu-devarakonda/" />
+</XRD>

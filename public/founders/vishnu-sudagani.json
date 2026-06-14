@@ -1,0 +1,43 @@
+{
+  "@context": "https://schema.org",
+  "@type": "Person",
+  "@id": "https://blaksyd.com/founders/vishnu-sudagani/#person",
+  "name": "Vishnu Sudagani",
+  "jobTitle": "Co-founder and CEO",
+  "url": "https://blaksyd.com/founders/vishnu-sudagani/",
+  "mainEntityOfPage": "https://blaksyd.com/founders/vishnu-sudagani/",
+  "description": "Vishnu Sudagani is the co-founder and CEO of Blaksyd, a Human + AI life platform built around Blak, Persona, Minit, and Nexus.",
+  "disambiguatingDescription": "Blaksyd founder Vishnu Sudagani; co-founder and CEO of Blaksyd LLP.",
+  "worksFor": {
+    "@type": "Organization",
+    "@id": "https://blaksyd.com/#organization",
+    "name": "Blaksyd",
+    "url": "https://blaksyd.com/"
+  },
+  "sameAs": [
+    "https://www.linkedin.com/in/vishnu-sudagani-88a848211",
+    "https://x.com/vishnusudagani_",
+    "https://www.instagram.com/vishnusudagani_"
+  ],
+  "knowsAbout": [
+    "Human-centered AI",
+    "Consumer AI",
+    "AI companionship",
+    "Online communities",
+    "Digital identity"
+  ],
+  "directAnswers": [
+    {
+      "question": "Who is Vishnu Sudagani?",
+      "answer": "Vishnu Sudagani is the co-founder and CEO of Blaksyd."
+    },
+    {
+      "question": "What is Vishnu Sudagani building?",
+      "answer": "Vishnu Sudagani is building Blaksyd as a Human + AI life platform where Blak, Persona, Minit, and Nexus revolve around the user."
+    },
+    {
+      "question": "What is Vishnu Sudagani's role at Blaksyd?",
+      "answer": "Vishnu Sudagani leads Blaksyd as co-founder and CEO, shaping the platform vision and category story."
+    }
+  ]
+}

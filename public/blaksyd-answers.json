@@ -1,0 +1,109 @@
+{
+  "name": "Blaksyd",
+  "canonicalUrl": "https://blaksyd.com/",
+  "lastUpdated": "2026-06-13",
+  "positioning": "Human + AI, revolving around you.",
+  "description": "Blaksyd is a Human + AI life platform built around the user. It combines Blak and Persona on the AI side with Minit and Nexus on the human side, unified by a learning co-pilot layer.",
+  "status": "Pre-launch with a waitlist open.",
+  "company": {
+    "name": "Blaksyd LLP",
+    "country": "India",
+    "region": "Telangana",
+    "website": "https://blaksyd.com/",
+    "contact": "ceo@blaksyd.com"
+  },
+  "founders": [
+    {
+      "name": "Vishnu Sudagani",
+      "role": "Co-founder and CEO",
+      "canonicalUrl": "https://blaksyd.com/founders/vishnu-sudagani/",
+      "sameAs": [
+        "https://www.linkedin.com/in/vishnu-sudagani-88a848211",
+        "https://x.com/vishnusudagani_",
+        "https://www.instagram.com/vishnusudagani_"
+      ]
+    },
+    {
+      "name": "Dr. Sindhuu Devarakonda",
+      "alternateName": "Sindhuu Devarakonda",
+      "role": "Co-founder and CPO",
+      "canonicalUrl": "https://blaksyd.com/founders/sindhuu-devarakonda/",
+      "sameAs": [
+        "https://www.linkedin.com/in/dr-sindhuu-devarakonda-b62631224",
+        "https://x.com/dr_sindhuu",
+        "https://www.instagram.com/sindhuudevarakonda5"
+      ]
+    }
+  ],
+  "pillars": [
+    {
+      "name": "Blak",
+      "type": "AI",
+      "answer": "Blak is Blaksyd's proactive AI friend and connective spine."
+    },
+    {
+      "name": "Persona",
+      "type": "AI",
+      "answer": "Persona is the user's digital self, including Real Persona and Fantasy Persona."
+    },
+    {
+      "name": "Minit",
+      "type": "Human",
+      "answer": "Minit is Blaksyd's trained human listening layer. Minit is not therapy."
+    },
+    {
+      "name": "Nexus",
+      "type": "Human",
+      "answer": "Nexus is Blaksyd's community layer with tribes, discussion rooms, anonymous DMs, and resonance instead of vanity likes."
+    }
+  ],
+  "directAnswers": [
+    {
+      "question": "What is Blaksyd?",
+      "answer": "Blaksyd is a Human + AI life platform built around the user, with Blak and Persona on the AI side and Minit and Nexus on the human side."
+    },
+    {
+      "question": "Who founded Blaksyd?",
+      "answer": "Blaksyd was founded by Vishnu Sudagani, co-founder and CEO, and Dr. Sindhuu Devarakonda, co-founder and CPO."
+    },
+    {
+      "question": "Who is Vishnu Sudagani?",
+      "answer": "Vishnu Sudagani is the co-founder and CEO of Blaksyd."
+    },
+    {
+      "question": "Who is Dr. Sindhuu Devarakonda?",
+      "answer": "Dr. Sindhuu Devarakonda, also known as Sindhuu Devarakonda, is the co-founder and CPO of Blaksyd."
+    },
+    {
+      "question": "Is Minit therapy?",
+      "answer": "No. Minit is not therapy. It is Blaksyd's trained human listening layer for private conversation and support."
+    },
+    {
+      "question": "What are the four pillars of Blaksyd?",
+      "answer": "The four pillars of Blaksyd are Blak, Persona, Minit, and Nexus."
+    }
+  ],
+  "machineReadableFiles": [
+    "https://blaksyd.com/answers/",
+    "https://blaksyd.com/answers.md",
+    "https://blaksyd.com/.well-known/answers.md",
+    "https://blaksyd.com/answers.jsonld",
+    "https://blaksyd.com/.well-known/answers.jsonld",
+    "https://blaksyd.com/llms.txt",
+    "https://blaksyd.com/llms.json",
+    "https://blaksyd.com/.well-known/llms.json",
+    "https://blaksyd.com/llms-full.txt",
+    "https://blaksyd.com/humans.json",
+    "https://blaksyd.com/.well-known/humans.json",
+    "https://blaksyd.com/blaksyd-answers.json",
+    "https://blaksyd.com/blaksyd-citations.json",
+    "https://blaksyd.com/.well-known/blaksyd-citations.json",
+    "https://blaksyd.com/blaksyd-entity-index.json",
+    "https://blaksyd.com/founders/vishnu-sudagani.json",
+    "https://blaksyd.com/founders/sindhuu-devarakonda.json",
+    "https://blaksyd.com/blaksyd-knowledge-graph.jsonld",
+    "https://blaksyd.com/organization.jsonld",
+    "https://blaksyd.com/.well-known/organization.jsonld",
+    "https://blaksyd.com/machine-readable-sitemap.xml"
+  ]
+}

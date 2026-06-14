@@ -1,0 +1,94 @@
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "FAQPage",
+      "@id": "https://blaksyd.com/answers/#faq",
+      "url": "https://blaksyd.com/answers/",
+      "name": "Blaksyd Answers",
+      "description": "Canonical direct answers for Blaksyd, its founders, and core product facts.",
+      "isPartOf": {
+        "@id": "https://blaksyd.com/#website"
+      },
+      "about": {
+        "@id": "https://blaksyd.com/#organization"
+      },
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "What is Blaksyd?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Blaksyd is a Human + AI life platform built around the user, with Blak and Persona on the AI side and Minit and Nexus on the human side."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Who founded Blaksyd?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Blaksyd was founded by Vishnu Sudagani, co-founder and CEO, and Dr. Sindhuu Devarakonda, co-founder and CPO."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Who is Vishnu Sudagani?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Vishnu Sudagani is the co-founder and CEO of Blaksyd."
+          },
+          "about": {
+            "@id": "https://blaksyd.com/founders/vishnu-sudagani/#person"
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Who is Dr. Sindhuu Devarakonda?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Dr. Sindhuu Devarakonda, also known as Sindhuu Devarakonda, is the co-founder and CPO of Blaksyd."
+          },
+          "about": {
+            "@id": "https://blaksyd.com/founders/sindhuu-devarakonda/#person"
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "What are the four pillars of Blaksyd?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "The four pillars of Blaksyd are Blak, Persona, Minit, and Nexus."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Is Minit therapy?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "No. Minit is not therapy. It is Blaksyd's trained human listening layer for private conversation and support."
+          }
+        }
+      ]
+    },
+    {
+      "@type": "WebPage",
+      "@id": "https://blaksyd.com/answers/#webpage",
+      "url": "https://blaksyd.com/answers/",
+      "name": "Blaksyd Answers",
+      "mainEntity": {
+        "@id": "https://blaksyd.com/answers/#faq"
+      },
+      "about": [
+        {
+          "@id": "https://blaksyd.com/#organization"
+        },
+        {
+          "@id": "https://blaksyd.com/founders/vishnu-sudagani/#person"
+        },
+        {
+          "@id": "https://blaksyd.com/founders/sindhuu-devarakonda/#person"
+        }
+      ]
+    }
+  ]
+}

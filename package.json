@@ -10,6 +10,8 @@
     "gen:logo": "node scripts/gen-logo.mjs",
     "gen:favicon": "node scripts/gen-favicon.mjs",
     "indexnow": "node scripts/indexnow.mjs",
+    "verify:recognition": "node scripts/verify-recognition.mjs",
+    "verify:recognition:dist": "node scripts/verify-recognition-dist.mjs",
     "astro": "astro"
   },
   "devDependencies": {
@@ -18,6 +20,7 @@
     "sharp": "^0.34"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.108.1"
+    "@supabase/supabase-js": "^2.108.1",
+    "livekit-server-sdk": "^2.15.4"
   }
 }

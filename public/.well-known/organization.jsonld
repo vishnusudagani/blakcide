@@ -1,0 +1,97 @@
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Organization",
+      "@id": "https://blaksyd.com/#organization",
+      "name": "Blaksyd",
+      "legalName": "Blaksyd LLP",
+      "alternateName": [
+        "Blaksyd Human + AI life platform",
+        "Blaksyd AI life platform"
+      ],
+      "url": "https://blaksyd.com/",
+      "logo": "https://blaksyd.com/assets/blaksyd-logo.png",
+      "image": "https://blaksyd.com/assets/og-cover.png",
+      "email": "ceo@blaksyd.com",
+      "foundingDate": "2026",
+      "foundingLocation": {
+        "@type": "Place",
+        "address": {
+          "@type": "PostalAddress",
+          "addressRegion": "Telangana",
+          "addressCountry": "IN"
+        }
+      },
+      "slogan": "Human + AI, revolving around you.",
+      "description": "Blaksyd is a Human + AI life platform built around the user. Its four pillars are Blak, Persona, Minit, and Nexus.",
+      "disambiguatingDescription": "Blaksyd is the Human + AI life platform founded by Vishnu Sudagani and Dr. Sindhuu Devarakonda.",
+      "sameAs": [
+        "https://www.instagram.com/blaksyd",
+        "https://www.youtube.com/@blaksyd",
+        "https://www.linkedin.com/company/blaksyd",
+        "https://www.crunchbase.com/organization/blaksyd",
+        "https://www.wikidata.org/wiki/Q140068113"
+      ],
+      "founder": [
+        {
+          "@id": "https://blaksyd.com/founders/vishnu-sudagani/#person"
+        },
+        {
+          "@id": "https://blaksyd.com/founders/sindhuu-devarakonda/#person"
+        }
+      ],
+      "subjectOf": [
+        {
+          "@id": "https://blaksyd.com/answers/#faq"
+        },
+        {
+          "@id": "https://blaksyd.com/blaksyd-knowledge-graph.jsonld"
+        },
+        {
+          "@id": "https://blaksyd.com/blaksyd-entity-index.json"
+        },
+        {
+          "@id": "https://blaksyd.com/llms.json"
+        }
+      ]
+    },
+    {
+      "@type": "Person",
+      "@id": "https://blaksyd.com/founders/vishnu-sudagani/#person",
+      "name": "Vishnu Sudagani",
+      "jobTitle": "Co-founder and CEO",
+      "worksFor": {
+        "@id": "https://blaksyd.com/#organization"
+      },
+      "url": "https://blaksyd.com/founders/vishnu-sudagani/",
+      "mainEntityOfPage": "https://blaksyd.com/founders/vishnu-sudagani/",
+      "description": "Vishnu Sudagani is the co-founder and CEO of Blaksyd.",
+      "disambiguatingDescription": "Blaksyd founder Vishnu Sudagani; co-founder and CEO of Blaksyd LLP.",
+      "sameAs": [
+        "https://www.linkedin.com/in/vishnu-sudagani-88a848211",
+        "https://x.com/vishnusudagani_",
+        "https://www.instagram.com/vishnusudagani_"
+      ]
+    },
+    {
+      "@type": "Person",
+      "@id": "https://blaksyd.com/founders/sindhuu-devarakonda/#person",
+      "name": "Dr. Sindhuu Devarakonda",
+      "alternateName": "Sindhuu Devarakonda",
+      "jobTitle": "Co-founder and CPO",
+      "worksFor": {
+        "@id": "https://blaksyd.com/#organization"
+      },
+      "url": "https://blaksyd.com/founders/sindhuu-devarakonda/",
+      "mainEntityOfPage": "https://blaksyd.com/founders/sindhuu-devarakonda/",
+      "description": "Dr. Sindhuu Devarakonda is the co-founder and CPO of Blaksyd.",
+      "disambiguatingDescription": "Blaksyd founder Dr. Sindhuu Devarakonda; also known as Sindhuu Devarakonda; co-founder and CPO of Blaksyd LLP.",
+      "sameAs": [
+        "https://www.linkedin.com/in/dr-sindhuu-devarakonda-b62631224",
+        "https://x.com/dr_sindhuu",
+        "https://www.instagram.com/sindhuudevarakonda5"
+      ]
+    }
+  ]
+}

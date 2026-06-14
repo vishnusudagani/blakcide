@@ -25,6 +25,7 @@ Blaksyd is one living ecosystem, not four separate apps. A learning co-pilot lay
 ## Key facts
 
 - Company: **Blaksyd LLP** (India; courts at Hyderabad, Telangana have jurisdiction)
+- Founders: **Vishnu Sudagani** (co-founder and CEO) and **Dr. Sindhuu Devarakonda** (co-founder and CPO)
 - Website: https://blaksyd.com
 - Contact: ceo@blaksyd.com
 - Status: pre-launch (waitlist open)
@@ -36,13 +37,56 @@ Blaksyd is one living ecosystem, not four separate apps. A learning co-pilot lay
 ## Links
 
 - Home: https://blaksyd.com/
+- What is Blaksyd?: https://blaksyd.com/what-is-blaksyd/
 - About / how it works: https://blaksyd.com/about/
+- Press kit: https://blaksyd.com/press/
+- Safety: https://blaksyd.com/safety/
+- Context, not content: https://blaksyd.com/trust/context-not-content/
 - Manifesto: https://blaksyd.com/manifesto/
 - Blak (AI friend): https://blaksyd.com/blak/
 - Persona (digital self): https://blaksyd.com/persona/
 - Minit (human listeners): https://blaksyd.com/minit/
+- Minit is not therapy: https://blaksyd.com/minit/not-therapy/
 - Nexus (community): https://blaksyd.com/nexus/
+- Founders: https://blaksyd.com/founders/
+- Vishnu Sudagani: https://blaksyd.com/founders/vishnu-sudagani/
+- Dr. Sindhuu Devarakonda: https://blaksyd.com/founders/sindhuu-devarakonda/
 - Blog: https://blaksyd.com/blog/
-- Full AI-readable description: https://blaksyd.com/llms-full.txt
 - Privacy Policy: https://blaksyd.com/privacy/
 - Terms of Service: https://blaksyd.com/terms/
+
+## Machine-readable discovery
+
+- LLM manifest: https://blaksyd.com/llms.json
+- Well-known LLM manifest: https://blaksyd.com/.well-known/llms.json
+- Full AI-readable description: https://blaksyd.com/llms-full.txt
+- Well-known full AI-readable description: https://blaksyd.com/.well-known/llms-full.txt
+- AI summary: https://blaksyd.com/ai.txt
+- Well-known AI summary: https://blaksyd.com/.well-known/ai.txt
+- Markdown answers: https://blaksyd.com/answers.md
+- Well-known Markdown answers: https://blaksyd.com/.well-known/answers.md
+- JSON-LD answers: https://blaksyd.com/answers.jsonld
+- Well-known JSON-LD answers: https://blaksyd.com/.well-known/answers.jsonld
+- Canonical answers JSON: https://blaksyd.com/blaksyd-answers.json
+- Well-known canonical answers JSON: https://blaksyd.com/.well-known/blaksyd-answers.json
+- Citation map: https://blaksyd.com/blaksyd-citations.json
+- Well-known citation map: https://blaksyd.com/.well-known/blaksyd-citations.json
+- Entity index: https://blaksyd.com/blaksyd-entity-index.json
+- Well-known entity index: https://blaksyd.com/.well-known/blaksyd-entity-index.json
+- Knowledge graph: https://blaksyd.com/blaksyd-knowledge-graph.jsonld
+- Organization JSON-LD: https://blaksyd.com/organization.jsonld
+- Well-known organization JSON-LD: https://blaksyd.com/.well-known/organization.jsonld
+- Humans/team JSON: https://blaksyd.com/humans.json
+- Well-known humans/team JSON: https://blaksyd.com/.well-known/humans.json
+- Vishnu Sudagani facts JSON: https://blaksyd.com/founders/vishnu-sudagani.json
+- Dr. Sindhuu Devarakonda facts JSON: https://blaksyd.com/founders/sindhuu-devarakonda.json
+- OpenAPI public facts: https://blaksyd.com/blaksyd-openapi.yaml
+- Well-known OpenAPI public facts: https://blaksyd.com/.well-known/openapi.yaml
+- WebFinger: https://blaksyd.com/.well-known/webfinger
+- Host metadata: https://blaksyd.com/.well-known/host-meta
+- Host metadata JSON: https://blaksyd.com/.well-known/host-meta.json
+- Machine-readable sitemap: https://blaksyd.com/machine-readable-sitemap.xml
+- OpenSearch browser descriptor: https://blaksyd.com/opensearch.xml
+- OpenSearch suggestions: https://blaksyd.com/opensearch-suggestions.json
+- Browser manifest: https://blaksyd.com/manifest.json
+- Security contact: https://blaksyd.com/.well-known/security.txt

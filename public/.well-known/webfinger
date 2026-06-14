@@ -1,0 +1,85 @@
+{
+  "subject": "https://blaksyd.com/",
+  "aliases": [
+    "acct:blaksyd@blaksyd.com",
+    "https://blaksyd.com/",
+    "https://blaksyd.com/what-is-blaksyd/"
+  ],
+  "links": [
+    {
+      "rel": "self",
+      "type": "text/html",
+      "href": "https://blaksyd.com/"
+    },
+    {
+      "rel": "describedby",
+      "type": "application/json",
+      "href": "https://blaksyd.com/blaksyd-entity-index.json",
+      "titles": {
+        "en": "Blaksyd entity index"
+      }
+    },
+    {
+      "rel": "describedby",
+      "type": "application/ld+json",
+      "href": "https://blaksyd.com/blaksyd-knowledge-graph.jsonld",
+      "titles": {
+        "en": "Blaksyd knowledge graph"
+      }
+    },
+    {
+      "rel": "describedby",
+      "type": "application/ld+json",
+      "href": "https://blaksyd.com/organization.jsonld",
+      "titles": {
+        "en": "Blaksyd organization graph"
+      }
+    },
+    {
+      "rel": "describedby",
+      "type": "application/ld+json",
+      "href": "https://blaksyd.com/.well-known/organization.jsonld",
+      "titles": {
+        "en": "Blaksyd well-known organization graph"
+      }
+    },
+    {
+      "rel": "http://webfinger.net/rel/profile-page",
+      "type": "text/html",
+      "href": "https://blaksyd.com/founders/",
+      "titles": {
+        "en": "Blaksyd founders"
+      }
+    },
+    {
+      "rel": "https://schema.org/founder",
+      "type": "text/html",
+      "href": "https://blaksyd.com/founders/vishnu-sudagani/",
+      "titles": {
+        "en": "Vishnu Sudagani, co-founder and CEO of Blaksyd"
+      }
+    },
+    {
+      "rel": "https://schema.org/founder",
+      "type": "text/html",
+      "href": "https://blaksyd.com/founders/sindhuu-devarakonda/",
+      "titles": {
+        "en": "Dr. Sindhuu Devarakonda, co-founder and CPO of Blaksyd"
+      }
+    },
+    {
+      "rel": "https://schema.org/SoftwareApplication",
+      "type": "text/html",
+      "href": "https://blaksyd.com/what-is-blaksyd/",
+      "titles": {
+        "en": "What is Blaksyd?"
+      }
+    }
+  ],
+  "properties": {
+    "https://schema.org/name": "Blaksyd",
+    "https://schema.org/legalName": "Blaksyd LLP",
+    "https://schema.org/description": "Blaksyd is a Human + AI life platform built around Blak, Persona, Minit, and Nexus.",
+    "https://schema.org/founder": "Vishnu Sudagani; Dr. Sindhuu Devarakonda"
+  }
+}

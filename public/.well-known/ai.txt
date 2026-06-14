@@ -1,0 +1,39 @@
+# Blaksyd AI-readable well-known summary
+
+Blaksyd is a Human + AI life platform built around the user. Its four pillars are Blak, Persona, Minit, and Nexus.
+
+Blaksyd was founded by Vishnu Sudagani, co-founder and CEO, and Dr. Sindhuu Devarakonda, co-founder and CPO.
+
+Canonical AI-readable files:
+
+- https://blaksyd.com/ai.txt
+- https://blaksyd.com/llms.txt
+- https://blaksyd.com/llms.json
+- https://blaksyd.com/.well-known/llms.json
+- https://blaksyd.com/llms-full.txt
+- https://blaksyd.com/answers.md
+- https://blaksyd.com/.well-known/answers.md
+- https://blaksyd.com/answers.jsonld
+- https://blaksyd.com/.well-known/answers.jsonld
+- https://blaksyd.com/blaksyd-answers.json
+- https://blaksyd.com/blaksyd-citations.json
+- https://blaksyd.com/.well-known/blaksyd-citations.json
+- https://blaksyd.com/blaksyd-entity-index.json
+- https://blaksyd.com/blaksyd-knowledge-graph.jsonld
+- https://blaksyd.com/organization.jsonld
+- https://blaksyd.com/.well-known/organization.jsonld
+- https://blaksyd.com/humans.json
+- https://blaksyd.com/.well-known/humans.json
+- https://blaksyd.com/blaksyd-openapi.yaml
+- https://blaksyd.com/.well-known/openapi.yaml
+- https://blaksyd.com/.well-known/webfinger
+- https://blaksyd.com/.well-known/host-meta
+- https://blaksyd.com/opensearch.xml
+- https://blaksyd.com/manifest.json
+- https://blaksyd.com/.well-known/security.txt
+- https://blaksyd.com/machine-readable-sitemap.xml
+
+Founder entity files:
+
+- https://blaksyd.com/founders/vishnu-sudagani.json
+- https://blaksyd.com/founders/sindhuu-devarakonda.json

@@ -1,104 +1,449 @@
 ---
 import AppLayout from '../../layouts/AppLayout.astro';
 ---
-<AppLayout active="persona" title="Persona" soon>
+<AppLayout active="persona" title="Persona">
   <div class="ap-page px">
-    <p class="ap-kicker">Persona · your digital selves</p>
-    <h1 class="ap-h1">A you that thinks. <span class="px-accent">And anyone you build.</span></h1>
-    <p class="ap-sub">Switch between a clone of you and characters you create — each one sounds like its own person.</p>
+    <p class="ap-kicker">Persona · your digital self</p>
+    <h1 class="ap-h1">A you that speaks <span class="px-accent">in your own voice.</span></h1>
+    <p class="ap-sub">Record your voice once per language. Then talk — and your persona answers back, in your voice, in whichever language you speak.</p>
 
-    <div class="px-selves" id="px-selves" role="tablist">
-      <button class="px-self c-lav is-on" data-self="clone"><span class="px-dot"></span>You · clone</button>
-      <button class="px-self c-gold" data-self="hype"><span class="px-dot"></span>Hype</button>
-      <button class="px-self c-coral" data-self="critic"><span class="px-dot"></span>Critic</button>
-      <button class="px-self c-aqua" data-self="study"><span class="px-dot"></span>Study buddy</button>
-      <button class="px-self px-new" data-self="new"><span class="px-plus">+</span>Build new</button>
-    </div>
+    <div id="px-app" hidden>
+      <!-- ── 1. YOUR VOICE — enrollment ─────────────────────────── -->
+      <section class="ap-card px-card">
+        <div class="px-card-head">
+          <h2 class="px-card-title">Your voice</h2>
+          <span class="px-card-tag" id="px-voice-tag">not recorded yet</span>
+        </div>
 
-    <div class="px-stage ap-card" id="px-stage">
-      <div class="px-stage-head">
-        <span class="px-avatar" id="px-avatar"></span>
-        <span class="px-who"><b id="px-name">You · clone</b><i id="px-role">looks and speaks as you</i></span>
-        <span class="px-badge" id="px-badge">clone</span>
-      </div>
-      <div class="px-bubble" id="px-bubble">I kept your people close today — drafted a reply to Maya in your style, and a July window seat is on hold. All waiting for your okay.</div>
-      <div class="px-meter-wrap" id="px-meter-wrap" hidden><span class="px-meter-l">confidence</span><div class="px-meter"><span></span></div></div>
-      <form class="px-composer" id="px-form">
-        <input type="text" id="px-input" placeholder="Say something to this persona…" autocomplete="off" />
-        <button type="submit" aria-label="Send"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
-      </form>
+        <div class="px-langs" id="px-enroll-langs" role="tablist" aria-label="Language to record"></div>
+
+        <p class="px-phrase-label">Read this aloud, clearly, once:</p>
+        <blockquote class="px-phrase" id="px-phrase"></blockquote>
+
+        <div class="px-rec">
+          <button type="button" class="px-mic" id="px-rec-btn" aria-label="Record">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v4"/></svg>
+          </button>
+          <div class="px-rec-meta">
+            <span class="px-rec-state" id="px-rec-state">Tap to record</span>
+            <span class="px-rec-timer" id="px-rec-timer">0:00</span>
+          </div>
+        </div>
+
+        <div class="px-review" id="px-review" hidden>
+          <audio id="px-review-audio" controls></audio>
+          <div class="px-review-actions">
+            <button type="button" class="px-btn px-btn-go" id="px-save">Save my voice</button>
+            <button type="button" class="px-btn px-btn-ghost" id="px-redo">Re-record</button>
+          </div>
+        </div>
+
+        <p class="px-msg" id="px-enroll-msg" role="status"></p>
+
+        <div class="px-enrolled" id="px-enrolled" hidden>
+          <p class="px-enrolled-label">Your recorded voices</p>
+          <ul class="px-enrolled-list" id="px-enrolled-list"></ul>
+          <button type="button" class="px-btn px-btn-danger" id="px-delete">Delete my voice</button>
+        </div>
+      </section>
+
+      <!-- ── 2. TALK TO YOUR PERSONA ────────────────────────────── -->
+      <section class="ap-card px-card">
+        <div class="px-card-head">
+          <h2 class="px-card-title">Talk to your persona</h2>
+          <div class="px-talk-lang">
+            <label for="px-talk-select">Voice</label>
+            <select id="px-talk-select"></select>
+          </div>
+        </div>
+
+        <div class="px-thread" id="px-thread" aria-live="polite">
+          <div class="px-bubble px-bubble-ai">Record your voice above, then say something here — I’ll answer back in your voice.</div>
+        </div>
+
+        <form class="px-composer" id="px-form">
+          <button type="button" class="px-mic-sm" id="px-voicein" aria-label="Speak" title="Speak">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v4"/></svg>
+          </button>
+          <input type="text" id="px-input" placeholder="Say something to your persona…" autocomplete="off" />
+          <button type="submit" class="px-send" aria-label="Send"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+        </form>
+        <audio id="px-talk-audio" hidden></audio>
+      </section>
+
+      <p class="px-note">Your voice is stored privately, only for you, and only after you read the phrase aloud (so it’s really you). One‑tap delete any time. Nothing is ever sent as you without your approval.</p>
     </div>
-    <p class="px-note">Beta preview — personas are scripted for now. Training + your real clone come next. Nothing is ever sent as you without your approval.</p>
   </div>
 
   <style>
     .px-accent { font-family: var(--font-serif); font-style: italic; font-weight: 400; background: linear-gradient(110deg, var(--lavender), var(--lavender-deep)); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
-    .px-selves { display: flex; flex-wrap: wrap; gap: .55rem; margin: clamp(1.2rem,3vh,1.8rem) 0 1.1rem; }
-    .px-self { display: inline-flex; align-items: center; gap: .5rem; font: inherit; font-size: var(--fs-md); font-weight: 500; color: var(--ink-soft); background: var(--surface); border: 1px solid var(--line-strong); border-radius: var(--r-pill); padding: .55rem .9rem; cursor: pointer; transition: .18s; }
-    .px-self:hover { color: var(--ink); transform: translateY(-1px); }
-    .px-self.is-on { color: var(--ink); background: var(--surface-strong); }
-    .px-dot { width: 9px; height: 9px; border-radius: 50%; }
-    .c-lav .px-dot { background: var(--lavender); } .c-gold .px-dot { background: var(--gold); } .c-coral .px-dot { background: var(--coral); } .c-aqua .px-dot { background: var(--aqua); }
-    .px-self.is-on.c-lav { box-shadow: inset 0 0 0 1px var(--lavender); } .px-self.is-on.c-gold { box-shadow: inset 0 0 0 1px var(--gold); } .px-self.is-on.c-coral { box-shadow: inset 0 0 0 1px var(--coral); } .px-self.is-on.c-aqua { box-shadow: inset 0 0 0 1px var(--aqua); }
-    .px-new { border-style: dashed; color: var(--ink-faint); } .px-plus { font-size: 1.1em; line-height: 1; }
+    html[data-theme="light"] .px-accent { background: linear-gradient(110deg, var(--lavender-ink), #5b46ad); -webkit-background-clip: text; background-clip: text; }
 
-    .px-stage { padding: 1.2rem 1.3rem 1.3rem; }
-    .px-stage-head { display: flex; align-items: center; gap: .7rem; padding-bottom: 1rem; border-bottom: 1px solid var(--line); }
-    .px-avatar { width: 40px; height: 40px; border-radius: 50%; flex: none; background: linear-gradient(135deg, var(--lavender), var(--lavender-deep)); box-shadow: 0 0 16px rgba(201,184,255,.5); transition: background .3s; }
-    .px-who { display: flex; flex-direction: column; line-height: 1.25; }
-    .px-who b { font-size: var(--fs-lg); font-weight: 650; }
-    .px-who i { font-style: normal; font-size: var(--fs-sm); color: var(--ink-faint); }
-    .px-badge { margin-left: auto; font-family: var(--font-mono); font-size: var(--fs-3xs); letter-spacing: .14em; text-transform: uppercase; color: var(--lavender); border: 1px solid rgba(201,184,255,.4); border-radius: 999px; padding: .2rem .55rem; }
-    .px-bubble { margin: 1rem 0 0; padding: .85rem 1rem; border-radius: 6px 16px 16px 16px; background: rgba(201,184,255,.12); border: 1px solid rgba(201,184,255,.22); font-size: var(--fs-base); line-height: 1.55; }
-    .px-meter-wrap { margin-top: .8rem; } .px-meter-l { font-size: var(--fs-xs); color: var(--ink-faint); }
-    .px-meter { height: 7px; border-radius: 999px; background: rgba(255,255,255,.08); overflow: hidden; margin-top: .35rem; } .px-meter span { display: block; height: 100%; width: 82%; border-radius: 999px; background: linear-gradient(90deg, var(--gold), var(--peach-deep)); }
-    .px-composer { display: flex; gap: .5rem; margin-top: 1.1rem; }
+    .px-gate { padding: 1.4rem 1.5rem; margin-top: 1.6rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+    .px-gate p { margin: 0; color: var(--ink-soft); font-size: var(--fs-lg); }
+
+    .px-card { padding: 1.3rem 1.4rem 1.5rem; margin-top: 1.6rem; }
+    .px-card-head { display: flex; align-items: center; gap: .8rem; padding-bottom: 1rem; border-bottom: 1px solid var(--line); margin-bottom: 1.1rem; }
+    .px-card-title { font-family: var(--font-display); font-weight: 600; font-size: var(--fs-xl); margin: 0; }
+    .px-card-tag { margin-left: auto; font-family: var(--font-mono); font-size: var(--fs-3xs); letter-spacing: .12em; text-transform: uppercase; color: var(--lavender); border: 1px solid rgba(201,184,255,.4); border-radius: 999px; padding: .2rem .6rem; }
+    .px-card-tag.is-ready { color: var(--mint); border-color: rgba(127, 224, 183, .45); }
+
+    .px-langs { display: flex; flex-wrap: wrap; gap: .5rem; margin-bottom: 1.2rem; }
+    .px-lang { font: inherit; font-size: var(--fs-md); font-weight: 500; color: var(--ink-soft); background: var(--surface); border: 1px solid var(--line-strong); border-radius: var(--r-pill); padding: .5rem 1rem; cursor: pointer; transition: .18s; display: inline-flex; align-items: center; gap: .45rem; }
+    .px-lang:hover { color: var(--ink); transform: translateY(-1px); }
+    .px-lang.is-on { color: var(--ink); background: var(--surface-strong); box-shadow: inset 0 0 0 1px var(--lavender); }
+    .px-lang .px-check { width: 7px; height: 7px; border-radius: 50%; background: var(--mint); box-shadow: 0 0 6px var(--mint); }
+
+    .px-phrase-label { margin: 0 0 .5rem; font-size: var(--fs-sm); color: var(--ink-faint); }
+    .px-phrase { margin: 0 0 1.3rem; padding: 1rem 1.15rem; border-radius: 6px 16px 16px 16px; background: rgba(201,184,255,.10); border: 1px solid rgba(201,184,255,.22); font-size: var(--fs-lg); line-height: 1.55; color: var(--ink); }
+
+    .px-rec { display: flex; align-items: center; gap: 1rem; }
+    .px-mic { flex: none; width: 64px; height: 64px; border-radius: 50%; border: 0; cursor: pointer; color: #fff; background: linear-gradient(135deg, var(--lavender-deep), var(--lavender)); box-shadow: 0 0 22px rgba(201,184,255,.45); transition: transform .15s; display: grid; place-items: center; }
+    .px-mic:hover { transform: scale(1.04); }
+    .px-mic svg { width: 26px; height: 26px; }
+    .px-mic.is-rec { background: linear-gradient(135deg, #F4458C, #FF6B9D); box-shadow: 0 0 0 0 rgba(244,69,140,.5); animation: px-pulse 1.4s infinite; }
+    @keyframes px-pulse { 0% { box-shadow: 0 0 0 0 rgba(244,69,140,.5); } 70% { box-shadow: 0 0 0 14px rgba(244,69,140,0); } 100% { box-shadow: 0 0 0 0 rgba(244,69,140,0); } }
+    .px-rec-meta { display: flex; flex-direction: column; line-height: 1.3; }
+    .px-rec-state { font-size: var(--fs-md); color: var(--ink); font-weight: 500; }
+    .px-rec-timer { font-family: var(--font-mono); font-size: var(--fs-sm); color: var(--ink-faint); }
+
+    .px-review { margin-top: 1.2rem; }
+    .px-review audio { width: 100%; height: 40px; }
+    .px-review-actions { display: flex; gap: .6rem; margin-top: .8rem; }
+
+    .px-btn { font: inherit; font-size: var(--fs-md); font-weight: 550; border-radius: var(--r-pill); padding: .6rem 1.2rem; cursor: pointer; border: 1px solid transparent; transition: .15s; }
+    .px-btn-go { color: #1b1030; background: var(--cta-grad); box-shadow: 0 0 16px rgba(255,107,157,.3); border: 0; }
+    .px-btn-go:hover { transform: translateY(-1px); }
+    .px-btn-ghost { background: var(--surface); border-color: var(--line-strong); color: var(--ink-soft); }
+    .px-btn-ghost:hover { color: var(--ink); }
+    .px-btn-danger { background: none; border-color: rgba(244,69,140,.4); color: var(--coral); margin-top: 1rem; }
+    .px-btn-danger:hover { background: rgba(244,69,140,.08); }
+    .px-btn:disabled { opacity: .5; cursor: progress; transform: none; }
+
+    .px-msg { margin: 1rem 0 0; font-size: var(--fs-sm); min-height: 1.2em; }
+    .px-msg.is-err { color: var(--coral); }
+    .px-msg.is-ok { color: var(--mint); }
+    .px-msg.is-busy { color: var(--ink-faint); }
+
+    .px-enrolled { margin-top: 1.4rem; padding-top: 1.2rem; border-top: 1px solid var(--line); }
+    .px-enrolled-label { margin: 0 0 .6rem; font-size: var(--fs-sm); color: var(--ink-faint); }
+    .px-enrolled-list { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: .5rem; }
+    .px-enrolled-list li { font-size: var(--fs-sm); color: var(--ink); background: var(--surface); border: 1px solid var(--line-strong); border-radius: var(--r-pill); padding: .35rem .8rem; display: inline-flex; align-items: center; gap: .4rem; }
+    .px-enrolled-list li .px-check { width: 7px; height: 7px; border-radius: 50%; background: var(--mint); box-shadow: 0 0 6px var(--mint); }
+
+    /* talk */
+    .px-talk-lang { margin-left: auto; display: flex; align-items: center; gap: .5rem; }
+    .px-talk-lang label { font-size: var(--fs-sm); color: var(--ink-faint); }
+    .px-talk-lang select { font: inherit; font-size: var(--fs-md); color: var(--ink); background: var(--surface); border: 1px solid var(--line-strong); border-radius: var(--r-md); padding: .4rem .6rem; }
+    .px-thread { display: flex; flex-direction: column; gap: .7rem; max-height: 320px; overflow-y: auto; padding: .3rem .1rem .6rem; }
+    .px-bubble { max-width: 85%; padding: .75rem 1rem; border-radius: 16px; font-size: var(--fs-base); line-height: 1.55; }
+    .px-bubble-ai { align-self: flex-start; border-radius: 6px 16px 16px 16px; background: rgba(201,184,255,.12); border: 1px solid rgba(201,184,255,.22); color: var(--ink); }
+    .px-bubble-me { align-self: flex-end; border-radius: 16px 16px 6px 16px; background: var(--surface-strong); border: 1px solid var(--line-strong); color: var(--ink); }
+    .px-bubble-ai.is-speaking { box-shadow: 0 0 0 1px rgba(201,184,255,.4); }
+    .px-bubble.is-thinking { color: var(--ink-faint); font-style: italic; }
+
+    .px-composer { display: flex; gap: .5rem; margin-top: 1.1rem; align-items: center; }
     .px-composer input { flex: 1; min-width: 0; padding: .8rem 1.05rem; border-radius: var(--r-pill); background: var(--surface); border: 1px solid var(--line-strong); color: var(--ink); font: inherit; font-size: var(--fs-md); }
     .px-composer input:focus { outline: none; border-color: var(--lavender); }
-    .px-composer button { flex: none; width: 46px; border-radius: 50%; border: 0; cursor: pointer; color: #fff; background: linear-gradient(135deg, var(--lavender-deep), var(--lavender)); }
-    .px-composer button svg { width: 19px; height: 19px; }
-    .px-note { margin: .9rem .2rem 0; font-size: var(--fs-xs); color: var(--ink-faint); text-align: center; }
-    /* LIGHT theme: deepen accent text so it reads on cream */
-    html[data-theme="light"] .px-accent { background: linear-gradient(110deg, var(--lavender-ink), #5b46ad); -webkit-background-clip: text; background-clip: text; }
-    html[data-theme="light"] .px-badge { color: var(--lavender-ink); }
+    .px-mic-sm, .px-send { flex: none; width: 44px; height: 44px; border-radius: 50%; border: 0; cursor: pointer; display: grid; place-items: center; color: #fff; }
+    .px-mic-sm { background: var(--surface); border: 1px solid var(--line-strong); color: var(--ink-soft); }
+    .px-mic-sm:hover { color: var(--ink); }
+    .px-mic-sm.is-rec { background: linear-gradient(135deg, #F4458C, #FF6B9D); color: #fff; border: 0; animation: px-pulse 1.4s infinite; }
+    .px-send { background: linear-gradient(135deg, var(--lavender-deep), var(--lavender)); }
+    .px-mic-sm svg, .px-send svg { width: 18px; height: 18px; }
+
+    .px-note { margin: 1.2rem .2rem 0; font-size: var(--fs-xs); color: var(--ink-faint); text-align: center; line-height: 1.6; }
   </style>
 
-  <script is:inline>
-    (function () {
-      var DATA = {
-        clone:  { name: 'You · clone', role: 'looks and speaks as you', badge: 'clone', av: 'linear-gradient(135deg,#C9B8FF,#9683E6)',
-                  msg: "I kept your people close today — drafted a reply to Maya in your style, and a July window seat is on hold. All waiting for your okay.", meter: false,
-                  reply: "On it — I'll draft it in your voice and hold it for your okay. Never sent without you." },
-        hype:   { name: 'Hype', role: 'in your corner', badge: 'character', av: 'linear-gradient(135deg,#FFD27A,#FF9B6C)', meter: true,
-                  msg: "You've got this. You've done harder things half-asleep — walk in like the room's already yours.",
-                  reply: "That nervous energy? That's just proof you care. Channel it. You're ready." },
-        critic: { name: 'Critic', role: 'sharp, on your side', badge: 'character', av: 'linear-gradient(135deg,#FF6B9D,#F4458C)', meter: false,
-                  msg: "Solid start. But slide 3 is doing two jobs — cut it in half and the whole thing gets sharper.",
-                  reply: "Better. Now say it in one sentence — if you can't, it's not clear yet." },
-        study:  { name: 'Study buddy', role: 'keeps you focused', badge: 'character', av: 'linear-gradient(135deg,#9FD9FF,#5BC0FF)', meter: false,
-                  msg: "Okay — 25-minute sprint, just the first problem set. I'll quiz you the second the timer's done.",
-                  reply: "Timer's running. Phone face-down. I'll check in at 25 — go." },
-        new:    { name: 'Build new', role: 'design a character', badge: 'new', av: 'linear-gradient(135deg,#2a2c4a,#3a3d63)', meter: false,
-                  msg: "Tell me who you want — a mentor, a gym hype-coach, a calm late-night voice — and I'll become them. (Builder lands in beta soon.)",
-                  reply: "Love it. Give me a name + a vibe and I'll take shape. (Full builder coming soon.)" },
-      };
-      var selves = document.getElementById('px-selves');
-      var avatar = document.getElementById('px-avatar'), name = document.getElementById('px-name'),
-          role = document.getElementById('px-role'), badge = document.getElementById('px-badge'),
-          bubble = document.getElementById('px-bubble'), meterWrap = document.getElementById('px-meter-wrap');
-      var input = document.getElementById('px-input'), form = document.getElementById('px-form');
-      var cur = 'clone';
-      function load(k) {
-        cur = k; var d = DATA[k];
-        avatar.style.background = d.av; name.textContent = d.name; role.textContent = d.role; badge.textContent = d.badge;
-        bubble.textContent = d.msg; meterWrap.hidden = !d.meter;
-      }
-      selves.addEventListener('click', function (e) {
-        var b = e.target.closest('.px-self'); if (!b) return;
-        [].forEach.call(selves.children, function (x) { x.classList.remove('is-on'); }); b.classList.add('is-on');
-        load(b.getAttribute('data-self'));
+  <script>
+    import { supabase } from '../../lib/supabaseClient';
+
+    // Same-origin '/api' in production (Netlify proxies to the backend). For local
+    // dev against a running symp-backend, set PUBLIC_API_BASE=http://localhost:4000.
+    const API = (import.meta.env.PUBLIC_API_BASE || '').replace(/\/+$/, '');
+
+    const LANGS = [
+      { code: 'en', label: 'English', stt: 'en-US',
+        phrase: 'Hello, this is my own voice, and today I am recording it to create my persona.' },
+      { code: 'hi', label: 'हिन्दी', stt: 'hi-IN',
+        phrase: 'नमस्ते, यह मेरी अपनी आवाज़ है। आज मैं इसे रिकॉर्ड कर रहा हूँ।' },
+      { code: 'te', label: 'తెలుగు', stt: 'te-IN',
+        phrase: 'నమస్తే, ఇది నా సొంత గొంతు. ఈ రోజు నేను దీన్ని రికార్డ్ చేస్తున్నాను.' },
+    ];
+
+    const $ = (id) => document.getElementById(id);
+    let session = null;          // { token, userId }
+    let enrolled = new Set();    // languages with a ready clone
+    let enrollLang = 'en';
+    let recBlob = null;          // last recorded WAV blob
+    const history = [];          // chat history for /api/chat
+
+    // ── auth ──────────────────────────────────────────────────────────────
+    async function getSession() {
+      if (!supabase) return null;
+      try {
+        const { data } = await supabase.auth.getSession();
+        const s = data && data.session;
+        if (!s) return null;
+        return { token: s.access_token, userId: s.user.id, email: s.user.email };
+      } catch { return null; }
+    }
+
+    // ── recording → 24kHz mono 16-bit WAV (clean reference for every engine) ──
+    let mediaRecorder = null, chunks = [], micStream = null, recTimer = null, recStart = 0;
+
+    async function startRec() {
+      micStream = await navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true } });
+      chunks = [];
+      mediaRecorder = new MediaRecorder(micStream);
+      mediaRecorder.ondataavailable = (e) => { if (e.data && e.data.size) chunks.push(e.data); };
+      mediaRecorder.start();
+      recStart = Date.now();
+      recTimer = setInterval(updateTimer, 200);
+    }
+    function stopRec() {
+      return new Promise((resolve) => {
+        mediaRecorder.onstop = async () => {
+          clearInterval(recTimer);
+          if (micStream) micStream.getTracks().forEach((t) => t.stop());
+          const raw = new Blob(chunks, { type: mediaRecorder.mimeType || 'audio/webm' });
+          resolve(await toWav24kMono(raw));
+        };
+        mediaRecorder.stop();
       });
-      form.addEventListener('submit', function (e) { e.preventDefault(); if (!input.value.trim()) return; input.value = ''; bubble.textContent = DATA[cur].reply; });
+    }
+    function updateTimer() {
+      const s = Math.floor((Date.now() - recStart) / 1000);
+      $('px-rec-timer').textContent = Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
+    }
+
+    async function toWav24kMono(blob) {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      const ctx = new AC();
+      const decoded = await ctx.decodeAudioData(await blob.arrayBuffer());
+      ctx.close && ctx.close();
+      const SR = 24000, len = decoded.length, ch = decoded.numberOfChannels;
+      const mono = new Float32Array(len);
+      for (let c = 0; c < ch; c++) { const d = decoded.getChannelData(c); for (let i = 0; i < len; i++) mono[i] += d[i] / ch; }
+      const offline = new OfflineAudioContext(1, Math.max(1, Math.ceil((len * SR) / decoded.sampleRate)), SR);
+      const buf = offline.createBuffer(1, len, decoded.sampleRate);
+      buf.copyToChannel(mono, 0);
+      const src = offline.createBufferSource(); src.buffer = buf; src.connect(offline.destination); src.start();
+      const out = (await offline.startRendering()).getChannelData(0);
+      return encodeWav(out, SR);
+    }
+    function encodeWav(samples, sr) {
+      const view = new DataView(new ArrayBuffer(44 + samples.length * 2));
+      const w = (o, s) => { for (let i = 0; i < s.length; i++) view.setUint8(o + i, s.charCodeAt(i)); };
+      w(0, 'RIFF'); view.setUint32(4, 36 + samples.length * 2, true); w(8, 'WAVE'); w(12, 'fmt ');
+      view.setUint32(16, 16, true); view.setUint16(20, 1, true); view.setUint16(22, 1, true);
+      view.setUint32(24, sr, true); view.setUint32(28, sr * 2, true); view.setUint16(32, 2, true); view.setUint16(34, 16, true);
+      w(36, 'data'); view.setUint32(40, samples.length * 2, true);
+      let o = 44; for (let i = 0; i < samples.length; i++) { const x = Math.max(-1, Math.min(1, samples[i])); view.setInt16(o, x < 0 ? x * 0x8000 : x * 0x7fff, true); o += 2; }
+      return new Blob([view], { type: 'audio/wav' });
+    }
+    const blobToB64 = (blob) => new Promise((res) => { const fr = new FileReader(); fr.onload = () => res(String(fr.result).split(',')[1]); fr.readAsDataURL(blob); });
+
+    // ── enroll UI ─────────────────────────────────────────────────────────
+    function curLang() { return LANGS.find((l) => l.code === enrollLang); }
+    function renderEnrollLangs() {
+      const wrap = $('px-enroll-langs'); wrap.innerHTML = '';
+      LANGS.forEach((l) => {
+        const b = document.createElement('button');
+        b.className = 'px-lang' + (l.code === enrollLang ? ' is-on' : '');
+        b.type = 'button';
+        b.innerHTML = (enrolled.has(l.code) ? '<span class="px-check"></span>' : '') + l.label;
+        b.onclick = () => { enrollLang = l.code; renderEnrollLangs(); $('px-phrase').textContent = curLang().phrase; resetReview(); };
+        wrap.appendChild(b);
+      });
+      $('px-phrase').textContent = curLang().phrase;
+    }
+    function resetReview() {
+      recBlob = null;
+      $('px-review').hidden = true;
+      $('px-rec-state').textContent = 'Tap to record';
+      $('px-rec-timer').textContent = '0:00';
+    }
+    function setMsg(el, kind, text) { el.className = 'px-msg' + (kind ? ' is-' + kind : ''); el.textContent = text || ''; }
+
+    async function onRecClick() {
+      const btn = $('px-rec-btn');
+      if (btn.classList.contains('is-rec')) {
+        btn.classList.remove('is-rec');
+        $('px-rec-state').textContent = 'Processing…';
+        try {
+          recBlob = await stopRec();
+          $('px-review-audio').src = URL.createObjectURL(recBlob);
+          $('px-review').hidden = false;
+          $('px-rec-state').textContent = 'Recorded — listen back, then save';
+          setMsg($('px-enroll-msg'), '', '');
+        } catch (e) { setMsg($('px-enroll-msg'), 'err', 'Could not process the recording. Try again.'); }
+        return;
+      }
+      setMsg($('px-enroll-msg'), '', '');
+      try {
+        await startRec();
+        btn.classList.add('is-rec');
+        $('px-rec-state').textContent = 'Recording… tap to stop';
+      } catch (e) {
+        setMsg($('px-enroll-msg'), 'err', 'Microphone permission is needed to record your voice.');
+      }
+    }
+
+    async function onSave() {
+      if (!recBlob) return;
+      const l = curLang();
+      const btn = $('px-save'); btn.disabled = true;
+      setMsg($('px-enroll-msg'), 'busy', 'Checking it’s really you and saving privately…');
+      try {
+        const audio_base64 = await blobToB64(recBlob);
+        const r = await fetch(API + '/api/voice-clone/enroll', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + session.token },
+          body: JSON.stringify({ language: l.code, audio_base64, mime_type: 'audio/wav', prompt_phrase: l.phrase }),
+        });
+        const j = await r.json();
+        if (j.ok) {
+          setMsg($('px-enroll-msg'), 'ok', 'Saved! Your ' + l.label + ' voice is ready.');
+          resetReview();
+          await loadStatus();
+        } else {
+          const code = j.error && j.error.code;
+          const map = {
+            liveness_failed: 'That didn’t match the phrase — please read it aloud, exactly, clearly.',
+            clip_too_short: 'Too short — read the whole phrase, then stop.',
+            liveness_unavailable: 'Couldn’t verify the recording just now. Please try again.',
+          };
+          setMsg($('px-enroll-msg'), 'err', map[code] || (j.error && j.error.message) || 'Could not save. Try again.');
+        }
+      } catch (e) {
+        setMsg($('px-enroll-msg'), 'err', 'Network error — is the backend reachable? Try again.');
+      } finally { btn.disabled = false; }
+    }
+
+    async function loadStatus() {
+      try {
+        const r = await fetch(API + '/api/voice-clone/status', { headers: { Authorization: 'Bearer ' + session.token } });
+        const j = await r.json();
+        enrolled = new Set(((j.data && j.data.clones) || []).filter((c) => c.status === 'ready').map((c) => c.language));
+      } catch { /* leave enrolled as-is */ }
+      // reflect everywhere
+      const ready = enrolled.size > 0;
+      $('px-voice-tag').textContent = ready ? (enrolled.size + ' language' + (enrolled.size > 1 ? 's' : '') + ' ready') : 'not recorded yet';
+      $('px-voice-tag').classList.toggle('is-ready', ready);
+      renderEnrollLangs();
+      const list = $('px-enrolled-list'); list.innerHTML = '';
+      LANGS.filter((l) => enrolled.has(l.code)).forEach((l) => {
+        const li = document.createElement('li'); li.innerHTML = '<span class="px-check"></span>' + l.label; list.appendChild(li);
+      });
+      $('px-enrolled').hidden = !ready;
+      renderTalkOptions();
+    }
+
+    async function onDelete() {
+      if (!confirm('Delete your voice in all languages? This removes your recordings permanently.')) return;
+      const btn = $('px-delete'); btn.disabled = true;
+      try {
+        await fetch(API + '/api/voice-clone', { method: 'DELETE', headers: { Authorization: 'Bearer ' + session.token } });
+        await loadStatus();
+        setMsg($('px-enroll-msg'), 'ok', 'Your voice was deleted.');
+      } catch { setMsg($('px-enroll-msg'), 'err', 'Could not delete. Try again.'); }
+      finally { btn.disabled = false; }
+    }
+
+    // ── talk ──────────────────────────────────────────────────────────────
+    function renderTalkOptions() {
+      const sel = $('px-talk-select'); const prev = sel.value;
+      sel.innerHTML = '';
+      LANGS.forEach((l) => {
+        const o = document.createElement('option'); o.value = l.code;
+        o.textContent = l.label + (enrolled.has(l.code) ? ' · your voice' : ' · stand-in');
+        sel.appendChild(o);
+      });
+      if (prev) sel.value = prev;
+    }
+    function addBubble(kind, text) {
+      const d = document.createElement('div');
+      d.className = 'px-bubble px-bubble-' + kind;
+      d.textContent = text;
+      $('px-thread').appendChild(d);
+      $('px-thread').scrollTop = $('px-thread').scrollHeight;
+      return d;
+    }
+
+    async function sendTurn(text) {
+      const lang = $('px-talk-select').value;
+      addBubble('me', text);
+      history.push({ role: 'user', content: text });
+      const thinking = addBubble('ai', '…'); thinking.classList.add('is-thinking');
+      try {
+        const cr = await fetch(API + '/api/chat', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ user_id: session.userId, messages: history.slice(-12) }),
+        });
+        const cj = await cr.json();
+        const reply = (cj.data && cj.data.reply) || cj.reply || (cj.error && cj.error.message) || 'Sorry, I could not reply just now.';
+        thinking.classList.remove('is-thinking'); thinking.textContent = reply;
+        history.push({ role: 'assistant', content: reply });
+        // speak it back in the cloned voice
+        thinking.classList.add('is-speaking');
+        await speak(reply, lang);
+        thinking.classList.remove('is-speaking');
+      } catch (e) {
+        thinking.classList.remove('is-thinking'); thinking.textContent = 'Network error — is the backend reachable?';
+      }
+    }
+
+    async function speak(text, language) {
+      try {
+        const r = await fetch(API + '/api/voice-clone/speak', {
+          method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + session.token },
+          body: JSON.stringify({ text, language }),
+        });
+        const j = await r.json();
+        const b64 = j.data && j.data.audio_base64;
+        if (!b64) return;
+        const a = $('px-talk-audio');
+        a.src = 'data:' + ((j.data && j.data.mime_type) || 'audio/mpeg') + ';base64,' + b64;
+        await a.play().catch(() => {});
+      } catch { /* silent — text is already shown */ }
+    }
+
+    // browser speech-to-text for hands-free input (optional, no backend cost)
+    let recog = null, listening = false;
+    function setupVoiceIn() {
+      const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SR) { $('px-voicein').style.display = 'none'; return; }
+      $('px-voicein').onclick = () => {
+        if (listening) { recog && recog.stop(); return; }
+        recog = new SR();
+        recog.lang = (LANGS.find((l) => l.code === $('px-talk-select').value) || LANGS[0]).stt;
+        recog.interimResults = false; recog.maxAlternatives = 1;
+        recog.onresult = (e) => { const t = e.results[0][0].transcript; if (t) sendTurn(t.trim()); };
+        recog.onend = () => { listening = false; $('px-voicein').classList.remove('is-rec'); };
+        recog.onerror = () => { listening = false; $('px-voicein').classList.remove('is-rec'); };
+        listening = true; $('px-voicein').classList.add('is-rec'); recog.start();
+      };
+    }
+
+    // ── boot ──────────────────────────────────────────────────────────────
+    (async () => {
+      // AppLayout gates the whole beta app, so by here the user is signed in.
+      session = await getSession();
+      $('px-app').hidden = false;
+      renderEnrollLangs();
+      renderTalkOptions();
+      setupVoiceIn();
+      $('px-rec-btn').onclick = onRecClick;
+      $('px-save').onclick = onSave;
+      $('px-redo').onclick = resetReview;
+      $('px-delete').onclick = onDelete;
+      $('px-form').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const v = $('px-input').value.trim(); if (!v) return;
+        $('px-input').value = ''; sendTurn(v);
+      });
+      await loadStatus();
     })();
   </script>
 </AppLayout>

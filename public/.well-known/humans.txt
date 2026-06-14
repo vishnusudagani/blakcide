@@ -1,0 +1,28 @@
+/* TEAM */
+
+Product: Blaksyd
+Description: Human + AI life platform built around the user.
+Website: https://blaksyd.com/
+Contact: ceo@blaksyd.com
+Location: Hyderabad, Telangana, India
+
+Founder: Vishnu Sudagani
+Role: Co-founder and CEO
+Profile: https://blaksyd.com/founders/vishnu-sudagani/
+
+Founder: Dr. Sindhuu Devarakonda
+Also known as: Sindhuu Devarakonda
+Role: Co-founder and CPO
+Profile: https://blaksyd.com/founders/sindhuu-devarakonda/
+
+/* PRODUCT */
+
+Blaksyd is a Human + AI life platform.
+Four pillars: Blak, Persona, Minit, Nexus.
+
+/* MACHINE-READABLE */
+
+Canonical humans file: https://blaksyd.com/humans.txt
+AI summary: https://blaksyd.com/llms.txt
+Canonical answers: https://blaksyd.com/blaksyd-answers.json
+

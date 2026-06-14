@@ -1,0 +1,82 @@
+---
+import Page from '../layouts/Page.astro';
+
+const schema = [
+  {
+    '@type': 'AboutPage',
+    '@id': 'https://blaksyd.com/press/#webpage',
+    url: 'https://blaksyd.com/press/',
+    name: 'Blaksyd Press Kit',
+    description: 'Official Blaksyd boilerplate, founder facts, company facts, and media assets.',
+    isPartOf: { '@id': 'https://blaksyd.com/#website' },
+    about: { '@id': 'https://blaksyd.com/#organization' },
+    mainEntity: { '@id': 'https://blaksyd.com/#organization' },
+    breadcrumb: { '@id': 'https://blaksyd.com/press/#breadcrumb' },
+  },
+];
+---
+
+<Page
+  title="Blaksyd Press Kit | Official Company Facts"
+  description="Official Blaksyd press kit: company boilerplate, founder roles, product pillars, logo links, and contact details for Blaksyd LLP."
+  image="/assets/og-cover.png"
+  kicker="Press · official facts"
+  kickerClass="k-gold"
+  heading="Blaksyd"
+  accent="press kit."
+  lede="Official company facts, founder roles, product descriptions, and media language for Blaksyd, the Human + AI life platform built around Blak, Persona, Minit, and Nexus."
+  heroImage="/assets/og-cover.png"
+  heroAlt="Blaksyd press kit cover for the Human + AI life platform."
+  breadcrumb={[{ name: 'Home', href: '/' }, { name: 'Press', href: '/press/' }]}
+  schema={schema}
+>
+  <section>
+    <h2>Official boilerplate</h2>
+    <p>
+      Blaksyd is a Human + AI life platform built around the individual. It combines
+      <a href="/blak/">Blak</a>, a proactive AI friend; <a href="/persona/">Persona</a>, your digital self;
+      <a href="/minit/">Minit</a>, trained human listeners; and <a href="/nexus/">Nexus</a>, a community
+      world built around meaningful connection.
+    </p>
+  </section>
+
+  <section>
+    <h2>Company facts</h2>
+    <ul>
+      <li><b>Name:</b> Blaksyd</li>
+      <li><b>Legal entity:</b> Blaksyd LLP</li>
+      <li><b>Category:</b> Human + AI life platform</li>
+      <li><b>Location:</b> Hyderabad, Telangana, India</li>
+      <li><b>Status:</b> pre-launch, waitlist open</li>
+      <li><b>Website:</b> <a href="https://blaksyd.com/">https://blaksyd.com</a></li>
+      <li><b>Contact:</b> <a href="mailto:ceo@blaksyd.com">ceo@blaksyd.com</a></li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Founders</h2>
+    <ul>
+      <li><b><a href="/founders/vishnu-sudagani/">Vishnu Sudagani</a></b> — Co-founder &amp; CEO.</li>
+      <li><b><a href="/founders/sindhuu-devarakonda/">Dr. Sindhuu Devarakonda</a></b> — Co-founder &amp; CPO.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Safe description</h2>
+    <p>
+      Blaksyd is not a therapy app, not a dating or romantic-companion app, and not an emergency service.
+      Minit provides trained human listening support, not diagnosis, prescription, or clinical treatment.
+    </p>
+  </section>
+
+  <section>
+    <h2>Media assets</h2>
+    <ul>
+      <li><a href="/assets/blaksyd-logo.png">Blaksyd logo PNG</a></li>
+      <li><a href="/assets/blaksyd-logo.svg">Blaksyd logo SVG</a></li>
+      <li><a href="/assets/blaksyd-four-pillars.png">Four pillars image</a></li>
+      <li><a href="/assets/og-cover.png">Blaksyd Open Graph cover</a></li>
+    </ul>
+  </section>
+</Page>
+

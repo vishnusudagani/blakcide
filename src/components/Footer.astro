@@ -41,18 +41,24 @@ const year = 2026; // static build; stamped, not Date.now() (kept deterministic)
 
     <nav class="foot-nav" aria-label="Company">
       <p class="foot-h">Company</p>
+      <a href="/what-is-blaksyd/">What is Blaksyd?</a>
+      <a href="/search/">Search Blaksyd</a>
+      <a href="/answers/">Answers for AI search</a>
       <a href="/about/">About Blaksyd</a>
+      <a href="/founders/">Founders</a>
+      <a href="/press/">Press kit</a>
       <a href="/manifesto/">Manifesto</a>
       <a href="/blog/">Blog</a>
-      <a href="/#faq">FAQ</a>
     </nav>
 
-    <nav class="foot-nav" aria-label="Legal">
-      <p class="foot-h">Legal</p>
+    <nav class="foot-nav" aria-label="Trust and legal">
+      <p class="foot-h">Trust</p>
+      <a href="/safety/">Safety</a>
+      <a href="/minit/not-therapy/">Minit is not therapy</a>
+      <a href="/trust/context-not-content/">Context, not content</a>
       <a href="/privacy/">Privacy</a>
       <a href="/terms/">Terms</a>
       <a href="mailto:ceo@blaksyd.com">Contact</a>
-      <a href="/#waitlist" data-open-auth data-tab="signup">Get early access</a>
     </nav>
   </div>
 
@@ -115,6 +121,8 @@ const year = 2026; // static build; stamped, not Date.now() (kept deterministic)
     border-top: 1px solid var(--line);
   }
   .foot-copy { font-size: var(--fs-sm); color: var(--ink-faint); }
-  .foot-tag { font-size: var(--fs-sm); color: var(--ink-ghost); font-style: italic; }
+  /* meaningful brand copy — was --ink-ghost (0.18 alpha → 1.58:1, fails AA per
+     Lighthouse); --ink-faint matches .foot-copy and clears 4.5:1 in both themes. */
+  .foot-tag { font-size: var(--fs-sm); color: var(--ink-faint); font-style: italic; }
   @media (max-width: 560px) { .foot-base { justify-content: center; text-align: center; } }
 </style>

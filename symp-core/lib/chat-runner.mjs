@@ -1,7 +1,10 @@
-// Streaming chat runner with tool-call support.
+// Streaming chat runner with tool-call support — OPEN-SOURCE provider edition.
 //
 // Responsibilities:
-//   - Open a streaming OpenAI completion
+//   - Open a streaming chat completion against the first healthy OPEN-SOURCE
+//     provider (Qwen 2.5 72B hosts → Groq/Llama floor; see llm-providers.mjs).
+//     Every provider is OpenAI-Chat-Completions-compatible, so the wire format
+//     (streaming deltas + tool-call deltas) is identical — no OpenAI anywhere.
 //   - Pipe content tokens out as SSE `data: {"delta":"…"}\n\n` to the client
 //   - On finish_reason='tool_calls', execute the tools, append the assistant
 //     turn (with tool_calls) and the tool results to the message stack,
@@ -9,6 +12,11 @@
 //   - Emit side-channel SSE meta events when specific tools fire so the
 //     frontend can render UI cards (escalate_to_human, suggest_switch_to_text,
 //     swap_persona) without parsing the model's text
+//
+// Failover: for each round we try providers in priority order until one returns
+// OK headers; the provider that worked is reused for subsequent tool rounds so
+// the model/voice stays consistent across a single answer. Only if every
+// provider fails do we surface an error event.
 //
 // Cap recursion at MAX_TOOL_ROUNDS (3) so a buggy tool can't infinite-loop.
 //
@@ -18,46 +26,77 @@
 //   data: {"done":true}                — finished
 //   data: {"error":"…"}                — fatal error
 
+import { chatProviders } from './llm-providers.mjs';
+
 const MAX_TOOL_ROUNDS = 3;
 
 /**
  * Run a streaming chat with tool support. Writes SSE chunks to `writer`.
  *
  * @param {Object}   opts
- * @param {string}   opts.openaiKey
- * @param {string}   opts.model
- * @param {Array}    opts.messages       — initial message stack (system + user/assistant)
- * @param {Array}    opts.tools          — OpenAI tool definitions
- * @param {Function} opts.executeTool    — async (name, args, ctx) → string
- * @param {Object}   opts.toolCtx        — { userId, … } passed through to executors
- * @param {Object}   opts.writer         — TransformStream writer
+ * @param {Array}    [opts.providers]     — open-source provider list (defaults to chatProviders())
+ * @param {Array}    opts.messages        — initial message stack (system + user/assistant)
+ * @param {Array}    opts.tools           — OpenAI-format tool definitions (may be [])
+ * @param {Function} opts.executeTool     — async (name, args, ctx) → string
+ * @param {Object}   opts.toolCtx         — { userId, … } passed through to executors
+ * @param {Object}   opts.writer          — TransformStream writer
  * @param {TextEncoder} opts.encoder
  * @param {number}   [opts.maxTokens]
  */
 export async function runStreamingChatWithTools(opts) {
     const {
-        openaiKey, model, tools, executeTool, toolCtx,
+        tools, executeTool, toolCtx,
         writer, encoder, maxTokens = 600,
     } = opts;
     let messages = opts.messages.slice();
 
+    const candidates = (opts.providers && opts.providers.length) ? opts.providers : chatProviders();
+    if (!candidates.length) {
+        await writer.write(encoder.encode(`data: ${JSON.stringify({ error: 'No open-source LLM providers configured' })}\n\n`));
+        return;
+    }
+    // Stick with whichever provider answered last round for consistency.
+    let preferred = candidates[0];
+
+    const hasTools = Array.isArray(tools) && tools.length > 0;
+
     for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
-        const res = await fetch('https://api.openai.com/v1/chat/completions', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${openaiKey}` },
-            body:   JSON.stringify({
-                model,
+        // ── Open a stream, trying the preferred provider first, then the rest ──
+        const order = [preferred, ...candidates.filter(p => p !== preferred)];
+        let res = null;
+        let lastErr = '';
+        for (const p of order) {
+            const body = {
+                model:       p.model,
                 messages,
                 stream:      true,
                 temperature: 0.75,
                 max_tokens:  maxTokens,
-                tools,
-                tool_choice: 'auto',
-            }),
-        });
-        if (!res.ok) {
-            const errText = await res.text().catch(() => '');
-            await writer.write(encoder.encode(`data: ${JSON.stringify({ error: errText.slice(0, 400) })}\n\n`));
+            };
+            if (hasTools && p.supportsTools !== false) {
+                body.tools       = tools;
+                body.tool_choice = 'auto';
+            }
+            try {
+                const r = await fetch(p.baseUrl, {
+                    method:  'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${p.apiKey}`, ...(p.headers || {}) },
+                    body:    JSON.stringify(body),
+                });
+                if (!r.ok) {
+                    lastErr = `${p.id}:${r.status} ${(await r.text().catch(() => '')).slice(0, 160)}`;
+                    continue;
+                }
+                res = r;
+                preferred = p;
+                break;
+            } catch (e) {
+                lastErr = `${p.id}:${(e?.message || e).toString().slice(0, 100)}`;
+                continue;
+            }
+        }
+        if (!res) {
+            await writer.write(encoder.encode(`data: ${JSON.stringify({ error: `All providers failed → ${lastErr}` })}\n\n`));
             return;
         }
 
@@ -121,7 +160,7 @@ export async function runStreamingChatWithTools(opts) {
         }
 
         // ── Tool round ─────────────────────────────────────────────────────
-        // Append the assistant turn (with tool_calls) so OpenAI recognises
+        // Append the assistant turn (with tool_calls) so the model recognises
         // the tool replies on the next round.
         messages.push({
             role:       'assistant',

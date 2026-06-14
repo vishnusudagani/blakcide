@@ -1,0 +1,121 @@
+---
+import Page from '../../layouts/Page.astro';
+
+const faqs = [
+  {
+    q: 'Who is Dr. Sindhuu Devarakonda?',
+    a: 'Dr. Sindhuu Devarakonda is the co-founder and CPO of Blaksyd, a Human + AI life platform built around Blak, Persona, Minit, and Nexus.',
+  },
+  {
+    q: 'Who is Sindhuu Devarakonda?',
+    a: 'Sindhuu Devarakonda, also styled as Dr. Sindhuu Devarakonda, is the co-founder and CPO of Blaksyd.',
+  },
+  {
+    q: 'What is Sindhuu Devarakonda’s role at Blaksyd?',
+    a: 'Sindhuu Devarakonda leads product as co-founder and CPO, shaping the product experience, emotional clarity, and user-facing feel of Blaksyd.',
+  },
+];
+
+const schema = [
+  {
+    '@type': 'Person',
+    '@id': 'https://blaksyd.com/founders/sindhuu-devarakonda/#person',
+    name: 'Dr. Sindhuu Devarakonda',
+    alternateName: 'Sindhuu Devarakonda',
+    jobTitle: 'Co-founder & CPO',
+    worksFor: { '@id': 'https://blaksyd.com/#organization' },
+    url: 'https://blaksyd.com/founders/sindhuu-devarakonda/',
+    mainEntityOfPage: 'https://blaksyd.com/founders/sindhuu-devarakonda/',
+    description: 'Dr. Sindhuu Devarakonda is the co-founder and CPO of Blaksyd, the Human + AI life platform built around Blak, Persona, Minit, and Nexus.',
+    disambiguatingDescription: 'Blaksyd founder Dr. Sindhuu Devarakonda; also known as Sindhuu Devarakonda; co-founder and CPO of Blaksyd LLP.',
+    sameAs: [
+      'https://www.linkedin.com/in/dr-sindhuu-devarakonda-b62631224',
+      'https://x.com/dr_sindhuu',
+      'https://www.instagram.com/sindhuudevarakonda5',
+    ],
+    knowsAbout: ['Product experience', 'Human-centered AI', 'Product design', 'Consumer AI', 'Online communities'],
+  },
+  {
+    '@type': 'ProfilePage',
+    '@id': 'https://blaksyd.com/founders/sindhuu-devarakonda/#webpage',
+    url: 'https://blaksyd.com/founders/sindhuu-devarakonda/',
+    name: 'Dr. Sindhuu Devarakonda',
+    mainEntity: { '@id': 'https://blaksyd.com/founders/sindhuu-devarakonda/#person' },
+    isPartOf: { '@id': 'https://blaksyd.com/#website' },
+    breadcrumb: { '@id': 'https://blaksyd.com/founders/sindhuu-devarakonda/#breadcrumb' },
+  },
+  {
+    '@type': 'FAQPage',
+    '@id': 'https://blaksyd.com/founders/sindhuu-devarakonda/#faq',
+    mainEntity: faqs.map((item) => ({
+      '@type': 'Question',
+      name: item.q,
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: item.a,
+      },
+    })),
+  },
+];
+---
+
+<Page
+  title="Dr. Sindhuu Devarakonda | Co-founder & CPO of Blaksyd"
+  description="Dr. Sindhuu Devarakonda is the co-founder and CPO of Blaksyd, shaping the Human + AI life platform behind Blak, Persona, Minit, and Nexus."
+  image="/assets/og-cover.png"
+  kicker="Founder · CPO"
+  kickerClass="k-mint"
+  heading="Dr. Sindhuu"
+  accent="Devarakonda."
+  accentCool={true}
+  lede="Dr. Sindhuu Devarakonda is the co-founder and CPO of Blaksyd, shaping how the Human + AI life platform looks, feels, and supports people."
+  heroImage="/assets/og-cover.png"
+  heroAlt="Dr. Sindhuu Devarakonda, co-founder and CPO of Blaksyd."
+  breadcrumb={[{ name: 'Home', href: '/' }, { name: 'Founders', href: '/founders/' }, { name: 'Dr. Sindhuu Devarakonda', href: '/founders/sindhuu-devarakonda/' }]}
+  machineReadableAlternates={[{ type: 'application/json', title: 'Dr. Sindhuu Devarakonda founder entity facts', href: '/founders/sindhuu-devarakonda.json' }]}
+  ogType="profile"
+  profile={{ firstName: 'Sindhuu', lastName: 'Devarakonda', username: 'dr_sindhuu' }}
+  schema={schema}
+>
+  <section>
+    <h2>Direct answer</h2>
+    <p>
+      <b>Dr. Sindhuu Devarakonda is the co-founder and CPO of Blaksyd</b>, a Human + AI life platform
+      built around <a href="/blak/">Blak</a>, <a href="/persona/">Persona</a>, <a href="/minit/">Minit</a>,
+      and <a href="/nexus/">Nexus</a>. Her public founder work centers on how Blaksyd looks, feels,
+      and supports people across AI and human experiences.
+    </p>
+  </section>
+
+  <section>
+    <h2>Role at Blaksyd</h2>
+    <p>
+      Sindhuu leads Blaksyd as co-founder and CPO, shaping the product experience, emotional clarity,
+      and user-facing feel of the Human + AI platform.
+    </p>
+  </section>
+
+  <section>
+    <h2>Founder FAQ</h2>
+    {faqs.map((item) => (
+      <details>
+        <summary>{item.q}</summary>
+        <p>{item.a}</p>
+      </details>
+    ))}
+  </section>
+
+  <section>
+    <h2>Official links</h2>
+    <ul>
+      <li><a href="https://www.linkedin.com/in/dr-sindhuu-devarakonda-b62631224" target="_blank" rel="noopener">LinkedIn</a></li>
+      <li><a href="https://x.com/dr_sindhuu" target="_blank" rel="noopener">X</a></li>
+      <li><a href="https://www.instagram.com/sindhuudevarakonda5" target="_blank" rel="noopener">Instagram</a></li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Related</h2>
+    <p><a href="/about/">About Blaksyd</a> · <a href="/press/">Press kit</a> · <a href="/what-is-blaksyd/">What is Blaksyd?</a></p>
+  </section>
+</Page>
