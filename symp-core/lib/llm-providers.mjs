@@ -36,6 +36,20 @@ const env = (k) => process.env[k] || undefined;
 export function chatProviders() {
     const all = [
         {
+            // Google Gemini, QUALITY PRIMARY while GCP credits last. The org
+            // disallows Google API keys, so this points at the ADC Cloud Run
+            // proxy (services/gemini-proxy) via GEMINI_BASE_URL — the proxy
+            // authenticates to Vertex with ADC (no keys) and draws the credits.
+            // GEMINI_API_KEY here is the proxy's shared secret, NOT a Google key.
+            // Strong multilingual incl. Hindi; verify Telugu via the bake-off.
+            // Unset GEMINI_API_KEY → falls through to the OSS Qwen/Llama floor.
+            id: 'gemini',
+            baseUrl: env('GEMINI_BASE_URL') || 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions',
+            model: env('GEMINI_CHAT_MODEL') || 'gemini-2.5-flash',
+            apiKey: env('GEMINI_API_KEY'),
+            supportsTools: true,
+        },
+        {
             id: 'together',
             baseUrl: 'https://api.together.xyz/v1/chat/completions',
             model: 'Qwen/Qwen2.5-72B-Instruct-Turbo',

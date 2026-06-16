@@ -1,6 +1,9 @@
-// Listener AI Copilot — returns GPT-4o suggestions to the listener dashboard.
-// ESM format (.mjs) — uses named export instead of CommonJS exports.handler.
-// The listener sends the connected user's profile + session context privately.
+// Listener AI Copilot — returns response suggestions to the listener dashboard
+// via the open-source LLM router (no OpenAI). ESM (.mjs) named export.
+// The listener sends the connected user's profile + session context privately;
+// suggestions are NEVER shown to the user.
+
+import { chatCompleteFailover } from '../../symp-core/lib/llm-providers.mjs';
 
 export const handler = async (event) => {
     const cors = {
@@ -11,9 +14,6 @@ export const handler = async (event) => {
 
     if (event.httpMethod === 'OPTIONS') return { statusCode: 200, headers: cors, body: '' };
     if (event.httpMethod !== 'POST')    return { statusCode: 405, headers: cors, body: JSON.stringify({ error: 'Method not allowed' }) };
-
-    const key = process.env.BLAKCIDE_OPENAI_KEY || process.env.OPENAI_API_KEY;
-    if (!key) return { statusCode: 500, headers: cors, body: JSON.stringify({ error: 'Server config error' }) };
 
     let body;
     try { body = JSON.parse(event.body || '{}'); } catch {
@@ -63,28 +63,16 @@ ${profileContext || '(no profile data available)'}
 ${sessionContext}`;
 
     try {
-        const res = await fetch('https://api.openai.com/v1/chat/completions', {
-            method: 'POST',
-            headers: { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                model: 'gpt-4o',
-                max_tokens: 400,
-                messages: [
-                    { role: 'system', content: systemPrompt },
-                    { role: 'user',   content: listenerQuestion },
-                ],
-            }),
-        });
-
-        if (!res.ok) {
-            const err = await res.text();
-            return { statusCode: res.status, headers: cors, body: JSON.stringify({ error: err }) };
-        }
-
-        const data = await res.json();
-        const reply = data.choices?.[0]?.message?.content || '';
-        return { statusCode: 200, headers: cors, body: JSON.stringify({ reply }) };
+        // Open-source router (Gemini → Qwen hosts → Groq Llama floor). No OpenAI.
+        const { text } = await chatCompleteFailover(
+            [
+                { role: 'system', content: systemPrompt },
+                { role: 'user',   content: listenerQuestion },
+            ],
+            { temperature: 0.6, maxTokens: 400 },
+        );
+        return { statusCode: 200, headers: cors, body: JSON.stringify({ reply: text || '' }) };
     } catch (e) {
-        return { statusCode: 500, headers: cors, body: JSON.stringify({ error: e.message }) };
+        return { statusCode: 502, headers: cors, body: JSON.stringify({ error: e.message }) };
     }
 };
