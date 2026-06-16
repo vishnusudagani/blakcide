@@ -1,0 +1,14 @@
+{
+  "name": "blak-vertex-proxy",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "OpenAI-compatible -> Vertex AI (Gemini) proxy, ADC-authenticated (no API keys). Runs on Cloud Run for Blak.",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "start": "node index.mjs"
+  },
+  "dependencies": {
+    "google-auth-library": "^9.15.0"
+  }
+}

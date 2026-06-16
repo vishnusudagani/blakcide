@@ -1,7 +1,7 @@
 ---
 import AppLayout from '../../layouts/AppLayout.astro';
 ---
-<AppLayout active="blak" title="Blak" soon>
+<AppLayout active="blak" title="Blak">
   <div class="bx">
     <header class="bx-head">
       <span class="bx-orb"></span>
@@ -27,7 +27,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
       <input type="text" id="bx-input" placeholder="Message Blak…" autocomplete="off" />
       <button type="submit" aria-label="Send"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
     </form>
-    <p class="bx-note">Beta preview — replies are scripted for now. The real Blak (your model) lands next.</p>
+    <p class="bx-note">Beta — you're talking to the real Blak now (free open model). It's still learning, so be kind.</p>
   </div>
 
   <style>
@@ -67,30 +67,98 @@ import AppLayout from '../../layouts/AppLayout.astro';
     html[data-theme="light"] .bx-tag { color: var(--coral-ink); }
   </style>
 
-  <script is:inline>
-    (function () {
-      var stream = document.getElementById('bx-stream'), form = document.getElementById('bx-form'),
-          input = document.getElementById('bx-input'), chips = document.getElementById('bx-chips');
-      var REPLIES = {
-        "I'm overwhelmed": "Then let's make today smaller. One thing that matters, the rest moved to tomorrow. I've got it.",
-        "Plan my weekend": "There's a quiet trail 20 min away and Saturday's clear. Want me to pencil it in and sort lunch after?",
-        "Help me focus": "Notifications off for an hour, your two needle-movers lined up, and I'll nudge you when the block's done.",
-        "_default": "I hear you. Tell me a little more — I'm right here."
-      };
-      function row(side, text, typing) {
-        var r = document.createElement('div'); r.className = 'bx-row ' + side;
-        var inner = side === 'them' ? '<span class="bx-av"></span>' : '';
-        inner += '<div class="bx-bub">' + (typing ? '<span class="bx-typing"><span class="bx-dot"></span><span class="bx-dot"></span><span class="bx-dot"></span></span>' : '') + '</div>';
-        r.innerHTML = inner; if (!typing) r.querySelector('.bx-bub').textContent = text;
-        stream.appendChild(r); stream.scrollTop = stream.scrollHeight; return r;
+  <script>
+    // Real Blak — streams from the Groq-backed chat via the authenticated
+    // Blaksyd→Symp proxy (/api/blaksyd/symp/chat). No paid OpenAI, no scripted replies.
+    import { supabase } from '../../lib/supabaseClient';
+
+    const stream = document.getElementById('bx-stream');
+    const form = document.getElementById('bx-form');
+    const input = document.getElementById('bx-input');
+    const chips = document.getElementById('bx-chips');
+
+    const GREETING = "Hey — good to see you. What's going on for you right now?";
+    const history = [];
+    let sending = false;
+
+    function addRow(side, text, typing) {
+      const r = document.createElement('div');
+      r.className = 'bx-row ' + side;
+      const av = side === 'them' ? '<span class="bx-av"></span>' : '';
+      r.innerHTML = av + '<div class="bx-bub">' + (typing ? '<span class="bx-typing"><span class="bx-dot"></span><span class="bx-dot"></span><span class="bx-dot"></span></span>' : '') + '</div>';
+      const bub = r.querySelector('.bx-bub');
+      if (!typing) bub.textContent = text;
+      stream.appendChild(r);
+      stream.scrollTop = stream.scrollHeight;
+      return bub;
+    }
+
+    // Replace the static demo seed with just Blak's live greeting.
+    stream.innerHTML = '';
+    addRow('them', GREETING);
+    history.push({ role: 'assistant', content: GREETING });
+
+    async function getToken() {
+      if (!supabase) return null;
+      try { return (await supabase.auth.getSession()).data?.session?.access_token || null; }
+      catch { return null; }
+    }
+
+    async function send(text) {
+      if (!text || sending) return;
+      sending = true;
+      addRow('me', text);
+      history.push({ role: 'user', content: text });
+      const bub = addRow('them', '', true);
+
+      const jwt = await getToken();
+      if (!jwt) {
+        bub.textContent = "Sign in first and I'm all yours — log in from the menu and come back.";
+        history.pop();
+        sending = false;
+        return;
       }
-      function send(text) {
-        if (!text) return; row('me', text);
-        var t = row('them', '', true);
-        setTimeout(function () { stream.removeChild(t); row('them', REPLIES[text] || REPLIES._default); }, 750);
+
+      try {
+        const res = await fetch('/api/blaksyd/symp/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + jwt },
+          body: JSON.stringify({ messages: history, stream: true }),
+        });
+        if (!res.ok || !res.body) throw new Error('http_' + res.status);
+
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let acc = '', buf = '';
+        bub.textContent = '';
+        for (;;) {
+          const { value, done } = await reader.read();
+          if (done) break;
+          buf += decoder.decode(value, { stream: true });
+          const lines = buf.split('\n');
+          buf = lines.pop() || '';
+          for (const line of lines) {
+            const t = line.trim();
+            if (!t.startsWith('data:')) continue;
+            const p = t.slice(5).trim();
+            if (!p || p === '[DONE]') continue;
+            let obj; try { obj = JSON.parse(p); } catch { continue; }
+            if (obj.delta) { acc += obj.delta; bub.textContent = acc; stream.scrollTop = stream.scrollHeight; }
+            if (obj.error) throw new Error(String(obj.error));
+          }
+        }
+        acc = acc.trim();
+        bub.textContent = acc || '…';
+        history.push({ role: 'assistant', content: acc });
+      } catch (e) {
+        bub.textContent = 'I had trouble reaching my brain just now — give me another try in a moment.';
+        history.pop();
+      } finally {
+        sending = false;
       }
-      form.addEventListener('submit', function (e) { e.preventDefault(); var v = input.value.trim(); input.value = ''; send(v); });
-      chips.addEventListener('click', function (e) { var b = e.target.closest('.bx-chip'); if (b) send(b.getAttribute('data-msg')); });
-    })();
+    }
+
+    form.addEventListener('submit', (e) => { e.preventDefault(); const v = input.value.trim(); input.value = ''; send(v); });
+    chips.addEventListener('click', (e) => { const b = e.target.closest('.bx-chip'); if (b) send(b.getAttribute('data-msg')); });
   </script>
 </AppLayout>

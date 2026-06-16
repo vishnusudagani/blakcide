@@ -12,7 +12,7 @@ const { active = 'home', title = 'Home', soon = false } = Astro.props;
 // soon: feature is a preview, not yet live (Blak / Persona / Minit). Nexus is live.
 const nav = [
   { id: 'home',    href: '/beta/',         label: 'Home',    c: 'gold',  d: 'M3 11l9-7 9 7M5 10v10h14V10' },
-  { id: 'blak',    href: '/beta/blak/',    label: 'Blak',    c: 'coral', soon: true, d: 'M4 5h16v11H8l-4 4z' },
+  { id: 'blak',    href: '/beta/blak/',    label: 'Blak',    c: 'coral', d: 'M4 5h16v11H8l-4 4z' },
   { id: 'persona', href: '/beta/persona/', label: 'Persona', c: 'lav',   soon: true, d: 'M12 12a4 4 0 100-8 4 4 0 000 8zM5 20a7 7 0 0114 0' },
   { id: 'minit',   href: '/beta/minit/',   label: 'Minit',   c: 'mint',  soon: true, d: 'M9 11a3 3 0 100-6 3 3 0 000 6zM2.5 19a6.5 6.5 0 0113 0M16 5.5a3 3 0 010 6M21.5 19a6.5 6.5 0 00-3-5.5' },
   { id: 'nexus',   href: '/beta/nexus/',   label: 'Nexus',   c: 'aqua',  d: 'M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5L18 18M18 6l-2.5 2.5M8.5 15.5L6 18' },
