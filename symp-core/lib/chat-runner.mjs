@@ -18,7 +18,15 @@
 // the model/voice stays consistent across a single answer. Only if every
 // provider fails do we surface an error event.
 //
-// Cap recursion at MAX_TOOL_ROUNDS (3) so a buggy tool can't infinite-loop.
+// NEVER-EMPTY GUARANTEE: open models (e.g. Llama 3.3 70B) sometimes keep
+// emitting tool calls — or return an empty message when tools are offered —
+// instead of settling on a text answer, which previously left the user with a
+// blank "…" reply. We defend against that two ways:
+//   1. The FINAL round is always run with tools DISABLED, so the model must
+//      produce a text answer from whatever tool results it has gathered.
+//   2. If a non-final round comes back empty (no text, no tool call), we fall
+//      through to that forced text round instead of returning blank.
+// Tool rounds are still capped at MAX_TOOL_ROUNDS so a buggy tool can't loop.
 //
 // SSE wire format extensions (existing parsers ignore unknown keys):
 //   data: {"delta":"token"}            — content token
@@ -29,6 +37,13 @@
 import { chatProviders } from './llm-providers.mjs';
 
 const MAX_TOOL_ROUNDS = 3;
+
+// Tools whose execution should also surface a UI hint to the frontend.
+const META_TOOLS = new Set([
+    'escalate_to_human',
+    'suggest_switch_to_text',
+    'swap_persona',
+]);
 
 /**
  * Run a streaming chat with tool support. Writes SSE chunks to `writer`.
@@ -48,7 +63,7 @@ export async function runStreamingChatWithTools(opts) {
         tools, executeTool, toolCtx,
         writer, encoder, maxTokens = 600,
     } = opts;
-    let messages = opts.messages.slice();
+    const messages = opts.messages.slice();
 
     const candidates = (opts.providers && opts.providers.length) ? opts.providers : chatProviders();
     if (!candidates.length) {
@@ -60,8 +75,10 @@ export async function runStreamingChatWithTools(opts) {
 
     const hasTools = Array.isArray(tools) && tools.length > 0;
 
-    for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
-        // ── Open a stream, trying the preferred provider first, then the rest ──
+    // Stream a single completion round against the current `messages`. Forwards
+    // content deltas to the client as they arrive. Returns the round outcome.
+    // `useTools` controls whether tool definitions are offered this round.
+    async function streamRound(useTools) {
         const order = [preferred, ...candidates.filter(p => p !== preferred)];
         let res = null;
         let lastErr = '';
@@ -73,7 +90,7 @@ export async function runStreamingChatWithTools(opts) {
                 temperature: 0.75,
                 max_tokens:  maxTokens,
             };
-            if (hasTools && p.supportsTools !== false) {
+            if (useTools && p.supportsTools !== false) {
                 body.tools       = tools;
                 body.tool_choice = 'auto';
             }
@@ -95,17 +112,12 @@ export async function runStreamingChatWithTools(opts) {
                 continue;
             }
         }
-        if (!res) {
-            await writer.write(encoder.encode(`data: ${JSON.stringify({ error: `All providers failed → ${lastErr}` })}\n\n`));
-            return;
-        }
+        if (!res) return { ok: false, err: lastErr };
 
         const reader = res.body.getReader();
         const decoder = new TextDecoder();
         let buf = '';
-
-        // Per-stream accumulators
-        let collectedContent = '';
+        let content = '';
         const toolCalls = []; // [{id, name, argsBuf}], indexed
         let finishReason = null;
 
@@ -129,7 +141,7 @@ export async function runStreamingChatWithTools(opts) {
 
                     // Content tokens — forward immediately
                     if (typeof delta.content === 'string' && delta.content.length) {
-                        collectedContent += delta.content;
+                        content += delta.content;
                         await writer.write(encoder.encode(`data: ${JSON.stringify({ delta: delta.content })}\n\n`));
                     }
 
@@ -138,9 +150,9 @@ export async function runStreamingChatWithTools(opts) {
                         for (const tc of delta.tool_calls) {
                             const idx = tc.index ?? 0;
                             if (!toolCalls[idx]) toolCalls[idx] = { id: '', name: '', argsBuf: '' };
-                            if (tc.id)                     toolCalls[idx].id      = tc.id;
-                            if (tc.function?.name)         toolCalls[idx].name    = tc.function.name;
-                            if (tc.function?.arguments)    toolCalls[idx].argsBuf += tc.function.arguments;
+                            if (tc.id)                  toolCalls[idx].id      = tc.id;
+                            if (tc.function?.name)      toolCalls[idx].name    = tc.function.name;
+                            if (tc.function?.arguments) toolCalls[idx].argsBuf += tc.function.arguments;
                         }
                     }
 
@@ -148,15 +160,34 @@ export async function runStreamingChatWithTools(opts) {
                 }
             }
         } catch (e) {
-            await writer.write(encoder.encode(`data: ${JSON.stringify({ error: e.message || String(e) })}\n\n`));
+            return { ok: false, err: e.message || String(e) };
+        }
+
+        return { ok: true, content, toolCalls: toolCalls.filter(Boolean), finishReason };
+    }
+
+    for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
+        // Force a plain-text answer on the final round: with tools off, the model
+        // must respond in text instead of looping on another tool call.
+        const useTools = hasTools && round < MAX_TOOL_ROUNDS - 1;
+
+        const r = await streamRound(useTools);
+        if (!r.ok) {
+            await writer.write(encoder.encode(`data: ${JSON.stringify({ error: `All providers failed → ${r.err}` })}\n\n`));
             return;
         }
 
-        // Stop conditions
-        if (finishReason !== 'tool_calls' || toolCalls.length === 0) {
-            // Normal completion or stop
-            await writer.write(encoder.encode(`data: ${JSON.stringify({ done: true })}\n\n`));
-            return;
+        const wantsTools = useTools && r.finishReason === 'tool_calls' && r.toolCalls.length > 0;
+
+        if (!wantsTools) {
+            // Model is done for this round. If it produced text, finish. If it
+            // came back empty (an open-model quirk when tools are offered) and we
+            // still have rounds left, loop again — the final round forces text.
+            if (r.content.trim() || round === MAX_TOOL_ROUNDS - 1) {
+                await writer.write(encoder.encode(`data: ${JSON.stringify({ done: true })}\n\n`));
+                return;
+            }
+            continue;
         }
 
         // ── Tool round ─────────────────────────────────────────────────────
@@ -164,19 +195,23 @@ export async function runStreamingChatWithTools(opts) {
         // the tool replies on the next round.
         messages.push({
             role:       'assistant',
-            content:    collectedContent || null,
-            tool_calls: toolCalls.filter(Boolean).map(tc => ({
+            content:    r.content || null,
+            tool_calls: r.toolCalls.map(tc => ({
                 id:       tc.id || `call_${Math.random().toString(36).slice(2, 10)}`,
                 type:     'function',
                 function: { name: tc.name, arguments: tc.argsBuf || '{}' },
             })),
         });
 
-        for (const tc of toolCalls) {
-            if (!tc) continue;
+        for (const tc of r.toolCalls) {
             let parsedArgs = {};
             try { parsedArgs = JSON.parse(tc.argsBuf || '{}'); } catch (_) { parsedArgs = {}; }
-            const result = await executeTool(tc.name, parsedArgs, toolCtx);
+
+            // Never let a throwing tool kill the stream — feed the error back so
+            // the model can recover and still answer.
+            let result;
+            try { result = await executeTool(tc.name, parsedArgs, toolCtx); }
+            catch (e) { result = `tool_error: ${e?.message || e}`; }
 
             // Side-channel meta event so the frontend can render a UI card.
             if (META_TOOLS.has(tc.name)) {
@@ -194,14 +229,8 @@ export async function runStreamingChatWithTools(opts) {
         // Loop continues — model gets to use the tool output to compose the final answer.
     }
 
-    // Hit the round cap — stop cleanly so the user gets *something*.
-    await writer.write(encoder.encode(`data: ${JSON.stringify({ delta: '' })}\n\n`));
+    // Safety net — the final round runs with tools disabled, so we normally
+    // return from inside the loop. This only fires in degenerate cases; never
+    // leave the connection hanging.
     await writer.write(encoder.encode(`data: ${JSON.stringify({ done: true })}\n\n`));
 }
-
-// Tools whose execution should also surface a UI hint to the frontend.
-const META_TOOLS = new Set([
-    'escalate_to_human',
-    'suggest_switch_to_text',
-    'swap_persona',
-]);
