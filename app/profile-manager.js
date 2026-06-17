@@ -784,8 +784,8 @@ window.openAddCreditsModal = function () {
 //       1. Look up the SKU by `credits` (e.g. 100/500/2500/10000).
 //       2. Create a Stripe Checkout Session (mode='payment') with:
 //            - line_items: [{ price: SKU.stripe_price_id, quantity: 1 }]
-//            - success_url: `https://blakcide.com/profile?credits=success&sid={CHECKOUT_SESSION_ID}`
-//            - cancel_url:  `https://blakcide.com/profile?credits=cancel`
+//            - success_url: `https://blaksyd.com/profile?credits=success&sid={CHECKOUT_SESSION_ID}`
+//            - cancel_url:  `https://blaksyd.com/profile?credits=cancel`
 //            - client_reference_id: user_id (proxy-stamped)
 //            - metadata: { user_id, credits }
 //       3. Return { ok:true, data:{ checkout_url: session.url } }.
