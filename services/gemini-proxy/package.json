@@ -10,7 +10,6 @@
   },
   "dependencies": {
     "google-auth-library": "^9.15.0",
-    "ws": "^8.18.0",
-    "jsonwebtoken": "^9.0.2"
+    "ws": "^8.18.0"
   }
 }
