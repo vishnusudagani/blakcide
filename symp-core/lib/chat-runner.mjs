@@ -34,9 +34,20 @@
 //   data: {"done":true}                — finished
 //   data: {"error":"…"}                — fatal error
 
-import { chatProviders } from './llm-providers.mjs';
+import { chatProviders, authHeadersFor } from './llm-providers.mjs';
 
-const MAX_TOOL_ROUNDS = 3;
+// Two rounds max: one tool-enabled round, then a forced plain-text round. This
+// caps a single user message at TWO upstream calls (not three), which matters a
+// lot on a free-tier floor provider where every extra call burns the
+// tokens-per-minute budget and triggers 429s.
+const MAX_TOOL_ROUNDS = 2;
+
+// Statuses worth waiting-and-retrying on the SAME provider before falling
+// through to the next one. 429 = rate limit (free tiers hit this constantly),
+// 5xx = transient upstream blips. The non-OK response arrives before any
+// streaming starts, so retrying the request is safe.
+const RETRYABLE_STATUS = new Set([408, 409, 425, 429, 500, 502, 503, 504]);
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 // Tools whose execution should also surface a UI hint to the frontend.
 const META_TOOLS = new Set([
@@ -94,23 +105,37 @@ export async function runStreamingChatWithTools(opts) {
                 body.tools       = tools;
                 body.tool_choice = 'auto';
             }
-            try {
-                const r = await fetch(p.baseUrl, {
-                    method:  'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${p.apiKey}`, ...(p.headers || {}) },
-                    body:    JSON.stringify(body),
-                });
-                if (!r.ok) {
-                    lastErr = `${p.id}:${r.status} ${(await r.text().catch(() => '')).slice(0, 160)}`;
-                    continue;
+            // Up to 3 attempts per provider, backing off on 429/5xx (honouring
+            // Retry-After when the host sends it). Only once these are exhausted
+            // do we fall through to the next provider — so a lone free-tier
+            // floor (Groq only) can still recover from a transient rate limit
+            // instead of dead-ending the whole turn.
+            for (let attempt = 0; attempt < 3 && !res; attempt++) {
+                try {
+                    const r = await fetch(p.baseUrl, {
+                        method:  'POST',
+                        headers: { 'Content-Type': 'application/json', ...authHeadersFor(p), ...(p.headers || {}) },
+                        body:    JSON.stringify(body),
+                    });
+                    if (!r.ok) {
+                        lastErr = `${p.id}:${r.status} ${(await r.text().catch(() => '')).slice(0, 160)}`;
+                        if (RETRYABLE_STATUS.has(r.status) && attempt < 2) {
+                            const ra = parseFloat(r.headers.get('retry-after') || '');
+                            const waitMs = Math.min(Number.isFinite(ra) ? ra * 1000 : 500 * 2 ** attempt, 4000);
+                            await sleep(waitMs);
+                            continue;            // retry the SAME provider
+                        }
+                        break;                   // non-retryable / out of attempts → next provider
+                    }
+                    res = r;
+                    preferred = p;
+                } catch (e) {
+                    lastErr = `${p.id}:${(e?.message || e).toString().slice(0, 100)}`;
+                    if (attempt < 2) { await sleep(400); continue; }  // transient network blip
+                    break;
                 }
-                res = r;
-                preferred = p;
-                break;
-            } catch (e) {
-                lastErr = `${p.id}:${(e?.message || e).toString().slice(0, 100)}`;
-                continue;
             }
+            if (res) break;
         }
         if (!res) return { ok: false, err: lastErr };
 

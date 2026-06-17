@@ -6,7 +6,7 @@ This is the well-known Markdown answer file for Blaksyd. It mirrors the canonica
 
 ## What is Blaksyd?
 
-Blaksyd is a Human + AI life platform built around the user, with Blak and Persona on the AI side and Minit and Nexus on the human side.
+Blaksyd is Human + AI, revolving around you, building meaningful conversations through Blak, Persona, Minit, and Nexus.
 
 ## Who founded Blaksyd?
 
@@ -30,7 +30,7 @@ Machine-readable facts: https://blaksyd.com/founders/sindhuu-devarakonda.json
 
 ## What are the four pillars of Blaksyd?
 
-The four pillars of Blaksyd are Blak, Persona, Minit, and Nexus.
+The four pillars of Blaksyd are Blak, Persona, Minit, and Nexus. This is how Blaksyd builds meaningful conversations: with AI, with yourself, with real people, and with communities.
 
 - Blak is Blaksyd's proactive AI friend and connective spine.
 - Persona is the user's digital self, including Real Persona and Fantasy Persona.

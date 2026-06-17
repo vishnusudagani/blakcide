@@ -33,10 +33,31 @@ const env = (k) => process.env[k] || undefined;
  *
  * @returns {Array<{id,baseUrl,model,apiKey,supportsTools,headers?}>}
  */
-export function chatProviders() {
+export function chatProviders({ tier = 'quality' } = {}) {
     const all = [
         {
-            // Google Gemini, QUALITY PRIMARY while GCP credits last. The org
+            // Azure OpenAI — RELIABLE PRIMARY for the user-facing chat while the
+            // $1k Azure credit lasts. First-party GPT-4o-mini → NO shared free-tier
+            // rate wall (the cause of Blak going silent on Groq). Azure auth uses
+            // the `api-key` header and the deployment + api-version live in the URL,
+            // so baseUrl is built from env and we flag azure:true. Unset any of the
+            // three AZURE_* vars → this entry drops out and we fall back to the OSS
+            // floor exactly as before. COST GUARDRAIL: only chatProviders()'s default
+            // 'quality' tier (used by the streaming user chat) puts Azure first;
+            // chatCompleteFailover() defaults to the 'cheap' tier (Groq-first), so
+            // background + tool-grounding work can never spend the credit.
+            id: 'azure',
+            baseUrl: (env('AZURE_OPENAI_ENDPOINT') && env('AZURE_OPENAI_DEPLOYMENT'))
+                ? `${env('AZURE_OPENAI_ENDPOINT').replace(/\/+$/, '')}/openai/deployments/${env('AZURE_OPENAI_DEPLOYMENT')}/chat/completions?api-version=${env('AZURE_OPENAI_API_VERSION') || '2024-10-21'}`
+                : undefined,
+            model: env('AZURE_OPENAI_DEPLOYMENT') || 'gpt-4o-mini',
+            apiKey: env('AZURE_OPENAI_API_KEY'),
+            azure: true,
+            supportsTools: true,
+        },
+        {
+            // Google Gemini — quality secondary (promote to primary when the
+            // Google-for-Startups grant lands). The org
             // disallows Google API keys, so this points at the ADC Cloud Run
             // proxy (services/gemini-proxy) via GEMINI_BASE_URL — the proxy
             // authenticates to Vertex with ADC (no keys) and draws the credits.
@@ -91,7 +112,26 @@ export function chatProviders() {
             supportsTools: true,
         },
     ];
-    return all.filter((p) => !!p.apiKey);
+
+    // A provider is live only if it has BOTH a key and a resolved baseUrl
+    // (Azure's baseUrl stays undefined until its endpoint + deployment are set).
+    const live = all.filter((p) => !!p.apiKey && !!p.baseUrl);
+
+    if (tier === 'cheap') {
+        // Background + tool-grounding work must NEVER burn paid/credit capacity:
+        // free floor (Groq) first, OSS hosts next, Azure/Gemini only as last resort.
+        const rank = (p) => (p.id === 'groq' ? 0 : (p.id === 'azure' || p.id === 'gemini') ? 2 : 1);
+        return live.slice().sort((a, b) => rank(a) - rank(b));
+    }
+    return live; // 'quality': Azure → Gemini → Qwen hosts → Groq floor
+}
+
+/**
+ * Auth header(s) for a provider. Azure OpenAI authenticates with an `api-key`
+ * header; every other (OpenAI-compatible) host uses `Authorization: Bearer`.
+ */
+export function authHeadersFor(p) {
+    return p.azure ? { 'api-key': p.apiKey } : { 'Authorization': `Bearer ${p.apiKey}` };
 }
 
 /** Append OpenRouter's `:online` web-search plugin suffix to a model id. */
@@ -114,9 +154,12 @@ const RETRYABLE = new Set([408, 409, 425, 429, 500, 502, 503, 504]);
  * @returns {Promise<{text,provider,model}>}
  */
 export async function chatCompleteFailover(messages, opts = {}) {
-    const { temperature = 0.6, maxTokens = 400, online = false, timeoutMs = 20_000 } = opts;
+    const { temperature = 0.6, maxTokens = 400, online = false, timeoutMs = 20_000, tier = 'cheap' } = opts;
 
-    let providers = chatProviders();
+    // Default tier is 'cheap': callers here do background / tool-grounding work
+    // (search_web, classifiers, briefs) that must stay on the free floor and never
+    // spend the Azure credit. Pass { tier: 'quality' } to opt a call into Azure.
+    let providers = chatProviders({ tier });
     // For online/web-grounded calls, prefer OpenRouter (it has the web plugin).
     if (online) {
         const or = providers.find((p) => p.id === 'openrouter');
@@ -135,7 +178,7 @@ export async function chatCompleteFailover(messages, opts = {}) {
                 signal: ctrl.signal,
                 headers: {
                     'Content-Type': 'application/json',
-                    Authorization: `Bearer ${p.apiKey}`,
+                    ...authHeadersFor(p),
                     ...(p.headers || {}),
                 },
                 body: JSON.stringify({ model, messages, temperature, max_tokens: maxTokens }),

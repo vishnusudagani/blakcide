@@ -4,7 +4,7 @@ import Page from '../layouts/Page.astro';
 const faqs = [
   {
     q: 'What is Blaksyd?',
-    a: 'Blaksyd is a Human + AI life platform built around you. It combines Blak, your AI friend; Persona, your digital self; Minit, trained human listeners; and Nexus, a living community into one system that learns around your life.',
+    a: 'Blaksyd is Human + AI, revolving around you, building meaningful conversations through Blak, Persona, Minit, and Nexus.',
   },
   {
     q: 'Is Blaksyd just an AI chatbot?',
@@ -22,7 +22,7 @@ const schema = [
     '@id': 'https://blaksyd.com/what-is-blaksyd/#webpage',
     url: 'https://blaksyd.com/what-is-blaksyd/',
     name: 'What is Blaksyd?',
-    description: 'Blaksyd is a Human + AI life platform built around Blak, Persona, Minit, and Nexus.',
+    description: 'Blaksyd is Human + AI, revolving around you, building meaningful conversations through Blak, Persona, Minit, and Nexus.',
     isPartOf: { '@id': 'https://blaksyd.com/#website' },
     about: { '@id': 'https://blaksyd.com/#organization' },
     mainEntity: { '@id': 'https://blaksyd.com/#organization' },
@@ -47,13 +47,13 @@ const schema = [
 
 <Page
   title="What Is Blaksyd? | Human + AI Life Platform"
-  description="Blaksyd is a Human + AI life platform built around Blak, Persona, Minit, and Nexus: an AI friend, digital self, trained listeners, and community."
+  description="Blaksyd is Human + AI, revolving around you, building meaningful conversations through Blak, Persona, Minit, and Nexus."
   image="/assets/blaksyd-four-pillars.png"
   kicker="Definition · Blaksyd"
   kickerClass="k-gold"
   heading="What is"
   accent="Blaksyd?"
-  lede="Blaksyd is a Human + AI life platform built around you. It brings together Blak, your AI friend; Persona, your digital self; Minit, trained human listeners; and Nexus, a living community."
+  lede="Blaksyd is Human + AI, revolving around you, building meaningful conversations through Blak, Persona, Minit, and Nexus."
   heroImage="/assets/blaksyd-four-pillars.webp"
   heroAlt="The four pillars of Blaksyd: Blak, Persona, Minit, and Nexus arranged around the user."
   breadcrumb={[{ name: 'Home', href: '/' }, { name: 'What is Blaksyd?', href: '/what-is-blaksyd/' }]}
@@ -62,10 +62,11 @@ const schema = [
   <section>
     <h2>Direct answer</h2>
     <p>
-      <b>Blaksyd is a Human + AI life platform built around you.</b> It combines four pillars:
+      <b>Blaksyd is Human + AI, revolving around you, building meaningful conversations.</b> How:
       <a href="/blak/">Blak</a>, your AI friend; <a href="/persona/">Persona</a>, your digital self;
       <a href="/minit/">Minit</a>, trained human listeners; and <a href="/nexus/">Nexus</a>, a
-      living community. Together they form one system that learns around your life.
+      living community. Together they make meaningful conversations with AI, with yourself, with real
+      people, and with communities revolve around you.
     </p>
   </section>
 
@@ -92,4 +93,3 @@ const schema = [
     {faqs.map((f) => (<><h3>{f.q}</h3><p>{f.a}</p></>))}
   </section>
 </Page>
-

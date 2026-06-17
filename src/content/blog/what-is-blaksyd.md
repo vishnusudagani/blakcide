@@ -1,6 +1,6 @@
 ---
 title: "What is Blaksyd?"
-description: "Blaksyd is a first-of-its-kind life platform — Human + AI, together, revolving entirely around you. One place for your AI friend, your digital self, real people, and your communities. Here's the whole idea."
+description: "Blaksyd is Human + AI, revolving around you, building meaningful conversations through Blak, Persona, Minit, and Nexus. Here's the whole idea."
 pubDate: 2026-06-08
 author: "The Blaksyd team"
 image: "/assets/blaksyd-four-pillars.png"
@@ -9,11 +9,11 @@ imageAlt: "The four pillars of Blaksyd — Blak, Persona, Minit, and Nexus — r
 
 Blaksyd is a first-of-its-kind life platform — built for people who want more from every day. More connection. More conversation. More fun. More *life*.
 
-Most platforms solve one thing. Social media gives you a feed but not a friend. Chat apps give you messages but not meaning. AI tools give you answers but not company. Blaksyd gives you all of it — and then some — built on one simple idea: **Human + AI, together, revolving entirely around you.**
+Most platforms solve one thing. Social media gives you a feed but not a friend. Chat apps give you messages but not meaning. AI tools give you answers but not company. Blaksyd gives you all of it — and then some — built on one simple idea: **Human + AI, revolving around you, building meaningful conversations.**
 
 ## Four pillars, one you
 
-Everything on Blaksyd evolves around who you are and what you need right now. It runs on four pillars — two powered by AI, two by real people:
+Everything on Blaksyd evolves around who you are and what you need right now. How? Four pillars — two powered by AI, two by real people:
 
 - **[Blak](/blak/)** — your AI friend, always there, shaped entirely around you.
 - **[Persona](/persona/)** — your digital self, plus any character you dream up.

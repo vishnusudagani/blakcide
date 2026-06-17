@@ -28,6 +28,13 @@
 // Anthropic / Gemini do not (would need a separate adapter).
 
 const LLM_PROVIDERS = {
+    // Groq (free Llama) is the DEFAULT for background tasks (classifier, summary,
+    // hint, proactive). Zero cost, and Azure is intentionally ABSENT here so
+    // background work can NEVER spend the Azure credit.
+    groq: {
+        baseUrl:   'https://api.groq.com/openai/v1',
+        apiKeyEnv: ['GROQ_API_KEY', 'SYMP_LLM_API_KEY'],
+    },
     openai: {
         baseUrl:   'https://api.openai.com/v1',
         apiKeyEnv: ['BLAKCIDE_OPENAI_KEY', 'OPENAI_API_KEY'],
@@ -84,6 +91,15 @@ const EMBED_PROVIDERS = {
 // Default model per (provider, task). Each provider exposes its best
 // drop-in for the task. Override per-task with SYMP_LLM_MODEL_<TASK>.
 const DEFAULT_MODELS = {
+    groq: {
+        chat:           'llama-3.3-70b-versatile',
+        classifier:     'llama-3.1-8b-instant',   // cheap+fast, separate rate bucket from 70B
+        summary:        'llama-3.3-70b-versatile',
+        vision:         'llama-3.3-70b-versatile',
+        hint:           'llama-3.1-8b-instant',
+        proactive:      'llama-3.3-70b-versatile',
+        ai_participant: 'llama-3.1-8b-instant',
+    },
     openai: {
         chat:           'gpt-4o',
         classifier:     'gpt-4o-mini',
@@ -140,7 +156,9 @@ function pickEnv(keys) {
 }
 
 function resolveLlmConfig() {
-    const provider = (process.env.SYMP_LLM_PROVIDER || 'openai').toLowerCase();
+    // Default to Groq (free) for background work — NOT OpenAI (dead key) and NOT
+    // Azure (credit-protected). Override with SYMP_LLM_PROVIDER if ever needed.
+    const provider = (process.env.SYMP_LLM_PROVIDER || 'groq').toLowerCase();
     const cfg = LLM_PROVIDERS[provider];
     if (!cfg) {
         throw new InferenceError(`Unknown SYMP_LLM_PROVIDER: ${provider}`, { provider });

@@ -2,8 +2,8 @@
   "name": "Blaksyd",
   "canonicalUrl": "https://blaksyd.com/",
   "lastUpdated": "2026-06-13",
-  "positioning": "Human + AI, revolving around you.",
-  "description": "Blaksyd is a Human + AI life platform built around the user. It combines Blak and Persona on the AI side with Minit and Nexus on the human side, unified by a learning co-pilot layer.",
+  "positioning": "Human + AI, revolving around you, building meaningful conversations.",
+  "description": "Blaksyd is Human + AI, revolving around you, building meaningful conversations through Blak, Persona, Minit, and Nexus.",
   "status": "Pre-launch with a waitlist open.",
   "company": {
     "name": "Blaksyd LLP",
@@ -60,7 +60,7 @@
   "directAnswers": [
     {
       "question": "What is Blaksyd?",
-      "answer": "Blaksyd is a Human + AI life platform built around the user, with Blak and Persona on the AI side and Minit and Nexus on the human side."
+      "answer": "Blaksyd is Human + AI, revolving around you, building meaningful conversations through Blak, Persona, Minit, and Nexus."
     },
     {
       "question": "Who founded Blaksyd?",
@@ -80,7 +80,7 @@
     },
     {
       "question": "What are the four pillars of Blaksyd?",
-      "answer": "The four pillars of Blaksyd are Blak, Persona, Minit, and Nexus."
+      "answer": "The four pillars of Blaksyd are Blak, Persona, Minit, and Nexus. This is how Blaksyd builds meaningful conversations: with AI, with yourself, with real people, and with communities."
     }
   ],
   "machineReadableFiles": [

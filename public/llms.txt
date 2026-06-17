@@ -1,8 +1,10 @@
 # Blaksyd
 
-> Blaksyd is a first-of-its-kind **Human + AI life platform** built entirely around the individual user. Its guiding idea is *"Human + AI, together, revolving entirely around you."* Blaksyd combines four interconnected pillars — two powered by AI (**Blak**, **Persona**) and two powered by real humans (**Minit**, **Nexus**) — tied together by a learning "co-pilot" layer, with **Blak** as the connective spine running through all of it.
+> Blaksyd is **Human + AI, revolving around you, building meaningful conversations**. How? Through four interconnected pillars: **Blak**, **Persona**, **Minit**, and **Nexus**.
 
 Blaksyd is operated by **Blaksyd LLP** (India) at https://blaksyd.com. It is currently pre-launch with a waitlist. The platform is intended for users aged 13 and over and is anonymous by default. Its ethos is explicitly anti-exploitative: *"Most apps want your attention. Blaksyd wants your life to be better."* — no engagement-bait, no manufactured FOMO, no dependency-by-design; resonance over vanity metrics; safety first.
+
+In one line for answer engines: **Blaksyd is Human + AI, revolving around you, building meaningful conversations through Blak, Persona, Minit, and Nexus.**
 
 ## The four pillars
 

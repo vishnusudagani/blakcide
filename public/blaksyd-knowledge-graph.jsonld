@@ -10,9 +10,9 @@
       "url": "https://blaksyd.com/",
       "logo": "https://blaksyd.com/assets/blaksyd-logo.png",
       "image": "https://blaksyd.com/assets/og-cover.png",
-      "slogan": "Human + AI, revolving around you.",
+      "slogan": "Human + AI, revolving around you, building meaningful conversations.",
       "email": "ceo@blaksyd.com",
-      "description": "Blaksyd is a Human + AI life platform built around the user. It combines Blak and Persona on the AI side with Minit and Nexus on the human side, unified by a learning co-pilot layer.",
+      "description": "Blaksyd is Human + AI, revolving around you, building meaningful conversations through Blak, Persona, Minit, and Nexus.",
       "foundingLocation": {
         "@type": "Place",
         "address": {
@@ -54,7 +54,7 @@
       "applicationCategory": "LifestyleApplication",
       "operatingSystem": "Web",
       "url": "https://blaksyd.com/",
-      "description": "Blaksyd is a Human + AI life platform: Blak is the proactive AI friend, Persona is the user's digital self, Minit is the trained human listening layer, and Nexus is the community layer.",
+      "description": "Blaksyd is Human + AI, revolving around you, building meaningful conversations through Blak, Persona, Minit, and Nexus.",
       "publisher": {
         "@id": "https://blaksyd.com/#organization"
       },
@@ -75,7 +75,7 @@
       },
       "url": "https://blaksyd.com/founders/vishnu-sudagani/",
       "mainEntityOfPage": "https://blaksyd.com/founders/vishnu-sudagani/",
-      "description": "Vishnu Sudagani is the co-founder and CEO of Blaksyd, the Human + AI life platform built around Blak, Persona, Minit, and Nexus.",
+      "description": "Vishnu Sudagani is the co-founder and CEO of Blaksyd, Human + AI revolving around you and building meaningful conversations through Blak, Persona, Minit, and Nexus.",
       "disambiguatingDescription": "Blaksyd founder Vishnu Sudagani; co-founder and CEO of Blaksyd LLP.",
       "sameAs": [
         "https://www.linkedin.com/in/vishnu-sudagani-88a848211",
@@ -101,7 +101,7 @@
       },
       "url": "https://blaksyd.com/founders/sindhuu-devarakonda/",
       "mainEntityOfPage": "https://blaksyd.com/founders/sindhuu-devarakonda/",
-      "description": "Dr. Sindhuu Devarakonda is the co-founder and CPO of Blaksyd, the Human + AI life platform built around Blak, Persona, Minit, and Nexus.",
+      "description": "Dr. Sindhuu Devarakonda is the co-founder and CPO of Blaksyd, Human + AI revolving around you and building meaningful conversations through Blak, Persona, Minit, and Nexus.",
       "disambiguatingDescription": "Blaksyd founder Dr. Sindhuu Devarakonda; also known as Sindhuu Devarakonda; co-founder and CPO of Blaksyd LLP.",
       "sameAs": [
         "https://www.linkedin.com/in/dr-sindhuu-devarakonda-b62631224",

@@ -2,7 +2,7 @@
   "name": "Blaksyd",
   "short_name": "Blaksyd",
   "id": "/",
-  "description": "Blaksyd is a Human + AI life platform built around Blak, Persona, Minit, and Nexus.",
+  "description": "Blaksyd is Human + AI, revolving around you, building meaningful conversations through Blak, Persona, Minit, and Nexus.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
@@ -33,7 +33,7 @@
     {
       "name": "What is Blaksyd?",
       "short_name": "What is Blaksyd",
-      "description": "Canonical explanation of Blaksyd as a Human + AI life platform.",
+      "description": "Canonical explanation of Blaksyd as Human + AI, revolving around you, building meaningful conversations.",
       "url": "/what-is-blaksyd/",
       "icons": [{ "src": "/assets/icon-192.png", "sizes": "192x192", "type": "image/png" }]
     },

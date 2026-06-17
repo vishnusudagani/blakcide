@@ -1,6 +1,6 @@
 # Blaksyd AI-readable well-known summary
 
-Blaksyd is a Human + AI life platform built around the user. Its four pillars are Blak, Persona, Minit, and Nexus.
+Blaksyd is Human + AI, revolving around you, building meaningful conversations through Blak, Persona, Minit, and Nexus.
 
 Blaksyd was founded by Vishnu Sudagani, co-founder and CEO, and Dr. Sindhuu Devarakonda, co-founder and CPO.
 

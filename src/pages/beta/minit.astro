@@ -1,87 +1,690 @@
 ---
 import AppLayout from '../../layouts/AppLayout.astro';
+// Minit — LIVE seeker experience. Start talking → find an available (fresh) listener
+// → connect (realtime text chat on `messages`) or honest "no one free" capture.
+// Anonymous by default; reconnect with a past listener; delivered/seen; typing.
 ---
-<AppLayout active="minit" title="Minit" soon>
-  <div class="ap-page mx">
-    <p class="ap-kicker">Minit · real people</p>
-    <h1 class="ap-h1">Someone real. <span class="mx-accent">In a minute.</span></h1>
-    <p class="ap-sub">Hand-picked, friendly people — anonymous by default, both sides cared for.</p>
-
-    <div class="mx-presence">
-      <span class="mx-faces"><i></i><i></i><i></i><i></i><span class="mx-more">+</span></span>
-      <span class="mx-presence-txt"><b>Real people</b> · around the clock</span>
+<AppLayout active="minit" title="Minit">
+  <div class="ap-page mnx" id="mnx-page">
+    <div id="mnx-root" class="mnx-root" role="region" aria-live="polite">
+      <div class="mnx-loading"><span class="mnx-spinner" aria-hidden="true"></span> Getting things ready…</div>
     </div>
 
-    <div class="mx-stage ap-card">
-      <div class="mx-feed" id="mx-feed">
-        <p class="mx-lead">Pick how you'd like to connect — your way. Anonymous unless you say otherwise.</p>
-      </div>
-      <div class="mx-modes" id="mx-modes">
-        <button type="button" class="mx-mode go" data-mode="talk">Talk now</button>
-        <button type="button" class="mx-mode" data-mode="smart">Smart match</button>
-        <button type="button" class="mx-mode" data-mode="book">Book for later</button>
-        <button type="button" class="mx-mode" data-mode="spec">Find a specialist</button>
-      </div>
-    </div>
-    <p class="mx-note">Beta preview — connections are simulated for now. Live listeners + the Blak co-pilot brief (“context, not content”) come next.</p>
+    <p class="mnx-foot mnx-chrome"><span class="mnx-foot-q">Need it now?</span><a class="mnx-help-link" href="/beta/blak/"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.5 8.5 0 0 1-12.5 7.5L3 21l2-5.5A8.5 8.5 0 1 1 21 11.5z"/></svg>Text with Blak</a><a class="mnx-help-link wa" href="https://wa.me/917702063434" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.5 14.4c-.3-.1-1.7-.8-2-.9-.3-.1-.5-.1-.7.2-.2.3-.7.9-.9 1.1-.2.2-.3.2-.6.1-.3-.1-1.2-.5-2.3-1.4-.9-.8-1.4-1.7-1.6-2-.2-.3 0-.5.1-.6.1-.1.3-.3.4-.5.1-.2.2-.3.3-.5.1-.2 0-.4 0-.5 0-.1-.7-1.6-.9-2.2-.2-.6-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.4-.3.3-1 1-1 2.5s1.1 2.9 1.2 3.1c.1.2 2.1 3.2 5.1 4.5.7.3 1.3.5 1.7.6.7.2 1.4.2 1.9.1.6-.1 1.7-.7 2-1.4.2-.7.2-1.2.2-1.4-.1-.1-.3-.2-.6-.3z"/><path d="M12 2a10 10 0 0 0-8.5 15.3L2 22l4.8-1.5A10 10 0 1 0 12 2zm0 18.2c-1.5 0-3-.4-4.3-1.2l-.3-.2-2.9.9.9-2.8-.2-.3A8.2 8.2 0 1 1 12 20.2z"/></svg>WhatsApp</a></p>
+    <audio id="mnx-rtc-audio" autoplay></audio>
   </div>
 
-  <style>
-    .mx-accent { font-family: var(--font-serif); font-style: italic; font-weight: 400; background: linear-gradient(110deg, var(--mint), var(--mint-deep) 45%, var(--aqua)); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
-    .mx-presence { display: flex; align-items: center; gap: .7rem; margin: clamp(1.1rem,3vh,1.6rem) 0 1rem; }
-    .mx-faces { display: inline-flex; } .mx-faces i, .mx-more { width: 28px; height: 28px; border-radius: 50%; margin-left: -8px; border: 2px solid var(--bg); display: inline-block; }
-    .mx-faces i:first-child { margin-left: 0; }
-    .mx-faces i:nth-child(1){background:linear-gradient(135deg,var(--mint),var(--mint-deep))} .mx-faces i:nth-child(2){background:linear-gradient(135deg,var(--aqua),var(--lavender))} .mx-faces i:nth-child(3){background:linear-gradient(135deg,var(--gold),var(--peach-deep))} .mx-faces i:nth-child(4){background:linear-gradient(135deg,var(--coral),var(--lavender-deep))}
-    .mx-more { display: inline-flex; align-items: center; justify-content: center; background: var(--surface-strong); color: var(--ink-soft); font-family: var(--font-mono); font-size: var(--fs-2xs); }
-    .mx-presence-txt { font-size: var(--fs-md); color: var(--ink-soft); } .mx-presence-txt b { color: var(--ink); }
+  <style is:global>
+    .mnx-accent { font-family: var(--font-serif); font-style: italic; font-weight: 400; background: linear-gradient(110deg, var(--mint), var(--mint-deep) 45%, var(--aqua)); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+    html[data-theme="light"] .mnx-accent { background: linear-gradient(110deg, var(--mint-ink), var(--aqua-ink)); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+    .mnx.immersive .mnx-chrome { display: none; }
 
-    .mx-stage { padding: 1.1rem 1.2rem 1.2rem; }
-    .mx-feed { min-height: 150px; }
-    .mx-lead { font-size: var(--fs-base); color: var(--ink-soft); padding: .3rem .2rem; }
-    .mx-connect { display: flex; align-items: center; gap: .9rem; padding: .8rem .2rem; animation: mx-in .3s ease both; }
-    .mx-ripple { position: relative; width: 38px; height: 38px; flex: none; } .mx-ripple i { position: absolute; inset: 0; border-radius: 50%; border: 1.5px solid var(--mint-deep); animation: mx-rip 1.7s ease-out infinite; } .mx-ripple i:nth-child(2){animation-delay:.6s} .mx-ripple::after { content:''; position:absolute; inset:12px; border-radius:50%; background:linear-gradient(135deg,var(--mint),var(--aqua)); }
-    @keyframes mx-rip { 0%{transform:scale(.4);opacity:.9} 100%{transform:scale(1);opacity:0} }
-    @keyframes mx-in { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:none} }
-    .mx-listener { animation: mx-in .4s var(--ease-spring) both; }
-    .mx-l-top { display: flex; align-items: center; gap: .7rem; }
-    .mx-pic { width: 44px; height: 44px; border-radius: 50%; flex: none; background: linear-gradient(135deg, var(--mint), var(--aqua)); box-shadow: 0 0 14px rgba(106,211,184,.45); }
-    .mx-l-who b { font-size: var(--fs-lg); } .mx-l-who span { display: block; font-size: var(--fs-sm); color: var(--ink-faint); }
-    .mx-rate { margin-left: auto; color: var(--gold); font-weight: 650; }
-    .mx-tags { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .8rem; } .mx-tag { font-family: var(--font-mono); font-size: var(--fs-3xs); color: var(--mint); background: rgba(106,211,184,.14); border: 1px solid rgba(106,211,184,.22); border-radius: 999px; padding: .22rem .55rem; }
-    .mx-st { font-size: var(--fs-sm); color: var(--ink-soft); margin-top: .8rem; display: flex; align-items: center; gap: .4rem; } .mx-st i { width: 7px; height: 7px; border-radius: 50%; background: var(--mint-deep); box-shadow: 0 0 8px var(--mint-deep); }
-    .mx-go-btn { display: block; width: 100%; margin-top: 1rem; padding: .7rem; border: 0; border-radius: var(--r-pill); cursor: pointer; font: inherit; font-weight: 650; color: #06231C; background: linear-gradient(135deg, var(--mint), var(--mint-deep) 70%, var(--aqua)); }
+    .mnx-root { min-height: clamp(220px, 34vh, 360px); }
+    .mnx-loading { display: flex; align-items: center; gap: .7rem; color: var(--ink-soft); font-size: var(--fs-base); padding: 1.4rem .2rem; }
+    .mnx-spinner { width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--line-strong); border-top-color: var(--mint-deep); animation: mnx-spin 1s linear infinite; }
+    @keyframes mnx-spin { to { transform: rotate(360deg); } }
+    @media (prefers-reduced-motion: reduce) { .mnx-spinner { animation: none; } }
+    .mnx-foot { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: .55rem; margin: 1.6rem .2rem 0; font-size: var(--fs-xs); color: var(--ink-faint); }
+    .mnx-foot-q { color: var(--ink-faint); }
 
-    .mx-modes { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: 1rem; padding-top: .9rem; border-top: 1px solid var(--line); }
-    .mx-mode { font: inherit; font-size: var(--fs-md); color: var(--ink-soft); background: var(--surface); border: 1px solid var(--line-strong); border-radius: var(--r-pill); padding: .55rem .9rem; cursor: pointer; transition: .16s; min-height: 44px; }
-    .mx-mode:hover { color: var(--ink); transform: translateY(-1px); }
-    .mx-mode.go { color: #06231C; border: 0; background: linear-gradient(135deg, var(--mint), var(--mint-deep) 70%, var(--aqua)); font-weight: 650; }
-    .mx-note { margin: .9rem .2rem 0; font-size: var(--fs-xs); color: var(--ink-faint); text-align: center; }
-    /* LIGHT theme: deepen accent text so it reads on cream */
-    html[data-theme="light"] .mx-accent { background: linear-gradient(110deg, var(--mint-ink), var(--aqua-ink)); -webkit-background-clip: text; background-clip: text; }
-    html[data-theme="light"] .mx-rate { color: var(--gold-ink); }
+    /* ---- Concierge entry panel (luminous) ---- */
+    .mnx-stage { position: relative; max-width: 460px; margin: 0 auto; padding-top: clamp(.5rem, 3vh, 1.5rem); }
+    .mnx-entry { position: relative; border-radius: 30px; padding: clamp(1.7rem, 4.5vw, 2.4rem) clamp(1.4rem, 4vw, 2rem) clamp(1.4rem, 4vw, 1.8rem); text-align: center; background: linear-gradient(180deg, rgba(255,255,255,.045), rgba(255,255,255,.02)); -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); box-shadow: 0 30px 90px rgba(0,0,0,.5), 0 0 60px rgba(106,211,184,.1), inset 0 1px 0 rgba(255,255,255,.06); overflow: hidden; }
+    html[data-theme="light"] .mnx-entry { background: linear-gradient(180deg, rgba(255,255,255,.9), rgba(255,255,255,.7)); box-shadow: 0 24px 70px rgba(60,40,20,.14), 0 0 50px rgba(106,211,184,.12); }
+    .mnx-entry::before { content: ''; position: absolute; inset: 0; border-radius: inherit; padding: 1px; background: linear-gradient(160deg, rgba(180,240,222,.55), rgba(91,192,255,.3) 32%, transparent 62%); -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; pointer-events: none; }
+    .mnx-entry-glow { position: absolute; top: -40%; left: 50%; width: 70%; height: 70%; transform: translateX(-50%); pointer-events: none; background: radial-gradient(circle, rgba(106,211,184,.22), transparent 60%); filter: blur(10px); }
+    .mnx-orb-wrap { position: relative; width: 76px; height: 76px; margin: 0 auto 1.2rem; display: grid; place-items: center; }
+    .mnx-orb { width: 64px; height: 64px; border-radius: 50%; background: radial-gradient(circle at 34% 28%, #ffffff 0%, var(--mint) 34%, var(--mint-deep) 66%, var(--aqua) 120%); box-shadow: 0 0 30px rgba(106,211,184,.55), inset 0 -4px 10px rgba(6,35,28,.3); animation: mnx-breathe 4.2s var(--ease-soft) infinite; }
+    .mnx-echo { position: absolute; inset: 0; border-radius: 50%; border: 1.5px solid rgba(106,211,184,.4); animation: mnx-echo 2.8s ease-out infinite; }
+    .mnx-echo:nth-child(2) { animation-delay: 1.4s; }
+    .mnx-kick2 { font-family: var(--font-mono); font-size: var(--fs-2xs); letter-spacing: .18em; text-transform: uppercase; color: var(--mint-deep); margin-bottom: .7rem; }
+    html[data-theme="light"] .mnx-kick2 { color: var(--mint-ink); }
+    .mnx-greet { font-size: clamp(1.55rem, 1.1rem + 2.2vw, 2.05rem); font-weight: 600; letter-spacing: -.02em; line-height: 1.12; color: var(--ink); }
+    .mnx-greet em { font-family: var(--font-serif); font-style: italic; font-weight: 400; background: linear-gradient(110deg, var(--mint), var(--mint-deep) 45%, var(--aqua)); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+    html[data-theme="light"] .mnx-greet em { background: linear-gradient(110deg, var(--mint-ink), var(--aqua-ink)); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+    .mnx-greet-sub { font-size: var(--fs-md); color: var(--ink-soft); margin: .7rem auto 0; max-width: 32ch; line-height: 1.55; }
+    .mnx-live { display: inline-flex; align-items: center; gap: .5rem; margin: 1.2rem 0 1.3rem; padding: .4rem .9rem; font-size: var(--fs-sm); color: var(--ink-soft); background: rgba(106,211,184,.08); border: 1px solid rgba(106,211,184,.2); border-radius: var(--r-pill); }
+    .mnx-live-dot { width: 8px; height: 8px; border-radius: 50%; flex: none; background: var(--mint-deep); box-shadow: 0 0 8px var(--mint-deep); animation: mnx-dot-pulse 2.2s var(--ease-soft) infinite; }
+    .mnx-live.off .mnx-live-dot { background: var(--ink-faint); box-shadow: none; animation: none; }
+    .mnx-cta-arrow { font-weight: 400; transition: transform var(--t-fast) var(--ease-out); }
+    .mnx-go:hover .mnx-cta-arrow { transform: translateX(3px); }
+    .mnx-anon-min { display: inline-flex; align-items: center; gap: .45rem; margin: .9rem auto 0; padding: .4rem .2rem; background: none; border: 0; font: inherit; font-size: var(--fs-sm); color: var(--ink-faint); cursor: pointer; }
+    .mnx-anon-min i { font-style: normal; color: var(--ink-faint); font-weight: 600; }
+    .mnx-anon-min.on i { color: var(--mint-deep); }
+    html[data-theme="light"] .mnx-anon-min.on i { color: var(--mint-ink); }
+    .mnx-anon-ico { display: inline-flex; } .mnx-anon-ico svg { width: 13px; height: 13px; }
+    .mnx-sw2 { width: 30px; height: 17px; border-radius: var(--r-pill); background: var(--surface-strong); border: 1px solid var(--line-strong); position: relative; margin-left: .2rem; transition: background var(--t-fast) var(--ease-out); }
+    .mnx-sw2::after { content: ''; position: absolute; top: 2px; left: 2px; width: 12px; height: 12px; border-radius: 50%; background: var(--ink-soft); transition: transform var(--t-fast) var(--ease-out), background var(--t-fast) var(--ease-out); }
+    .mnx-anon-min.on .mnx-sw2 { background: linear-gradient(135deg, var(--mint), var(--mint-deep)); border-color: transparent; }
+    .mnx-anon-min.on .mnx-sw2::after { transform: translateX(13px); background: #06231C; }
+    .mnx-meter { margin-top: 1.4rem; padding-top: 1.3rem; border-top: 1px solid var(--line); }
+    .mnx-meter-top { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: .55rem; }
+    .mnx-meter-label { font-family: var(--font-mono); font-size: var(--fs-2xs); letter-spacing: .1em; text-transform: uppercase; color: var(--ink-faint); }
+    .mnx-meter-val { font-size: var(--fs-sm); font-weight: 650; color: var(--ink); }
+    .mnx-pips { display: flex; gap: 5px; }
+    .mnx-pip { flex: 1; height: 6px; border-radius: var(--r-pill); background: var(--surface-strong); }
+    .mnx-pip.on { background: linear-gradient(90deg, var(--mint), var(--mint-deep)); box-shadow: 0 0 6px rgba(106,211,184,.4); }
+    .mnx-meter-foot { font-size: var(--fs-xs); color: var(--ink-faint); margin-top: .6rem; text-align: left; }
+    @keyframes mnx-dot-pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(106,211,184,.55); } 60% { box-shadow: 0 0 0 6px rgba(106,211,184,0); } }
+    @media (prefers-reduced-motion: reduce) { .mnx-orb, .mnx-echo, .mnx-live-dot { animation: none; } .mnx-echo { opacity: .25; } }
+    .mnx-go { display: inline-flex; align-items: center; justify-content: center; gap: .5rem; width: 100%; padding: 1rem 1.1rem; border: 0; border-radius: var(--r-pill); font: inherit; font-size: var(--fs-xl); font-weight: 650; color: #06231C; cursor: pointer; background: linear-gradient(135deg, var(--mint) 0%, var(--mint-deep) 70%, var(--aqua) 130%); box-shadow: 0 14px 38px rgba(106,211,184,.42); transition: transform var(--t-fast) var(--ease-out), opacity var(--t-fast) var(--ease-out); }
+    .mnx-go:hover { transform: translateY(-1px); }
+    .mnx-go[disabled] { opacity: .55; cursor: default; transform: none; }
+    .mnx-reconnect { display: block; width: 100%; margin-top: .7rem; padding: .7rem 1rem; border-radius: var(--r-pill); background: var(--surface); border: 1px solid var(--line-strong); color: var(--ink); font: inherit; font-size: var(--fs-sm); cursor: pointer; }
+    .mnx-reconnect:hover { border-color: rgba(106,211,184,.5); }
+    .mnx-help-row { display: flex; gap: .6rem; flex-wrap: wrap; margin: clamp(1rem,3vh,1.4rem) 0 1.3rem; }
+    .mnx-help-link { display: inline-flex; align-items: center; gap: .45rem; min-height: 40px; padding: .5rem .95rem; font-size: var(--fs-sm); color: var(--ink-soft); background: var(--surface); border: 1px solid var(--line-strong); border-radius: var(--r-pill); text-decoration: none; transition: border-color var(--t-fast) var(--ease-out), color var(--t-fast) var(--ease-out); }
+    .mnx-help-link svg { width: 15px; height: 15px; flex: none; }
+    .mnx-help-link:hover { color: var(--ink); border-color: rgba(106,211,184,.5); }
+    .mnx-help-link.wa { color: #25D366; border-color: rgba(37,211,102,.4); }
+    .mnx-help-link.wa:hover { color: #25D366; border-color: rgba(37,211,102,.75); }
+    html[data-theme="light"] .mnx-help-link.wa { color: #128C7E; border-color: rgba(18,140,126,.4); }
+    .mnx-threads { margin-top: 1.6rem; padding-top: 1.4rem; border-top: 1px solid var(--line); }
+    .mnx-threads-label { font-family: var(--font-mono); font-size: var(--fs-xs); letter-spacing: .1em; text-transform: uppercase; color: var(--ink-faint); margin-bottom: .7rem; }
+    .mnx-thread { display: flex; align-items: center; gap: .8rem; width: 100%; text-align: left; padding: .8rem 1rem; margin-bottom: .5rem; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); cursor: pointer; font: inherit; }
+    .mnx-thread:hover { border-color: rgba(106,211,184,.4); }
+    .mnx-thread-orb { width: 32px; height: 32px; border-radius: 50%; flex: none; background: linear-gradient(135deg, var(--mint), var(--aqua)); }
+    .mnx-thread-meta { flex: 1; min-width: 0; } .mnx-thread-meta b { font-size: var(--fs-md); color: var(--ink); font-weight: 600; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; } .mnx-thread-meta i { font-style: normal; font-size: var(--fs-xs); color: var(--ink-faint); }
+    .mnx-thread-go { color: var(--ink-faint); font-size: 1.1rem; }
+
+    .mnx-ring { text-align: center; padding: 2.2rem 1.4rem; }
+    .mnx-ring-avatar { position: relative; width: 96px; height: 96px; margin: 0 auto 1.4rem; display: flex; align-items: center; justify-content: center; }
+    .mnx-ring-avatar .core { width: 84px; height: 84px; border-radius: 50%; background: linear-gradient(135deg, var(--mint), var(--mint-deep) 70%, var(--aqua)); box-shadow: 0 0 24px rgba(106,211,184,.5); animation: mnx-breathe 4s var(--ease-soft) infinite; }
+    .mnx-ring-avatar i { position: absolute; inset: 0; border-radius: 50%; border: 2px solid rgba(106,211,184,.4); animation: mnx-echo 2.6s ease-out infinite; }
+    .mnx-ring-avatar i:nth-child(2) { animation-delay: 1.3s; }
+    @keyframes mnx-breathe { 0%,100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+    @keyframes mnx-echo { 0% { transform: scale(.9); opacity: .7; } 100% { transform: scale(1.5); opacity: 0; } }
+    @media (prefers-reduced-motion: reduce) { .mnx-ring-avatar .core, .mnx-ring-avatar i { animation: none; } .mnx-ring-avatar i { opacity: .25; } }
+    .mnx-ring h3 { font-size: var(--fs-xl); font-weight: 600; color: var(--ink); }
+    .mnx-ring p { font-size: var(--fs-md); color: var(--ink-soft); margin-top: .4rem; max-width: 38ch; margin-inline: auto; }
+    .mnx-ring-actions { display: flex; gap: .6rem; justify-content: center; margin-top: 1.4rem; flex-wrap: wrap; }
+    .mnx-cancel { display: inline-flex; align-items: center; justify-content: center; min-height: 40px; padding: .6rem 1.4rem; border-radius: var(--r-pill); background: var(--surface); border: 1px solid var(--line-strong); color: var(--ink-soft); font: inherit; font-size: var(--fs-sm); cursor: pointer; }
+    .mnx-cancel:hover { color: var(--ink); }
+    .mnx-ring-check { width: 84px; height: 84px; border-radius: 50%; margin: 0 auto 1.2rem; display: grid; place-items: center; font-size: 2.4rem; color: #06231C; background: linear-gradient(135deg, var(--mint), var(--mint-deep)); }
+    .mnx-steps { display: flex; align-items: center; justify-content: center; gap: .5rem; margin-top: 1.5rem; }
+    .mnx-step { font-family: var(--font-mono); font-size: var(--fs-2xs); letter-spacing: .04em; text-transform: uppercase; color: var(--ink-faint); transition: color var(--t-base) var(--ease-out); }
+    .mnx-step.on { color: var(--mint-deep); }
+    html[data-theme="light"] .mnx-step.on { color: var(--mint-ink); }
+    .mnx-step-line { width: 22px; height: 2px; border-radius: 2px; background: var(--line-strong); transition: background var(--t-base) var(--ease-out); }
+    .mnx-step-line.on { background: var(--mint-deep); }
+    .mnx-skel { display: flex; flex-direction: column; gap: .5rem; padding: .5rem 0; }
+    .mnx-skel i { height: 34px; border-radius: 14px; background: linear-gradient(90deg, var(--surface) 25%, var(--surface-strong) 37%, var(--surface) 63%); background-size: 400% 100%; animation: mnx-shimmer 1.4s ease infinite; }
+    .mnx-skel i:nth-child(odd) { align-self: flex-end; width: 60%; } .mnx-skel i:nth-child(even) { width: 72%; }
+    @keyframes mnx-shimmer { from { background-position: 100% 0; } to { background-position: 0 0; } }
+    @media (prefers-reduced-motion: reduce) { .mnx-skel i { animation: none; } }
+
+    .mnx-schedule { text-align: center; padding: 2rem 1.4rem; }
+    .mnx-empty-orb { width: 56px; height: 56px; border-radius: 50%; margin: 0 auto 1rem; background: radial-gradient(circle at 35% 30%, rgba(255,255,255,.5), var(--mint-deep)); opacity: .55; box-shadow: 0 0 24px rgba(106,211,184,.3); }
+    .mnx-schedule h3 { font-size: var(--fs-xl); font-weight: 600; color: var(--ink); }
+    .mnx-schedule p { font-size: var(--fs-md); color: var(--ink-soft); margin-top: .4rem; max-width: 42ch; margin-inline: auto; }
+    .mnx-times { display: flex; flex-wrap: wrap; justify-content: center; gap: .55rem; margin-top: 1.3rem; }
+    .mnx-time { display: inline-flex; align-items: center; min-height: 40px; padding: .6rem 1rem; border-radius: var(--r-pill); background: var(--surface); border: 1px solid var(--line-strong); color: var(--ink); font: inherit; font-size: var(--fs-sm); cursor: pointer; }
+    .mnx-time:hover { border-color: rgba(106,211,184,.5); }
+
+    .mnx-chat { display: flex; flex-direction: column; width: 100%; max-width: 640px; margin-inline: auto; height: clamp(360px, 66dvh, 620px); background: var(--glass-strong); border: 1px solid var(--line-strong); border-radius: var(--r-lg); box-shadow: var(--shadow-soft); overflow: hidden; position: relative; }
+    .mnx-chat-head { display: flex; align-items: center; gap: .7rem; padding: .8rem 1rem; border-bottom: 1px solid var(--line); flex: none; }
+    .mnx-chat-pic { width: 36px; height: 36px; border-radius: 50%; flex: none; background: linear-gradient(135deg, var(--mint), var(--aqua)); display: grid; place-items: center; color: #06231C; }
+    .mnx-chat-pic svg { width: 18px; height: 18px; }
+    .mnx-chat-who b { font-size: var(--fs-md); color: var(--ink); font-weight: 600; display: block; }
+    .mnx-chat-who i { font-style: normal; font-size: var(--fs-2xs); color: var(--mint-deep); display: inline-flex; align-items: center; gap: .3rem; }
+    html[data-theme="light"] .mnx-chat-who i { color: var(--mint-ink); }
+    .mnx-chat-end { margin-left: auto; padding: .4rem .9rem; border-radius: var(--r-pill); background: rgba(255,107,157,.1); border: 1px solid rgba(255,107,157,.25); color: var(--coral); font: inherit; font-size: var(--fs-sm); font-weight: 600; cursor: pointer; white-space: nowrap; }
+    html[data-theme="light"] .mnx-chat-end { color: var(--coral-ink); }
+    .mnx-chat-end.confirm { background: var(--coral); color: #fff; border-color: transparent; }
+    .mnx-feed { flex: 1; overflow-y: auto; padding: 1rem .9rem; display: flex; flex-direction: column; gap: .35rem; justify-content: flex-start; }
+    .mnx-sys { text-align: center; font-size: var(--fs-xs); color: var(--ink-faint); padding: .4rem 0; }
+    .mnx-row { display: flex; flex-direction: column; }
+    .mnx-row.me { align-items: flex-end; } .mnx-row.them { align-items: flex-start; }
+    .mnx-bubble { max-width: 78%; padding: .6rem .85rem; border-radius: 16px; font-size: var(--fs-md); line-height: 1.5; word-wrap: break-word; overflow-wrap: anywhere; animation: mnx-bub .18s var(--ease-out) both; }
+    @keyframes mnx-bub { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+    .mnx-row.me .mnx-bubble { background: linear-gradient(135deg, var(--mint), var(--mint-deep)); color: #06231C; border-bottom-right-radius: 5px; }
+    .mnx-row.me.temp .mnx-bubble { opacity: .6; }
+    .mnx-row.them .mnx-bubble { background: var(--surface-strong); border: 1px solid var(--line); color: var(--ink); border-bottom-left-radius: 5px; }
+    html[data-theme="light"] .mnx-row.them .mnx-bubble { background: #fff; border-color: var(--line-strong); }
+    .mnx-meta { display: flex; align-items: center; margin: .14rem .2rem 0; }
+    .mnx-row.me .mnx-meta { justify-content: flex-end; }
+    .mnx-mtime { font-size: var(--fs-3xs); color: var(--ink-faint); font-family: var(--font-mono); }
+    .mnx-status { font-size: var(--fs-3xs); color: var(--ink-faint); font-family: var(--font-mono); }
+    .mnx-status:not(:empty)::before { content: '·'; margin: 0 .3rem; color: var(--ink-ghost); }
+    .mnx-typing { align-self: flex-start; display: inline-flex; gap: 4px; padding: .6rem .8rem; background: var(--surface-strong); border: 1px solid var(--line); border-radius: 16px; border-bottom-left-radius: 5px; }
+    .mnx-typing span { width: 6px; height: 6px; border-radius: 50%; background: var(--ink-faint); animation: mnx-typing 1.2s infinite; }
+    .mnx-typing span:nth-child(2) { animation-delay: .2s; } .mnx-typing span:nth-child(3) { animation-delay: .4s; }
+    @keyframes mnx-typing { 0%,60%,100% { opacity: .3; transform: translateY(0); } 30% { opacity: 1; transform: translateY(-3px); } }
+    .mnx-newmsgs { position: absolute; left: 50%; transform: translateX(-50%); bottom: 78px; padding: .4rem .9rem; border-radius: var(--r-pill); background: var(--mint-deep); color: #06231C; font: inherit; font-size: var(--fs-sm); font-weight: 600; border: 0; cursor: pointer; box-shadow: var(--shadow-soft); display: none; }
+    .mnx-newmsgs.show { display: block; }
+    .mnx-input { display: flex; align-items: center; gap: .6rem; padding: .7rem .8rem; border-top: 1px solid var(--line); flex: none; }
+    .mnx-input input { flex: 1; background: var(--surface); border: 1px solid var(--line-strong); border-radius: var(--r-pill); padding: .65rem 1rem; color: var(--ink); font: inherit; font-size: 16px; outline: none; }
+    .mnx-input input:focus { border-color: rgba(106,211,184,.5); }
+    .mnx-send { width: 42px; height: 42px; flex: none; border-radius: 50%; border: 0; cursor: pointer; color: #06231C; background: linear-gradient(135deg, var(--mint), var(--mint-deep)); display: grid; place-items: center; transition: transform var(--t-fast) var(--ease-out), filter var(--t-fast) var(--ease-out), opacity var(--t-fast) var(--ease-out); }
+    .mnx-send:hover { transform: translateY(-1px); filter: brightness(1.06); }
+    .mnx-send:active { transform: scale(.92); }
+    .mnx-send[disabled] { opacity: .5; cursor: default; transform: none; filter: none; }
+    .mnx-send svg { width: 18px; height: 18px; }
+    .mnx-icon-btn { width: 38px; height: 38px; flex: none; display: grid; place-items: center; border-radius: 50%; background: var(--surface); border: 1px solid var(--line-strong); color: var(--ink-soft); cursor: pointer; transition: color var(--t-fast) var(--ease-out), border-color var(--t-fast) var(--ease-out); }
+    .mnx-icon-btn:hover { color: var(--mint-deep); border-color: rgba(106,211,184,.5); }
+    .mnx-icon-btn svg { width: 17px; height: 17px; }
+    .mnx-call { display: flex; align-items: center; justify-content: space-between; gap: .6rem; flex: none; padding: .6rem .9rem; border-bottom: 1px solid var(--line); background: rgba(106,211,184,.08); }
+    .mnx-call[hidden] { display: none; }
+    .mnx-call-status { display: inline-flex; align-items: center; gap: .5rem; font-size: var(--fs-sm); color: var(--ink); font-weight: 600; }
+    .mnx-call-sub { font-weight: 400; color: var(--ink-faint); font-size: var(--fs-xs); }
+    .mnx-call-dot { width: 8px; height: 8px; border-radius: 50%; flex: none; background: var(--gold); }
+    .mnx-call-dot.live { background: var(--mint-deep); box-shadow: 0 0 8px var(--mint-deep); animation: mnx-dot-pulse 2s var(--ease-soft) infinite; }
+    .mnx-call-actions { display: flex; gap: .5rem; }
+    .mnx-call-accept, .mnx-call-decline, .mnx-call-end, .mnx-call-mute { min-height: 36px; padding: .35rem .9rem; border-radius: var(--r-pill); font: inherit; font-size: var(--fs-sm); font-weight: 600; cursor: pointer; border: 1px solid var(--line-strong); background: var(--surface); color: var(--ink); }
+    .mnx-call-accept { background: linear-gradient(135deg, var(--mint), var(--mint-deep)); color: #06231C; border-color: transparent; }
+    .mnx-call-end, .mnx-call-decline { background: rgba(255,107,157,.12); border-color: rgba(255,107,157,.3); color: var(--coral); }
+    html[data-theme="light"] .mnx-call-end, html[data-theme="light"] .mnx-call-decline { color: var(--coral-ink); }
+    .mnx-call-mute.on { background: var(--coral); color: #fff; border-color: transparent; }
+    /* scanning radar */
+    .mnx-scan { position: relative; width: 120px; height: 120px; margin: 0 auto 1.4rem; border-radius: 50%; }
+    .mnx-scan::before, .mnx-scan::after { content: ''; position: absolute; border-radius: 50%; border: 1px solid rgba(106,211,184,.22); }
+    .mnx-scan::before { inset: 0; } .mnx-scan::after { inset: 24px; }
+    .mnx-scan-sweep { position: absolute; inset: 0; border-radius: 50%; background: conic-gradient(from 0deg, transparent 0deg, rgba(106,211,184,.38) 60deg, transparent 130deg); animation: mnx-radar 1.5s linear infinite; }
+    .mnx-scan-core { position: absolute; top: 50%; left: 50%; width: 44px; height: 44px; transform: translate(-50%, -50%); border-radius: 50%; background: radial-gradient(circle at 35% 30%, #fff, var(--mint-deep)); box-shadow: 0 0 22px rgba(106,211,184,.5); }
+    @keyframes mnx-radar { to { transform: rotate(360deg); } }
+    @media (prefers-reduced-motion: reduce) { .mnx-scan-sweep { animation: none; } }
+    /* chat/call choice */
+    .mnx-choice { display: flex; flex-direction: column; gap: .6rem; max-width: 320px; margin: 1.4rem auto 0; }
+    .mnx-go svg { width: 18px; height: 18px; }
+    .mnx-go-alt { background: var(--surface-strong); color: var(--ink); box-shadow: none; border: 1px solid rgba(106,211,184,.45); }
+    .mnx-go-alt:hover { border-color: rgba(106,211,184,.7); }
+    /* history trigger + drawer */
+    .mnx-history-btn { display: inline-flex; align-items: center; gap: .4rem; margin: 1.3rem auto 0; background: none; border: 0; color: var(--ink-faint); font: inherit; font-size: var(--fs-sm); cursor: pointer; }
+    .mnx-history-btn:hover { color: var(--mint-deep); }
+    .mnx-history-btn span { transition: transform var(--t-fast) var(--ease-out); }
+    .mnx-history-btn:hover span { transform: translateX(3px); }
+    .mnx-drawer { position: fixed; inset: 0; z-index: 9000; }
+    .mnx-drawer[hidden] { display: none; }
+    .mnx-drawer-scrim { position: absolute; inset: 0; background: rgba(8,9,26,.6); -webkit-backdrop-filter: blur(2px); backdrop-filter: blur(2px); opacity: 0; transition: opacity var(--t-base) var(--ease-out); }
+    .mnx-drawer.open .mnx-drawer-scrim { opacity: 1; }
+    .mnx-drawer-panel { position: absolute; top: 0; right: 0; height: 100%; width: min(360px, 86vw); background: var(--bg-mid); border-left: 1px solid var(--line-strong); box-shadow: -20px 0 60px rgba(0,0,0,.5); padding: 1.2rem 1rem; overflow-y: auto; transform: translateX(100%); transition: transform var(--t-base) var(--ease-out); }
+    .mnx-drawer.open .mnx-drawer-panel { transform: translateX(0); }
+    html[data-theme="light"] .mnx-drawer-panel { background: var(--bg-warm); }
+    .mnx-drawer-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; }
+    .mnx-drawer-head b { font-size: var(--fs-lg); color: var(--ink); }
+    .mnx-drawer-close { background: none; border: 0; color: var(--ink-faint); font-size: 1.1rem; cursor: pointer; width: 32px; height: 32px; border-radius: 50%; }
+    .mnx-drawer-close:hover { color: var(--ink); background: var(--surface); }
+
+    .mnx-msg { padding: 2rem 1.4rem; text-align: center; color: var(--ink-soft); font-size: var(--fs-md); }
+    .mnx-retry { margin-top: 1rem; }
+
+    .mnx-modal { position: fixed; inset: 0; z-index: 9000; display: flex; align-items: center; justify-content: center; padding: 1.2rem; background: var(--glass-strong); backdrop-filter: blur(6px); }
+    .mnx-modal-card { width: 100%; max-width: 360px; background: var(--bg-warm); border: 1px solid var(--line-strong); border-radius: var(--r-lg); box-shadow: var(--shadow-soft); padding: 1.6rem 1.4rem; text-align: center; }
+    .mnx-modal-card h3 { font-size: var(--fs-xl); color: var(--ink); font-weight: 600; }
+    .mnx-modal-card p { font-size: var(--fs-sm); color: var(--ink-soft); margin-top: .3rem; }
+    .mnx-feel { display: flex; justify-content: center; gap: .5rem; margin: 1rem 0; }
+    .mnx-feel button { font-size: 1.7rem; background: var(--surface); border: 1px solid var(--line-strong); border-radius: var(--r-md); width: 52px; height: 52px; cursor: pointer; transition: border-color var(--t-fast) var(--ease-out), transform var(--t-fast) var(--ease-out); }
+    .mnx-feel button:hover { transform: translateY(-2px); }
+    .mnx-feel button.on { border-color: var(--mint-deep); background: rgba(106,211,184,.14); }
+    .mnx-stars { display: flex; justify-content: center; gap: .6rem; font-size: 2rem; margin: .4rem 0 1rem; cursor: pointer; }
+    .mnx-stars span { color: var(--line-strong); transition: color var(--t-fast) var(--ease-out), transform var(--t-fast) var(--ease-out); }
+    .mnx-stars span:hover { transform: scale(1.12); }
+    .mnx-stars span.on { color: var(--gold); }
+    .mnx-modal-actions { display: flex; gap: .6rem; margin-top: 1rem; }
+    .mnx-btn-ghost { flex: 1; padding: .7rem; border-radius: var(--r-pill); background: var(--surface); border: 1px solid var(--line-strong); color: var(--ink-soft); font: inherit; font-size: var(--fs-sm); cursor: pointer; }
+    .mnx-btn-go { flex: 2; padding: .7rem; border-radius: var(--r-pill); border: 0; color: #06231C; font: inherit; font-size: var(--fs-sm); font-weight: 650; cursor: pointer; background: linear-gradient(135deg, var(--mint), var(--mint-deep)); }
+
   </style>
 
-  <script is:inline>
-    (function () {
-      var feed = document.getElementById('mx-feed'), modes = document.getElementById('mx-modes');
-      var D = {
-        talk: { c: "Finding your <b>person</b>, right now…", name: 'Aria M.', meta: 'warm · funny · great company', rate: '★ 4.9', tags: ['trip planning','pep talks','big ideas'], st: 'available now · connects in ~28s · anonymous' },
-        smart:{ c: "Reading your <b>vibe</b> and matching…", name: 'Sol K.', meta: 'steady · great brainstorm buddy', rate: '★ 4.9', tags: ['ideas','plans','motivation'], st: 'matched to you · connects in ~40s' },
-        book: { c: "Holding a time for you…", name: 'Priya', meta: 'calm, easy to talk to', rate: '★ 5.0', tags: ['evenings','wind-down'], st: 'booked · 9:00 tonight · we’ll nudge you' },
-        spec: { c: "Finding someone with a <b>specialty</b>…", name: 'Specialist', meta: 'knows your world inside out', rate: '★ 5.0', tags: ['deep dives','your niche'], st: 'available · connects in ~2 min' },
-      };
-      var busy = false;
-      function connect(k) {
-        if (busy) return; busy = true; var d = D[k];
-        feed.innerHTML = '<div class="mx-connect"><span class="mx-ripple"><i></i><i></i></span><span>' + d.c + '</span></div>';
-        setTimeout(function () {
-          feed.innerHTML = '<div class="mx-listener"><div class="mx-l-top"><span class="mx-pic"></span><span class="mx-l-who"><b>' + d.name + '</b><span>' + d.meta + '</span></span><span class="mx-rate">' + d.rate + '</span></div>'
-            + '<div class="mx-tags">' + d.tags.map(function (t) { return '<span class="mx-tag">' + t + '</span>'; }).join('') + '</div>'
-            + '<div class="mx-st"><i></i>' + d.st + '</div><button type="button" class="mx-go-btn">Start talking</button></div>';
-          busy = false;
-        }, 1100);
+  <script>
+    import { supabase } from '../../lib/supabaseClient';
+
+    const root = document.getElementById('mnx-root');
+    const page = document.getElementById('mnx-page');
+    const immersive = (on) => page?.classList.toggle('immersive', on);
+    const SEND_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4z"/></svg>';
+    const PERSON_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 12a4 4 0 100-8 4 4 0 000 8zM5 20a7 7 0 0114 0"/></svg>';
+    const PHONE_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6.6 10.8a15 15 0 0 0 6.6 6.6l2.2-2.2a1 1 0 0 1 1-.24 11.4 11.4 0 0 0 3.6.58 1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1 11.4 11.4 0 0 0 .58 3.6 1 1 0 0 1-.24 1z"/></svg>';
+    const LOCK_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>';
+    const CHAT_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.5 8.5 0 0 1-12.5 7.5L3 21l2-5.5A8.5 8.5 0 1 1 21 11.5z"/></svg>';
+    const FRESH = () => new Date(Date.now() - 120000).toISOString();
+    const fmtTime = (iso) => { try { return new Date(iso).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' }); } catch { return ''; } };
+    const relTime = (iso) => { const d = Date.now() - new Date(iso).getTime(); const m = Math.floor(d / 60000), h = Math.floor(m / 60), day = Math.floor(h / 24); if (day > 6) return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }); if (day >= 1) return day + (day === 1 ? ' day ago' : ' days ago'); if (h >= 1) return h + (h === 1 ? ' hr ago' : ' hrs ago'); if (m >= 1) return m + ' min ago'; return 'just now'; };
+    const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+    const hashId = (id) => { let h = 0; const s = String(id || ''); for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0; return h; };
+    const orbStyle = (id) => { if (!id) return ''; const h = hashId(id) % 360; return `background:linear-gradient(135deg,hsl(${h},65%,68%),hsl(${(h + 38) % 360},70%,52%))`; };
+    const stepsHTML = (active) => { const step = (n, label) => `<span class="mnx-step ${active >= n ? 'on' : ''}">${label}</span>`; const line = (n) => `<span class="mnx-step-line ${active >= n ? 'on' : ''}"></span>`; return `<div class="mnx-steps">${step(1, 'Looking')}${line(2)}${step(2, 'Connecting')}${line(3)}${step(3, 'Connected')}</div>`; };
+
+    if (!root) { /* no root */ }
+    else if (!supabase) { root.innerHTML = '<div class="mnx-msg">Sign-in isn’t configured in this environment yet.</div>'; }
+    else {
+      const SB_URL = import.meta.env.PUBLIC_SUPABASE_URL || '';
+      const SB_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY || '';
+      let user = null, accessToken = null;
+      let activeSessionId = null, activeListenerId = null, isEnding = false, busy = false, sending = false, pendingWithCall = false;
+      let sessionChannel = null, chatChannel = null, sessionPoll = null, msgPoll = null, lastMsgAt = null;
+      let chatOpen = false, connectWatchdog = 0, typingTimer = 0, lastTypingSent = 0, lastOwnStatusEl = null;
+      const rendered = new Set();
+
+      const getUser = async () => { try { const { data } = await supabase.auth.getSession(); accessToken = data?.session?.access_token || null; return data?.session?.user || null; } catch { return null; } };
+      const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+      const sessionExpired = async () => { try { const { data } = await supabase.auth.getSession(); const s = data?.session; return !s || (s.expires_at && s.expires_at * 1000 < Date.now() + 5000); } catch { return true; } };
+
+      window.addEventListener('pagehide', () => {
+        if (!activeSessionId || chatOpen || isEnding || !accessToken || !SB_URL) return;
+        try { fetch(SB_URL + '/rest/v1/connect_sessions?id=eq.' + activeSessionId, { method: 'PATCH', keepalive: true, headers: { apikey: SB_KEY, Authorization: 'Bearer ' + accessToken, 'Content-Type': 'application/json', Prefer: 'return=minimal' }, body: JSON.stringify({ status: 'cancelled' }) }); } catch (e) {}
+      });
+
+      function teardown() {
+        try { endCall(false); } catch (e) {}
+        [sessionChannel, chatChannel].forEach((c) => { if (c) supabase.removeChannel(c); });
+        sessionChannel = chatChannel = null;
+        if (sessionPoll) clearInterval(sessionPoll);
+        if (msgPoll) clearInterval(msgPoll);
+        if (connectWatchdog) clearTimeout(connectWatchdog);
       }
-      modes.addEventListener('click', function (e) { var b = e.target.closest('.mx-mode'); if (b) connect(b.getAttribute('data-mode')); });
-    })();
+
+      // ---- analytics (append-only events) ----
+      function logEvent(event, meta) { try { supabase.from('minit_events').insert([{ user_id: user.id, listener_id: activeListenerId, session_id: activeSessionId, event, meta: meta || null }]); } catch (e) {} }
+
+      // ---- credits: 1 minit = 1 minute; 10/day, 30/week, hard ceiling ----
+      async function checkCredits() {
+        try {
+          const { data } = await supabase.rpc('minit_minutes_used');
+          const row = Array.isArray(data) ? data[0] : data;
+          const t = Math.max(0, Number(row?.today_min || 0)), w = Math.max(0, Number(row?.week_min || 0));
+          const leftToday = Math.max(0, 10 - Math.floor(t)), leftWeek = Math.max(0, 30 - Math.floor(w));
+          return { leftToday, leftWeek, ok: leftToday > 0 && leftWeek > 0 };
+        } catch { return { leftToday: 10, leftWeek: 30, ok: true }; }
+      }
+      function showCapped() {
+        immersive(false); logEvent('cap_blocked');
+        root.innerHTML = `<div class="mnx-schedule"><div class="mnx-empty-orb"></div><h3>You’ve used your minits</h3><p>Everyone gets 10 minits a day and 30 a week, so there’s always room for others. Your minits reset at midnight.</p><div class="mnx-ring-actions"><a class="mnx-go" href="/beta/blak/" style="width:auto;padding:.7rem 1.4rem;text-decoration:none">Text with Blak</a><button type="button" class="mnx-cancel" id="mnx-capback">Back</button></div></div>`;
+        document.getElementById('mnx-capback')?.addEventListener('click', showEntry);
+      }
+
+      // ---- voice calling (WebRTC over Supabase Realtime signalling) ----
+      const RTC_CFG = { iceServers: [{ urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] }] };
+      let pc = null, localStream = null, callState = 'idle', callTimer = 0, callStart = 0, pendingCands = [], remoteOffer = null, callTimeout = 0, callMuted = false, chatReady = false;
+      function callSend(kind, data) { try { chatChannel?.send({ type: 'broadcast', event: 'call', payload: { from: user.id, kind, data } }); } catch (e) {} }
+      function fmtDur(s) { const m = Math.floor(s / 60), x = s % 60; return m + ':' + String(x).padStart(2, '0'); }
+      function renderCallBar(state) {
+        const bar = document.getElementById('mnx-call'); if (!bar) return;
+        if (!state) { bar.hidden = true; bar.innerHTML = ''; if (callTimer) { clearInterval(callTimer); callTimer = 0; } return; }
+        bar.hidden = false;
+        if (state === 'calling') bar.innerHTML = `<span class="mnx-call-status"><span class="mnx-call-dot"></span> Calling… <span class="mnx-call-sub">ringing your listener</span></span><button type="button" class="mnx-call-end" id="mnx-call-cancel">Cancel</button>`;
+        else if (state === 'incoming') bar.innerHTML = `<span class="mnx-call-status"><span class="mnx-call-dot"></span> Incoming voice call</span><span class="mnx-call-actions"><button type="button" class="mnx-call-decline" id="mnx-call-decline">Decline</button><button type="button" class="mnx-call-accept" id="mnx-call-accept">Accept</button></span>`;
+        else bar.innerHTML = `<span class="mnx-call-status"><span class="mnx-call-dot live"></span> On call · <span id="mnx-call-time">0:00</span></span><span class="mnx-call-actions"><button type="button" class="mnx-call-mute ${callMuted ? 'on' : ''}" id="mnx-call-mute">${callMuted ? 'Unmute' : 'Mute'}</button><button type="button" class="mnx-call-end" id="mnx-call-hang">End call</button></span>`;
+        document.getElementById('mnx-call-cancel')?.addEventListener('click', () => endCall(true));
+        document.getElementById('mnx-call-hang')?.addEventListener('click', () => endCall(true));
+        document.getElementById('mnx-call-decline')?.addEventListener('click', declineCall);
+        document.getElementById('mnx-call-accept')?.addEventListener('click', acceptCall);
+        document.getElementById('mnx-call-mute')?.addEventListener('click', (e) => { callMuted = !callMuted; const tr = localStream?.getAudioTracks()[0]; if (tr) tr.enabled = !callMuted; e.currentTarget.textContent = callMuted ? 'Unmute' : 'Mute'; e.currentTarget.classList.toggle('on', callMuted); });
+      }
+      function createPC() {
+        pc = new RTCPeerConnection(RTC_CFG);
+        pc.onicecandidate = (e) => { if (e.candidate) callSend('ice', e.candidate); };
+        pc.ontrack = (e) => { const a = document.getElementById('mnx-rtc-audio'); if (a) a.srcObject = e.streams[0]; };
+        pc.onconnectionstatechange = () => { if (!pc) return; const st = pc.connectionState; if (st === 'connected') onCallConnected(); else if (st === 'failed' || st === 'disconnected' || st === 'closed') endCall(false); };
+      }
+      function onCallConnected() {
+        if (callState === 'connected') return; callState = 'connected'; callStart = Date.now();
+        if (callTimeout) { clearTimeout(callTimeout); callTimeout = 0; }
+        renderCallBar('connected'); logEvent('call_connected');
+        if (callTimer) clearInterval(callTimer);
+        callTimer = setInterval(() => { const t = document.getElementById('mnx-call-time'); if (t) t.textContent = fmtDur(Math.floor((Date.now() - callStart) / 1000)); }, 1000);
+      }
+      const getMic = () => navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+      async function startCall() {
+        if (callState !== 'idle' || !activeSessionId) return;
+        if (!chatReady) { for (let i = 0; i < 12 && !chatReady; i++) await wait(150); }
+        try { localStream = await getMic(); } catch (e) { alert('Microphone access is needed for a voice call.'); return; }
+        callState = 'calling'; renderCallBar('calling'); logEvent('call_started');
+        createPC(); localStream.getTracks().forEach((t) => pc.addTrack(t, localStream));
+        try { const offer = await pc.createOffer({ offerToReceiveAudio: true }); await pc.setLocalDescription(offer); callSend('offer', offer); } catch (e) { endCall(true); return; }
+        if (callTimeout) clearTimeout(callTimeout);
+        callTimeout = setTimeout(() => { if (callState === 'calling') endCall(true); }, 45000);
+      }
+      async function handleCallSignal(p) {
+        const kind = p?.kind, data = p?.data, from = p?.from;
+        if (kind === 'offer') {
+          if (callState === 'calling') { if (String(user.id) < String(from)) return; endCall(false); remoteOffer = data; callState = 'incoming'; acceptCall(); return; }
+          if (callState !== 'idle') return;
+          remoteOffer = data; callState = 'incoming'; renderCallBar('incoming');
+        } else if (kind === 'answer') {
+          if (pc && callState === 'calling') { try { await pc.setRemoteDescription(new RTCSessionDescription(data)); for (const c of pendingCands.splice(0)) { try { await pc.addIceCandidate(new RTCIceCandidate(c)); } catch (e) {} } } catch (e) {} }
+        } else if (kind === 'ice') { try { if (pc && pc.remoteDescription) await pc.addIceCandidate(new RTCIceCandidate(data)); else pendingCands.push(data); } catch (e) {} }
+        else if (kind === 'end' || kind === 'decline') { endCall(false); }
+      }
+      async function acceptCall() {
+        if (callState !== 'incoming' || !remoteOffer) return;
+        try { localStream = await getMic(); } catch (e) { declineCall(); return; }
+        createPC(); localStream.getTracks().forEach((t) => pc.addTrack(t, localStream));
+        try {
+          await pc.setRemoteDescription(new RTCSessionDescription(remoteOffer));
+          for (const c of pendingCands.splice(0)) { try { await pc.addIceCandidate(new RTCIceCandidate(c)); } catch (e) {} }
+          const ans = await pc.createAnswer(); await pc.setLocalDescription(ans); callSend('answer', ans);
+          callState = 'connecting'; renderCallBar('connected'); logEvent('call_accepted');
+        } catch (e) { endCall(true); }
+      }
+      function declineCall() { callSend('decline'); remoteOffer = null; callState = 'idle'; renderCallBar(null); }
+      function endCall(notify) {
+        if (callState === 'idle' && !pc) return;
+        if (notify) callSend('end');
+        logEvent('call_ended', { dur: callStart ? Math.floor((Date.now() - callStart) / 1000) : 0, connected: !!callStart });
+        if (callTimeout) { clearTimeout(callTimeout); callTimeout = 0; }
+        try { if (pc) { pc.onicecandidate = pc.ontrack = pc.onconnectionstatechange = null; pc.close(); } } catch (e) {}
+        pc = null;
+        try { localStream?.getTracks().forEach((t) => t.stop()); } catch (e) {}
+        localStream = null; remoteOffer = null; pendingCands = []; callStart = 0; callState = 'idle'; callMuted = false;
+        const a = document.getElementById('mnx-rtc-audio'); if (a) a.srcObject = null;
+        renderCallBar(null);
+      }
+
+      async function init() {
+        user = await getUser();
+        if (!user) { showSessionExpired(); return; }
+        try { const { data: lp } = await supabase.from('listeners').select('id').eq('user_id', user.id).maybeSingle(); if (lp) { window.location.replace('/beta/listen/'); return; } } catch (e) {}
+        const { data: existing } = await supabase.from('connect_sessions').select('*').eq('user_id', user.id).in('status', ['pending', 'active']).order('created_at', { ascending: false }).limit(1);
+        const s = existing && existing[0];
+        if (s) { activeSessionId = s.id; activeListenerId = s.listener_id; watchSession(s.id); if (s.status === 'active') openChat(); else showConnecting(); return; }
+        showEntry();
+      }
+
+      async function availableCount() {
+        try { const { data } = await supabase.from('listeners').select('id,last_seen').eq('is_online', true); return (data || []).filter((l) => !l.last_seen || Date.now() - new Date(l.last_seen).getTime() < 120000).length; } catch { return 0; }
+      }
+      async function lastListenerId() {
+        try { const { data } = await supabase.from('connect_sessions').select('listener_id').eq('user_id', user.id).eq('status', 'completed').not('listener_id', 'is', null).order('created_at', { ascending: false }).limit(1); return data && data[0] ? data[0].listener_id : null; } catch { return null; }
+      }
+
+      async function showEntry() {
+        chatOpen = false; immersive(false);
+        root.innerHTML = '<div class="mnx-skel" style="margin-top:1rem"><i></i><i></i><i></i></div>';
+        const [count, history, credits] = await Promise.all([availableCount(), loadHistory(), checkCredits()]);
+        const anonPref = localStorage.getItem('mnx_anon') !== 'false';
+        const live = count > 0
+          ? '<div class="mnx-live"><span class="mnx-live-dot"></span> Someone’s available right now</div>'
+          : '<div class="mnx-live off"><span class="mnx-live-dot"></span> Quiet right now — start anyway and we’ll look</div>';
+        const pips = Array.from({ length: 10 }, (_, i) => `<i class="mnx-pip ${i < credits.leftToday ? 'on' : ''}"></i>`).join('');
+        const threadItems = history.map((h) => `<button type="button" class="mnx-thread" data-id="${h.id}" data-lid="${h.listener_id || ''}"><span class="mnx-thread-orb" style="${orbStyle(h.listener_id)}"></span><span class="mnx-thread-meta"><b>${esc(h.snippet)}</b><i>${h.when}</i></span><span class="mnx-thread-go">→</span></button>`).join('');
+        const historyBtn = history.length ? `<button type="button" class="mnx-history-btn" id="mnx-history">View past conversations <span>→</span></button>` : '';
+        const drawer = history.length ? `<div class="mnx-drawer" id="mnx-drawer" hidden><div class="mnx-drawer-scrim" id="mnx-drawer-scrim"></div><aside class="mnx-drawer-panel"><div class="mnx-drawer-head"><b>Your conversations</b><button type="button" class="mnx-drawer-close" id="mnx-drawer-close" aria-label="Close">✕</button></div><div class="mnx-drawer-list">${threadItems}</div></aside></div>` : '';
+        root.innerHTML = `<div class="mnx-stage">
+          <div class="mnx-entry">
+            <span class="mnx-entry-glow" aria-hidden="true"></span>
+            <div class="mnx-orb-wrap" aria-hidden="true"><i class="mnx-echo"></i><i class="mnx-echo"></i><span class="mnx-orb"></span></div>
+            <p class="mnx-kick2">Minit · real people</p>
+            <h2 class="mnx-greet">Someone real is <em>here for you.</em></h2>
+            <p class="mnx-greet-sub">Whenever you need them — anonymous by default, both sides cared for.</p>
+            ${live}
+            <button type="button" class="mnx-go" id="mnx-start"${credits.ok ? '' : ' disabled'}>Start talking <span class="mnx-cta-arrow">→</span></button>
+            <button type="button" class="mnx-anon-min ${anonPref ? 'on' : ''}" id="mnx-anon" aria-pressed="${anonPref}"><span class="mnx-anon-ico">${LOCK_SVG}</span> Anonymous <i>${anonPref ? 'on' : 'off'}</i><span class="mnx-sw2"></span></button>
+            <div class="mnx-meter">
+              <div class="mnx-meter-top"><span class="mnx-meter-label">Today’s minits</span><span class="mnx-meter-val">${credits.leftToday} left</span></div>
+              <div class="mnx-pips">${pips}</div>
+              <p class="mnx-meter-foot">${credits.ok ? credits.leftWeek + ' of 30 left this week · resets daily' : 'No minits left — more at midnight'}</p>
+            </div>
+            ${historyBtn}
+          </div>
+        </div>${drawer}`;
+        let anon = anonPref;
+        const anonBtn = document.getElementById('mnx-anon');
+        anonBtn?.addEventListener('click', () => { anon = !anon; localStorage.setItem('mnx_anon', anon ? 'true' : 'false'); anonBtn.classList.toggle('on', anon); anonBtn.setAttribute('aria-pressed', String(anon)); const i = anonBtn.querySelector('i'); if (i) i.textContent = anon ? 'on' : 'off'; });
+        document.getElementById('mnx-start')?.addEventListener('click', async (e) => {
+          if (busy) return; busy = true; e.currentTarget.setAttribute('disabled', '');
+          const c = await checkCredits();
+          if (!c.ok) { busy = false; showCapped(); return; }
+          logEvent('start_tapped', { anon }); startTalking(anon);
+        });
+        const drawerEl = document.getElementById('mnx-drawer');
+        const openDrawer = () => { if (!drawerEl) return; drawerEl.hidden = false; requestAnimationFrame(() => drawerEl.classList.add('open')); };
+        const closeDrawer = () => { if (!drawerEl) return; drawerEl.classList.remove('open'); setTimeout(() => { drawerEl.hidden = true; }, 320); };
+        document.getElementById('mnx-history')?.addEventListener('click', openDrawer);
+        document.getElementById('mnx-drawer-close')?.addEventListener('click', closeDrawer);
+        document.getElementById('mnx-drawer-scrim')?.addEventListener('click', closeDrawer);
+        root.querySelectorAll('.mnx-thread').forEach((t) => t.addEventListener('click', () => openThread(t.getAttribute('data-id'), t.getAttribute('data-lid'))));
+      }
+
+      async function loadHistory() {
+        try {
+          const { data } = await supabase.from('connect_sessions').select('id, listener_id, created_at').eq('user_id', user.id).eq('status', 'completed').order('created_at', { ascending: false }).limit(8);
+          const sessions = data || [];
+          if (!sessions.length) return [];
+          const lastBy = {};
+          try {
+            const { data: msgs } = await supabase.from('messages').select('session_id, content, created_at').in('session_id', sessions.map((s) => s.id)).order('created_at', { ascending: true });
+            (msgs || []).forEach((m) => { if (m.content && !String(m.content).startsWith('###')) lastBy[m.session_id] = m.content; });
+          } catch (e) {}
+          return sessions.map((s) => ({ id: s.id, listener_id: s.listener_id, when: relTime(s.created_at), snippet: lastBy[s.id] || 'No messages yet' }));
+        } catch { return []; }
+      }
+
+      async function openThread(sessionId, listenerId) {
+        immersive(true);
+        root.innerHTML = `<div class="mnx-chat">
+          <div class="mnx-chat-head"><div class="mnx-chat-pic">${PERSON_SVG}</div><div class="mnx-chat-who"><b>Past conversation</b><i>read-only</i></div><button type="button" class="mnx-chat-end" id="mnx-tback" style="background:var(--surface);border-color:var(--line-strong);color:var(--ink-soft)">Back</button></div>
+          <div class="mnx-feed" id="mnx-feed" role="log"><div class="mnx-skel"><i></i><i></i><i></i></div></div>
+          <div class="mnx-input" style="gap:.6rem"><button type="button" class="mnx-go" id="mnx-recon" style="flex:1;font-size:var(--fs-md)">↩ Reconnect</button><button type="button" class="mnx-cancel" id="mnx-newchat">New chat</button></div>
+        </div>`;
+        document.getElementById('mnx-tback')?.addEventListener('click', showEntry);
+        document.getElementById('mnx-recon')?.addEventListener('click', () => { busy = true; startTalking(localStorage.getItem('mnx_anon') !== 'false', listenerId || undefined); });
+        document.getElementById('mnx-newchat')?.addEventListener('click', () => { busy = true; startTalking(localStorage.getItem('mnx_anon') !== 'false'); });
+        const feed = document.getElementById('mnx-feed');
+        const { data: msgs } = await supabase.from('messages').select('*').eq('session_id', sessionId).order('created_at', { ascending: true });
+        const real = (msgs || []).filter((m) => m.content && !String(m.content).startsWith('###'));
+        feed.innerHTML = real.length ? '' : '<div class="mnx-schedule" style="padding:2.2rem 1rem"><div class="mnx-empty-orb"></div><p class="mnx-sys">No messages in this conversation.</p></div>';
+        real.forEach((m) => { const me = m.sender_id === user.id; const row = document.createElement('div'); row.className = 'mnx-row ' + (me ? 'me' : 'them'); const b = document.createElement('div'); b.className = 'mnx-bubble'; b.textContent = m.content; row.appendChild(b); const meta = document.createElement('div'); meta.className = 'mnx-meta'; const tm = document.createElement('span'); tm.className = 'mnx-mtime'; tm.textContent = fmtTime(m.created_at); meta.appendChild(tm); row.appendChild(meta); feed.appendChild(row); });
+        feed.scrollTop = feed.scrollHeight;
+      }
+
+      async function startTalking(isAnonymous, preferredId) {
+        immersive(true);
+        root.innerHTML = `<div class="mnx-ring"><div class="mnx-scan"><span class="mnx-scan-sweep"></span><span class="mnx-scan-core"></span></div><h3>Scanning for listeners…</h3><p>${preferredId ? 'Looking for your listener.' : 'Finding someone real and available for you.'}</p></div>`;
+        const [r] = await Promise.all([supabase.from('listeners').select('id,last_seen').eq('is_online', true), wait(1700)]);
+        busy = false;
+        if (r.error) { showError('Couldn’t reach the room just now.', () => { busy = true; startTalking(isAnonymous, preferredId); }); return; }
+        const ids = (r.data || []).filter((l) => !l.last_seen || Date.now() - new Date(l.last_seen).getTime() < 120000).map((l) => l.id);
+        const chosen = preferredId && ids.includes(preferredId) ? preferredId : ids[0];
+        if (chosen) { logEvent('listener_found'); showChoice(chosen, isAnonymous); }
+        else { logEvent('no_listener'); showSchedule(isAnonymous); }
+      }
+
+      function showChoice(listenerId, isAnonymous) {
+        immersive(true);
+        root.innerHTML = `<div class="mnx-ring">
+          <div class="mnx-ring-avatar"><i></i><i></i><span class="core"></span></div>
+          <h3>Someone’s available</h3>
+          <p>How would you like to talk? You can switch to a call anytime once you’re connected.</p>
+          <div class="mnx-choice">
+            <button type="button" class="mnx-go" id="mnx-pick-chat">${CHAT_SVG} Start chat</button>
+            <button type="button" class="mnx-go mnx-go-alt" id="mnx-pick-call">${PHONE_SVG} Start call</button>
+          </div>
+          <div class="mnx-ring-actions"><button type="button" class="mnx-cancel" id="mnx-pick-back">Back</button></div>
+        </div>`;
+        document.getElementById('mnx-pick-chat')?.addEventListener('click', () => connect(listenerId, isAnonymous, false));
+        document.getElementById('mnx-pick-call')?.addEventListener('click', () => connect(listenerId, isAnonymous, true));
+        document.getElementById('mnx-pick-back')?.addEventListener('click', showEntry);
+      }
+
+      async function connect(listenerId, isAnonymous, withCall) {
+        pendingWithCall = !!withCall;
+        showConnecting();
+        let id = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : null;
+        const row = { user_id: user.id, listener_id: listenerId, session_type: 'chat', is_anonymous: isAnonymous, status: 'pending' };
+        if (id) row.id = id;
+        const ins = await supabase.from('connect_sessions').insert([row]).select('id').single();
+        if (ins.error || !ins.data) {
+          console.error('[minit] connect insert failed:', ins.error?.code, ins.error?.message);
+          if (await sessionExpired() || ins.error?.code === '42501') { showSessionExpired(); return; }
+          showError('Couldn’t start the session. Please try again.', () => { busy = true; startTalking(isAnonymous); });
+          return;
+        }
+        activeSessionId = ins.data.id; activeListenerId = listenerId;
+        watchSession(activeSessionId);
+      }
+
+      function showConnecting() {
+        immersive(true);
+        root.innerHTML = `<div class="mnx-ring"><div class="mnx-ring-avatar"><i></i><i></i><span class="core"></span></div><h3>Connecting you…</h3><p>Someone’s coming to the chat. This is usually quick.</p>${stepsHTML(2)}<div class="mnx-ring-actions"><button type="button" class="mnx-cancel" id="mnx-cancel">Cancel</button></div></div>`;
+        document.getElementById('mnx-cancel')?.addEventListener('click', () => cancelPending().then(showEntry));
+        if (connectWatchdog) clearTimeout(connectWatchdog);
+        connectWatchdog = setTimeout(() => {
+          if (chatOpen) return;
+          const h = root.querySelector('.mnx-ring h3'), p = root.querySelector('.mnx-ring p'), a = root.querySelector('.mnx-ring-actions');
+          if (h) h.textContent = 'Still looking…';
+          if (p) p.textContent = 'It’s taking longer than usual. Keep waiting, or set a time and check back.';
+          if (a) a.innerHTML = '<button type="button" class="mnx-cancel" id="mnx-cancel">Cancel</button><button type="button" class="mnx-go" id="mnx-sched2" style="width:auto;padding:.6rem 1.2rem">Set a time</button>';
+          document.getElementById('mnx-cancel')?.addEventListener('click', () => cancelPending().then(showEntry));
+          document.getElementById('mnx-sched2')?.addEventListener('click', () => { cancelPending().then(() => showSchedule(localStorage.getItem('mnx_anon') !== 'false')); });
+        }, 45000);
+      }
+
+      function showError(text, retry) {
+        immersive(false);
+        root.innerHTML = `<div class="mnx-msg">${text}<div class="mnx-retry"><button type="button" class="mnx-go" id="mnx-retry" style="width:auto;padding:.7rem 1.4rem">Try again</button></div></div>`;
+        document.getElementById('mnx-retry')?.addEventListener('click', () => retry && retry());
+      }
+      function showSessionExpired() {
+        immersive(false);
+        root.innerHTML = `<div class="mnx-msg">Your sign-in has expired. Please sign in again to keep talking.<div class="mnx-retry"><a href="/?auth=1" class="mnx-go" style="display:inline-flex;width:auto;padding:.7rem 1.4rem;text-decoration:none">Sign in again</a></div></div>`;
+      }
+
+      function showSchedule(isAnonymous) {
+        immersive(false);
+        root.innerHTML = `<div class="mnx-schedule"><div class="mnx-empty-orb"></div><h3>All your listeners are quiet right now</h3><p>Everyone’s away for the moment. Tell us when suits you and we’ll have someone ready — or text Blak in the meantime.</p><div class="mnx-times"><button type="button" class="mnx-time" data-when="in about 30 minutes">In ~30 min</button><button type="button" class="mnx-time" data-when="tonight">Tonight</button><button type="button" class="mnx-time" data-when="tomorrow">Tomorrow</button></div><div class="mnx-ring-actions"><button type="button" class="mnx-cancel" id="mnx-sback">Back</button></div></div>`;
+        root.querySelectorAll('.mnx-time').forEach((b) => b.addEventListener('click', () => scheduleFor(b.getAttribute('data-when'), isAnonymous)));
+        document.getElementById('mnx-sback')?.addEventListener('click', showEntry);
+      }
+      async function scheduleFor(when, isAnonymous) {
+        try { await supabase.from('connect_sessions').insert([{ user_id: user.id, listener_id: null, session_type: 'chat', is_anonymous: isAnonymous, status: 'scheduled', listener_notes: 'requested: ' + when }]); } catch (e) {}
+        logEvent('scheduled', { when });
+        root.innerHTML = `<div class="mnx-ring"><div class="mnx-ring-check">✓</div><h3>Noted — thank you</h3><p>We’ve logged that you’d like to talk <b>${when}</b>. Check back soon.</p><div class="mnx-ring-actions"><button type="button" class="mnx-cancel" id="mnx-sdone">Done</button></div></div>`;
+        document.getElementById('mnx-sdone')?.addEventListener('click', showEntry);
+      }
+
+      function watchSession(id) {
+        if (sessionChannel) supabase.removeChannel(sessionChannel);
+        sessionChannel = supabase.channel('mnx_session_' + id).on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'connect_sessions', filter: `id=eq.${id}` }, syncSession).subscribe();
+        if (sessionPoll) clearInterval(sessionPoll);
+        sessionPoll = setInterval(syncSession, 1500);
+      }
+      async function syncSession() {
+        if (!activeSessionId || isEnding) return;
+        const { data: s, error } = await supabase.from('connect_sessions').select('status').eq('id', activeSessionId).maybeSingle();
+        if (error || !s) return;
+        if (s.status === 'active') openChat();
+        else if (s.status === 'completed') endByOther();
+        else if (s.status === 'rejected') { isEnding = true; teardown(); immersive(false); root.innerHTML = '<div class="mnx-msg">Your listener got pulled away. Please try again in a little while.<div class="mnx-retry"><button type="button" class="mnx-go" id="mnx-retry" style="width:auto;padding:.7rem 1.4rem">Back</button></div></div>'; document.getElementById('mnx-retry')?.addEventListener('click', resetToEntry); }
+        else if (s.status === 'cancelled') resetToEntry();
+      }
+      function resetToEntry() { isEnding = false; teardown(); activeSessionId = null; activeListenerId = null; chatOpen = false; rendered.clear(); lastMsgAt = null; lastOwnStatusEl = null; showEntry(); }
+      async function cancelPending() { if (!activeSessionId) return; isEnding = true; pendingWithCall = false; teardown(); await supabase.from('connect_sessions').update({ status: 'cancelled' }).eq('id', activeSessionId); activeSessionId = null; isEnding = false; }
+
+      function nearBottom(f) { return f.scrollHeight - f.scrollTop - f.clientHeight < 90; }
+
+      async function openChat() {
+        if (chatOpen) return; chatOpen = true; immersive(true);
+        if (connectWatchdog) clearTimeout(connectWatchdog);
+        root.innerHTML = `<div class="mnx-chat">
+          <div class="mnx-chat-head"><div class="mnx-chat-pic">${PERSON_SVG}</div><div class="mnx-chat-who"><b>Your listener</b><i><span style="width:6px;height:6px;border-radius:50%;background:currentColor;display:inline-block"></span> here with you · private</i></div><button type="button" class="mnx-icon-btn" id="mnx-call-btn" style="margin-left:auto" aria-label="Voice call" title="Voice call">${PHONE_SVG}</button><button type="button" class="mnx-chat-end" id="mnx-end">End</button></div>
+          <div class="mnx-call" id="mnx-call" hidden></div>
+          <div class="mnx-feed" id="mnx-feed" role="log" aria-live="polite"><div class="mnx-sys">🔒 You’re connected to a real person. Say what’s on your mind.</div></div>
+          <button type="button" class="mnx-newmsgs" id="mnx-newmsgs">↓ New messages</button>
+          <div class="mnx-input"><input type="text" id="mnx-text" placeholder="Message your listener…" autocomplete="off" aria-label="Message" /><button type="button" class="mnx-send" id="mnx-send" aria-label="Send">${SEND_SVG}</button></div>
+        </div>`;
+        const input = document.getElementById('mnx-text'), feed = document.getElementById('mnx-feed');
+        document.getElementById('mnx-send')?.addEventListener('click', sendMessage);
+        document.getElementById('mnx-end')?.addEventListener('click', confirmEnd);
+        document.getElementById('mnx-call-btn')?.addEventListener('click', startCall);
+        document.getElementById('mnx-newmsgs')?.addEventListener('click', () => { feed.scrollTop = feed.scrollHeight; document.getElementById('mnx-newmsgs').classList.remove('show'); });
+        feed.addEventListener('scroll', () => { if (nearBottom(feed)) document.getElementById('mnx-newmsgs')?.classList.remove('show'); });
+        input?.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); sendMessage(); } });
+        input?.addEventListener('input', sendTyping);
+        input?.addEventListener('focus', () => setTimeout(() => input.scrollIntoView({ block: 'center' }), 200));
+
+        const { data: msgs } = await supabase.from('messages').select('*').eq('session_id', activeSessionId).order('created_at', { ascending: true });
+        (msgs || []).forEach(renderMessage);
+        if (msgs && msgs.length) lastMsgAt = msgs[msgs.length - 1].created_at;
+        feed.scrollTop = feed.scrollHeight;
+
+        chatReady = false;
+        chatChannel = supabase.channel('minit_sig_' + activeSessionId)
+          .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `session_id=eq.${activeSessionId}` }, (p) => renderMessage(p.new))
+          .on('broadcast', { event: 'typing' }, (p) => { if (p.payload?.from !== user.id) showTyping(); })
+          .on('broadcast', { event: 'seen' }, (p) => { if (p.payload?.from !== user.id) markSeen(); })
+          .on('broadcast', { event: 'call' }, (p) => { if (p.payload?.from !== user.id) handleCallSignal(p.payload); })
+          .subscribe((s) => { chatReady = (s === 'SUBSCRIBED'); });
+        if (msgPoll) clearInterval(msgPoll);
+        msgPoll = setInterval(pollMessages, 1800);
+        logEvent('connected');
+        input?.focus();
+        if (pendingWithCall) { pendingWithCall = false; startCall(); }
+      }
+
+      function sendTyping() { const n = Date.now(); if (n - lastTypingSent < 1500) return; lastTypingSent = n; chatChannel?.send({ type: 'broadcast', event: 'typing', payload: { from: user.id } }); }
+      function showTyping() { const feed = document.getElementById('mnx-feed'); if (!feed) return; let t = document.getElementById('mnx-typing'); if (!t) { t = document.createElement('div'); t.id = 'mnx-typing'; t.className = 'mnx-typing'; t.innerHTML = '<span></span><span></span><span></span>'; feed.appendChild(t); if (nearBottom(feed)) feed.scrollTop = feed.scrollHeight; } if (typingTimer) clearTimeout(typingTimer); typingTimer = setTimeout(() => document.getElementById('mnx-typing')?.remove(), 2400); }
+      function markSeen() { if (lastOwnStatusEl) lastOwnStatusEl.textContent = 'Seen'; }
+
+      async function pollMessages() {
+        if (!activeSessionId) return;
+        let q = supabase.from('messages').select('*').eq('session_id', activeSessionId).order('created_at', { ascending: true });
+        if (lastMsgAt) q = q.gte('created_at', lastMsgAt);
+        const { data: msgs } = await q;
+        if (msgs && msgs.length) msgs.forEach(renderMessage);
+      }
+
+      function renderMessage(m) {
+        if (!m || rendered.has(m.id)) return;
+        if (m.content && String(m.content).startsWith('###')) { rendered.add(m.id); return; }
+        rendered.add(m.id);
+        if (m.created_at && (!lastMsgAt || m.created_at > lastMsgAt)) lastMsgAt = m.created_at;
+        const feed = document.getElementById('mnx-feed'); if (!feed) return;
+        const me = m.sender_id === user.id;
+        const stick = nearBottom(feed);
+        if (me) feed.querySelectorAll('.mnx-row.me.temp').forEach((el) => el.remove());
+        document.getElementById('mnx-typing')?.remove();
+        const row = document.createElement('div'); row.className = 'mnx-row ' + (me ? 'me' : 'them');
+        const b = document.createElement('div'); b.className = 'mnx-bubble'; b.textContent = m.content; row.appendChild(b);
+        const meta = document.createElement('div'); meta.className = 'mnx-meta';
+        const tm = document.createElement('span'); tm.className = 'mnx-mtime'; tm.textContent = fmtTime(m.created_at); meta.appendChild(tm);
+        if (me) { const st = document.createElement('span'); st.className = 'mnx-status'; st.textContent = 'Delivered'; meta.appendChild(st); if (lastOwnStatusEl) lastOwnStatusEl.textContent = ''; lastOwnStatusEl = st; }
+        row.appendChild(meta);
+        feed.appendChild(row);
+        if (stick || me) feed.scrollTop = feed.scrollHeight; else document.getElementById('mnx-newmsgs')?.classList.add('show');
+        if (!me) chatChannel?.send({ type: 'broadcast', event: 'seen', payload: { from: user.id } });
+      }
+
+      async function sendMessage() {
+        if (sending) return;
+        const input = document.getElementById('mnx-text'); const text = input?.value.trim();
+        if (!text || !activeSessionId) return;
+        sending = true;
+        const sendBtn = document.getElementById('mnx-send'); sendBtn?.setAttribute('disabled', '');
+        try {
+          input.value = '';
+          const feed = document.getElementById('mnx-feed');
+          let temp;
+          if (feed) { temp = document.createElement('div'); temp.className = 'mnx-row me temp'; temp.innerHTML = '<div class="mnx-bubble"></div>'; temp.querySelector('.mnx-bubble').textContent = text; feed.appendChild(temp); feed.scrollTop = feed.scrollHeight; setTimeout(() => temp && temp.classList.remove('temp'), 4000); }
+          const { error } = await supabase.from('messages').insert([{ session_id: activeSessionId, sender_id: user.id, content: text }]);
+          if (error) { temp?.remove(); input.value = text; if (await sessionExpired()) showSessionExpired(); }
+        } finally { sending = false; sendBtn?.removeAttribute('disabled'); }
+      }
+
+      let endArmed = false;
+      function confirmEnd(e) { const btn = e.currentTarget; if (!endArmed) { endArmed = true; btn.classList.add('confirm'); btn.textContent = 'Tap to confirm'; setTimeout(() => { endArmed = false; btn.classList.remove('confirm'); btn.textContent = 'End'; }, 3000); return; } endSession(); }
+      async function endSession() { if (!activeSessionId) return; const sid = activeSessionId, lid = activeListenerId; isEnding = true; endCall(true); logEvent('ended', { by: 'seeker' }); teardown(); await supabase.from('connect_sessions').update({ status: 'completed', ended_at: new Date().toISOString() }).eq('id', sid); showReview(sid, lid); }
+      function endByOther() { if (isEnding) return; isEnding = true; logEvent('ended', { by: 'listener' }); teardown(); showReview(activeSessionId, activeListenerId); }
+
+      function showReview(sessionId, listenerId) {
+        immersive(false);
+        let stars = 0, feel = null;
+        const modal = document.createElement('div'); modal.className = 'mnx-modal';
+        modal.innerHTML = `<div class="mnx-modal-card"><div style="font-size:1.6rem">✨</div><h3>How do you feel now?</h3><p>Compared to when you came in.</p>
+          <div class="mnx-feel" id="mnx-feel"><button data-f="lighter" title="Lighter">🙂</button><button data-f="same" title="About the same">😐</button><button data-f="heavy" title="Still heavy">😔</button></div>
+          <p style="margin-top:.8rem">And your listener?</p>
+          <div class="mnx-stars" id="mnx-stars">${[1,2,3,4,5].map((n) => `<span data-n="${n}">★</span>`).join('')}</div>
+          <div class="mnx-modal-actions"><button type="button" class="mnx-btn-ghost" id="mnx-skip">Skip</button><button type="button" class="mnx-btn-go" id="mnx-submit">Done</button></div></div>`;
+        document.body.appendChild(modal);
+        modal.querySelectorAll('#mnx-feel button').forEach((bn) => bn.addEventListener('click', () => { feel = bn.getAttribute('data-f'); modal.querySelectorAll('#mnx-feel button').forEach((x) => x.classList.toggle('on', x === bn)); }));
+        modal.querySelectorAll('#mnx-stars span').forEach((s) => s.addEventListener('click', () => { stars = Number(s.getAttribute('data-n')); modal.querySelectorAll('#mnx-stars span').forEach((x) => x.classList.toggle('on', Number(x.getAttribute('data-n')) <= stars)); }));
+        const finish = () => { modal.remove(); resetToEntry(); };
+        modal.querySelector('#mnx-skip').addEventListener('click', finish);
+        modal.querySelector('#mnx-submit').addEventListener('click', async () => { if (stars) { try { await supabase.from('listener_reviews').insert([{ session_id: sessionId, listener_id: listenerId, user_id: user.id, rating: stars, review_text: feel ? ('felt: ' + feel) : null }]); } catch (e) {} } try { logEvent('reviewed', { stars, feel }); } catch (e) {} finish(); });
+        modal.addEventListener('click', (e) => { if (e.target === modal) finish(); });
+      }
+
+      init();
+    }
   </script>
 </AppLayout>

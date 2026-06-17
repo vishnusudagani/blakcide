@@ -9,8 +9,7 @@
 // We never trust the LLM to hand-roll a shape — we validate-and-coerce the
 // keys we depend on so a malformed run cannot poison the Vault.
 
-const OPENAI_KEY = process.env.BLAKCIDE_OPENAI_KEY || process.env.OPENAI_API_KEY || '';
-const MODEL      = 'gpt-4o-mini';
+import { chatComplete } from './inference.mjs';
 
 const SYSTEM_PROMPT = `You are the Omniscient Analyser inside Symp.ai — a private,
 non-clinical psychological summariser. You receive one day's worth of a user's
@@ -101,7 +100,6 @@ function coerce(raw) {
  * @returns {Promise<{analysis:Object, raw:string, model:string}>}
  */
 export async function analyseDailyJournals({ journalDate, rows }) {
-    if (!OPENAI_KEY) throw new Error('OPENAI key not configured');
     if (!Array.isArray(rows) || rows.length === 0) {
         throw new Error('No journal rows to analyse');
     }
@@ -117,32 +115,26 @@ export async function analyseDailyJournals({ journalDate, rows }) {
 
     const userMsg = `Date: ${journalDate}\n\n${blocks.join('\n\n')}\n\nReturn the strict JSON profile now.`;
 
-    const res = await fetch('https://api.openai.com/v1/chat/completions', {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${OPENAI_KEY}` },
-        body:    JSON.stringify({
-            model:           MODEL,
-            response_format: { type: 'json_object' },
-            temperature:     0.4,
-            max_tokens:      900,
-            messages: [
-                { role: 'system', content: SYSTEM_PROMPT },
-                { role: 'user',   content: userMsg },
-            ],
-        }),
+    // Routed through the inference router (defaults to the free Groq floor —
+    // background analysis must never spend the Azure credit). JSON mode keeps
+    // the output strict-parseable.
+    const out = await chatComplete({
+        task:            'summary',
+        messages: [
+            { role: 'system', content: SYSTEM_PROMPT },
+            { role: 'user',   content: userMsg },
+        ],
+        response_format: { type: 'json_object' },
+        temperature:     0.4,
+        max_tokens:      900,
+        timeoutMs:       20000,
     });
 
-    if (!res.ok) {
-        const txt = await res.text();
-        throw new Error(`OpenAI ${res.status}: ${txt.slice(0, 300)}`);
-    }
-    const data    = await res.json();
-    const content = data.choices?.[0]?.message?.content || '{}';
-
+    const content = out.content || '{}';
     let parsed;
     try { parsed = JSON.parse(content); }
     catch (e) { throw new Error('Analyser produced non-JSON output'); }
 
     const analysis = coerce(parsed);
-    return { analysis, raw: content, model: MODEL };
+    return { analysis, raw: content, model: out.model_used };
 }

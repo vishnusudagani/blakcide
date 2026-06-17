@@ -67,7 +67,7 @@ export async function GET(context) {
   <channel>
     <title>The Blaksyd Blog</title>
     <link>${site}blog/</link>
-    <description>Notes from the team building Blaksyd — Human + AI, revolving around you.</description>
+    <description>Notes from the team building Blaksyd — Human + AI, revolving around you, building meaningful conversations.</description>
     <language>en</language>
     <atom:link href="${site}rss.xml" rel="self" type="application/rss+xml" />
 ${pinnedItems}
