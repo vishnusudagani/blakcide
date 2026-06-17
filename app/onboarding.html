@@ -40,7 +40,7 @@
 
     <div class="glass-pane">
         <h2>Welcome to Blaksyd</h2>
-        <p style="opacity: 0.7; margin-bottom: 30px; font-size: 0.9rem;">Let's personalize your sanctuary before you enter.</p>
+        <p style="opacity: 0.7; margin-bottom: 30px; font-size: 0.9rem;">A few details so Blak knows who it's talking to.</p>
         
         <input type="text" id="ob-name" class="minimal-input" placeholder="What should we call you? (Full Name)">
 
@@ -48,21 +48,34 @@
             <input type="text" id="ob-username" class="minimal-input" placeholder="Pick a username (3–20, a–z, 0–9, _)" autocomplete="off" autocapitalize="off" spellcheck="false" style="margin-bottom:6px; padding-right: 38px;">
             <span id="ob-username-status" style="position:absolute; right:12px; top:14px; font-size:0.95rem;"></span>
         </div>
-        <div id="ob-username-hint" style="text-align:left; opacity:0.6; font-size:0.75rem; margin: -2px 0 16px 5px;">This is your public handle. You can't change it later.</div>
+        <div id="ob-username-hint" style="text-align:left; opacity:0.6; font-size:0.75rem; margin: -2px 0 16px 5px;">This is your public handle — choose one you'll be happy with.</div>
 
-        <div style="text-align: left; opacity: 0.7; font-size: 0.8rem; margin-bottom: 5px; margin-left: 5px;">Date of Birth</div>
+        <div style="text-align: left; opacity: 0.7; font-size: 0.8rem; margin-bottom: 5px; margin-left: 5px;">Date of Birth <span style="opacity:0.7;">(optional)</span></div>
         <input type="date" id="ob-dob" class="minimal-input">
-        
+
+        <div style="text-align: left; opacity: 0.7; font-size: 0.8rem; margin-bottom: 5px; margin-left: 5px;">Gender <span style="opacity:0.7;">(optional)</span></div>
         <select id="ob-gender" class="minimal-input">
-            <option value="" disabled selected>Select Gender</option>
+            <option value="" disabled selected>Select Gender (optional)</option>
             <option value="Male">Male</option>
             <option value="Female">Female</option>
             <option value="Non-Binary">Non-Binary</option>
             <option value="Prefer not to say">Prefer not to say</option>
         </select>
 
+        <div style="text-align: left; opacity: 0.7; font-size: 0.8rem; margin-bottom: 5px; margin-left: 5px;">What should Blak know about you? <span style="opacity:0.7;">(optional)</span></div>
+        <textarea id="ob-about" class="minimal-input" rows="3" placeholder="Anything you want — what you're into, what's going on, how you like to be talked to." style="resize: vertical; font-family: inherit;"></textarea>
+
+        <label style="display:flex; align-items:flex-start; gap:8px; text-align:left; font-size:0.8rem; opacity:0.85; margin-bottom:12px; cursor:pointer;">
+            <input type="checkbox" id="ob-age" style="margin-top:2px; flex-shrink:0;">
+            <span>I'm 18 or older.</span>
+        </label>
+        <label style="display:flex; align-items:flex-start; gap:8px; text-align:left; font-size:0.8rem; opacity:0.85; margin-bottom:20px; cursor:pointer;">
+            <input type="checkbox" id="ob-consent" style="margin-top:2px; flex-shrink:0;">
+            <span>I agree to the <a href="/terms" target="_blank" rel="noopener" style="color:inherit; text-decoration:underline;">Terms</a> and <a href="/privacy" target="_blank" rel="noopener" style="color:inherit; text-decoration:underline;">Privacy Policy</a>.</span>
+        </label>
+
         <div id="ob-error" style="display:none; margin: 0 0 14px; padding: 10px 12px; border-radius: 8px; background: rgba(255,76,76,0.12); border: 1px solid rgba(255,76,76,0.4); color:#ffb3b3; font-size:0.85rem; text-align:left;"></div>
-        <button id="save-btn" class="btn-solid">Enter Blaksyd <ion-icon name="arrow-forward"></ion-icon></button>
+        <button id="save-btn" class="btn-solid" disabled style="opacity:0.5; cursor:not-allowed;">Enter Blaksyd <ion-icon name="arrow-forward"></ion-icon></button>
     </div>
 
     <script>
@@ -78,6 +91,17 @@
         const errBox = document.getElementById('ob-error');
         const showErr = (msg) => { errBox.style.display = 'block'; errBox.innerText = msg; };
         const clearErr = () => { errBox.style.display = 'none'; errBox.innerText = ''; };
+
+        // Compute age in whole years from a yyyy-mm-dd date string.
+        function computeAge(dobStr) {
+            const d = new Date(dobStr);
+            if (isNaN(d.getTime())) return NaN;
+            const now = new Date();
+            let age = now.getFullYear() - d.getFullYear();
+            const m = now.getMonth() - d.getMonth();
+            if (m < 0 || (m === 0 && now.getDate() < d.getDate())) age--;
+            return age;
+        }
 
         // ── Username live validation + availability ───────────────────────
         const USERNAME_RE = /^[a-z0-9_]{3,20}$/;
@@ -119,10 +143,17 @@
             const username = usernameInput.value.trim().toLowerCase();
             const dob = document.getElementById('ob-dob').value;
             const gender = document.getElementById('ob-gender').value;
+            const about = document.getElementById('ob-about').value.trim();
 
             if (!name) { showErr('Please tell us your name so we know what to call you.'); return; }
             if (!username) { showErr('Pick a username — this is how others will see you.'); return; }
             if (!USERNAME_RE.test(username)) { showErr('Username must be 3–20 chars: lowercase letters, digits, or underscore.'); return; }
+
+            // DOB is optional, but if provided and it computes to under 18, block.
+            if (dob && computeAge(dob) < 18) {
+                showErr('You need to be 18 or older to use Blaksyd right now.');
+                return;
+            }
             if (!usernameOk) {
                 // Re-check synchronously in case the user submitted before the debounce fired.
                 await checkUsername();
@@ -145,13 +176,29 @@
                     return;
                 }
 
-                const { error } = await sb.from('profiles').upsert({
+                // Keep a local fallback copy of the "about" text regardless of
+                // whether the DB column exists.
+                try { localStorage.setItem('blak-about', about || ''); } catch (_) {}
+
+                const baseProfile = {
                     id:        session.user.id,
                     full_name: name,
                     username:  username,
                     dob:       dob || null,
                     gender:    gender || null,
+                };
+
+                let { error } = await sb.from('profiles').upsert({
+                    ...baseProfile,
+                    about: about || null,
                 });
+
+                // If the 'about' column doesn't exist yet, retry without it so
+                // onboarding still succeeds (the localStorage copy is kept).
+                if (error && /column/i.test(error.message || '') && /about/i.test(error.message || '')) {
+                    console.warn('[onboarding] "about" column missing — retrying upsert without it', error);
+                    ({ error } = await sb.from('profiles').upsert(baseProfile));
+                }
 
                 if (error) {
                     console.error('[onboarding] profile upsert failed', error);
@@ -179,6 +226,20 @@
             const el = document.getElementById(id);
             if (el) el.addEventListener('keydown', (e) => { if (e.key === 'Enter') saveProfile(); });
         });
+
+        // ── Consent + age gating: enable the button only when both are ticked ──
+        const ageCheck = document.getElementById('ob-age');
+        const consentCheck = document.getElementById('ob-consent');
+        const saveBtn = document.getElementById('save-btn');
+        function refreshSaveState() {
+            const ready = ageCheck.checked && consentCheck.checked;
+            saveBtn.disabled = !ready;
+            saveBtn.style.opacity = ready ? '1' : '0.5';
+            saveBtn.style.cursor = ready ? 'pointer' : 'not-allowed';
+        }
+        ageCheck.addEventListener('input', refreshSaveState);
+        consentCheck.addEventListener('input', refreshSaveState);
+        refreshSaveState();
     </script>
 </body>
 </html>

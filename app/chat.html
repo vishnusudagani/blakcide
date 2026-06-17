@@ -2,8 +2,8 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Echo – Blaksyd</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Blak · Blaksyd</title>
     <link rel="stylesheet" href="app-style.css">
     <link rel="stylesheet" href="blakcide-ui-v3.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -184,7 +184,7 @@
                 <ion-icon name="home-outline"></ion-icon><span>Home</span>
             </a>
             <a class="snav-item active" href="chat.html">
-                <ion-icon name="sparkles-outline"></ion-icon><span>Echo</span>
+                <ion-icon name="sparkles-outline"></ion-icon><span>Blak</span>
             </a>
             <a class="snav-item" href="journal.html">
                 <ion-icon name="book-outline"></ion-icon><span>Journal</span>
@@ -229,7 +229,7 @@
             <button id="mobile-menu-btn" class="mobile-menu-btn">
                 <ion-icon name="menu-outline"></ion-icon>
             </button>
-            <span class="mobile-chat-title" id="mobile-chat-title">Echo</span>
+            <span class="mobile-chat-title" id="mobile-chat-title">Blak</span>
             <!-- Persona picker — click to swap mode (or just say "be my astrologer" mid-chat) -->
             <button id="persona-picker-btn" class="persona-picker-btn" title="Choose mode"
                 onclick="window.togglePersonaPicker && window.togglePersonaPicker()">
@@ -239,7 +239,7 @@
             </button>
             <a id="invite-friend-btn" class="invite-friend-btn v3-press"
                 href="group-chat.html"
-                title="Invite a friend — Echo mediates between you both">
+                title="Invite a friend — Blak mediates between you both">
                 <ion-icon name="person-add-outline"></ion-icon>
                 <span class="invite-friend-label">Invite friend</span>
             </a>
@@ -378,7 +378,7 @@
     <div class="ai-call-avatar" id="ai-call-avatar-el">
         <span style="font-size:2.4rem;color:var(--accent);opacity:0.8;">✦</span>
     </div>
-    <div class="ai-call-name">Echo</div>
+    <div class="ai-call-name">Blak</div>
     <div class="ai-call-status" id="ai-call-status">Connecting…</div>
     <div class="ai-call-timer"  id="ai-call-timer">0:00</div>
     <div id="ai-call-transcript"></div>
@@ -405,10 +405,7 @@
 <script src="profile-manager.js?v=20260428b"></script>
 <script src="nav-bar.js"></script>
 <script src="blaksyd-pulse.js?v=20260428b"></script>
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-    if (window.BlaksydPulse) window.BlaksydPulse.trigger('ai_echo', { delayMs: 12000 });
-});
-</script>
+<!-- Pulse auto-trigger removed: no unsolicited timed modal mid-conversation. -->
+
 </body>
 </html>

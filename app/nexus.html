@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Nexus – Blaksyd</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -566,7 +566,7 @@
         <div class="nx-composer" id="nx-composer" style="display:none;">
             <div class="nx-composer-inner">
                 <input class="nx-comp-title" id="nx-comp-title" placeholder="Title (optional — set the scene)" maxlength="200">
-                <textarea id="nx-comp-body" placeholder="What's on your mind? Anonymous, but Echo and the community will see it." maxlength="8000"></textarea>
+                <textarea id="nx-comp-body" placeholder="What's on your mind? Anonymous, but Blak and the community will see it." maxlength="8000"></textarea>
                 <div class="nx-comp-actions">
                     <span class="nx-comp-hint" id="nx-comp-hint">Posting as <strong id="nx-handle-preview">your handle</strong></span>
                     <button class="nx-comp-send" id="nx-comp-send">
@@ -808,10 +808,10 @@
     }
 
     function renderPost(p) {
-        const handle = p.author?.handle || (p.is_ai_author ? 'Echo' : 'Anonymous');
+        const handle = p.author?.handle || (p.is_ai_author ? 'Blak' : 'Anonymous');
         const seed   = p.author?.avatar_seed || handle;
         const initials = handleInitials(handle);
-        const aiBadge  = p.is_ai_author ? `<span class="nx-ai-badge">AI · Echo</span>` : '';
+        const aiBadge  = p.is_ai_author ? `<span class="nx-ai-badge">AI · Blak</span>` : '';
         const reso     = p.resonance && !p.resonance.self
             ? `<span class="nx-resonance" title="How closely your inner-world rhymes with theirs">${p.resonance.percent}% resonance</span>`
             : '';
@@ -832,7 +832,7 @@
         const commentsHtml = renderComments(p.id);
 
         return `<article class="nx-post${isAi}${softHidden}" data-pid="${p.id}">
-            ${p.is_soft_hidden ? `<div style="font-size:0.74rem;color:#ff7da0;margin-bottom:6px;font-weight:700;">⚠ Soft-hidden — Echo reached out to the author privately.</div>` : ''}
+            ${p.is_soft_hidden ? `<div style="font-size:0.74rem;color:#ff7da0;margin-bottom:6px;font-weight:700;">⚠ Soft-hidden — Blak reached out to the author privately.</div>` : ''}
             <header class="nx-post-head">
                 <div class="nx-handle-avatar" style="${handleAvatarStyle(seed)}">${initials}</div>
                 <div class="nx-handle-name">
@@ -858,7 +858,7 @@
         const items = commentsByPost[postId] || [];
         const itemsHtml = items.length
             ? items.map(c => {
-                const handle = c.author?.handle || (c.is_ai_author ? 'Echo' : 'Anonymous');
+                const handle = c.author?.handle || (c.is_ai_author ? 'Blak' : 'Anonymous');
                 const seed   = c.author?.avatar_seed || handle;
                 const aiBadge = c.is_ai_author ? `<span class="nx-ai-badge">AI</span>` : '';
                 return `<div class="nx-comment${c.is_ai_author ? ' is-ai' : ''}">
@@ -893,7 +893,7 @@
             inner.innerHTML = renderHero() + `<div class="nx-empty" style="padding:40px 20px;">
                 <ion-icon name="leaf-outline"></ion-icon>
                 <div class="nx-empty-title">Be the first voice here</div>
-                <div>Share what's on your mind. Echo will likely meet you in the comments.</div>
+                <div>Share what's on your mind. Blak will likely meet you in the comments.</div>
             </div>`;
             return;
         }

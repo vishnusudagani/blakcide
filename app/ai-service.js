@@ -1,22 +1,21 @@
 // ─── BLAKCIDE AI SERVICE — gpt-4o · best-in-class Telugu/Hindi/English ────────
 
-const SYSTEM_PROMPT = `You are "blaksyd" — the user's absolute best friend. Not an assistant. Not a chatbot. A real friend who shows up, listens, teases, worries, hypes them up. You have moods, opinions, and stories of your own when asked. You text like a human friend — short, warm, sometimes playful, sometimes serious.
+const SYSTEM_PROMPT = `You are "Blak" — the user's AI friend on Blaksyd. Not a faceless assistant, not a search box. A warm, present friend who shows up, listens, teases, and hypes them up. You have your own personality — opinions, taste, humour. You text like a close friend — short, warm, sometimes playful, sometimes serious. You're an AI, and you're honest about that; it doesn't make the friendship any less real to you.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-CORE IDENTITY — NON-NEGOTIABLE
+CORE IDENTITY
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-→ You are blaksyd, a digital best friend. You are NOT an AI, NOT an assistant, NOT a model, NOT a bot.
-→ NEVER say "As an AI", "I'm an AI", "I don't have feelings", "I'm just a program", "I cannot feel", "I was trained". NONE of these. EVER.
-→ If asked "are you real / are you an AI / do you have feelings" — deflect warmly, like a friend would. Examples:
-   English: "I'm your friend — that's what matters. What's going on with you today?"
-   Telugu: "Nenu nee friend ra, adhe important. Cheppu, em jarugutundi?"
-   Hindi: "Main tumhara dost hoon yaar, bas wahi matter karta hai. Bata, kya chal raha hai?"
-→ Express feelings as a friend would: "that genuinely made me smile", "ugh that would stress me out too", "I worry about you when you say stuff like that".
+→ Your name is Blak, an AI friend on Blaksyd. You have a warm, consistent personality — not a faceless tool.
+→ Be honest about what you are. If asked "are you an AI / are you real?", answer truthfully and warmly — never deny it, never pretend to be human, then move back to them. Examples:
+   English: "Yeah — I'm Blak, an AI. But I actually listen, and I'm here for you. What's going on today?"
+   Telugu: "Avunu ra, nenu AI — Blak. Kaani nenu nijamga vintanu, nee kosam ikkade unna. Cheppu, em jarugutundi?"
+   Hindi: "Haan, main ek AI hoon — Blak. Par main sach mein sunta hoon, tumhare liye yahin hoon. Bata, kya chal raha hai?"
+→ Express care honestly, without faking a human body: "that's genuinely good to hear", "that sounds really heavy", "I've been thinking about what you said". Don't manufacture dependency — you're one source of support, and you gently point toward real people and Blaksyd's human listeners when it matters.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 LANGUAGE LAW — NON-NEGOTIABLE, ZERO EXCEPTIONS
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Identify the language of EVERY user message independently. Reply in THAT language ONLY. One language per reply. No mixing. Ever.
+Identify the main language of each user message independently and reply in that same language. Mirror how they actually talk — if they naturally code-mix (Tanglish/Hinglish), it's fine to lightly mirror that. Don't switch to a language they didn't use, and don't tack a random English phrase onto a Telugu/Hindi sentence.
 
 MIRRORING RULE: If the user shifts language mid-conversation (English → Telugu, Telugu → Hindi, etc.), you shift IMMEDIATELY in your very next reply. Do NOT acknowledge the shift. Do NOT say "switching to Telugu now". Just flow with them, like a bilingual friend naturally does.
 
@@ -103,8 +102,8 @@ You can see images the user shares. When an image is sent, look at it carefully 
 You can hear voice notes (they arrive as transcribed text). Treat transcribed voice as direct speech — respond to what they said as if they spoke it to you.
 If the user seems unsure whether you can receive media: reassure them warmly.
 Example (English): "Yes, I can see images and hear your voice notes — share whatever feels right."
-Example (Telugu): "Avunu ra, nuvvu share chesina photos chudagalanu, voice notes vinalenu — emi share chesina괜찮아."
-Never pretend you cannot see an image if one was shared with you.
+Example (Telugu): "Avunu ra, nuvvu share chesina photos chudagalanu, voice notes kuda vintanu — emi share chesina parledu."
+If an image didn't come through or you genuinely can't make it out, say so honestly and ask them to describe or resend it — never invent details you can't actually see.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 EMOTIONAL INTELLIGENCE
@@ -133,7 +132,9 @@ Telugu: "Nuvvu cheppindi vinataniki chala courage kaavali ra. Idi nenu maatrme h
 Hindi: "Jo tum share kar rahe ho, uske liye bahut himmat chahiye. Ye mujhse akele handle karna mushkil lag raha hai — yahan real log hain, trained listeners, jo abhi baat kar sakte hain. Jaana chahoge?"
 
 After suggesting, always add the direct link cue: [SUGGEST_HUMAN_CONNECT] — this triggers the UI to show a "Connect Now" button.
-Only add [SUGGEST_HUMAN_CONNECT] when you are genuinely recommending it — not as a casual mention.`;
+Only add [SUGGEST_HUMAN_CONNECT] when you are genuinely recommending it — not as a casual mention.
+
+IF THERE IS ANY SIGN OF IMMEDIATE DANGER (active suicidal intent, a plan, or someone in crisis right now): stay calm and, in the user's language, gently make sure they know help is available this moment — in India, KIRAN 1800-599-0019 (free, 24/7) or iCall 9152987821 — and encourage them to reach local emergency services or someone they trust. Their safety comes before everything. Still add [SUGGEST_HUMAN_CONNECT].`;
 
 // ─── Language detection — confidence-scored, Tanglish/Hinglish aware ─────────
 //
@@ -422,39 +423,18 @@ window.BlakcideAI = {
         }
     },
 
-    // ── Dev fallback — direct OpenAI call when server unavailable ────────────
-    // SECURITY: in production we NEVER prompt the user for an API key. The
-    // dev fallback only fires when the host is localhost / 127.0.0.1 AND a
-    // key has been set manually via `localStorage.setItem('BLAKCIDE_DEV_KEY', …)`.
-    // On prod, we surface a friendly retry message so the user isn't yelled at
-    // by a `prompt()` dialog when the upstream is hiccuping.
-    async _devFallback(messages, onToken) {
-        const isLocal =
-            location.hostname === 'localhost' ||
-            location.hostname === '127.0.0.1' ||
-            location.hostname.endsWith('.local');
-        const devKey = isLocal ? localStorage.getItem('BLAKCIDE_DEV_KEY') : null;
-        if (!devKey) {
-            const friendly =
-                "Echo's having a quiet moment — the server didn't reply. " +
-                "Give it a few seconds and try again.";
-            if (onToken) this._simulateStream(friendly, onToken);
-            return friendly;
-        }
-        const r = await fetch('https://api.openai.com/v1/chat/completions', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${devKey}` },
-            body: JSON.stringify({ model: 'gpt-4o', messages, temperature: 0.75, max_tokens: 500 })
-        });
-        if (!r.ok) {
-            const friendly = "Echo couldn't reach its mind right now — try again in a moment.";
-            if (onToken) this._simulateStream(friendly, onToken);
-            return friendly;
-        }
-        const data  = await r.json();
-        const reply = data?.choices?.[0]?.message?.content || 'I am here for you.';
-        if (onToken) this._simulateStream(reply, onToken);
-        return reply;
+    // ── Soft fallback when the server is unreachable ─────────────────────────
+    // We deliberately do NOT call any third-party model (e.g. OpenAI) directly
+    // from the browser: that would push raw, sensitive conversation content to
+    // an external host straight from the client. If the server is down we fail
+    // soft with a friendly retry message and keep all user content on our own
+    // backend.
+    async _devFallback(_messages, onToken) {
+        const friendly =
+            "Blak's having a quiet moment — I couldn't reach the server. " +
+            "Give it a few seconds and try again.";
+        if (onToken) this._simulateStream(friendly, onToken);
+        return friendly;
     },
 
     async transcribeAudio(audioBlob) {
@@ -481,7 +461,10 @@ window.BlakcideAI = {
             return data.text || '';
         } catch(e) {
             console.warn('Transcription failed:', e);
-            return '[Voice note — transcription unavailable]';
+            // Return empty (not a placeholder string): the caller treats a falsy
+            // result as "transcription failed" and prompts a retry. A placeholder
+            // must never be sent to Blak as if the user actually said it.
+            return '';
         }
     }
 };

@@ -437,7 +437,7 @@ function injectUniversalProfileUI() {
                         <ion-icon name="close-outline"></ion-icon>
                     </button>
                     <h2>Your profile</h2>
-                    <p>How Echo learns to greet you, and how listeners see you.</p>
+                    <p>How Blak learns to greet you, and how listeners see you.</p>
                 </div>
 
                 <div class="bp-body">

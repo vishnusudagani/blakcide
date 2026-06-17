@@ -203,9 +203,9 @@
 
     // ── Hero invitation rotator (variable-reward microcopy) ────────────
     const INVITATIONS = [
-        { eyebrow: 'Today\'s invitation', title: 'Take one slow breath together.', sub: 'A 30-second pause. Just you and Echo.', cta: 'Begin', href: 'chat.html?call=1', tone: 'mint' },
+        { eyebrow: 'Today\'s invitation', title: 'Take one slow breath together.', sub: 'A 30-second pause. Just you and Blak.', cta: 'Begin', href: 'chat.html?call=1', tone: 'mint' },
         { eyebrow: 'A small ritual', title: 'Write one line about today.', sub: 'No structure. No grade. Just a sentence.', cta: 'Open journal', href: 'journal.html', tone: 'iris' },
-        { eyebrow: 'Try this', title: 'Tell Echo what you\'re carrying.', sub: 'It listens in your language. Always.', cta: 'Start chat', href: 'chat.html', tone: 'mint' },
+        { eyebrow: 'Try this', title: 'Tell Blak what you\'re carrying.', sub: 'It listens in your language. Always.', cta: 'Start chat', href: 'chat.html', tone: 'mint' },
         { eyebrow: 'Connect', title: 'A real listener is online.', sub: 'A 10-minute call can change a day.', cta: 'Find someone', href: 'connect.html', tone: 'coral' },
         { eyebrow: 'Reset', title: 'Five quiet minutes.', sub: 'Step away. The screen will wait.', cta: 'Got it', href: '#', tone: 'azure' },
     ];

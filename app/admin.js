@@ -825,7 +825,7 @@ const PULSE_VIBE_META = {
     needs_something: { emoji: '💡', label: 'Needs something' },
 };
 const PULSE_CONTEXT_LABEL = {
-    ai_echo:       'AI Echo',
+    ai_echo:       'AI Blak',
     journal:       'Journal',
     human_connect: 'Listener',
     community:     'Community',

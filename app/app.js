@@ -719,7 +719,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const connectHtml = showConnectCue
-            ? `<div class="connect-cue"><a href="connect.html" class="connect-cue-btn"><ion-icon name="people-outline"></ion-icon> Talk to a Real Person</a></div>`
+            ? `<div class="connect-cue">
+                 <a href="connect.html" class="connect-cue-btn"><ion-icon name="people-outline"></ion-icon> Talk to a Real Person</a>
+                 <div class="connect-cue-help" style="font-size:0.72rem;opacity:0.72;margin-top:7px;line-height:1.55;">If it feels urgent, you don't have to wait — <a href="tel:18005990019" style="color:inherit;text-decoration:underline;">KIRAN 1800-599-0019</a> (free, 24/7) or <a href="tel:9152987821" style="color:inherit;text-decoration:underline;">iCall 9152987821</a>. In an emergency, call 112.</div>
+               </div>`
             : '';
 
         feed.innerHTML += `<div class="message ${role==='user'?'user-msg':'ai-msg'}"><div class="msg-content">${contentHtml}</div>${connectHtml}</div>`;

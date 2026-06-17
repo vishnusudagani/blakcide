@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Blaksyd</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -321,7 +321,7 @@
             <ion-icon name="home"></ion-icon><span>Home</span>
         </a>
         <a class="snav-item" href="chat.html">
-            <ion-icon name="sparkles-outline"></ion-icon><span>Echo</span>
+            <ion-icon name="sparkles-outline"></ion-icon><span>Blak</span>
         </a>
         <a class="snav-item" href="journal.html">
             <ion-icon name="book-outline"></ion-icon><span>Journal</span>
@@ -422,29 +422,29 @@
     <!-- ── v3 HERO: streak + momentum + meta ─────────────────────────── -->
     <section class="v3-hero v3-rise" data-d="1" aria-label="Your momentum">
         <div class="v3-hero-row">
-            <div class="v3-ring" id="dash-streak-ring" data-target="42" style="--p:0;--sz:104px;">
+            <div class="v3-ring" id="dash-streak-ring" data-target="0" style="--p:0;--sz:104px;">
                 <div>
-                    <div class="v3-ring-num" id="dash-streak-num">3</div>
+                    <div class="v3-ring-num" id="dash-streak-num">0</div>
                     <span class="v3-ring-label">Day streak</span>
                 </div>
             </div>
             <div class="v3-hero-text">
-                <div class="v3-hero-eyebrow">Your week so far</div>
-                <h2 class="v3-hero-title">You showed up <span style="color:var(--pulse-1);">three days in a row</span>.</h2>
-                <p class="v3-hero-sub">Tiny steps build a quieter mind. Keep going at your own pace.</p>
+                <div class="v3-hero-eyebrow">Your space</div>
+                <h2 class="v3-hero-title">Welcome. <span style="color:var(--pulse-1);">This is your space.</span></h2>
+                <p class="v3-hero-sub">However today's going, Blak's here for it. Start wherever you like.</p>
             </div>
         </div>
         <div class="v3-hero-meta">
             <div class="v3-meta-cell">
-                <div class="v3-meta-num" id="dash-meta-chats">12<small>×</small></div>
+                <div class="v3-meta-num" id="dash-meta-chats">0<small>×</small></div>
                 <span class="v3-meta-lbl">Chats</span>
             </div>
             <div class="v3-meta-cell">
-                <div class="v3-meta-num" id="dash-meta-entries">5<small>×</small></div>
+                <div class="v3-meta-num" id="dash-meta-entries">0<small>×</small></div>
                 <span class="v3-meta-lbl">Journal</span>
             </div>
             <div class="v3-meta-cell">
-                <div class="v3-meta-num"><span class="v3-pulse-dot" style="margin-right:5px;"></span><span id="dash-meta-listeners">2</span></div>
+                <div class="v3-meta-num"><span class="v3-pulse-dot" style="margin-right:5px;"></span><span id="dash-meta-listeners">0</span></div>
                 <span class="v3-meta-lbl">Listeners online</span>
             </div>
         </div>
@@ -454,9 +454,9 @@
     <a class="v3-focus v3-rise v3-press" data-d="2" data-v3-invite href="chat.html?call=1">
         <span class="v3-focus-icon"><ion-icon name="leaf-outline"></ion-icon></span>
         <span class="v3-focus-text">
-            <div class="v3-focus-eyebrow">Today's invitation</div>
-            <div class="v3-focus-title">Take one slow breath together.</div>
-            <div class="v3-focus-sub">A 30-second pause. Just you and Echo.</div>
+            <div class="v3-focus-eyebrow">Today</div>
+            <div class="v3-focus-title">Got a minute? Tell Blak about your day.</div>
+            <div class="v3-focus-sub">No agenda — just talk. Text or voice.</div>
         </span>
         <ion-icon class="v3-focus-arrow" name="arrow-forward-outline"></ion-icon>
     </a>
@@ -465,8 +465,8 @@
     <div class="v3-quick v3-rise" data-d="3">
         <a class="v3-quick-item v3-press" href="chat.html">
             <ion-icon name="sparkles-outline"></ion-icon>
-            <div class="v3-quick-label">Echo</div>
-            <div class="v3-quick-sub">Your AI companion. Text or voice.</div>
+            <div class="v3-quick-label">Blak</div>
+            <div class="v3-quick-sub">Your AI friend. Text or voice.</div>
         </a>
         <a class="v3-quick-item v3-press tone-iris" href="journal.html">
             <ion-icon name="create-outline"></ion-icon>
@@ -485,12 +485,7 @@
         </a>
     </div>
 
-    <!-- Section label -->
-    <p class="section-label v3-rise" data-d="4" style="display:none;">Your Sanctuary</p>
-
-    <!-- Feature cards intentionally removed — the four v3-quick tiles above
-         are the single source of truth for navigation. -->
-    <div class="feature-cards" hidden></div>
+    <!-- Navigation lives in the four quick tiles above (single source of truth). -->
 
     <!-- Mood check-in -->
     <div class="mood-section">
@@ -571,10 +566,9 @@
         const cached = JSON.parse(localStorage.getItem('blakcide-streak') || 'null');
         if (cached && typeof cached.days === 'number') return setRing(cached.days);
     } catch (_) {}
-    // 2) Fallback — keep the friendly seed value of 3 already in the HTML;
-    //    just animate the ring to the matching percentage so it never
-    //    sits empty.
-    setRing(3);
+    // 2) No cache yet — show an honest zero. dashboard.js replaces this with the
+    //    user's real streak once it loads (never a fabricated seed value).
+    setRing(0);
 })();
 </script>
 <script>
@@ -623,12 +617,26 @@
     else el.textContent = 'Good evening';
 })();
 
-// Mood selector
+// Mood selector — actually persists, so it can inform Blak instead of being a
+// throwaway toast. Saves locally (read by the chat context builder) and, when a
+// Supabase client + session exist, records to mood_logs (best-effort, silent).
 function selectMood(btn) {
     document.querySelectorAll('.mood-btn').forEach(b => b.classList.remove('selected'));
     btn.classList.add('selected');
     const mood = btn.dataset.mood;
-    const toasts = { great: '✨ Glad you\'re feeling great!', okay: '💙 That\'s okay. Take it easy.', low: '🌿 It\'s okay to feel this way.', anxious: '🫁 Take a slow, deep breath.', angry: '🌊 Let\'s find some calm together.' };
+    try {
+        localStorage.setItem('blak-mood', JSON.stringify({ mood, date: new Date().toISOString().slice(0, 10) }));
+    } catch (_) {}
+    try {
+        const sb = window._sbClient;
+        if (sb && sb.auth) {
+            sb.auth.getUser().then(({ data }) => {
+                const uid = data?.user?.id;
+                if (uid) sb.from('mood_logs').insert({ user_id: uid, mood }).then(() => {}, () => {});
+            }, () => {});
+        }
+    } catch (_) {}
+    const toasts = { great: '✨ Glad you\'re feeling good.', okay: '💙 Noted — take it easy.', low: '🌿 Thanks for checking in. Blak\'s here.', anxious: '🫁 Take a slow, deep breath.', angry: '🌊 That\'s valid. Blak\'s around if you want to talk.' };
     const t = document.createElement('div');
     t.className = 'toast';
     t.innerText = toasts[mood] || '✓';
@@ -642,10 +650,8 @@ document.getElementById('logout-btn')?.addEventListener('click', () => {
 });
 </script>
 <script src="blaksyd-pulse.js?v=20260428b"></script>
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-    if (window.BlaksydPulse) window.BlaksydPulse.trigger('dashboard', { delayMs: 22000 });
-});
-</script>
+<!-- Pulse is no longer auto-popped on the home: an unsolicited timed modal on an
+     idle screen is exactly the kind of interruption Blaksyd avoids. It can still
+     be surfaced intentionally after a meaningful action elsewhere. -->
 </body>
 </html>
