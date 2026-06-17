@@ -171,7 +171,15 @@
                 return false; // no UI shown yet → clean fallback to OpenAI
             }
             var cfg = await res.json();
-            if (!cfg || !cfg.token) return false;
+            if (!cfg || !cfg.wsUrl) return false;
+            // The Cloud Run bridge authenticates us by our Supabase access token,
+            // passed as a WS subprotocol. No session → can't open the bridge.
+            var sbToken = null;
+            try {
+                var sb = window._sbClient;
+                if (sb && sb.auth) { var ses = await sb.auth.getSession(); sbToken = ses && ses.data && ses.data.session && ses.data.session.access_token; }
+            } catch (_) {}
+            if (!sbToken) { console.warn('[gemini-call] no Supabase session — using fallback'); return false; }
 
             active = true; muted = false; speaker = true; secs = 0; aiTextBuf = ''; nextPlayTime = 0;
 
@@ -196,7 +204,7 @@
                 });
             } catch (e) { console.warn('[gemini-call] mic denied:', e); }
 
-            ws = new WebSocket(WS_BASE + '?access_token=' + encodeURIComponent(cfg.token));
+            ws = new WebSocket(cfg.wsUrl, ['blak.v1', 'blak.jwt.' + sbToken]);
             ws.onopen = function () {
                 setStatus('Connected…');
                 ws.send(JSON.stringify({

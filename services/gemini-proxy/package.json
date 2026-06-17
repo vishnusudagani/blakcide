@@ -9,6 +9,8 @@
     "start": "node index.mjs"
   },
   "dependencies": {
-    "google-auth-library": "^9.15.0"
+    "google-auth-library": "^9.15.0",
+    "ws": "^8.18.0",
+    "jsonwebtoken": "^9.0.2"
   }
 }

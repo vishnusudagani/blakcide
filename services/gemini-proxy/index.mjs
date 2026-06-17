@@ -15,11 +15,25 @@
 
 import http from 'node:http';
 import { GoogleAuth } from 'google-auth-library';
+import { WebSocketServer, WebSocket as WsClient } from 'ws';
+import jwt from 'jsonwebtoken';
 
 const PROJECT = process.env.GCP_PROJECT;
 const REGION  = process.env.GCP_REGION || 'us-central1';
 const SECRET  = process.env.PROXY_SECRET || '';
 const PORT    = process.env.PORT || 8080;
+
+// ── Live (speech-to-speech) bridge config ────────────────────────────────────
+// Browser <-> this service <-> Vertex Live API. Browsers can't set the
+// Authorization header a Vertex WS needs, and Netlify can't hold a socket, so
+// this service bridges: it verifies the caller's Supabase JWT, mints an ADC
+// OAuth token (same attached service account — draws the GCP credits), and pipes
+// audio frames to/from Vertex. The Google token NEVER reaches the browser.
+const SUPABASE_JWT_SECRET = process.env.SUPABASE_JWT_SECRET || '';
+const VERTEX_LIVE_MODEL   = process.env.VERTEX_LIVE_MODEL || 'gemini-live-2.5-flash';
+// Override only if Google moves the service path.
+const VERTEX_LIVE_WS_PATH = process.env.VERTEX_LIVE_WS_PATH ||
+    'google.cloud.aiplatform.v1beta1.LlmBidiService/BidiGenerateContent';
 
 if (!PROJECT) console.warn('[vertex-proxy] GCP_PROJECT is not set — requests will 500.');
 if (!SECRET)  console.warn('[vertex-proxy] PROXY_SECRET is not set — proxy is UNAUTHENTICATED.');
@@ -109,4 +123,78 @@ const server = http.createServer(async (req, res) => {
   res.end();
 });
 
-server.listen(PORT, () => console.log(`[vertex-proxy] listening on :${PORT} -> ${vertexUrl()}`));
+// ── WebSocket bridge: /live  (Vertex Gemini Live, speech-to-speech) ──────────
+function vertexLiveWsUrl() {
+  const host = REGION === 'global' ? 'aiplatform.googleapis.com' : `${REGION}-aiplatform.googleapis.com`;
+  return `wss://${host}/ws/${VERTEX_LIVE_WS_PATH}`;
+}
+const modelResourcePath = () =>
+  `projects/${PROJECT}/locations/${REGION}/publishers/google/models/${VERTEX_LIVE_MODEL}`;
+
+const wss = new WebSocketServer({
+  noServer: true,
+  handleProtocols: (protocols) => (protocols.has('blak.v1') ? 'blak.v1' : false),
+});
+
+server.on('upgrade', (req, socket, head) => {
+  if (!req.url || !req.url.startsWith('/live')) { socket.destroy(); return; }
+  // Auth: the browser passes its Supabase access token as a subprotocol
+  // (subprotocols are the only "header" a browser WebSocket can set), so it
+  // stays out of the URL and access logs. Verify it with the Supabase JWT secret.
+  const offered  = String(req.headers['sec-websocket-protocol'] || '').split(',').map(s => s.trim());
+  const jwtProto = offered.find(p => p.startsWith('blak.jwt.'));
+  const token    = jwtProto ? jwtProto.slice('blak.jwt.'.length) : '';
+  try {
+    if (!SUPABASE_JWT_SECRET) throw new Error('SUPABASE_JWT_SECRET not set');
+    if (!token) throw new Error('no token');
+    jwt.verify(token, SUPABASE_JWT_SECRET, { algorithms: ['HS256'] });
+  } catch (e) {
+    socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n');
+    socket.destroy();
+    return;
+  }
+  wss.handleUpgrade(req, socket, head, (browserWs) => bridgeToVertex(browserWs));
+});
+
+async function bridgeToVertex(browserWs) {
+  let accessToken;
+  try {
+    authClient = authClient || await auth.getClient();
+    const at = await authClient.getAccessToken();
+    accessToken = typeof at === 'string' ? at : at?.token;
+    if (!accessToken) throw new Error('empty token');
+  } catch (e) {
+    try { browserWs.close(1011, 'ADC token failed'); } catch {}
+    return;
+  }
+
+  const upstream = new WsClient(vertexLiveWsUrl(), { headers: { Authorization: `Bearer ${accessToken}` } });
+  const queue = [];
+
+  upstream.on('open', () => { for (const m of queue) upstream.send(m); queue.length = 0; });
+
+  // Browser -> Vertex: rewrite setup.model to the full Vertex resource path, so
+  // the client sends only a short model name and never learns the project id.
+  browserWs.on('message', (data) => {
+    let text = data.toString();
+    try {
+      const obj = JSON.parse(text);
+      if (obj && obj.setup) { obj.setup.model = modelResourcePath(); text = JSON.stringify(obj); }
+    } catch { /* non-JSON/binary — pass through untouched */ }
+    if (upstream.readyState === WsClient.OPEN) upstream.send(text); else queue.push(text);
+  });
+
+  // Vertex -> Browser: pass frames straight through.
+  upstream.on('message', (data) => {
+    if (browserWs.readyState === browserWs.OPEN) browserWs.send(data.toString());
+  });
+
+  upstream.on('close', (code, reason) => {
+    try { browserWs.close(code >= 1000 && code < 5000 ? code : 1011, String(reason || '').slice(0, 120)); } catch {}
+  });
+  upstream.on('error', () => { try { browserWs.close(1011, 'vertex upstream error'); } catch {} });
+  browserWs.on('close', () => { try { upstream.close(); } catch {} });
+  browserWs.on('error', () => { try { upstream.close(); } catch {} });
+}
+
+server.listen(PORT, () => console.log(`[vertex-proxy] listening on :${PORT} (HTTP /v1/chat/completions + WS /live -> ${vertexLiveWsUrl()})`));
