@@ -512,12 +512,14 @@ import AppLayout from '../../layouts/AppLayout.astro';
       const i16 = new Int16Array(bytes.buffer), f32 = new Float32Array(i16.length);
       for (let i = 0; i < i16.length; i++) f32[i] = i16[i] / 32768;
       const b = actx.createBuffer(1, f32.length, 24000); b.copyToChannel(f32, 0);
-      const s = actx.createBufferSource(); s.buffer = b; s.connect(actx.destination);
+      const s = actx.createBufferSource(); s.buffer = b;
       const now = actx.currentTime;
-      // Fresh utterance → bigger lead-in so the first phoneme (e.g. the "w" in
-      // "what") isn't clipped by audio-output latency.
+      // Fresh utterance → short lead-in (low latency) with a 30ms fade-in that
+      // masks any first-phoneme clip (so "what" doesn't become "hat").
       const fresh = gNextPlay <= now + 0.02;
-      const t = fresh ? now + 0.18 : gNextPlay;
+      const t = fresh ? now + 0.10 : gNextPlay;
+      if (fresh) { const g = actx.createGain(); g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(1, t + 0.03); s.connect(g); g.connect(actx.destination); }
+      else { s.connect(actx.destination); }
       s.start(t); gNextPlay = t + b.duration; gsrcNode = s;
       if (!gAiSpeaking) { gAiSpeaking = true; setCall('speaking', 'speaking…'); }
       // Keep the mic DUCKED until the audio truly finishes (not just until
@@ -578,8 +580,10 @@ import AppLayout from '../../layouts/AppLayout.astro';
         const langSel = (callLang && callLang.value && callLang.value !== 'auto') ? ('\nThe user picked ' + callLang.value + ' for this call — speak that language.') : '';
         ws.onopen = () => { setCall('', 'connecting…'); ws.send(JSON.stringify({ setup: {
           model: cfg.model,
-          generationConfig: { responseModalities: ['AUDIO'], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: cfg.voice || 'Aoede' } } } },
+          generationConfig: { responseModalities: ['AUDIO'], temperature: 0.9, speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: cfg.voice || 'Aoede' } } } },
           systemInstruction: { parts: [{ text: (cfg.instructions || '') + langSel }] },
+          // Snappy turn-taking → lower perceived latency + natural flow.
+          realtimeInputConfig: { automaticActivityDetection: { startOfSpeechSensitivity: 'START_SENSITIVITY_HIGH', endOfSpeechSensitivity: 'END_SENSITIVITY_HIGH', silenceDurationMs: 350, prefixPaddingMs: 60 } },
           inputAudioTranscription: {}, outputAudioTranscription: {},
         } })); };
         const onObj = (o) => { if (o && o.setupComplete && !settled) { clearTimeout(to); liveMode = true; gStartMic(); setCall('listening', 'listening… just talk'); done(true); } gHandle(o); };
