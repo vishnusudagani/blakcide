@@ -1,0 +1,510 @@
+---
+import AppLayout from '../../layouts/AppLayout.astro';
+// Minit — LISTENER console. Availability (with heartbeat presence) · live incoming
+// requests (alerts) → accept/decline · live chat (typing, delivered/seen, private
+// notes) · report/escalate · end. Stats + warm context strip.
+---
+<AppLayout active="minit" title="Listener">
+  <div class="ap-page lsn">
+    <div class="lsn-aura" aria-hidden="true"></div>
+    <div class="lsn-head">
+      <div>
+        <p class="ap-kicker">Minit · listener</p>
+        <h1 class="ap-h1">Listener <span class="lsn-accent">console</span></h1>
+      </div>
+      <div class="lsn-avail" id="lsn-avail" hidden>
+        <span class="lsn-status" id="lsn-status">Offline</span>
+        <button type="button" class="lsn-toggle" id="lsn-toggle" role="switch" aria-checked="false" aria-label="Availability"><span class="lsn-toggle-dot"></span></button>
+      </div>
+    </div>
+    <div id="lsn-root" class="lsn-root" role="region" aria-live="polite">
+      <div class="lsn-loading"><span class="lsn-spinner" aria-hidden="true"></span> Loading your console…</div>
+    </div>
+    <audio id="lsn-rtc-audio" autoplay></audio>
+  </div>
+
+  <style is:global>
+    .lsn-accent { font-family: var(--font-serif); font-style: italic; font-weight: 400; background: linear-gradient(110deg, var(--mint), var(--mint-deep) 45%, var(--aqua)); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+    html[data-theme="light"] .lsn-accent { background: linear-gradient(110deg, var(--mint-ink), var(--aqua-ink)); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+    .lsn-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+    .lsn-avail { display: flex; align-items: center; gap: .6rem; flex: none; }
+    .lsn-status { font-family: var(--font-mono); font-size: var(--fs-xs); letter-spacing: .06em; text-transform: uppercase; color: var(--ink-faint); }
+    .lsn-status.on { color: var(--mint-deep); }
+    html[data-theme="light"] .lsn-status.on { color: var(--mint-ink); }
+    .lsn-toggle { position: relative; width: 50px; height: 28px; border-radius: var(--r-pill); background: var(--surface-strong); border: 1px solid var(--line-strong); cursor: pointer; transition: background var(--t-fast) var(--ease-out); padding: 0; flex: none; }
+    .lsn-toggle[aria-checked="true"] { background: linear-gradient(135deg, var(--mint), var(--mint-deep)); border-color: transparent; }
+    .lsn-toggle-dot { position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: var(--ink-soft); transition: transform var(--t-fast) var(--ease-out), background var(--t-fast) var(--ease-out); }
+    .lsn-toggle[aria-checked="true"] .lsn-toggle-dot { transform: translateX(22px); background: #06231C; }
+    .lsn-toggle[disabled] { opacity: .4; cursor: default; pointer-events: none; }
+    .lsn-sched { margin-bottom: 1.4rem; }
+    .lsn-sched-item { display: flex; align-items: center; gap: .6rem; padding: .6rem .9rem; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); margin-bottom: .4rem; font-size: var(--fs-sm); color: var(--ink-soft); }
+    .lsn-sched-txt { flex: 1; min-width: 0; }
+    .lsn-sched-when { font-family: var(--font-mono); font-size: var(--fs-2xs); color: var(--gold); background: rgba(255,210,122,.12); border: 1px solid rgba(255,210,122,.3); padding: .22rem .55rem; border-radius: var(--r-pill); white-space: nowrap; flex: none; }
+    html[data-theme="light"] .lsn-sched-when { color: var(--gold-ink); border-color: rgba(138,100,16,.3); }
+    .lsn-sched-dot { width: 8px; height: 8px; border-radius: 50%; flex: none; background: var(--gold); box-shadow: 0 0 8px var(--gold); }
+    html[data-theme="light"] .lsn-sched-dot { background: var(--gold-ink); box-shadow: none; }
+    .lsn-toast { margin-top: .6rem; font-size: var(--fs-sm); color: var(--coral); }
+    html[data-theme="light"] .lsn-toast { color: var(--coral-ink); }
+
+    .lsn-root { min-height: clamp(300px, 50vh, 480px); margin-top: 1.2rem; }
+    .lsn-loading { display: flex; align-items: center; gap: .7rem; color: var(--ink-soft); font-size: var(--fs-base); padding: 1.4rem .2rem; }
+    .lsn-spinner { width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--line-strong); border-top-color: var(--mint-deep); animation: lsn-spin 1s linear infinite; }
+    @keyframes lsn-spin { to { transform: rotate(360deg); } }
+    @media (prefers-reduced-motion: reduce) { .lsn-spinner { animation: none; } }
+    .lsn-msg { padding: 2rem 1.4rem; text-align: center; color: var(--ink-soft); font-size: var(--fs-md); }
+    .lsn-msg a { color: var(--aqua); font-weight: 600; }
+
+    .lsn-stats { display: flex; gap: .7rem; margin-bottom: 1.4rem; flex-wrap: wrap; }
+    .lsn-stat { padding: .55rem 1rem; min-width: 76px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); }
+    .lsn-stat b { display: block; font-size: var(--fs-xl); color: var(--ink); font-weight: 650; }
+    .lsn-stat span { font-size: var(--fs-2xs); font-family: var(--font-mono); letter-spacing: .06em; text-transform: uppercase; color: var(--ink-faint); }
+
+    .lsn-state { text-align: center; padding: 2.2rem 1.4rem; }
+    .lsn-state-orb { width: 60px; height: 60px; border-radius: 50%; margin: 0 auto 1.1rem; background: radial-gradient(circle at 35% 30%, rgba(255,255,255,.5), var(--mint-deep)); box-shadow: 0 0 26px rgba(106,211,184,.35); }
+    .lsn-state-orb.dim { opacity: .4; box-shadow: none; }
+    .lsn-state h3 { font-size: var(--fs-xl); font-weight: 600; color: var(--ink); }
+    .lsn-state p { font-size: var(--fs-md); color: var(--ink-soft); margin-top: .4rem; max-width: 42ch; margin-inline: auto; }
+    .lsn-nudge { margin-top: 1rem; font-size: var(--fs-sm); color: var(--gold); }
+    html[data-theme="light"] .lsn-nudge { color: var(--gold-ink); }
+    .lsn-pulse { position: relative; width: 70px; height: 70px; margin: 0 auto 1.2rem; display: grid; place-items: center; }
+    .lsn-pulse .core { width: 60px; height: 60px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, rgba(255,255,255,.5), var(--mint-deep)); }
+    .lsn-pulse i { position: absolute; inset: 0; border-radius: 50%; border: 2px solid rgba(106,211,184,.4); animation: lsn-echo 2.4s ease-out infinite; }
+    @keyframes lsn-echo { 0% { transform: scale(.85); opacity: .7; } 100% { transform: scale(1.5); opacity: 0; } }
+    @media (prefers-reduced-motion: reduce) { .lsn-pulse i { animation: none; opacity: .25; } }
+
+    .lsn-section-label { font-family: var(--font-mono); font-size: var(--fs-xs); letter-spacing: .1em; text-transform: uppercase; color: var(--ink-faint); margin-bottom: .9rem; }
+    .lsn-req { display: flex; align-items: center; gap: 1rem; padding: 1rem 1.2rem; background: var(--glass-strong); border: 1px solid var(--line-strong); border-left: 3px solid var(--mint-deep); border-radius: var(--r-lg); box-shadow: var(--shadow-soft); margin-bottom: .8rem; animation: lsn-in .4s var(--ease-out) both; }
+    .lsn-req.fresh { animation: lsn-in .4s var(--ease-out) both, lsn-glow 2.6s var(--ease-out) 1; }
+    @keyframes lsn-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+    @keyframes lsn-glow { 0% { box-shadow: 0 0 0 0 rgba(106,211,184,.5), var(--shadow-soft); } 55% { box-shadow: 0 0 0 9px rgba(106,211,184,0), var(--shadow-soft); } 100% { box-shadow: var(--shadow-soft); } }
+    @media (prefers-reduced-motion: reduce) { .lsn-req.fresh { animation: lsn-in .4s var(--ease-out) both; } }
+    .lsn-req-orb { width: 42px; height: 42px; border-radius: 50%; flex: none; background: linear-gradient(135deg, var(--mint), var(--aqua)); display: grid; place-items: center; color: #06231C; }
+    .lsn-req-orb svg { width: 20px; height: 20px; }
+    .lsn-req-who { flex: 1; min-width: 0; }
+    .lsn-req-who b { font-size: var(--fs-lg); color: var(--ink); font-weight: 600; display: block; }
+    .lsn-req-who span { font-size: var(--fs-sm); color: var(--ink-soft); }
+    .lsn-req-actions { display: flex; gap: .5rem; flex: none; }
+    .lsn-accept { display: inline-flex; align-items: center; min-height: 44px; padding: .55rem 1.2rem; border-radius: var(--r-pill); border: 0; color: #06231C; font: inherit; font-size: var(--fs-sm); font-weight: 650; cursor: pointer; background: linear-gradient(135deg, var(--mint), var(--mint-deep)); transition: transform var(--t-fast) var(--ease-out), filter var(--t-fast) var(--ease-out); }
+    .lsn-accept:hover { filter: brightness(1.05); transform: translateY(-1px); }
+    .lsn-accept[disabled] { opacity: .5; cursor: default; transform: none; }
+    .lsn-decline { display: inline-flex; align-items: center; min-height: 44px; padding: .55rem 1.1rem; border-radius: var(--r-pill); background: var(--surface); border: 1px solid var(--line-strong); color: var(--ink-soft); font: inherit; font-size: var(--fs-sm); cursor: pointer; }
+    .lsn-decline:hover { color: var(--ink); }
+
+    .lsn-chat { display: flex; flex-direction: column; width: 100%; max-width: 680px; margin-inline: auto; height: clamp(400px, 70dvh, 640px); background: var(--glass-strong); border: 1px solid var(--line-strong); border-radius: var(--r-lg); box-shadow: var(--shadow-soft); overflow: hidden; position: relative; }
+    .lsn-chat-head { display: flex; align-items: center; gap: .7rem; padding: .8rem 1rem; border-bottom: 1px solid var(--line); flex: none; }
+    .lsn-chat-orb { width: 36px; height: 36px; border-radius: 50%; flex: none; background: linear-gradient(135deg, var(--mint), var(--aqua)); display: grid; place-items: center; color: #06231C; }
+    .lsn-chat-orb svg { width: 18px; height: 18px; }
+    .lsn-chat-who b { font-size: var(--fs-md); color: var(--ink); font-weight: 600; display: block; }
+    .lsn-chat-who i { font-style: normal; font-size: var(--fs-2xs); color: var(--mint-deep); }
+    .lsn-hbtns { margin-left: auto; display: flex; gap: .4rem; }
+    .lsn-hbtn { display: inline-flex; align-items: center; gap: .35rem; min-height: 40px; padding: .4rem .8rem; border-radius: var(--r-pill); background: var(--surface); border: 1px solid var(--line-strong); color: var(--ink-soft); font: inherit; font-size: var(--fs-sm); cursor: pointer; }
+    .lsn-hbtn svg { width: 15px; height: 15px; flex: none; }
+    .lsn-hbtn.on { color: var(--ink); border-color: rgba(106,211,184,.5); }
+    .lsn-chat-end { padding: .4rem .9rem; border-radius: var(--r-pill); background: rgba(255,107,157,.1); border: 1px solid rgba(255,107,157,.25); color: var(--coral); font: inherit; font-size: var(--fs-sm); font-weight: 600; cursor: pointer; white-space: nowrap; }
+    html[data-theme="light"] .lsn-chat-end { color: var(--coral-ink); }
+    .lsn-chat-end.confirm { background: var(--coral); color: #fff; border-color: transparent; }
+    .lsn-ctx { flex: none; padding: .55rem .9rem; border-bottom: 1px solid var(--line); background: var(--surface); font-size: var(--fs-sm); color: var(--ink-soft); }
+    .lsn-ctx b { color: var(--ink); font-weight: 600; }
+    .lsn-panel { position: absolute; left: 0; right: 0; bottom: 58px; z-index: 6; padding: .8rem .9rem; background: var(--glass-strong); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); border-top: 1px solid var(--line-strong); box-shadow: 0 -12px 30px rgba(0,0,0,.32); max-height: 62%; overflow: auto; transform: translateY(120%); opacity: 0; pointer-events: none; transition: transform var(--t-base) var(--ease-out), opacity var(--t-base) var(--ease-out); }
+    .lsn-panel.open { transform: translateY(0); opacity: 1; pointer-events: auto; }
+    .lsn-panel textarea { width: 100%; box-sizing: border-box; background: var(--bg-warm); border: 1px solid var(--line-strong); border-radius: var(--r-sm); padding: .5rem .6rem; color: var(--ink); font: inherit; font-size: var(--fs-sm); resize: vertical; min-height: 52px; outline: none; }
+    .lsn-panel .hint { font-size: var(--fs-2xs); color: var(--ink-faint); margin-top: .3rem; }
+    .lsn-panel .wa { display: inline-flex; align-items: center; gap: .4rem; margin-top: .6rem; padding: .5rem .9rem; border-radius: var(--r-pill); background: linear-gradient(135deg, #25D366, #128C7E); color: #04231a; font-weight: 650; font-size: var(--fs-sm); text-decoration: none; }
+    .lsn-flag { margin-top: .6rem; margin-left: .5rem; padding: .5rem .9rem; border-radius: var(--r-pill); background: var(--surface-strong); border: 1px solid var(--line-strong); color: var(--ink-soft); font: inherit; font-size: var(--fs-sm); cursor: pointer; }
+    .lsn-feed { flex: 1; overflow-y: auto; padding: 1rem .9rem; display: flex; flex-direction: column; gap: .35rem; justify-content: flex-start; }
+    .lsn-sys { text-align: center; font-size: var(--fs-xs); color: var(--ink-faint); padding: .4rem 0; }
+    .lsn-row { display: flex; flex-direction: column; } .lsn-row.me { align-items: flex-end; } .lsn-row.them { align-items: flex-start; }
+    .lsn-bubble { max-width: 78%; padding: .6rem .85rem; border-radius: 16px; font-size: var(--fs-md); line-height: 1.5; word-wrap: break-word; overflow-wrap: anywhere; animation: lsn-bub .18s var(--ease-out) both; }
+    @keyframes lsn-bub { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+    .lsn-row.me .lsn-bubble { background: linear-gradient(135deg, var(--mint), var(--mint-deep)); color: #06231C; border-bottom-right-radius: 5px; }
+    .lsn-row.me.temp .lsn-bubble { opacity: .6; }
+    .lsn-row.them .lsn-bubble { background: var(--surface-strong); border: 1px solid var(--line); color: var(--ink); border-bottom-left-radius: 5px; }
+    html[data-theme="light"] .lsn-row.them .lsn-bubble { background: #fff; border-color: var(--line-strong); }
+    .lsn-meta { display: flex; align-items: center; margin: .14rem .2rem 0; }
+    .lsn-row.me .lsn-meta { justify-content: flex-end; }
+    .lsn-mtime { font-size: var(--fs-3xs); color: var(--ink-faint); font-family: var(--font-mono); }
+    .lsn-status2 { font-size: var(--fs-3xs); color: var(--ink-faint); font-family: var(--font-mono); }
+    .lsn-status2:not(:empty)::before { content: '·'; margin: 0 .3rem; color: var(--ink-ghost); }
+    .lsn-typing { align-self: flex-start; display: inline-flex; gap: 4px; padding: .6rem .8rem; background: var(--surface-strong); border: 1px solid var(--line); border-radius: 16px; border-bottom-left-radius: 5px; }
+    .lsn-typing span { width: 6px; height: 6px; border-radius: 50%; background: var(--ink-faint); animation: lsn-typ 1.2s infinite; }
+    .lsn-typing span:nth-child(2) { animation-delay: .2s; } .lsn-typing span:nth-child(3) { animation-delay: .4s; }
+    @keyframes lsn-typ { 0%,60%,100% { opacity: .3; transform: translateY(0); } 30% { opacity: 1; transform: translateY(-3px); } }
+    .lsn-newmsgs { position: absolute; left: 50%; transform: translateX(-50%); bottom: 78px; padding: .4rem .9rem; border-radius: var(--r-pill); background: var(--mint-deep); color: #06231C; font: inherit; font-size: var(--fs-sm); font-weight: 600; border: 0; cursor: pointer; box-shadow: var(--shadow-soft); display: none; }
+    .lsn-newmsgs.show { display: block; }
+    .lsn-input { display: flex; align-items: center; gap: .6rem; padding: .7rem .8rem; border-top: 1px solid var(--line); flex: none; }
+    .lsn-input input { flex: 1; background: var(--surface); border: 1px solid var(--line-strong); border-radius: var(--r-pill); padding: .65rem 1rem; color: var(--ink); font: inherit; font-size: 16px; outline: none; }
+    .lsn-input input:focus { border-color: rgba(106,211,184,.5); }
+    .lsn-send { width: 42px; height: 42px; flex: none; border-radius: 50%; border: 0; cursor: pointer; color: #06231C; background: linear-gradient(135deg, var(--mint), var(--mint-deep)); display: grid; place-items: center; transition: transform var(--t-fast) var(--ease-out), filter var(--t-fast) var(--ease-out), opacity var(--t-fast) var(--ease-out); }
+    .lsn-send:hover { transform: translateY(-1px); filter: brightness(1.06); }
+    .lsn-send:active { transform: scale(.92); }
+    .lsn-send[disabled] { opacity: .5; cursor: default; transform: none; filter: none; }
+    .lsn-send svg { width: 18px; height: 18px; }
+    .lsn-icon-btn { width: 38px; height: 38px; flex: none; display: grid; place-items: center; border-radius: 50%; background: var(--surface); border: 1px solid var(--line-strong); color: var(--ink-soft); cursor: pointer; transition: color var(--t-fast) var(--ease-out), border-color var(--t-fast) var(--ease-out); }
+    .lsn-icon-btn:hover { color: var(--mint-deep); border-color: rgba(106,211,184,.5); }
+    .lsn-icon-btn svg { width: 17px; height: 17px; }
+    .lsn-call { display: flex; align-items: center; justify-content: space-between; gap: .6rem; flex: none; padding: .6rem .9rem; border-bottom: 1px solid var(--line); background: rgba(106,211,184,.08); }
+    .lsn-call[hidden] { display: none; }
+    .lsn-call-status { display: inline-flex; align-items: center; gap: .5rem; font-size: var(--fs-sm); color: var(--ink); font-weight: 600; }
+    .lsn-call-sub { font-weight: 400; color: var(--ink-faint); font-size: var(--fs-xs); }
+    .lsn-call-dot { width: 8px; height: 8px; border-radius: 50%; flex: none; background: var(--gold); }
+    .lsn-call-dot.live { background: var(--mint-deep); box-shadow: 0 0 8px var(--mint-deep); }
+    .lsn-call-actions { display: flex; gap: .5rem; }
+    .lsn-call-accept, .lsn-call-decline, .lsn-call-end, .lsn-call-mute { min-height: 36px; padding: .35rem .9rem; border-radius: var(--r-pill); font: inherit; font-size: var(--fs-sm); font-weight: 600; cursor: pointer; border: 1px solid var(--line-strong); background: var(--surface); color: var(--ink); }
+    .lsn-call-accept { background: linear-gradient(135deg, var(--mint), var(--mint-deep)); color: #06231C; border-color: transparent; }
+    .lsn-call-end, .lsn-call-decline { background: rgba(255,107,157,.12); border-color: rgba(255,107,157,.3); color: var(--coral); }
+    html[data-theme="light"] .lsn-call-end, html[data-theme="light"] .lsn-call-decline { color: var(--coral-ink); }
+    .lsn-call-mute.on { background: var(--coral); color: #fff; border-color: transparent; }
+    .lsn-aura { position: fixed; inset: 0; z-index: -1; pointer-events: none; background: radial-gradient(55% 40% at 50% 10%, rgba(106,211,184,.14), transparent 70%), radial-gradient(45% 35% at 84% 6%, rgba(91,192,255,.10), transparent 72%); }
+    html[data-theme="light"] .lsn-aura { background: radial-gradient(55% 40% at 50% 10%, rgba(106,211,184,.16), transparent 70%), radial-gradient(45% 35% at 84% 6%, rgba(91,192,255,.12), transparent 72%); }
+    .lsn-go-online { display: inline-flex; align-items: center; justify-content: center; gap: .5rem; margin-top: 1.5rem; min-height: 46px; padding: .8rem 1.9rem; border: 0; border-radius: var(--r-pill); font: inherit; font-size: var(--fs-lg); font-weight: 650; color: #06231C; cursor: pointer; background: linear-gradient(135deg, var(--mint), var(--mint-deep) 75%, var(--aqua)); box-shadow: 0 12px 32px rgba(106,211,184,.38); transition: transform var(--t-fast) var(--ease-out); }
+    .lsn-go-online:hover { transform: translateY(-1px); }
+    @media (max-width: 560px) { .lsn-head { flex-wrap: wrap; } .lsn-avail { width: 100%; justify-content: flex-end; margin-top: .4rem; } .lsn-hbtn .lbl { display: none; } .lsn-chat-head { gap: .5rem; } .lsn-hbtns { gap: .3rem; } }
+  </style>
+
+  <script>
+    import { supabase } from '../../lib/supabaseClient';
+
+    const root = document.getElementById('lsn-root');
+    const SEND_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4z"/></svg>';
+    const PERSON_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 12a4 4 0 100-8 4 4 0 000 8zM5 20a7 7 0 0114 0"/></svg>';
+    const NOTE_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4v16h16v-7"/><path d="M18.5 2.5a2.1 2.1 0 0 1 3 3L12 15l-4 1 1-4z"/></svg>';
+    const SHIELD_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v6c0 4.4-3 7.6-7 9-4-1.4-7-4.6-7-9V6z"/></svg>';
+    const PHONE_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6.6 10.8a15 15 0 0 0 6.6 6.6l2.2-2.2a1 1 0 0 1 1-.24 11.4 11.4 0 0 0 3.6.58 1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1 11.4 11.4 0 0 0 .58 3.6 1 1 0 0 1-.24 1z"/></svg>';
+    const fmtTime = (iso) => { try { return new Date(iso).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' }); } catch { return ''; } };
+    const relTime = (iso) => { const d = Date.now() - new Date(iso).getTime(); const m = Math.floor(d / 60000), h = Math.floor(m / 60), day = Math.floor(h / 24); if (day > 6) return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }); if (day >= 1) return day + (day === 1 ? ' day ago' : ' days ago'); if (h >= 1) return h + (h === 1 ? ' hr ago' : ' hrs ago'); if (m >= 1) return m + ' min ago'; return 'just now'; };
+
+    if (!root) { /* no root */ }
+    else if (!supabase) { root.innerHTML = '<div class="lsn-msg">Sign-in isn’t configured in this environment yet.</div>'; }
+    else {
+      const SB_URL = import.meta.env.PUBLIC_SUPABASE_URL || '', SB_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY || '';
+      let user = null, profile = null, accessToken = null;
+      let activeSessionId = null, isEnding = false, sending = false, accepting = false;
+      let queueChannel = null, sessionChannel = null, chatChannel = null, sessionPoll = null, msgPoll = null, queuePoll = 0, heartbeat = 0;
+      let lastMsgAt = null, typingTimer = 0, lastTypingSent = 0, notesTimer = 0, audioCtx = null, lastOwnStatusEl = null, titleFlash = 0;
+      const rendered = new Set(), seen = new Set();
+      const baseTitle = document.title;
+      const availEl = document.getElementById('lsn-avail'), statusEl = document.getElementById('lsn-status'), toggleEl = document.getElementById('lsn-toggle');
+
+      const getUser = async () => { try { const { data } = await supabase.auth.getSession(); accessToken = data?.session?.access_token || null; return data?.session?.user || null; } catch { return null; } };
+      const startOfToday = () => { const d = new Date(); d.setHours(0, 0, 0, 0); return d.toISOString(); };
+      const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+
+      // Audio unlocks on the first user gesture (covers resume-already-online).
+      function unlockAudio() { try { audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)(); if (audioCtx.state === 'suspended') audioCtx.resume(); } catch (e) {} }
+      window.addEventListener('pointerdown', unlockAudio, { once: true });
+      function beep() { try { unlockAudio(); if (!audioCtx) return; const o = audioCtx.createOscillator(), g = audioCtx.createGain(); o.type = 'sine'; o.frequency.value = 660; o.connect(g); g.connect(audioCtx.destination); g.gain.setValueAtTime(0.0001, audioCtx.currentTime); g.gain.exponentialRampToValueAtTime(0.18, audioCtx.currentTime + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.32); o.start(); o.stop(audioCtx.currentTime + 0.34); } catch (e) {} }
+      function alertRequest() {
+        beep();
+        if (document.hidden) {
+          if (!titleFlash) { let on = false; titleFlash = setInterval(() => { document.title = (on = !on) ? '🔔 New request' : baseTitle; }, 1000); }
+          try { if ('Notification' in window && Notification.permission === 'granted') new Notification('Someone wants to talk', { body: 'A person reached out on Minit.' }); } catch (e) {}
+        }
+      }
+      document.addEventListener('visibilitychange', () => { if (!document.hidden) { if (titleFlash) { clearInterval(titleFlash); titleFlash = 0; } document.title = baseTitle; } });
+      window.addEventListener('pagehide', () => { if (profile && profile.is_online && accessToken && SB_URL) { try { fetch(SB_URL + '/rest/v1/listeners?id=eq.' + profile.id, { method: 'PATCH', keepalive: true, headers: { apikey: SB_KEY, Authorization: 'Bearer ' + accessToken, 'Content-Type': 'application/json', Prefer: 'return=minimal' }, body: JSON.stringify({ is_online: false }) }); } catch (e) {} } });
+
+      function startHeartbeat() { stopHeartbeat(); touch(); heartbeat = setInterval(touch, 30000); }
+      function stopHeartbeat() { if (heartbeat) clearInterval(heartbeat); heartbeat = 0; }
+      async function touch() { try { await supabase.from('listeners').update({ last_seen: new Date().toISOString() }).eq('id', profile.id); } catch (e) {} }
+
+      function teardownChat() { try { endCall(false); } catch (e) {} [sessionChannel, chatChannel].forEach((c) => { if (c) supabase.removeChannel(c); }); sessionChannel = chatChannel = null; if (sessionPoll) clearInterval(sessionPoll); if (msgPoll) clearInterval(msgPoll); }
+      function paintAvailability() { const on = !!profile.is_online; statusEl.textContent = on ? 'Online' : 'Offline'; statusEl.classList.toggle('on', on); toggleEl.setAttribute('aria-checked', on ? 'true' : 'false'); }
+      function nearBottom(f) { return f.scrollHeight - f.scrollTop - f.clientHeight < 90; }
+
+      // ---- analytics (append-only events) ----
+      function logEvent(event, meta) { try { supabase.from('minit_events').insert([{ user_id: user.id, listener_id: profile?.id || null, session_id: activeSessionId, event, meta: meta || null }]); } catch (e) {} }
+
+      // ---- voice calling (WebRTC over Supabase Realtime signalling) ----
+      const RTC_CFG = { iceServers: [{ urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] }] };
+      let pc = null, localStream = null, callState = 'idle', callTimer = 0, callStart = 0, pendingCands = [], remoteOffer = null, callTimeout = 0, callMuted = false, chatReady = false;
+      function callSend(kind, data) { try { chatChannel?.send({ type: 'broadcast', event: 'call', payload: { from: user.id, kind, data } }); } catch (e) {} }
+      function fmtDur(s) { const m = Math.floor(s / 60), x = s % 60; return m + ':' + String(x).padStart(2, '0'); }
+      function renderCallBar(state) {
+        const bar = document.getElementById('lsn-call'); if (!bar) return;
+        if (!state) { bar.hidden = true; bar.innerHTML = ''; if (callTimer) { clearInterval(callTimer); callTimer = 0; } return; }
+        bar.hidden = false;
+        if (state === 'calling') bar.innerHTML = `<span class="lsn-call-status"><span class="lsn-call-dot"></span> Calling… <span class="lsn-call-sub">ringing them</span></span><button type="button" class="lsn-call-end" id="lsn-call-cancel">Cancel</button>`;
+        else if (state === 'incoming') bar.innerHTML = `<span class="lsn-call-status"><span class="lsn-call-dot"></span> Incoming voice call</span><span class="lsn-call-actions"><button type="button" class="lsn-call-decline" id="lsn-call-decline">Decline</button><button type="button" class="lsn-call-accept" id="lsn-call-accept">Accept</button></span>`;
+        else bar.innerHTML = `<span class="lsn-call-status"><span class="lsn-call-dot live"></span> On call · <span id="lsn-call-time">0:00</span></span><span class="lsn-call-actions"><button type="button" class="lsn-call-mute ${callMuted ? 'on' : ''}" id="lsn-call-mute">${callMuted ? 'Unmute' : 'Mute'}</button><button type="button" class="lsn-call-end" id="lsn-call-hang">End call</button></span>`;
+        document.getElementById('lsn-call-cancel')?.addEventListener('click', () => endCall(true));
+        document.getElementById('lsn-call-hang')?.addEventListener('click', () => endCall(true));
+        document.getElementById('lsn-call-decline')?.addEventListener('click', declineCall);
+        document.getElementById('lsn-call-accept')?.addEventListener('click', acceptCall);
+        document.getElementById('lsn-call-mute')?.addEventListener('click', (e) => { callMuted = !callMuted; const tr = localStream?.getAudioTracks()[0]; if (tr) tr.enabled = !callMuted; e.currentTarget.textContent = callMuted ? 'Unmute' : 'Mute'; e.currentTarget.classList.toggle('on', callMuted); });
+      }
+      function createPC() {
+        pc = new RTCPeerConnection(RTC_CFG);
+        pc.onicecandidate = (e) => { if (e.candidate) callSend('ice', e.candidate); };
+        pc.ontrack = (e) => { const a = document.getElementById('lsn-rtc-audio'); if (a) a.srcObject = e.streams[0]; };
+        pc.onconnectionstatechange = () => { if (!pc) return; const st = pc.connectionState; if (st === 'connected') onCallConnected(); else if (st === 'failed' || st === 'disconnected' || st === 'closed') endCall(false); };
+      }
+      function onCallConnected() {
+        if (callState === 'connected') return; callState = 'connected'; callStart = Date.now();
+        if (callTimeout) { clearTimeout(callTimeout); callTimeout = 0; }
+        renderCallBar('connected'); logEvent('call_connected');
+        if (callTimer) clearInterval(callTimer);
+        callTimer = setInterval(() => { const t = document.getElementById('lsn-call-time'); if (t) t.textContent = fmtDur(Math.floor((Date.now() - callStart) / 1000)); }, 1000);
+      }
+      const getMic = () => navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+      async function startCall() {
+        if (callState !== 'idle' || !activeSessionId) return;
+        if (!chatReady) { for (let i = 0; i < 12 && !chatReady; i++) await wait(150); }
+        try { localStream = await getMic(); } catch (e) { alert('Microphone access is needed for a voice call.'); return; }
+        callState = 'calling'; renderCallBar('calling'); logEvent('call_started');
+        createPC(); localStream.getTracks().forEach((t) => pc.addTrack(t, localStream));
+        try { const offer = await pc.createOffer({ offerToReceiveAudio: true }); await pc.setLocalDescription(offer); callSend('offer', offer); } catch (e) { endCall(true); return; }
+        if (callTimeout) clearTimeout(callTimeout);
+        callTimeout = setTimeout(() => { if (callState === 'calling') endCall(true); }, 45000);
+      }
+      async function handleCallSignal(p) {
+        const kind = p?.kind, data = p?.data, from = p?.from;
+        if (kind === 'offer') {
+          if (callState === 'calling') { if (String(user.id) < String(from)) return; endCall(false); remoteOffer = data; callState = 'incoming'; acceptCall(); return; }
+          if (callState !== 'idle') return;
+          remoteOffer = data; callState = 'incoming'; renderCallBar('incoming');
+        } else if (kind === 'answer') {
+          if (pc && callState === 'calling') { try { await pc.setRemoteDescription(new RTCSessionDescription(data)); for (const c of pendingCands.splice(0)) { try { await pc.addIceCandidate(new RTCIceCandidate(c)); } catch (e) {} } } catch (e) {} }
+        } else if (kind === 'ice') { try { if (pc && pc.remoteDescription) await pc.addIceCandidate(new RTCIceCandidate(data)); else pendingCands.push(data); } catch (e) {} }
+        else if (kind === 'end' || kind === 'decline') { endCall(false); }
+      }
+      async function acceptCall() {
+        if (callState !== 'incoming' || !remoteOffer) return;
+        try { localStream = await getMic(); } catch (e) { declineCall(); return; }
+        createPC(); localStream.getTracks().forEach((t) => pc.addTrack(t, localStream));
+        try {
+          await pc.setRemoteDescription(new RTCSessionDescription(remoteOffer));
+          for (const c of pendingCands.splice(0)) { try { await pc.addIceCandidate(new RTCIceCandidate(c)); } catch (e) {} }
+          const ans = await pc.createAnswer(); await pc.setLocalDescription(ans); callSend('answer', ans);
+          callState = 'connecting'; renderCallBar('connected'); logEvent('call_accepted');
+        } catch (e) { endCall(true); }
+      }
+      function declineCall() { callSend('decline'); remoteOffer = null; callState = 'idle'; renderCallBar(null); }
+      function endCall(notify) {
+        if (callState === 'idle' && !pc) return;
+        if (notify) callSend('end');
+        logEvent('call_ended', { dur: callStart ? Math.floor((Date.now() - callStart) / 1000) : 0, connected: !!callStart });
+        if (callTimeout) { clearTimeout(callTimeout); callTimeout = 0; }
+        try { if (pc) { pc.onicecandidate = pc.ontrack = pc.onconnectionstatechange = null; pc.close(); } } catch (e) {}
+        pc = null;
+        try { localStream?.getTracks().forEach((t) => t.stop()); } catch (e) {}
+        localStream = null; remoteOffer = null; pendingCands = []; callStart = 0; callState = 'idle'; callMuted = false;
+        const a = document.getElementById('lsn-rtc-audio'); if (a) a.srcObject = null;
+        renderCallBar(null);
+      }
+
+      async function init() {
+        user = await getUser();
+        if (!user) { root.innerHTML = '<div class="lsn-msg">Please sign in.</div>'; return; }
+        const { data: lp } = await supabase.from('listeners').select('*').eq('user_id', user.id).maybeSingle();
+        if (!lp) { root.innerHTML = '<div class="lsn-msg">This area is for Minit listeners.<br/><br/><a href="/beta/">← Back to Blaksyd</a></div>'; return; }
+        profile = lp; availEl.hidden = false; paintAvailability();
+        toggleEl.addEventListener('click', toggleAvailability);
+        if (profile.is_online) { startHeartbeat(); try { if ('Notification' in window && Notification.permission === 'default') Notification.requestPermission(); } catch (e) {} }
+        const { data: act } = await supabase.from('connect_sessions').select('*').eq('listener_id', profile.id).eq('status', 'active').order('created_at', { ascending: false }).limit(1);
+        if (act && act[0]) { openChat(act[0]); return; }
+        renderHome();
+      }
+
+      async function toggleAvailability() {
+        if (activeSessionId) return; // can't change availability mid-session
+        const next = !profile.is_online;
+        toggleEl.setAttribute('aria-checked', next ? 'true' : 'false');
+        if (next) { unlockAudio(); try { if ('Notification' in window && Notification.permission === 'default') Notification.requestPermission(); } catch (e) {} }
+        const patch = next ? { is_online: true, last_seen: new Date().toISOString() } : { is_online: false };
+        const { error } = await supabase.from('listeners').update(patch).eq('id', profile.id);
+        if (error) { paintAvailability(); root.insertAdjacentHTML('afterbegin', '<div class="lsn-toast" id="lsn-toast">Couldn’t update availability — check your connection.</div>'); setTimeout(() => document.getElementById('lsn-toast')?.remove(), 3000); return; }
+        profile.is_online = next; paintAvailability();
+        if (next) startHeartbeat(); else stopHeartbeat();
+        renderHome();
+      }
+
+      function subscribeQueue() {
+        if (queueChannel) return;
+        queueChannel = supabase.channel('lsn_queue_' + profile.id)
+          .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'connect_sessions', filter: `listener_id=eq.${profile.id}` }, (p) => { if (p.new.status === 'pending') { addRequest(p.new); alertRequest(); } })
+          .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'connect_sessions', filter: `listener_id=eq.${profile.id}` }, (p) => { if (p.new.status !== 'pending') { document.getElementById('req-' + p.new.id)?.remove(); checkEmptyQueue(); } })
+          .subscribe();
+      }
+
+      async function statsHTML() {
+        let today = 0;
+        try { const { count } = await supabase.from('connect_sessions').select('id', { count: 'exact', head: true }).eq('listener_id', profile.id).eq('status', 'completed').gte('created_at', startOfToday()); today = count || 0; } catch (e) {}
+        const rating = profile.rating != null ? Number(profile.rating).toFixed(1) : '—';
+        return `<div class="lsn-stats"><div class="lsn-stat"><b>${rating}</b><span>rating</span></div><div class="lsn-stat"><b>${profile.reviews_count || 0}</b><span>reviews</span></div><div class="lsn-stat"><b>${today}</b><span>today</span></div></div>`;
+      }
+
+      async function renderHome() {
+        teardownChat(); activeSessionId = null; isEnding = false;
+        toggleEl.removeAttribute('disabled'); toggleEl.removeAttribute('title'); paintAvailability();
+        const stats = await statsHTML();
+        const sched = await scheduledHTML();
+        if (!profile.is_online) {
+          if (queueChannel) { supabase.removeChannel(queueChannel); queueChannel = null; }
+          if (queuePoll) { clearInterval(queuePoll); queuePoll = 0; }
+          root.innerHTML = stats + sched + `<div class="lsn-state"><div class="lsn-state-orb dim"></div><h3>You’re offline</h3><p>Go online when you’re ready to receive people — you’re in control of when you’re available.</p><button type="button" class="lsn-go-online" id="lsn-go-online">Go online</button></div>`;
+          document.getElementById('lsn-go-online')?.addEventListener('click', () => { if (!profile.is_online) toggleAvailability(); });
+          return;
+        }
+        root.innerHTML = stats + sched + `<p class="lsn-section-label">Incoming · live</p><div id="lsn-queue"></div>`;
+        subscribeQueue();
+        const { data: pend } = await supabase.from('connect_sessions').select('*').eq('listener_id', profile.id).eq('status', 'pending').gte('created_at', new Date(Date.now() - 10 * 60 * 1000).toISOString()).order('created_at', { ascending: true });
+        seen.clear();
+        (pend || []).forEach((r) => addRequest(r, true));
+        checkEmptyQueue();
+        if (queuePoll) clearInterval(queuePoll);
+        queuePoll = setInterval(refreshQueue, 3000);
+      }
+
+      async function scheduledHTML() {
+        try {
+          const { data } = await supabase.from('connect_sessions').select('id, created_at, listener_notes').eq('status', 'scheduled').gte('created_at', new Date(Date.now() - 2 * 24 * 3600 * 1000).toISOString()).order('created_at', { ascending: false }).limit(10);
+          if (!data || !data.length) return '';
+          const items = data.map((s) => { const when = String(s.listener_notes || '').replace(/^requested:\s*/, '') || 'soon'; return `<div class="lsn-sched-item"><span class="lsn-sched-dot"></span><span class="lsn-sched-txt">Someone asked to talk</span><span class="lsn-sched-when">${when}</span></div>`; }).join('');
+          return `<p class="lsn-section-label">Scheduled · later (${data.length})</p><div class="lsn-sched">${items}</div>`;
+        } catch (e) { return ''; }
+      }
+
+      async function refreshQueue() {
+        if (!profile.is_online || activeSessionId) return;
+        const { data: pend } = await supabase.from('connect_sessions').select('*').eq('listener_id', profile.id).eq('status', 'pending').gte('created_at', new Date(Date.now() - 10 * 60 * 1000).toISOString()).order('created_at', { ascending: true });
+        (pend || []).forEach((r) => { if (!seen.has(r.id)) { addRequest(r); alertRequest(); } });
+      }
+
+      function checkEmptyQueue() { const q = document.getElementById('lsn-queue'); if (!q) return; if (!q.querySelector('.lsn-req')) q.innerHTML = `<div class="lsn-state"><div class="lsn-pulse"><i></i><span class="core"></span></div><h3>You’re online — waiting for someone</h3><p>When a person reaches out, their request appears here instantly. Hang tight.</p></div>`; }
+
+      function addRequest(req, silent) {
+        if (seen.has(req.id)) return; seen.add(req.id);
+        const q = document.getElementById('lsn-queue'); if (!q) return;
+        q.querySelector('.lsn-state')?.remove();
+        const el = document.createElement('div'); el.className = 'lsn-req' + (silent ? '' : ' fresh'); el.id = 'req-' + req.id;
+        const meta = (req.is_anonymous ? 'Anonymous' : 'Wants to talk') + ' · ' + relTime(req.created_at);
+        el.innerHTML = `<div class="lsn-req-orb">${PERSON_SVG}</div><div class="lsn-req-who"><b>Someone reached out</b><span>${meta}</span></div><div class="lsn-req-actions"><button type="button" class="lsn-decline">Decline</button><button type="button" class="lsn-accept">Accept</button></div>`;
+        q.prepend(el);
+        el.querySelector('.lsn-accept').addEventListener('click', (e) => acceptRequest(req, e.currentTarget));
+        el.querySelector('.lsn-decline').addEventListener('click', () => declineRequest(req.id, el));
+        if (!req.is_anonymous) supabase.rpc('session_seeker_name', { sid: req.id }).then(({ data }) => { const nm = data && String(data).trim(); if (nm) el.querySelector('b').textContent = nm; });
+      }
+
+      async function acceptRequest(req, btn) {
+        if (accepting) return; accepting = true; if (btn) btn.setAttribute('disabled', '');
+        const { data: upd, error } = await supabase.from('connect_sessions').update({ status: 'active', activated_at: new Date().toISOString() }).eq('id', req.id).eq('status', 'pending').select('id');
+        if (error || !upd || !upd.length) { accepting = false; if (btn) btn.removeAttribute('disabled'); document.getElementById('req-' + req.id)?.remove(); checkEmptyQueue(); return; }
+        if (queueChannel) { supabase.removeChannel(queueChannel); queueChannel = null; }
+        if (queuePoll) { clearInterval(queuePoll); queuePoll = 0; }
+        if (titleFlash) { clearInterval(titleFlash); titleFlash = 0; } document.title = baseTitle;
+        accepting = false; openChat({ ...req, status: 'active' });
+      }
+      async function declineRequest(id, el) { await supabase.from('connect_sessions').update({ status: 'rejected' }).eq('id', id); try { supabase.from('minit_events').insert([{ user_id: user.id, listener_id: profile.id, session_id: id, event: 'declined' }]); } catch (e) {} el?.remove(); checkEmptyQueue(); }
+
+      async function openChat(session) {
+        if (activeSessionId === session.id && document.getElementById('lsn-feed')) return;
+        activeSessionId = session.id; rendered.clear(); lastMsgAt = null; lastOwnStatusEl = null;
+        toggleEl.setAttribute('disabled', ''); toggleEl.setAttribute('title', 'Locked during a live chat'); statusEl.textContent = 'In session';
+        let who = 'Someone';
+        if (session.is_anonymous) who = 'Someone · anonymous';
+        else { try { const { data } = await supabase.rpc('session_seeker_name', { sid: session.id }); const nm = data && String(data).trim(); if (nm) who = nm; } catch (e) {} }
+        root.innerHTML = `<div class="lsn-chat">
+          <div class="lsn-chat-head"><div class="lsn-chat-orb">${PERSON_SVG}</div><div class="lsn-chat-who"><b>${who}</b><i>connected · private</i></div>
+            <div class="lsn-hbtns"><button type="button" class="lsn-hbtn" id="lsn-call-btn" title="Voice call">${PHONE_SVG}<span class="lbl">Call</span></button><button type="button" class="lsn-hbtn" id="lsn-notes-btn">${NOTE_SVG}<span class="lbl">Notes</span></button><button type="button" class="lsn-hbtn" id="lsn-help-btn">${SHIELD_SVG}<span class="lbl">Safety</span></button></div>
+            <button type="button" class="lsn-chat-end" id="lsn-end">End</button></div>
+          <div class="lsn-call" id="lsn-call" hidden></div>
+          <div class="lsn-ctx" id="lsn-ctx">They reached out just now. Listen first — context, not interrogation.</div>
+          <div class="lsn-panel" id="lsn-notes"><textarea id="lsn-notes-text" placeholder="Private notes — only you can ever see these…"></textarea><div class="hint">Saved automatically to your private notes.</div></div>
+          <div class="lsn-panel" id="lsn-help"><div style="color:var(--ink);font-weight:600">Worried about their safety?</div><div class="hint">If someone may be in danger, point them to urgent help and flag this for the team.</div><a class="wa" href="https://wa.me/917702063434" target="_blank" rel="noopener">Blaksyd Assist on WhatsApp</a><button type="button" class="lsn-flag" id="lsn-flag">Flag this session</button></div>
+          <div class="lsn-feed" id="lsn-feed" role="log" aria-live="polite"><div class="lsn-sys">🔒 You’re connected. Listen first — they reached out to you.</div></div>
+          <button type="button" class="lsn-newmsgs" id="lsn-newmsgs">↓ New messages</button>
+          <div class="lsn-input"><input type="text" id="lsn-text" placeholder="Write back…" autocomplete="off" aria-label="Message" /><button type="button" class="lsn-send" id="lsn-send" aria-label="Send">${SEND_SVG}</button></div>
+        </div>`;
+        const input = document.getElementById('lsn-text'), feed = document.getElementById('lsn-feed');
+        document.getElementById('lsn-send').addEventListener('click', sendMessage);
+        document.getElementById('lsn-end').addEventListener('click', confirmEnd);
+        document.getElementById('lsn-call-btn')?.addEventListener('click', startCall);
+        document.getElementById('lsn-newmsgs').addEventListener('click', () => { feed.scrollTop = feed.scrollHeight; document.getElementById('lsn-newmsgs').classList.remove('show'); });
+        feed.addEventListener('scroll', () => { if (nearBottom(feed)) document.getElementById('lsn-newmsgs')?.classList.remove('show'); });
+        input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); sendMessage(); } });
+        input.addEventListener('input', sendTyping);
+        input.addEventListener('focus', () => setTimeout(() => input.scrollIntoView({ block: 'center' }), 200));
+
+        // surface a brief if one exists (server-generated; usually none yet)
+        try { const { data: br } = await supabase.from('symp_listener_briefs').select('brief').eq('connect_session_id', session.id).maybeSingle(); if (br && br.brief) { const txt = typeof br.brief === 'string' ? br.brief : (br.brief.summary || br.brief.recommended_focus || ''); if (txt) document.getElementById('lsn-ctx').innerHTML = '<b>Blak brief:</b> ' + String(txt); } } catch (e) {}
+
+        // private notes
+        const notesBtn = document.getElementById('lsn-notes-btn'), notesBox = document.getElementById('lsn-notes'), notesText = document.getElementById('lsn-notes-text');
+        try { const { data: nd } = await supabase.from('minit_listener_notes').select('notes').eq('session_id', session.id).maybeSingle(); if (nd && nd.notes) notesText.value = nd.notes; } catch (e) {}
+        notesBtn.addEventListener('click', () => { const open = notesBox.classList.toggle('open'); notesBtn.classList.toggle('on', open); document.getElementById('lsn-help').classList.remove('open'); document.getElementById('lsn-help-btn').classList.remove('on'); if (open) notesText.focus(); });
+        notesText.addEventListener('input', () => { if (notesTimer) clearTimeout(notesTimer); notesTimer = setTimeout(() => { supabase.from('minit_listener_notes').upsert({ session_id: activeSessionId, listener_user_id: user.id, notes: notesText.value, updated_at: new Date().toISOString() }); }, 700); });
+
+        // help / report
+        const helpBtn = document.getElementById('lsn-help-btn'), helpBox = document.getElementById('lsn-help');
+        helpBtn.addEventListener('click', () => { const open = helpBox.classList.toggle('open'); helpBtn.classList.toggle('on', open); notesBox.classList.remove('open'); notesBtn.classList.remove('on'); });
+        document.getElementById('lsn-flag').addEventListener('click', async (e) => { await supabase.from('connect_sessions').update({ flagged_at: new Date().toISOString(), flag_reason: 'listener-flagged' }).eq('id', activeSessionId); logEvent('flagged'); e.currentTarget.textContent = 'Flagged ✓'; e.currentTarget.disabled = true; });
+
+        const { data: msgs } = await supabase.from('messages').select('*').eq('session_id', activeSessionId).order('created_at', { ascending: true });
+        (msgs || []).forEach(renderMessage);
+        if (msgs && msgs.length) lastMsgAt = msgs[msgs.length - 1].created_at;
+        feed.scrollTop = feed.scrollHeight;
+
+        chatReady = false;
+        chatChannel = supabase.channel('minit_sig_' + activeSessionId)
+          .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `session_id=eq.${activeSessionId}` }, (p) => renderMessage(p.new))
+          .on('broadcast', { event: 'typing' }, (p) => { if (p.payload?.from !== user.id) showTyping(); })
+          .on('broadcast', { event: 'seen' }, (p) => { if (p.payload?.from !== user.id) markSeen(); })
+          .on('broadcast', { event: 'call' }, (p) => { if (p.payload?.from !== user.id) handleCallSignal(p.payload); })
+          .subscribe((s) => { chatReady = (s === 'SUBSCRIBED'); });
+        if (msgPoll) clearInterval(msgPoll);
+        msgPoll = setInterval(pollMessages, 1800);
+        sessionChannel = supabase.channel('lsn_session_' + activeSessionId).on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'connect_sessions', filter: `id=eq.${activeSessionId}` }, syncSession).subscribe();
+        if (sessionPoll) clearInterval(sessionPoll);
+        sessionPoll = setInterval(syncSession, 1500);
+        logEvent('connected');
+        input.focus();
+      }
+
+      function sendTyping() { const n = Date.now(); if (n - lastTypingSent < 1500) return; lastTypingSent = n; chatChannel?.send({ type: 'broadcast', event: 'typing', payload: { from: user.id } }); }
+      function showTyping() { const feed = document.getElementById('lsn-feed'); if (!feed) return; let t = document.getElementById('lsn-typing'); if (!t) { t = document.createElement('div'); t.id = 'lsn-typing'; t.className = 'lsn-typing'; t.innerHTML = '<span></span><span></span><span></span>'; feed.appendChild(t); if (nearBottom(feed)) feed.scrollTop = feed.scrollHeight; } if (typingTimer) clearTimeout(typingTimer); typingTimer = setTimeout(() => document.getElementById('lsn-typing')?.remove(), 2400); }
+      function markSeen() { if (lastOwnStatusEl) lastOwnStatusEl.textContent = 'Seen'; }
+
+      async function syncSession() { if (!activeSessionId || isEnding) return; const { data: s } = await supabase.from('connect_sessions').select('status').eq('id', activeSessionId).maybeSingle(); if (!s) return; if (s.status === 'completed' || s.status === 'cancelled') { isEnding = true; teardownChat(); renderHome(); } }
+      async function pollMessages() { if (!activeSessionId) return; let q = supabase.from('messages').select('*').eq('session_id', activeSessionId).order('created_at', { ascending: true }); if (lastMsgAt) q = q.gte('created_at', lastMsgAt); const { data: msgs } = await q; if (msgs && msgs.length) msgs.forEach(renderMessage); }
+
+      function renderMessage(m) {
+        if (!m || rendered.has(m.id)) return;
+        if (m.content && String(m.content).startsWith('###')) { rendered.add(m.id); return; }
+        rendered.add(m.id);
+        if (m.created_at && (!lastMsgAt || m.created_at > lastMsgAt)) lastMsgAt = m.created_at;
+        const feed = document.getElementById('lsn-feed'); if (!feed) return;
+        const me = m.sender_id === user.id, stick = nearBottom(feed);
+        if (me) feed.querySelectorAll('.lsn-row.me.temp').forEach((el) => el.remove());
+        document.getElementById('lsn-typing')?.remove();
+        const row = document.createElement('div'); row.className = 'lsn-row ' + (me ? 'me' : 'them');
+        const b = document.createElement('div'); b.className = 'lsn-bubble'; b.textContent = m.content; row.appendChild(b);
+        const meta = document.createElement('div'); meta.className = 'lsn-meta';
+        const tm = document.createElement('span'); tm.className = 'lsn-mtime'; tm.textContent = fmtTime(m.created_at); meta.appendChild(tm);
+        if (me) { const st = document.createElement('span'); st.className = 'lsn-status2'; st.textContent = 'Delivered'; meta.appendChild(st); if (lastOwnStatusEl) lastOwnStatusEl.textContent = ''; lastOwnStatusEl = st; }
+        row.appendChild(meta);
+        feed.appendChild(row);
+        if (stick || me) feed.scrollTop = feed.scrollHeight; else document.getElementById('lsn-newmsgs')?.classList.add('show');
+        if (!me) chatChannel?.send({ type: 'broadcast', event: 'seen', payload: { from: user.id } });
+      }
+
+      async function sendMessage() {
+        if (sending) return; const input = document.getElementById('lsn-text'); const text = input?.value.trim();
+        if (!text || !activeSessionId) return; sending = true;
+        const sendBtn = document.getElementById('lsn-send'); sendBtn?.setAttribute('disabled', '');
+        try {
+          input.value = '';
+          const feed = document.getElementById('lsn-feed'); let temp;
+          if (feed) { temp = document.createElement('div'); temp.className = 'lsn-row me temp'; temp.innerHTML = '<div class="lsn-bubble"></div>'; temp.querySelector('.lsn-bubble').textContent = text; feed.appendChild(temp); feed.scrollTop = feed.scrollHeight; setTimeout(() => temp && temp.classList.remove('temp'), 4000); }
+          const { error } = await supabase.from('messages').insert([{ session_id: activeSessionId, sender_id: user.id, content: text }]);
+          if (error) { temp?.remove(); input.value = text; }
+        } finally { sending = false; sendBtn?.removeAttribute('disabled'); }
+      }
+
+      let endArmed = false;
+      function confirmEnd(e) { const btn = e.currentTarget; if (!endArmed) { endArmed = true; btn.classList.add('confirm'); btn.textContent = 'Tap to confirm'; setTimeout(() => { endArmed = false; btn.classList.remove('confirm'); btn.textContent = 'End'; }, 3000); return; } endSession(); }
+      async function endSession() { if (!activeSessionId) return; const sid = activeSessionId; isEnding = true; endCall(true); logEvent('ended', { by: 'listener' }); teardownChat(); await supabase.from('connect_sessions').update({ status: 'completed', ended_at: new Date().toISOString() }).eq('id', sid); renderHome(); }
+
+      init();
+    }
+  </script>
+</AppLayout>

@@ -381,32 +381,140 @@ import AppLayout from '../../layouts/AppLayout.astro';
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ user_id: session.userId, messages: history.slice(-12) }),
         });
-        const cj = await cr.json();
-        const reply = (cj.data && cj.data.reply) || cj.reply || (cj.error && cj.error.message) || 'Sorry, I could not reply just now.';
-        thinking.classList.remove('is-thinking'); thinking.textContent = reply;
+        if (!cr.ok || !cr.body) throw new Error('http_' + cr.status);
+        // /api/chat streams Server-Sent Events: data: {"delta":"…"} … data: {"done":true}
+        const reader = cr.body.getReader();
+        const decoder = new TextDecoder();
+        let reply = '', buf = '';
+        thinking.classList.remove('is-thinking'); thinking.textContent = '';
+        for (;;) {
+          const { value, done } = await reader.read();
+          if (done) break;
+          buf += decoder.decode(value, { stream: true });
+          const lines = buf.split('\n');
+          buf = lines.pop() || '';
+          for (const line of lines) {
+            const t = line.trim();
+            if (!t.startsWith('data:')) continue;
+            const p = t.slice(5).trim();
+            if (!p || p === '[DONE]') continue;
+            let obj; try { obj = JSON.parse(p); } catch { continue; }
+            if (obj.delta) { reply += obj.delta; thinking.textContent = reply; $('px-thread').scrollTop = $('px-thread').scrollHeight; }
+            if (obj.error) throw new Error(String(obj.error));
+          }
+        }
+        reply = (reply.trim()) || 'Sorry, I could not reply just now.';
+        thinking.textContent = reply;
         history.push({ role: 'assistant', content: reply });
         // speak it back in the cloned voice
         thinking.classList.add('is-speaking');
-        await speak(reply, lang);
+        await speak(reply, lang, thinking);
         thinking.classList.remove('is-speaking');
       } catch (e) {
         thinking.classList.remove('is-thinking'); thinking.textContent = 'Network error — is the backend reachable?';
       }
     }
 
-    async function speak(text, language) {
+    // ── Voice: talk back via the self-hosted Svara-TTS engine (Modal GPU), called
+    // DIRECTLY from the browser so the GPU cold-start (~2 min, one-time) isn't bound
+    // by a serverless function timeout. Phase 1 = natural language preset voice;
+    // phase 2 will swap to the user's clone (reference_audio + reference_transcript). ──
+    // Your own voice-infer engine (OmniVoice — cross-lingual clone incl. Telugu).
+    const SVARA_URL = 'https://ceo-91462--voice-infer-fastapi-app.modal.run';
+    let svaraWarm = false;
+    function svaraVoice(language) {
+      return ({ en: 'en_female', hi: 'hi_female', te: 'te_female' })[language] || 'en_female';
+    }
+    // Unlock the <audio> element during a real user gesture (the Send tap) by playing
+    // 0.1s of silence — so the browser lets us auto-play the spoken reply later, even
+    // after the synth delay (otherwise autoplay is blocked and only a manual tap works).
+    let audioUnlocked = false;
+    function unlockAudio() {
+      if (audioUnlocked) return;
       try {
-        const r = await fetch(API + '/api/voice-clone/speak', {
-          method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + session.token },
-          body: JSON.stringify({ text, language }),
-        });
-        const j = await r.json();
-        const b64 = j.data && j.data.audio_base64;
-        if (!b64) return;
         const a = $('px-talk-audio');
-        a.src = 'data:' + ((j.data && j.data.mime_type) || 'audio/mpeg') + ';base64,' + b64;
-        await a.play().catch(() => {});
-      } catch { /* silent — text is already shown */ }
+        a.src = URL.createObjectURL(encodeWav(new Float32Array(2400), 24000));
+        const p = a.play();
+        if (p && p.then) p.then(() => { a.pause(); a.currentTime = 0; audioUnlocked = true; }).catch(() => {});
+        else audioUnlocked = true;
+      } catch (e) {}
+    }
+    function svaraWarmPing() {
+      // Fire-and-forget no-cors warm-up — kicks the GPU container awake WITHOUT
+      // tripping CORS on Modal's cold-start redirect (no-cors fetches skip CORS).
+      try { fetch(SVARA_URL + '/health', { mode: 'no-cors', cache: 'no-store' }); } catch (e) {}
+    }
+    async function svaraReady() {
+      // A real CORS GET returns 200 ONLY once the container is warm. While it's cold,
+      // Modal 303-redirects to a polling URL with no CORS header, so this fetch throws —
+      // we treat that throw as "still warming" and poll until it answers a clean 200.
+      try { const r = await fetch(SVARA_URL + '/health', { cache: 'no-store' }); return r.ok; }
+      catch (e) { return false; }
+    }
+    async function ensureWarm(status) {
+      if (svaraWarm) return true;
+      svaraWarmPing();
+      for (let i = 0; i < 75; i++) {
+        if (await svaraReady()) { svaraWarm = true; return true; }
+        if (status) status.textContent = '🔊 warming up your voice (first time, ~2 min)…';
+        await new Promise((r) => setTimeout(r, 4000));
+      }
+      return false;
+    }
+    // Fetch the user's saved reference clip (base64) so the engine speaks in THEIR
+    // voice. Cached per language. Falls back to null → preset voice if none saved.
+    const refCache = {};
+    async function getUserRef(language) {
+      if (refCache[language] !== undefined) return refCache[language];
+      let ref = null;
+      try {
+        if (session && session.token) {
+          const r = await fetch(API + '/api/voice-clone/ref?language=' + encodeURIComponent(language), { headers: { Authorization: 'Bearer ' + session.token } });
+          if (r.ok) {
+            const d = (await r.json()).data || {};
+            if (d.audio_base64) ref = { b64: d.audio_base64, transcript: d.transcript || '' };
+          }
+        }
+      } catch (e) { ref = null; }
+      refCache[language] = ref;
+      return ref;
+    }
+    async function speak(text, language, bubble) {
+      const audioEl = $('px-talk-audio');
+      const voice = svaraVoice(language);
+      const status = document.createElement('div');
+      status.style.cssText = 'font-size:.82em;opacity:.75;margin-top:.45rem;';
+      if (bubble) bubble.appendChild(status);
+      try {
+        if (!(await ensureWarm(status))) { status.textContent = '(voice is taking too long to start — try again in a minute)'; return; }
+        const ref = await getUserRef(language).catch(() => null);
+        // Call YOUR OmniVoice engine — clone mode uses the user's saved clip.
+        const body = { language, text, mode: (ref && ref.b64) ? 'clone' : 'preset', format: 'mp3' };
+        if (ref && ref.b64) { body.reference_base64 = ref.b64; body.reference_transcript = ref.transcript; }
+        const synth = (b) => fetch(SVARA_URL + '/synthesize', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(b),
+        });
+        let res = await synth(body);
+        if (!res.ok && body.mode === 'clone') {
+          // Clone failed — fall back to a preset voice so it still speaks.
+          res = await synth({ language, text, mode: 'preset', format: 'mp3' }).catch(() => res);
+        }
+        if (!res.ok) { status.textContent = '(voice unavailable — code ' + res.status + ')'; return; }
+        audioEl.src = URL.createObjectURL(await res.blob());
+        try { await audioEl.play(); status.remove(); }
+        catch (e) {
+          // Autoplay blocked (after a wait / no fresh gesture) — offer a tap.
+          status.textContent = '';
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.textContent = '🔊 Tap to hear';
+          btn.style.cssText = 'font:inherit;font-size:.85em;cursor:pointer;border:1px solid currentColor;border-radius:999px;padding:.25rem .7rem;background:transparent;color:inherit;';
+          btn.onclick = () => { audioEl.play().catch(() => {}); btn.remove(); };
+          status.appendChild(btn);
+        }
+      } catch (e) { status.textContent = '(voice could not be reached — try again)'; }
     }
 
     // browser speech-to-text for hands-free input (optional, no backend cost)
@@ -429,7 +537,12 @@ import AppLayout from '../../layouts/AppLayout.astro';
     // ── boot ──────────────────────────────────────────────────────────────
     (async () => {
       // AppLayout gates the whole beta app, so by here the user is signed in.
+      svaraWarmPing();   // start warming the voice GPU now — overlaps with the user recording/reading
       session = await getSession();
+      // After a hard refresh the Supabase session can hydrate a beat late — retry
+      // briefly so the first loadStatus() runs with a real token (fixes the saved
+      // voice wrongly showing as "deleted" on reload).
+      for (let i = 0; !session && i < 20; i++) { await new Promise((r) => setTimeout(r, 150)); session = await getSession(); }
       $('px-app').hidden = false;
       renderEnrollLangs();
       renderTalkOptions();
@@ -441,9 +554,17 @@ import AppLayout from '../../layouts/AppLayout.astro';
       $('px-form').addEventListener('submit', (e) => {
         e.preventDefault();
         const v = $('px-input').value.trim(); if (!v) return;
+        unlockAudio();                 // bless audio playback within this user gesture
         $('px-input').value = ''; sendTurn(v);
       });
       await loadStatus();
+      // Keep the token fresh and re-sync the saved voice whenever auth hydrates or
+      // the token auto-refreshes — so a reload never loses the recorded voice.
+      if (supabase) {
+        supabase.auth.onAuthStateChange((_event, s) => {
+          if (s) { session = { token: s.access_token, userId: s.user.id, email: s.user.email }; loadStatus(); }
+        });
+      }
     })();
   </script>
 </AppLayout>

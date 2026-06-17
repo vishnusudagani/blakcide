@@ -1,0 +1,13 @@
+# Supabase config — Edge Functions for Blak on WhatsApp.
+#
+# The webhook is called UNAUTHENTICATED by Meta (no Supabase JWT). We do NOT
+# verify a JWT; instead the function verifies Meta's X-Hub-Signature-256 itself.
+# The proactive function is guarded by a CRON_SECRET header.
+
+project_id = "T2MWEB"
+
+[functions.blak-whatsapp]
+verify_jwt = false
+
+[functions.blak-proactive]
+verify_jwt = false

@@ -60,7 +60,7 @@ export default async (req) => {
     // Allowlist — only expose endpoints Blaksyd is meant to hit. Admin routes
     // (vault/:user_id) and raw whisper WS are deliberately excluded.
     const ALLOWED = new Set([
-        'health', 'chat', 'transcribe', 'vision', 'tts',
+        'health', 'chat', 'voice', 'title', 'transcribe', 'vision', 'tts',
         'session/ingest', 'analyse/run', 'copilot/hint',
         'proactive-checkin',
         // Unified Soul:

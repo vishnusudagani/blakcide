@@ -4,7 +4,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
 const pillars = [
   { id: 'blak',    href: '/beta/blak/',    name: 'Blak',    c: 'coral', tag: 'your AI friend',    line: 'Here before you ask. Text it anything.', snip: '“Your 4pm shifted — want me to move the run to morning?”' },
   { id: 'persona', href: '/beta/persona/', name: 'Persona', c: 'lav',   soon: true, tag: 'your digital self', line: 'A you that thinks. And anyone you build.', snip: '“Hype me before the pitch.” → “Walk in like it’s yours.”' },
-  { id: 'minit',   href: '/beta/minit/',   name: 'Minit',   c: 'mint',  soon: true, tag: 'real people',       line: 'A real, friendly person in about a minute.', snip: 'Aria · available now · connects in ~28s' },
+  { id: 'minit',   href: '/beta/minit/',   name: 'Minit',   c: 'mint',  tag: 'real people',       line: 'A real, friendly person in about a minute.', snip: 'Anonymous by default · someone real, now' },
   { id: 'nexus',   href: '/beta/nexus/',   name: 'Nexus',   c: 'aqua',  tag: 'your community',    line: 'The few who genuinely resonate with you.', snip: 'Starting Over · 840 here · “day 1, terrified, here anyway.”' },
 ];
 ---
@@ -83,6 +83,19 @@ const pillars = [
       var h = new Date().getHours();
       var g = h < 12 ? 'good morning' : h < 17 ? 'good afternoon' : 'good evening';
       var el = document.getElementById('greet'); if (el) el.textContent = g + ' · beta';
+    })();
+  </script>
+  <script>
+    // Listeners get sent straight to their console after login.
+    import { supabase } from '../../lib/supabaseClient';
+    (async () => {
+      if (!supabase) return;
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) return;
+        const { data: lp } = await supabase.from('listeners').select('id').eq('user_id', session.user.id).maybeSingle();
+        if (lp) window.location.replace('/beta/listen/');
+      } catch (e) {}
     })();
   </script>
 </AppLayout>

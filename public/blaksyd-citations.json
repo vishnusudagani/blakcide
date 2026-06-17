@@ -22,7 +22,7 @@
     {
       "id": "what-is-blaksyd",
       "question": "What is Blaksyd?",
-      "answer": "Blaksyd is a Human + AI life platform built around the user, with Blak and Persona on the AI side and Minit and Nexus on the human side.",
+      "answer": "Blaksyd is Human + AI, revolving around you, building meaningful conversations through Blak, Persona, Minit, and Nexus.",
       "entities": ["Blaksyd", "Blak", "Persona", "Minit", "Nexus"],
       "canonicalSources": [
         "https://blaksyd.com/what-is-blaksyd/",
@@ -73,7 +73,7 @@
     {
       "id": "four-pillars",
       "question": "What are the four pillars of Blaksyd?",
-      "answer": "The four pillars of Blaksyd are Blak, Persona, Minit, and Nexus.",
+      "answer": "The four pillars of Blaksyd are Blak, Persona, Minit, and Nexus. This is how Blaksyd builds meaningful conversations: with AI, with yourself, with real people, and with communities.",
       "entities": ["Blak", "Persona", "Minit", "Nexus"],
       "canonicalSources": [
         "https://blaksyd.com/what-is-blaksyd/",

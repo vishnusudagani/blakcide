@@ -30,6 +30,7 @@ import { TOOL_DEFS, executeTool } from '../../symp-core/lib/tools.mjs';
 import { runStreamingChatWithTools } from '../../symp-core/lib/chat-runner.mjs';
 import { chatProviders } from '../../symp-core/lib/llm-providers.mjs';
 import { recordEventAsync } from '../../symp-core/lib/vibe-tracker.mjs';
+import { updateRollingMemoryAsync } from '../../symp-core/lib/memory-updater.mjs';
 import { analyseTurn } from '../../symp-core/lib/diagnostic.mjs';
 import SympContract from '../../symp-core/contract/endpoints.js';
 
@@ -76,6 +77,18 @@ export default async (req) => {
         return jsonError(ERROR_CODES.INTERNAL_ERROR, 'No open-source LLM providers configured', 500, requestId);
     }
 
+    // ── Token diet for the free floor ────────────────────────────────────
+    // Groq's free tier is 12k tokens/MINUTE. Tool definitions (~400 tokens)
+    // PLUS the empty-round-with-tools double-call (open models often emit an
+    // empty first round when tools are dangled, forcing a second call) burn
+    // that budget ~2.5x per message — the gap between ~2 and ~6 messages/min,
+    // i.e. the "I lost my train of thought" breakage. When the ONLY configured
+    // provider is the Groq floor we drop tools so every turn is ONE lean call.
+    // Add any higher-capacity provider (Gemini credits / a Qwen key) and full
+    // tools switch back on automatically — no code change.
+    const floorOnly   = providers.length === 1 && providers[0].id === 'groq';
+    const activeTools = floorOnly ? [] : TOOL_DEFS;
+
     // ── Build the layered system stack ───────────────────────────────────
     let systemStack = [];
     try {
@@ -116,7 +129,7 @@ export default async (req) => {
 
         try {
             await runStreamingChatWithTools({
-                providers, tools: TOOL_DEFS, executeTool,
+                providers, tools: activeTools, executeTool,
                 toolCtx: { userId: user_id }, writer: captureWriter, encoder,
                 messages: finalMessages, maxTokens: 600,
             });
@@ -133,6 +146,7 @@ export default async (req) => {
             sourceSessionId: source_session_id,
             evidence: `User: ${lastUser}\n\nAssistant: ${assembled}`,
         });
+        updateRollingMemoryAsync(user_id, { userText: lastUser, assistantText: assembled });
 
         // Self-correction analysis — synchronous but cheap (regex-only).
         try {
@@ -177,7 +191,7 @@ export default async (req) => {
     (async () => {
         try {
             await runStreamingChatWithTools({
-                providers, tools: TOOL_DEFS, executeTool,
+                providers, tools: activeTools, executeTool,
                 toolCtx: { userId: user_id }, writer: teeWriter, encoder,
                 messages: finalMessages, maxTokens: 600,
             });
@@ -193,6 +207,7 @@ export default async (req) => {
                 sourceSessionId: source_session_id,
                 evidence: `User: ${lastUser}\n\nAssistant: ${assembledForVibe}`,
             });
+            updateRollingMemoryAsync(user_id, { userText: lastUser, assistantText: assembledForVibe });
 
             // Self-correction analysis — pins next-turn corrective hint.
             try {

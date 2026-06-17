@@ -21,6 +21,10 @@ import { verifySupabaseJwt, extractBearer } from '../../symp-core/lib/auth.mjs';
 const SUPABASE_URL = process.env.SUPABASE_URL || '';
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 const OPENAI_KEY = process.env.BLAKCIDE_OPENAI_KEY || process.env.OPENAI_API_KEY || '';
+// Open-source STT: Groq's free, OpenAI-compatible Whisper (whisper-large-v3).
+// Used for liveness verification — no paid OpenAI on the enrollment path.
+const GROQ_KEY = process.env.GROQ_API_KEY || '';
+const GROQ_WHISPER_MODEL = process.env.GROQ_WHISPER_MODEL || 'whisper-large-v3';
 const VOICE_INFER_URL = (process.env.VOICE_INFER_URL || '').replace(/\/+$/, '');
 const VOICE_INFER_SECRET = process.env.VOICE_INFER_SECRET || '';
 
@@ -87,11 +91,12 @@ async function storageSignedUrl(objectPath, ttl = 120) {
 async function whisperTranscribe(buffer, contentType, ext, langHint) {
   const form = new FormData();
   form.append('file', new Blob([buffer], { type: contentType }), `audio.${ext}`);
-  form.append('model', 'whisper-1');
+  form.append('model', GROQ_WHISPER_MODEL);
   if (langHint && langHint !== 'en') form.append('language', langHint);
   form.append('response_format', 'json');
-  const r = await fetch('https://api.openai.com/v1/audio/transcriptions', {
-    method: 'POST', headers: { Authorization: `Bearer ${OPENAI_KEY}` }, body: form,
+  // Open-source STT via Groq's OpenAI-compatible Whisper endpoint (free, no OpenAI).
+  const r = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
+    method: 'POST', headers: { Authorization: `Bearer ${GROQ_KEY}` }, body: form,
   });
   if (!r.ok) throw new Error('whisper_' + r.status);
   const j = await r.json();
@@ -129,6 +134,7 @@ export default async (req) => {
   try {
     if (req.method === 'POST' && path.endsWith('/enroll')) return await enroll(req, userId);
     if (req.method === 'GET' && path.endsWith('/status')) return await status(userId);
+    if (req.method === 'GET' && path.endsWith('/ref')) return await getRef(req, userId);
     if (req.method === 'POST' && path.endsWith('/speak')) return await speak(req, userId);
     if (req.method === 'DELETE') return await deleteAll(userId);
     return fail(404, 'not_found', 'Unknown voice-clone route');
@@ -138,12 +144,12 @@ export default async (req) => {
 };
 
 export const config = {
-  path: ['/api/voice-clone', '/api/voice-clone/enroll', '/api/voice-clone/status', '/api/voice-clone/speak'],
+  path: ['/api/voice-clone', '/api/voice-clone/enroll', '/api/voice-clone/status', '/api/voice-clone/ref', '/api/voice-clone/speak'],
 };
 
 // ── handlers ─────────────────────────────────────────────────────────────
 async function enroll(req, userId) {
-  if (!OPENAI_KEY) return fail(500, 'config_error', 'liveness unavailable (no OpenAI key)');
+  if (!GROQ_KEY) return fail(500, 'config_error', 'liveness unavailable (no Groq key)');
   let b;
   try { b = await req.json(); } catch { return fail(400, 'bad_request', 'invalid JSON'); }
   const { language, audio_base64, mime_type, prompt_phrase, transcript } = b || {};
@@ -190,6 +196,32 @@ async function enroll(req, userId) {
 async function status(userId) {
   const r = await sbRest(`symp_voice_clones?user_id=eq.${userId}&deleted_at=is.null&status=neq.deleted&select=id,language,status,created_at&order=created_at.desc`);
   return ok({ clones: Array.isArray(r.data) ? r.data : [] });
+}
+
+// Short-lived signed URL + transcript for the user's saved reference clip, so the
+// browser can pass it to the voice engine as the cloning reference (reference_audio).
+async function getRef(req, userId) {
+  const language = new URL(req.url).searchParams.get('language');
+  const SEL = 'select=language,ref_clip_path,ref_transcript&order=created_at.desc&limit=1';
+  // Prefer the requested language; fall back to ANY ready clone (Svara clones cross-lingually).
+  let clone = null;
+  if (language) {
+    const r1 = await sbRest(`symp_voice_clones?user_id=eq.${userId}&language=eq.${language}&status=eq.ready&deleted_at=is.null&${SEL}`);
+    clone = Array.isArray(r1.data) && r1.data[0];
+  }
+  if (!clone) {
+    const r2 = await sbRest(`symp_voice_clones?user_id=eq.${userId}&status=eq.ready&deleted_at=is.null&${SEL}`);
+    clone = Array.isArray(r2.data) && r2.data[0];
+  }
+  if (!clone || !clone.ref_clip_path) return fail(404, 'no_clone', 'No saved voice yet');
+  // Download the clip server-side and hand the browser raw base64 — avoids any
+  // browser→Supabase cross-origin fetch (which was silently failing → preset voice).
+  const signed = await storageSignedUrl(clone.ref_clip_path, 120);
+  if (!signed) return fail(500, 'sign_error', 'Could not sign the reference clip');
+  let buf;
+  try { const c = await fetch(signed); if (!c.ok) return fail(502, 'clip_fetch', 'clip ' + c.status); buf = Buffer.from(await c.arrayBuffer()); }
+  catch (e) { return fail(502, 'clip_fetch', 'could not read the saved clip'); }
+  return ok({ audio_base64: buf.toString('base64'), transcript: clone.ref_transcript || '', language: clone.language });
 }
 
 async function deleteAll(userId) {

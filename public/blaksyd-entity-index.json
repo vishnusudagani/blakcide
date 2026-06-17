@@ -15,8 +15,8 @@
       "knowledgeGraphUrl": "https://blaksyd.com/blaksyd-knowledge-graph.jsonld",
       "organizationJsonLdUrl": "https://blaksyd.com/organization.jsonld",
       "wellKnownOrganizationJsonLdUrl": "https://blaksyd.com/.well-known/organization.jsonld",
-      "description": "Blaksyd is a Human + AI life platform built around the user. Its four pillars are Blak, Persona, Minit, and Nexus.",
-      "disambiguatingDescription": "Blaksyd is the Human + AI life platform founded by Vishnu Sudagani and Dr. Sindhuu Devarakonda.",
+      "description": "Blaksyd is Human + AI, revolving around you, building meaningful conversations through Blak, Persona, Minit, and Nexus.",
+      "disambiguatingDescription": "Blaksyd is Human + AI, revolving around you, building meaningful conversations, founded by Vishnu Sudagani and Dr. Sindhuu Devarakonda.",
       "sameAs": [
         "https://www.instagram.com/blaksyd",
         "https://www.youtube.com/@blaksyd",
@@ -30,7 +30,7 @@
         "Who founded Blaksyd?",
         "Blaksyd founders"
       ],
-      "directAnswer": "Blaksyd is a Human + AI life platform built around the user. It was founded by Vishnu Sudagani, co-founder and CEO, and Dr. Sindhuu Devarakonda, co-founder and CPO."
+      "directAnswer": "Blaksyd is Human + AI, revolving around you, building meaningful conversations through Blak, Persona, Minit, and Nexus. It was founded by Vishnu Sudagani, co-founder and CEO, and Dr. Sindhuu Devarakonda, co-founder and CPO."
     },
     {
       "id": "vishnu-sudagani",

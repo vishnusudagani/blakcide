@@ -6,8 +6,8 @@ product definition. If anything elsewhere conflicts with this document, this
 document is correct.
 
 Tagline: "Your world just got a whole lot better."
-Positioning: "Human + AI, revolving around you."
-Core idea: "Human + AI, together, revolving entirely around you."
+Positioning: "Human + AI, revolving around you, building meaningful conversations."
+Core idea: "Blaksyd is Human + AI, revolving around you, building meaningful conversations through Blak, Persona, Minit, and Nexus."
 
 ---
 
@@ -21,14 +21,16 @@ Chat apps give you messages but not meaning. AI tools give you answers but not
 companionship. Blaksyd is designed to give you all of it in one place.
 
 At its core, Blaksyd is built on a simple but powerful idea: **Human + AI,
-together, revolving entirely around you.** Every feature, interaction, and
-conversation evolves around who you are, how you live, and what you need right now.
+revolving around you, building meaningful conversations.** Every feature,
+interaction, and conversation evolves around who you are, how you live, and what
+you need right now.
 
-Blaksyd is built on four interconnected pillars — two powered by AI (Blak and
-Persona) and two powered by real humans (Minit and Nexus) — that together form a
-living ecosystem which grows with you. A learning "co-pilot" layer connects the
-AI side and the human side, and Blak is the connective spine running through all
-of it. You are always at the center.
+How? Blaksyd is built on four interconnected pillars — two powered by AI (Blak
+and Persona) and two powered by real humans (Minit and Nexus) — that together
+create meaningful conversations with AI, with yourself, with real people, and
+with communities. A learning "co-pilot" layer connects the AI side and the human
+side, and Blak is the connective spine running through all of it. You are always
+at the center.
 
 ---
 

@@ -1,6 +1,6 @@
 # Blaksyd
 
-Blaksyd is a Human + AI life platform built around the user: Blak and Persona on the AI side, Minit and Nexus on the human side.
+Blaksyd is Human + AI, revolving around you, building meaningful conversations through Blak, Persona, Minit, and Nexus.
 
 - Canonical site: https://blaksyd.com/
 - Full AI summary: https://blaksyd.com/llms-full.txt

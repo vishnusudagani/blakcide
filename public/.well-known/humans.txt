@@ -1,7 +1,7 @@
 /* TEAM */
 
 Product: Blaksyd
-Description: Human + AI life platform built around the user.
+Description: Human + AI, revolving around you, building meaningful conversations through Blak, Persona, Minit, and Nexus.
 Website: https://blaksyd.com/
 Contact: ceo@blaksyd.com
 Location: Hyderabad, Telangana, India
@@ -17,7 +17,7 @@ Profile: https://blaksyd.com/founders/sindhuu-devarakonda/
 
 /* PRODUCT */
 
-Blaksyd is a Human + AI life platform.
+Blaksyd is Human + AI, revolving around you, building meaningful conversations.
 Four pillars: Blak, Persona, Minit, Nexus.
 
 /* MACHINE-READABLE */
@@ -25,4 +25,3 @@ Four pillars: Blak, Persona, Minit, Nexus.
 Canonical humans file: https://blaksyd.com/humans.txt
 AI summary: https://blaksyd.com/llms.txt
 Canonical answers: https://blaksyd.com/blaksyd-answers.json
-

@@ -44,6 +44,29 @@ export async function fetchBlaksydProfile(userId) {
     return (ok && Array.isArray(data) && data[0]) ? data[0] : null;
 }
 
+/**
+ * Patch the user's rolling memory (profiles.user_memory). PATCHes the existing
+ * row created at sign-up. Best-effort: returns false if the row/column is
+ * missing — the memory updater never blocks or breaks a chat.
+ */
+export async function updateUserMemory(userId, memory) {
+    // Update the existing row first (preserves username / full_name / etc.).
+    const upd = await sbFetch(
+        `profiles?id=eq.${encodeURIComponent(userId)}`,
+        { method: 'PATCH', body: { user_memory: memory }, prefer: 'return=representation' }
+    );
+    if (upd.ok && Array.isArray(upd.data) && upd.data.length) return true;
+    // No row yet (profile never created at sign-up) → create a minimal one so
+    // memory persists for EVERY user. profiles requires id + username (both NOT
+    // NULL); everything else is nullable/defaulted.
+    const ins = await sbFetch('profiles', {
+        method: 'POST',
+        body:   { id: userId, username: `user_${userId.slice(0, 8)}`, user_memory: memory },
+        prefer: 'return=minimal',
+    });
+    return ins.ok;
+}
+
 export async function fetchVaultProfile(userId) {
     const { ok, data } = await sbFetch(
         `symp_vault_profiles?user_id=eq.${encodeURIComponent(userId)}&select=symp_analysis,last_analyzed_at,updated_at`

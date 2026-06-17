@@ -1,0 +1,875 @@
+/* ═════════════════════════════════════════════════════════════════════
+   BLAKCIDE  UI v3 — "Pulse"
+   Layered ON TOP of app-style.css. Never modify app-style.css directly;
+   keep every legacy class & id stable so existing JS keeps working.
+
+   Design philosophy — neuro-addictive UX without the manipulative bits:
+     • Variable-reward cues  (subtle hue shifts on milestones)
+     • Endowed progress      (rings start filled, never at 0)
+     • Goal-gradient pulse   (the closer you are, the warmer it glows)
+     • Loss aversion (kind)  (streak preservation reminder, never shaming)
+     • Microcommitment       (one-tap surfaces with instant feedback)
+     • Recognition > recall  (iconic bottom-tab on mobile, native conventions)
+     • Cognitive ease        (one primary CTA per surface, max)
+     • Sensory richness      (warm gradients, breath-rate motion, soft glows)
+     • Haptic-feel           (8ms vibrate on supported devices, harmless else)
+     • Honors prefers-reduced-motion
+   ═════════════════════════════════════════════════════════════════════ */
+
+/* ── 1. Token overlay ────────────────────────────────────────────────── */
+:root {
+    /* Brand spectrum — interpolated for a "single living organism" feel */
+    --pulse-1: #00d4aa;     /* mint     — calm  / accent  */
+    --pulse-2: #4d9fff;     /* azure    — focus / chat    */
+    --pulse-3: #a067ff;     /* iris     — depth / journal */
+    --pulse-4: #ff6b8a;     /* coral    — warmth / connect */
+    --pulse-5: #f5a623;     /* amber    — celebration     */
+
+    /* Soft variants for halos */
+    --pulse-1-soft: rgba(0,212,170,0.16);
+    --pulse-2-soft: rgba(77,159,255,0.16);
+    --pulse-3-soft: rgba(160,103,255,0.16);
+    --pulse-4-soft: rgba(255,107,138,0.16);
+    --pulse-5-soft: rgba(245,166,35,0.16);
+
+    /* Surfaces with depth */
+    --v3-surface-glass: rgba(20,20,40,0.55);
+    --v3-surface-edge:  rgba(255,255,255,0.06);
+    --v3-stroke-warm:   linear-gradient(135deg, var(--pulse-1), var(--pulse-3) 50%, var(--pulse-4));
+
+    /* Motion */
+    --v3-spring:   cubic-bezier(0.34, 1.56, 0.64, 1);   /* tiny overshoot */
+    --v3-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+    --v3-fast:     180ms;
+    --v3-med:      320ms;
+    --v3-slow:     520ms;
+
+    /* Type scale (fluid) */
+    --t-display: clamp(1.6rem, 5vw + 0.4rem, 2.6rem);
+    --t-title:   clamp(1.15rem, 2vw + 0.6rem, 1.45rem);
+    --t-body:    clamp(0.92rem, 0.8vw + 0.7rem, 1rem);
+    --t-micro:   clamp(0.62rem, 0.4vw + 0.55rem, 0.72rem);
+
+    /* Layout */
+    --v3-bottom-nav-h: 64px;
+    --v3-content-max:  720px;
+}
+
+html.light-mode {
+    --v3-surface-glass: rgba(255,255,255,0.7);
+    --v3-surface-edge:  rgba(0,0,0,0.06);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    :root { --v3-fast: 1ms; --v3-med: 1ms; --v3-slow: 1ms; }
+    *, *::before, *::after {
+        animation-duration: 1ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 1ms !important;
+    }
+}
+
+/* ── 2. Subtle ambient breathing background ──────────────────────────── */
+/* A near-imperceptible pulse on the page background. ~5s breath rate —
+   matches resting respiration, calming rather than stimulating.       */
+@keyframes v3-breath {
+    0%, 100% { background-position: 0% 0%; }
+    50%      { background-position: 100% 100%; }
+}
+body.v3-breath::before {
+    content: '';
+    position: fixed; inset: 0; z-index: -1; pointer-events: none;
+    background:
+        radial-gradient(60vmax 60vmax at 15% 10%, var(--pulse-3-soft), transparent 60%),
+        radial-gradient(70vmax 70vmax at 85% 90%, var(--pulse-1-soft), transparent 60%);
+    opacity: 0.55;
+    animation: v3-breath 14s ease-in-out infinite alternate;
+}
+html.light-mode body.v3-breath::before { opacity: 0.4; }
+
+/* ── 3. Universal micro-interactions ─────────────────────────────────── */
+
+/* Press-feel: every tappable thing settles into the surface for 90ms.    */
+.v3-press,
+.feature-card,
+.snav-item,
+.mood-btn,
+.btn-solid,
+.luxury-btn,
+.send-btn {
+    transition:
+        transform var(--v3-fast) var(--v3-ease-out),
+        box-shadow var(--v3-fast) var(--v3-ease-out),
+        background-color var(--v3-fast) var(--v3-ease-out),
+        border-color var(--v3-fast) var(--v3-ease-out),
+        opacity var(--v3-fast) var(--v3-ease-out);
+}
+.v3-press:active,
+.feature-card:active,
+.mood-btn:active {
+    transform: translateY(1px) scale(0.985);
+}
+
+/* Hover-lift on pointer-fine devices only (no jitter on touch)           */
+@media (hover: hover) and (pointer: fine) {
+    .feature-card { will-change: transform; }
+    .feature-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 18px 38px -18px rgba(0,0,0,0.55);
+    }
+    html.light-mode .feature-card:hover {
+        box-shadow: 0 14px 32px -16px rgba(0,0,0,0.18);
+    }
+}
+
+/* ── 4. Skeleton loader ──────────────────────────────────────────────── */
+@keyframes v3-skeleton {
+    0%   { background-position: -200% 0; }
+    100% { background-position:  200% 0; }
+}
+.v3-skel {
+    background:
+        linear-gradient(90deg,
+            var(--surface-2) 0%,
+            var(--surface-3) 40%,
+            var(--surface-2) 80%);
+    background-size: 200% 100%;
+    animation: v3-skeleton 1.4s ease-in-out infinite;
+    border-radius: 10px;
+    color: transparent !important;
+}
+
+/* ── 5. Streak / momentum ring ───────────────────────────────────────── */
+/* Use: <div class="v3-ring" style="--p:62"><span>62%</span></div>       */
+.v3-ring {
+    --sz: 96px;
+    --p: 0;
+    width: var(--sz); height: var(--sz);
+    border-radius: 50%;
+    display: grid; place-items: center;
+    position: relative;
+    background:
+        conic-gradient(
+            var(--pulse-1) calc(var(--p, 0) * 1%),
+            var(--surface-3) 0
+        );
+    transition: background var(--v3-slow) var(--v3-ease-out);
+    flex-shrink: 0;
+}
+.v3-ring::before {
+    content: '';
+    position: absolute; inset: 6px;
+    border-radius: 50%;
+    background: var(--surface-1);
+}
+.v3-ring > * { position: relative; z-index: 1; text-align: center; }
+.v3-ring .v3-ring-num {
+    font-size: 1.55rem; font-weight: 800; letter-spacing: -0.02em;
+    color: var(--text);
+    line-height: 1;
+}
+.v3-ring .v3-ring-label {
+    display: block; font-size: 0.55rem; font-weight: 700;
+    color: var(--text-3); text-transform: uppercase; letter-spacing: 1.1px;
+    margin-top: 3px;
+}
+
+/* Goal-gradient: ring warms (mint → amber) the closer you get */
+.v3-ring[data-tier="warm"]   { background: conic-gradient(var(--pulse-2) calc(var(--p) * 1%), var(--surface-3) 0); }
+.v3-ring[data-tier="warmer"] { background: conic-gradient(var(--pulse-3) calc(var(--p) * 1%), var(--surface-3) 0); }
+.v3-ring[data-tier="hot"]    {
+    background: conic-gradient(var(--pulse-5) calc(var(--p) * 1%), var(--surface-3) 0);
+    box-shadow: 0 0 0 0 var(--pulse-5-soft);
+    animation: v3-ring-pulse 2.6s ease-in-out infinite;
+}
+@keyframes v3-ring-pulse {
+    50% { box-shadow: 0 0 0 14px transparent; }
+}
+
+/* ── 6. Momentum bar ─────────────────────────────────────────────────── */
+.v3-momentum {
+    height: 6px; border-radius: 999px; overflow: hidden;
+    background: var(--surface-3);
+    position: relative;
+}
+.v3-momentum > span {
+    display: block; height: 100%;
+    background: linear-gradient(90deg, var(--pulse-1), var(--pulse-2), var(--pulse-3));
+    background-size: 200% 100%;
+    border-radius: inherit;
+    width: var(--p, 0%);
+    transition: width var(--v3-slow) var(--v3-spring);
+    animation: v3-shimmer 3.4s linear infinite;
+}
+@keyframes v3-shimmer {
+    0%   { background-position:   0% 0; }
+    100% { background-position: 200% 0; }
+}
+
+/* ── 7. v3 Hero card (dashboard) ─────────────────────────────────────── */
+.v3-hero {
+    position: relative;
+    margin: 0 16px 14px;
+    padding: 18px 18px 20px;
+    border-radius: var(--r-lg);
+    background:
+        radial-gradient(120% 80% at 100% 0%, var(--pulse-3-soft), transparent 60%),
+        radial-gradient(120% 80% at 0% 100%, var(--pulse-1-soft), transparent 60%),
+        var(--surface-1);
+    border: 1px solid var(--border);
+    overflow: hidden;
+}
+.v3-hero::after {
+    /* faint moving sheen — variable reward cue */
+    content: '';
+    position: absolute; inset: 0;
+    background: linear-gradient(125deg,
+        transparent 30%,
+        rgba(255,255,255,0.05) 50%,
+        transparent 70%);
+    transform: translateX(-100%);
+    animation: v3-sheen 9s ease-in-out infinite;
+    pointer-events: none;
+}
+@keyframes v3-sheen {
+    0%, 30%   { transform: translateX(-100%); }
+    60%, 100% { transform: translateX(100%); }
+}
+
+.v3-hero-row {
+    display: flex; align-items: center; gap: 16px;
+    position: relative; z-index: 1;
+}
+.v3-hero-text { flex: 1; min-width: 0; }
+.v3-hero-eyebrow {
+    font-size: 0.6rem; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 1.6px;
+    color: var(--text-3);
+    margin-bottom: 6px;
+}
+.v3-hero-title {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: var(--t-title); font-weight: 500;
+    letter-spacing: -0.01em; line-height: 1.18;
+    color: var(--text);
+}
+.v3-hero-sub {
+    font-size: 0.82rem; color: var(--text-2); margin-top: 6px; line-height: 1.45;
+}
+
+.v3-hero-meta {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-top: 16px;
+    position: relative; z-index: 1;
+}
+.v3-meta-cell {
+    text-align: center;
+    padding: 10px 6px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+}
+.v3-meta-num {
+    font-size: 1.05rem; font-weight: 800;
+    color: var(--text); line-height: 1;
+}
+.v3-meta-num small { font-size: 0.6rem; color: var(--text-3); margin-left: 1px; font-weight: 600; }
+.v3-meta-lbl {
+    display: block; margin-top: 5px;
+    font-size: 0.56rem; font-weight: 700;
+    color: var(--text-3); text-transform: uppercase; letter-spacing: 1px;
+}
+
+/* ── 8. Focus card — single primary CTA per surface ──────────────────── */
+.v3-focus {
+    margin: 4px 16px 14px;
+    padding: 16px 18px;
+    border-radius: var(--r-lg);
+    background:
+        linear-gradient(135deg, var(--pulse-1-soft), transparent 60%),
+        var(--surface-1);
+    border: 1px solid var(--border-md);
+    display: flex; align-items: center; gap: 14px;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    text-decoration: none; color: inherit;
+    position: relative; overflow: hidden;
+}
+.v3-focus::before {
+    content: ''; position: absolute; inset: 0;
+    background: radial-gradient(200% 100% at 0% 50%, var(--pulse-1-soft), transparent 50%);
+    opacity: 0; transition: opacity var(--v3-med);
+    pointer-events: none;
+}
+.v3-focus:hover::before { opacity: 1; }
+
+.v3-focus-icon {
+    width: 46px; height: 46px;
+    border-radius: 14px;
+    background: var(--pulse-1-soft);
+    color: var(--pulse-1);
+    display: grid; place-items: center;
+    flex-shrink: 0;
+    font-size: 1.45rem;
+}
+.v3-focus-text { flex: 1; min-width: 0; }
+.v3-focus-eyebrow {
+    font-size: 0.58rem; font-weight: 800; letter-spacing: 1.5px;
+    text-transform: uppercase; color: var(--pulse-1);
+    margin-bottom: 3px;
+}
+.v3-focus-title { font-size: 0.98rem; font-weight: 700; color: var(--text); }
+.v3-focus-sub   { font-size: 0.74rem; color: var(--text-2); margin-top: 2px; }
+.v3-focus-arrow {
+    color: var(--text-3); font-size: 1rem;
+    transition: transform var(--v3-fast) var(--v3-ease-out);
+}
+.v3-focus:hover .v3-focus-arrow { transform: translateX(3px); color: var(--pulse-1); }
+
+/* ── 9. Quick action grid ────────────────────────────────────────────── */
+.v3-quick {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    padding: 0 16px 6px;
+}
+.v3-quick-item {
+    background: var(--surface-1);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    padding: 14px;
+    display: flex; flex-direction: column; gap: 6px;
+    text-decoration: none; color: inherit;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    position: relative; overflow: hidden;
+}
+.v3-quick-item ion-icon {
+    font-size: 1.4rem;
+    color: var(--accent);
+}
+.v3-quick-item.tone-iris   ion-icon { color: var(--pulse-3); }
+.v3-quick-item.tone-azure  ion-icon { color: var(--pulse-2); }
+.v3-quick-item.tone-coral  ion-icon { color: var(--pulse-4); }
+.v3-quick-item.tone-amber  ion-icon { color: var(--pulse-5); }
+.v3-quick-label { font-size: 0.85rem; font-weight: 700; color: var(--text); }
+.v3-quick-sub   { font-size: 0.7rem;  color: var(--text-2); line-height: 1.35; }
+
+@media (min-width: 600px) { .v3-quick { grid-template-columns: repeat(4, 1fr); } }
+
+/* ── 10. Section heading w/ pill counter ─────────────────────────────── */
+.v3-sec-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 18px 22px 10px;
+}
+.v3-sec-title {
+    font-size: 0.65rem; font-weight: 800;
+    text-transform: uppercase; letter-spacing: 2px;
+    color: var(--text-3);
+}
+.v3-sec-action {
+    font-size: 0.74rem; font-weight: 600;
+    color: var(--accent); text-decoration: none;
+    -webkit-tap-highlight-color: transparent;
+}
+.v3-sec-action:hover { text-decoration: underline; }
+
+/* ── 11. Mobile bottom nav (auto-mounted by blakcide-ui-v3.js) ───────── */
+.v3-bnav {
+    position: fixed; left: 0; right: 0; bottom: 0;
+    height: calc(var(--v3-bottom-nav-h) + env(safe-area-inset-bottom, 0px));
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    background: var(--v3-surface-glass);
+    -webkit-backdrop-filter: blur(22px) saturate(180%);
+    backdrop-filter: blur(22px) saturate(180%);
+    border-top: 1px solid var(--v3-surface-edge);
+    display: none;            /* shown via media query below */
+    z-index: 9000;
+    user-select: none; -webkit-user-select: none;
+}
+@media (max-width: 880px) { .v3-bnav { display: flex; } }
+
+.v3-bnav-inner {
+    display: flex;
+    flex: 1;
+    align-items: stretch;
+    justify-content: space-around;
+}
+.v3-bnav-tab {
+    flex: 1;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 3px;
+    color: var(--text-3);
+    text-decoration: none;
+    background: none; border: none; cursor: pointer;
+    font-family: inherit;
+    -webkit-tap-highlight-color: transparent;
+    position: relative;
+    transition: color var(--v3-fast) var(--v3-ease-out), transform 90ms var(--v3-ease-out);
+    min-width: 44px;
+    padding: 6px 0 4px;
+}
+.v3-bnav-tab ion-icon {
+    font-size: 1.42rem;
+    transition: transform var(--v3-fast) var(--v3-spring), filter var(--v3-fast);
+}
+.v3-bnav-label {
+    font-size: 0.6rem; font-weight: 600; letter-spacing: 0.2px;
+}
+.v3-bnav-tab:active { transform: scale(0.92); }
+
+.v3-bnav-tab.is-active { color: var(--text); }
+.v3-bnav-tab.is-active ion-icon {
+    color: var(--accent);
+    transform: translateY(-2px);
+    filter: drop-shadow(0 0 9px var(--accent-glow));
+}
+.v3-bnav-tab.is-active::before {
+    /* underline pip — recognition cue */
+    content: '';
+    position: absolute; top: 4px; left: 50%;
+    width: 22px; height: 3px; border-radius: 0 0 4px 4px;
+    background: var(--accent);
+    box-shadow: 0 0 6px var(--accent-glow);
+    transform: translateX(-50%);
+    animation: v3-pop 240ms var(--v3-spring);
+}
+@keyframes v3-pop {
+    0%   { transform: translate(-50%, -6px) scaleX(0.4); opacity: 0; }
+    100% { transform: translate(-50%, 0)    scaleX(1);   opacity: 1; }
+}
+
+/* Special centre "act" tab — slightly elevated FAB-style */
+.v3-bnav-tab.v3-bnav-fab {
+    flex: 0 0 76px;
+}
+.v3-bnav-fab .v3-bnav-fab-inner {
+    width: 50px; height: 50px;
+    border-radius: 50%;
+    display: grid; place-items: center;
+    margin-top: -22px;
+    background: linear-gradient(135deg, var(--pulse-1), var(--pulse-2));
+    color: #fff;
+    box-shadow:
+        0 12px 28px -10px rgba(0,212,170,0.55),
+        0 0 0 4px var(--bg);
+    transition: transform var(--v3-fast) var(--v3-spring);
+}
+.v3-bnav-fab .v3-bnav-fab-inner ion-icon { font-size: 1.55rem; color: #fff; }
+.v3-bnav-fab:active .v3-bnav-fab-inner { transform: scale(0.92); }
+.v3-bnav-fab .v3-bnav-label { color: var(--accent); margin-top: 6px; }
+
+/* Push body content above the nav on mobile */
+@media (max-width: 880px) {
+    body.v3-has-bnav .dashboard-main,
+    body.v3-has-bnav main,
+    body.v3-has-bnav .home-wrap {
+        padding-bottom: calc(var(--v3-bottom-nav-h) + env(safe-area-inset-bottom, 0px) + 8px);
+    }
+}
+
+/* Hide on listener-console / admin / onboarding via body data-attr */
+body[data-v3-no-bnav="true"] .v3-bnav { display: none !important; }
+
+/* ── 12. Toasts v3 — queued, slide + tilt ────────────────────────────── */
+.v3-toast {
+    position: fixed; left: 50%; bottom: calc(var(--v3-bottom-nav-h) + 80px);
+    transform: translate(-50%, 12px);
+    background: var(--surface-1);
+    color: var(--text);
+    border: 1px solid var(--border-md);
+    box-shadow: var(--shadow-md);
+    padding: 11px 16px;
+    border-radius: 999px;
+    font-size: 0.85rem; font-weight: 600;
+    opacity: 0;
+    pointer-events: none;
+    z-index: 9999;
+    transition:
+        transform var(--v3-med) var(--v3-spring),
+        opacity   var(--v3-med) var(--v3-ease-out);
+    max-width: 90vw;
+    text-align: center;
+    display: flex; align-items: center; gap: 8px;
+}
+.v3-toast.show { opacity: 1; transform: translate(-50%, 0); }
+.v3-toast .v3-toast-pip {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 8px var(--accent-glow);
+}
+@media (min-width: 880px) {
+    .v3-toast { bottom: 32px; }
+}
+
+/* ── 13. Card shimmer hover (variable reward cue) ────────────────────── */
+@media (hover: hover) and (pointer: fine) {
+    .v3-hero, .v3-focus, .feature-card { position: relative; }
+    .v3-hero, .v3-focus, .feature-card { transition: transform var(--v3-fast) var(--v3-ease-out), border-color var(--v3-fast); }
+}
+
+/* ── 14. Sidebar refresh ─────────────────────────────────────────────── */
+.snav-item {
+    border-radius: 12px;
+    transition: background var(--v3-fast) var(--v3-ease-out), color var(--v3-fast), transform 90ms var(--v3-ease-out);
+}
+.snav-item:active { transform: scale(0.97); }
+.snav-item.active {
+    background: linear-gradient(135deg, var(--pulse-1-soft), transparent 70%);
+    color: var(--text);
+    position: relative;
+}
+.snav-item.active::before {
+    content: '';
+    position: absolute; left: 0; top: 18%; bottom: 18%;
+    width: 3px; border-radius: 0 3px 3px 0;
+    background: linear-gradient(180deg, var(--pulse-1), var(--pulse-3));
+}
+
+/* ── 15. Mood buttons — stronger feedback + variable hue ────────────── */
+.mood-btn {
+    transition: transform 90ms var(--v3-ease-out),
+                background var(--v3-fast),
+                border-color var(--v3-fast);
+}
+.mood-btn:active { transform: scale(0.92); }
+.mood-btn.selected {
+    background: var(--pulse-1-soft);
+    border-color: var(--pulse-1);
+    box-shadow: 0 0 0 4px rgba(0,212,170,0.10);
+}
+.mood-btn[data-mood="great"].selected   { background: rgba(245,166,35,0.16); border-color: var(--pulse-5); box-shadow: 0 0 0 4px rgba(245,166,35,0.10); }
+.mood-btn[data-mood="okay"].selected    { background: rgba(77,159,255,0.14);  border-color: var(--pulse-2); box-shadow: 0 0 0 4px rgba(77,159,255,0.08); }
+.mood-btn[data-mood="low"].selected     { background: rgba(160,103,255,0.14); border-color: var(--pulse-3); box-shadow: 0 0 0 4px rgba(160,103,255,0.08); }
+.mood-btn[data-mood="anxious"].selected { background: rgba(0,212,170,0.14);   border-color: var(--pulse-1); box-shadow: 0 0 0 4px rgba(0,212,170,0.08); }
+.mood-btn[data-mood="angry"].selected   { background: rgba(255,107,138,0.14); border-color: var(--pulse-4); box-shadow: 0 0 0 4px rgba(255,107,138,0.08); }
+
+/* ── 16. Reveal-on-scroll & enter animations ─────────────────────────── */
+@keyframes v3-rise {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: none; }
+}
+.v3-rise { animation: v3-rise var(--v3-med) var(--v3-ease-out) both; }
+.v3-rise[data-d="1"] { animation-delay: 60ms; }
+.v3-rise[data-d="2"] { animation-delay: 130ms; }
+.v3-rise[data-d="3"] { animation-delay: 200ms; }
+.v3-rise[data-d="4"] { animation-delay: 270ms; }
+.v3-rise[data-d="5"] { animation-delay: 340ms; }
+
+/* ── 17. Affordance dots / "online" pulse ────────────────────────────── */
+.v3-pulse-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--accent);
+    display: inline-block;
+    box-shadow: 0 0 0 0 var(--accent-glow);
+    animation: v3-dot 2.2s ease-out infinite;
+    flex-shrink: 0;
+}
+@keyframes v3-dot {
+    0%   { box-shadow: 0 0 0 0   var(--accent-glow); }
+    70%  { box-shadow: 0 0 0 10px transparent; }
+    100% { box-shadow: 0 0 0 0   transparent; }
+}
+
+/* ── 18. Floating "loss aversion" streak chip ────────────────────────── */
+.v3-streak-chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 5px 10px;
+    border-radius: 999px;
+    font-size: 0.7rem; font-weight: 700;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    color: var(--text-2);
+}
+.v3-streak-chip ion-icon { color: var(--pulse-5); font-size: 0.85rem; }
+.v3-streak-chip.is-hot   { color: var(--pulse-5); border-color: rgba(245,166,35,0.4); background: rgba(245,166,35,0.08); }
+.v3-streak-chip.is-risk  { color: var(--pulse-4); border-color: rgba(255,107,138,0.4); background: rgba(255,107,138,0.08); }
+
+/* ── 19. Cross-platform safety nets ──────────────────────────────────── */
+
+/* iOS — keep tap-target ≥44 */
+@supports (-webkit-touch-callout: none) {
+    .v3-bnav-tab, .snav-item, .mood-btn, .feature-card { min-height: 44px; }
+}
+
+/* Android Chrome — flatten heavy backdrop-filter (perf) */
+@media screen and (max-resolution: 1.4dppx) and (max-width: 600px) {
+    .v3-bnav { backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); }
+}
+
+/* Foldables / very-narrow */
+@media (max-width: 360px) {
+    .v3-quick { grid-template-columns: 1fr 1fr; }
+    .v3-hero-meta { gap: 6px; }
+    .v3-meta-num { font-size: 0.95rem; }
+}
+
+/* Wide desktop — center single column with breathing room */
+@media (min-width: 1100px) {
+    .home-wrap { max-width: var(--v3-content-max); margin: 0 auto; padding-left: 4px; padding-right: 4px; }
+}
+
+/* ── Invite-a-friend pill (chat header) ────────────────────────────── */
+.invite-friend-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 12px;
+    border-radius: 999px;
+    background: linear-gradient(135deg,
+        color-mix(in srgb, var(--pulse-2) 22%, transparent),
+        color-mix(in srgb, var(--pulse-3) 18%, transparent));
+    border: 1px solid color-mix(in srgb, var(--pulse-2) 38%, transparent);
+    color: var(--text);
+    font-size: 0.78rem;
+    font-weight: 600;
+    text-decoration: none;
+    letter-spacing: -0.005em;
+    transition: transform var(--v3-fast) var(--v3-spring),
+                background var(--v3-fast) ease,
+                box-shadow var(--v3-fast) ease;
+    -webkit-tap-highlight-color: transparent;
+    flex-shrink: 0;
+}
+.invite-friend-btn ion-icon { font-size: 1rem; }
+.invite-friend-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 14px color-mix(in srgb, var(--pulse-2) 22%, transparent);
+}
+.invite-friend-btn:active { transform: scale(0.96); }
+@media (max-width: 480px) {
+    .invite-friend-label { display: none; }
+    .invite-friend-btn { padding: 7px 9px; }
+}
+
+/* ═════════════════════════════════════════════════════════════════════
+   v3-BRIGHT  —  saturated, colourful, neuro-addictive overlay
+   Activated by adding `v3-bright` to <body> (the v3 JS does this for us).
+   Layered on top of the dark base. Touches surfaces, edges & accent
+   chroma — never restructures layout, so every existing JS hook still
+   resolves to the same nodes.
+   ═════════════════════════════════════════════════════════════════════ */
+body.v3-bright {
+    /* Brighter, more saturated brand spectrum */
+    --pulse-1: #00f0c0;     /* mint  — brighter */
+    --pulse-2: #5ab1ff;     /* azure — vivid    */
+    --pulse-3: #b073ff;     /* iris  — luminous */
+    --pulse-4: #ff7da0;     /* coral — warmer   */
+    --pulse-5: #ffb733;     /* amber — saturated*/
+
+    --pulse-1-soft: rgba(0,240,192,0.22);
+    --pulse-2-soft: rgba(90,177,255,0.22);
+    --pulse-3-soft: rgba(176,115,255,0.22);
+    --pulse-4-soft: rgba(255,125,160,0.22);
+    --pulse-5-soft: rgba(255,183,51,0.22);
+}
+
+/* A more vibrant ambient backdrop — three drifting gradient orbs.       */
+@keyframes v3-bright-drift {
+    0%, 100% {
+        background-position:
+            12% 18%,
+            88% 82%,
+            48% 50%;
+    }
+    50% {
+        background-position:
+            22% 28%,
+            76% 70%,
+            58% 42%;
+    }
+}
+body.v3-bright.v3-breath::before {
+    background:
+        radial-gradient(48vmax 48vmax at 12% 18%, var(--pulse-1-soft), transparent 60%),
+        radial-gradient(54vmax 54vmax at 88% 82%, var(--pulse-3-soft), transparent 60%),
+        radial-gradient(40vmax 40vmax at 48% 50%, var(--pulse-2-soft), transparent 60%);
+    background-repeat: no-repeat;
+    background-size: 100% 100%, 100% 100%, 100% 100%;
+    opacity: 0.95;
+    animation: v3-bright-drift 22s ease-in-out infinite alternate;
+}
+
+/* Rainbow streak ring — variable-reward visual treat. */
+body.v3-bright .v3-ring {
+    background:
+        conic-gradient(
+            var(--pulse-1) 0%,
+            var(--pulse-2) calc(var(--p) * 0.33%),
+            var(--pulse-3) calc(var(--p) * 0.66%),
+            var(--pulse-4) calc(var(--p) * 1%),
+            var(--surface-3) 0
+        );
+    box-shadow:
+        0 0 0 3px color-mix(in srgb, var(--pulse-3) 12%, transparent),
+        0 12px 28px -16px color-mix(in srgb, var(--pulse-3) 50%, transparent);
+}
+body.v3-bright .v3-ring[data-tier="hot"] {
+    background:
+        conic-gradient(
+            var(--pulse-5) 0%,
+            var(--pulse-4) calc(var(--p) * 0.5%),
+            var(--pulse-3) calc(var(--p) * 1%),
+            var(--surface-3) 0
+        );
+}
+
+/* Hero — saturated tri-tone gradient, glassy edge. */
+body.v3-bright .v3-hero {
+    background:
+        radial-gradient(140% 90% at 100% 0%, color-mix(in srgb, var(--pulse-3) 26%, transparent), transparent 60%),
+        radial-gradient(140% 90% at 0% 100%, color-mix(in srgb, var(--pulse-1) 24%, transparent), transparent 60%),
+        radial-gradient(120% 80% at 50% 100%, color-mix(in srgb, var(--pulse-4) 14%, transparent), transparent 70%),
+        var(--surface-1);
+    border-color: color-mix(in srgb, var(--pulse-3) 30%, transparent);
+    box-shadow:
+        0 24px 60px -28px color-mix(in srgb, var(--pulse-3) 38%, transparent),
+        inset 0 1px 0 rgba(255,255,255,0.06);
+}
+body.v3-bright .v3-hero-title { color: var(--text); }
+body.v3-bright .v3-meta-cell {
+    background: linear-gradient(135deg,
+        color-mix(in srgb, var(--pulse-2) 10%, var(--surface-2)),
+        var(--surface-2));
+    border-color: color-mix(in srgb, var(--pulse-2) 20%, var(--border));
+}
+body.v3-bright .v3-meta-num { color: var(--pulse-2); }
+
+/* Focus card — daily invitation gets dramatic gradient */
+body.v3-bright .v3-focus {
+    background:
+        linear-gradient(135deg,
+            color-mix(in srgb, var(--pulse-1) 18%, transparent),
+            color-mix(in srgb, var(--pulse-3) 14%, transparent) 60%,
+            var(--surface-1));
+    border-color: color-mix(in srgb, var(--pulse-1) 36%, var(--border));
+    box-shadow: 0 18px 38px -22px color-mix(in srgb, var(--pulse-1) 50%, transparent);
+}
+body.v3-bright .v3-focus-icon {
+    background: linear-gradient(135deg, var(--pulse-1), var(--pulse-2));
+    color: #06121a;
+    box-shadow: 0 8px 20px -10px var(--pulse-1);
+}
+
+/* Quick action tiles — each tone gets its own vibrant tinted card  */
+body.v3-bright .v3-quick-item {
+    background:
+        linear-gradient(135deg,
+            color-mix(in srgb, var(--pulse-2) 14%, transparent),
+            color-mix(in srgb, var(--pulse-2) 4%, var(--surface-1)));
+    border: 1px solid color-mix(in srgb, var(--pulse-2) 30%, var(--border));
+    box-shadow: 0 10px 24px -16px color-mix(in srgb, var(--pulse-2) 60%, transparent);
+}
+body.v3-bright .v3-quick-item ion-icon { color: var(--pulse-2); }
+body.v3-bright .v3-quick-item.tone-iris {
+    background:
+        linear-gradient(135deg,
+            color-mix(in srgb, var(--pulse-3) 14%, transparent),
+            color-mix(in srgb, var(--pulse-3) 4%, var(--surface-1)));
+    border-color: color-mix(in srgb, var(--pulse-3) 32%, var(--border));
+    box-shadow: 0 10px 24px -16px color-mix(in srgb, var(--pulse-3) 60%, transparent);
+}
+body.v3-bright .v3-quick-item.tone-iris ion-icon { color: var(--pulse-3); }
+body.v3-bright .v3-quick-item.tone-coral {
+    background:
+        linear-gradient(135deg,
+            color-mix(in srgb, var(--pulse-4) 14%, transparent),
+            color-mix(in srgb, var(--pulse-4) 4%, var(--surface-1)));
+    border-color: color-mix(in srgb, var(--pulse-4) 32%, var(--border));
+    box-shadow: 0 10px 24px -16px color-mix(in srgb, var(--pulse-4) 60%, transparent);
+}
+body.v3-bright .v3-quick-item.tone-coral ion-icon { color: var(--pulse-4); }
+body.v3-bright .v3-quick-item.tone-azure {
+    background:
+        linear-gradient(135deg,
+            color-mix(in srgb, var(--pulse-5) 14%, transparent),
+            color-mix(in srgb, var(--pulse-5) 4%, var(--surface-1)));
+    border-color: color-mix(in srgb, var(--pulse-5) 32%, var(--border));
+    box-shadow: 0 10px 24px -16px color-mix(in srgb, var(--pulse-5) 60%, transparent);
+}
+body.v3-bright .v3-quick-item.tone-azure ion-icon { color: var(--pulse-5); }
+
+/* Mood buttons — subtle hue per mood */
+body.v3-bright .mood-btn {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    transition: transform var(--v3-fast) var(--v3-spring), background var(--v3-fast) ease;
+}
+body.v3-bright .mood-btn[data-mood="great"]   { background: linear-gradient(135deg, color-mix(in srgb, var(--pulse-5) 14%, transparent), var(--surface-2)); border-color: color-mix(in srgb, var(--pulse-5) 28%, var(--border)); }
+body.v3-bright .mood-btn[data-mood="okay"]    { background: linear-gradient(135deg, color-mix(in srgb, var(--pulse-2) 12%, transparent), var(--surface-2)); border-color: color-mix(in srgb, var(--pulse-2) 24%, var(--border)); }
+body.v3-bright .mood-btn[data-mood="low"]     { background: linear-gradient(135deg, color-mix(in srgb, var(--pulse-3) 12%, transparent), var(--surface-2)); border-color: color-mix(in srgb, var(--pulse-3) 24%, var(--border)); }
+body.v3-bright .mood-btn[data-mood="anxious"] { background: linear-gradient(135deg, color-mix(in srgb, var(--pulse-4) 12%, transparent), var(--surface-2)); border-color: color-mix(in srgb, var(--pulse-4) 24%, var(--border)); }
+
+/* Chat header invite-friend pill — saturated */
+body.v3-bright .invite-friend-btn {
+    background: linear-gradient(135deg, var(--pulse-2), var(--pulse-3));
+    color: #fff;
+    border-color: transparent;
+    box-shadow: 0 8px 20px -10px color-mix(in srgb, var(--pulse-3) 70%, transparent);
+}
+body.v3-bright .invite-friend-btn ion-icon { color: #fff; }
+
+/* Bottom-nav fab — gradient + warmer halo */
+body.v3-bright .v3-bnav-fab .v3-bnav-fab-inner {
+    background: linear-gradient(135deg, var(--pulse-1), var(--pulse-2) 50%, var(--pulse-3));
+    box-shadow:
+        0 0 0 4px color-mix(in srgb, var(--pulse-2) 18%, transparent),
+        0 12px 28px -10px color-mix(in srgb, var(--pulse-3) 60%, transparent);
+}
+
+/* Active bottom-nav tab gets vivid accent */
+body.v3-bright .v3-bnav-tab.is-active ion-icon {
+    color: var(--pulse-3);
+    filter: drop-shadow(0 0 4px color-mix(in srgb, var(--pulse-3) 70%, transparent));
+}
+
+/* Sidebar nav active item — colorful left edge */
+body.v3-bright .snav-item.active::before {
+    background: linear-gradient(180deg, var(--pulse-1), var(--pulse-3));
+    box-shadow: 0 0 12px color-mix(in srgb, var(--pulse-3) 70%, transparent);
+}
+
+/* Section labels — readable but soft */
+body.v3-bright .section-label,
+body.v3-bright .v3-sec-head {
+    color: color-mix(in srgb, var(--pulse-3) 65%, var(--text-2));
+}
+
+/* ── 11. Spacing-overlap safety net ──────────────────────────────────── */
+/* Stops the v3 hero / focus / quick-tiles from crashing into the
+   feature-cards or following sections on small viewports.              */
+.v3-hero      + .v3-focus,
+.v3-focus     + .v3-quick,
+.v3-quick     + .section-label,
+.v3-quick     + .feature-cards,
+.v3-quick     + .mood-section {
+    margin-top: 18px;
+}
+.feature-cards[hidden] { display: none !important; }
+.section-label:empty,
+.section-label[style*="display:none"] { display: none !important; }
+
+/* Make sure the bottom-nav doesn't sit on top of content */
+body.v3-has-bnav .home-wrap,
+body.v3-has-bnav main,
+body.v3-has-bnav .connect-page,
+body.v3-has-bnav .chat-feed,
+body.v3-has-bnav .journal-editor {
+    padding-bottom: calc(var(--v3-bottom-nav-h) + env(safe-area-inset-bottom, 0px) + 14px);
+}
+
+/* ── 12. Milestone burst (variable-reward) ───────────────────────────── */
+@keyframes v3-burst {
+    0%   { transform: scale(0.6); opacity: 0; }
+    40%  { transform: scale(1.06); opacity: 1; }
+    100% { transform: scale(1); opacity: 1; }
+}
+.v3-burst { animation: v3-burst 600ms var(--v3-spring); }
+
+/* Print — hide chrome */
+@media print {
+    .v3-bnav, .sidebar, .home-header { display: none !important; }
+}
