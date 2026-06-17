@@ -124,13 +124,28 @@ const server = http.createServer(async (req, res) => {
   res.end();
 });
 
-// ── WebSocket bridge: /live  (Vertex Gemini Live, speech-to-speech) ──────────
-function vertexLiveWsUrl() {
+// ── WebSocket bridge: /live  (Gemini Live, speech-to-speech) ────────────────
+// Two upstream modes:
+//   • AI Studio (when GEMINI_LIVE_API_KEY is set): browser <-> bridge <-> the
+//     generativelanguage Live endpoint, authed with the key (held here, never
+//     sent to the browser). This is the only path with native-audio models.
+//   • Vertex (default): browser <-> bridge <-> Vertex Live, ADC-authed.
+const GEMINI_LIVE_API_KEY = process.env.GEMINI_LIVE_API_KEY || '';
+const AISTUDIO = Boolean(GEMINI_LIVE_API_KEY);
+
+function upstreamWsUrl() {
+  if (AISTUDIO) {
+    return 'wss://generativelanguage.googleapis.com/ws/'
+      + 'google.ai.generativelanguage.v1alpha.GenerativeService.BidiGenerateContent'
+      + `?key=${encodeURIComponent(GEMINI_LIVE_API_KEY)}`;
+  }
   const host = REGION === 'global' ? 'aiplatform.googleapis.com' : `${REGION}-aiplatform.googleapis.com`;
   return `wss://${host}/ws/${VERTEX_LIVE_WS_PATH}`;
 }
 const modelResourcePath = () =>
-  `projects/${PROJECT}/locations/${REGION}/publishers/google/models/${VERTEX_LIVE_MODEL}`;
+  AISTUDIO
+    ? `models/${VERTEX_LIVE_MODEL}`
+    : `projects/${PROJECT}/locations/${REGION}/publishers/google/models/${VERTEX_LIVE_MODEL}`;
 
 const wss = new WebSocketServer({
   noServer: true,
@@ -164,18 +179,23 @@ server.on('upgrade', (req, socket, head) => {
 });
 
 async function bridgeToVertex(browserWs) {
-  let accessToken;
-  try {
-    authClient = authClient || await auth.getClient();
-    const at = await authClient.getAccessToken();
-    accessToken = typeof at === 'string' ? at : at?.token;
-    if (!accessToken) throw new Error('empty token');
-  } catch (e) {
-    try { browserWs.close(1011, 'ADC token failed'); } catch {}
-    return;
+  let upstream;
+  if (AISTUDIO) {
+    // AI Studio: the key is in the URL; no per-request token needed.
+    upstream = new WsClient(upstreamWsUrl());
+  } else {
+    let accessToken;
+    try {
+      authClient = authClient || await auth.getClient();
+      const at = await authClient.getAccessToken();
+      accessToken = typeof at === 'string' ? at : at?.token;
+      if (!accessToken) throw new Error('empty token');
+    } catch (e) {
+      try { browserWs.close(1011, 'ADC token failed'); } catch {}
+      return;
+    }
+    upstream = new WsClient(upstreamWsUrl(), { headers: { Authorization: `Bearer ${accessToken}` } });
   }
-
-  const upstream = new WsClient(vertexLiveWsUrl(), { headers: { Authorization: `Bearer ${accessToken}` } });
   const queue = [];
 
   upstream.on('open', () => { for (const m of queue) upstream.send(m); queue.length = 0; });
@@ -204,4 +224,4 @@ async function bridgeToVertex(browserWs) {
   browserWs.on('error', () => { try { upstream.close(); } catch {} });
 }
 
-server.listen(PORT, () => console.log(`[vertex-proxy] listening on :${PORT} (HTTP /v1/chat/completions + WS /live -> ${vertexLiveWsUrl()})`));
+server.listen(PORT, () => console.log(`[vertex-proxy] listening on :${PORT} (HTTP + WS /live; mode=${AISTUDIO ? 'aistudio' : 'vertex'} model=${VERTEX_LIVE_MODEL})`));
