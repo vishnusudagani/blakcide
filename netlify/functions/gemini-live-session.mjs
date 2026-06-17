@@ -67,7 +67,7 @@ export default async (req) => {
 
     try {
         const r = await fetch(
-            `https://generativelanguage.googleapis.com/v1alpha/auth_tokens:create?key=${encodeURIComponent(key)}`,
+            `https://generativelanguage.googleapis.com/v1alpha/auth_tokens?key=${encodeURIComponent(key)}`,
             { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(tokenReq) },
         );
         if (!r.ok) {
