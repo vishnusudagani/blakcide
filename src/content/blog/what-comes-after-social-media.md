@@ -26,4 +26,4 @@ Here's where it gets futuristic. Your [Persona](/persona/) — a digital you —
 
 The feed era is ending. Something a whole lot more *you* is almost here.
 
-*Step into what's next — [join the waitlist](/#waitlist), or explore [Nexus](/nexus/).*
+*Step into what's next — [try the beta](/#waitlist), or explore [Nexus](/nexus/).*

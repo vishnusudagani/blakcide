@@ -33,4 +33,4 @@ When your Persona can talk to your friend's Persona — when your digital selves
 
 It sounds like sci-fi. It's almost here.
 
-*[Join the waitlist](/#waitlist) to build your Persona — or meet [Blak, your AI friend](/blak/).*
+*[Try the beta](/#waitlist) to build your Persona — or meet [Blak, your AI friend](/blak/).*

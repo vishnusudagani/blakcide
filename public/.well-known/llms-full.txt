@@ -262,7 +262,7 @@ without Minit no real people, without Nexus no world.
   (co-founder and CPO)
 - Website: https://blaksyd.com
 - Contact: ceo@blaksyd.com
-- Status: pre-launch, waitlist open
+- Status: live, open beta
 - Minimum age: 13+
 - Privacy posture: anonymous by default; users control what Persona/Blak remember;
   the company states it does not sell personal data

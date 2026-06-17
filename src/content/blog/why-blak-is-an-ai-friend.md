@@ -35,4 +35,4 @@ And when a real human is what you're after, Blak hands you straight to your peop
 
 This is what an AI friend was always supposed to feel like. Yours is almost ready.
 
-*[Join the waitlist](/#waitlist) and meet your Blak — or explore [Persona, your digital self](/persona/).*
+*[Try the beta](/#waitlist) and meet your Blak — or explore [Persona, your digital self](/persona/).*

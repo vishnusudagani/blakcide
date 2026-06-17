@@ -26,4 +26,4 @@ This isn't a forum or a comment section. It's a real person, present and on your
 
 The best of both worlds: an AI that's always yours, and real people whenever a human is exactly what you want.
 
-*Talk to a real person — [join the waitlist](/#waitlist), or explore [Minit](/minit/).*
+*Talk to a real person — [try the beta](/#waitlist), or explore [Minit](/minit/).*

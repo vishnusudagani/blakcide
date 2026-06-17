@@ -28,4 +28,4 @@ The best part is how easy it is — no green room, no setup. You see a room is l
 
 When the conversation is alive, you don't want to read about it later. You want to be in the room.
 
-*Be in the room — [join the waitlist](/#waitlist), or explore [Nexus](/nexus/).*
+*Be in the room — [try the beta](/#waitlist), or explore [Nexus](/nexus/).*

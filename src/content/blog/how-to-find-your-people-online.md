@@ -26,4 +26,4 @@ Here you're seen for what you bring, not how loud you are. Nexus runs on **Reson
 
 Less doomscrolling, more belonging. That's a corner of the internet worth coming back to.
 
-*Find your people — [join the waitlist](/#waitlist), or explore [Nexus](/nexus/).*
+*Find your people — [try the beta](/#waitlist), or explore [Nexus](/nexus/).*

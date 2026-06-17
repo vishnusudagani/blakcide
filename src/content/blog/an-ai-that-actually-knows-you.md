@@ -26,4 +26,4 @@ Here's the magic of it: the more you share, the more Blak becomes *yours*. It's 
 
 Imagine never explaining yourself twice again. That's just a normal day on Blaksyd.
 
-*Meet an AI that knows you — [join the waitlist](/#waitlist), or [meet Blak](/blak/).*
+*Meet an AI that knows you — [try the beta](/#waitlist), or [meet Blak](/blak/).*

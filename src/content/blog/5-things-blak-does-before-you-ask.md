@@ -31,4 +31,4 @@ Some moments are better with a real person or your people. Blak reads the room a
 
 > The magic of an AI friend isn't answering faster. It's being three steps ahead.
 
-*[Join the waitlist](/#waitlist) and meet your Blak — or see [a day in your Blaksyd world](/blog/a-day-in-your-world/).*
+*[Try the beta](/#waitlist) and meet your Blak — or see [a day in your Blaksyd world](/blog/a-day-in-your-world/).*

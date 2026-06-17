@@ -29,4 +29,4 @@ Here's the neat part: your fantasy characters only know what *you* tell them —
 
 It's the most fun you'll have with AI: not one assistant, but a whole crew, each one exactly who you need them to be.
 
-*[Join the waitlist](/#waitlist) and start building your squad — or meet [Blak, your AI friend](/blak/).*
+*[Try the beta](/#waitlist) and start building your squad — or meet [Blak, your AI friend](/blak/).*

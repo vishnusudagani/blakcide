@@ -29,4 +29,4 @@ Here's the Blaksyd magic: before you connect, Blak quietly briefs the listener o
 
 AI for everything it does best. A real person for the moments that call for one. That's both worlds, together.
 
-*Talk to a real person — [join the waitlist](/#waitlist), or explore [Minit](/minit/).*
+*Talk to a real person — [try the beta](/#waitlist), or explore [Minit](/minit/).*

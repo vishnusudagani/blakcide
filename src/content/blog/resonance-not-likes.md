@@ -27,4 +27,4 @@ When the score is impact instead of applause, the whole vibe changes. You post b
 
 It turns out the internet is a lot more fun when the points actually mean something.
 
-*Build real resonance — [join the waitlist](/#waitlist), or explore [Nexus](/nexus/).*
+*Build real resonance — [try the beta](/#waitlist), or explore [Nexus](/nexus/).*

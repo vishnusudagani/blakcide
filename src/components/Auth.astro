@@ -52,16 +52,19 @@
           </button>
         </form>
 
-        {/* Local-dev only (revealed by the script when on localhost): email + password
-            sign-in. signInWithPassword returns a session directly — NO OAuth/magic-link
-            redirect — so it works on localhost without touching Supabase's redirect
-            allowlist. Production stays passwordless (this form stays hidden off-localhost). */}
-        <form class="auth-form auth-dev" data-auth-form="password" hidden novalidate>
-          <div class="auth-or" aria-hidden="true"><span>local dev</span></div>
-          <input type="email" name="dev-email" value="connect@blaksyd.com" inputmode="email" autocomplete="email" aria-label="Email (local dev)" data-auth-dev-email />
-          <input type="password" name="dev-password" autocomplete="current-password" placeholder="password" aria-label="Password (local dev)" data-auth-dev-pass />
-          <button type="submit" class="btn btn-primary auth-submit"><span>Sign in with password</span></button>
-        </form>
+        {/* Local-dev only: email + password sign-in. signInWithPassword returns a
+            session directly — NO OAuth/magic-link redirect — so it works on localhost
+            without touching Supabase's redirect allowlist. Gated behind import.meta.env.DEV
+            so the form, the dev email, and the password affordance are NEVER emitted into
+            the production build (it previously shipped on every prod page, merely hidden). */}
+        {import.meta.env.DEV && (
+          <form class="auth-form auth-dev" data-auth-form="password" hidden novalidate>
+            <div class="auth-or" aria-hidden="true"><span>local dev</span></div>
+            <input type="email" name="dev-email" value="connect@blaksyd.com" inputmode="email" autocomplete="email" aria-label="Email (local dev)" data-auth-dev-email />
+            <input type="password" name="dev-password" autocomplete="current-password" placeholder="password" aria-label="Password (local dev)" data-auth-dev-pass />
+            <button type="submit" class="btn btn-primary auth-submit"><span>Sign in with password</span></button>
+          </form>
+        )}
       </div>
 
       {/* ── WhatsApp: phone entry ── */}
@@ -85,7 +88,7 @@
 
       {/* ── done ── */}
       <div class="auth-view" data-auth-view="done" hidden>
-        <p class="auth-step auth-done"><b>You're in — welcome to Blaksyd.</b><br />We'll open your world the moment we launch.</p>
+        <p class="auth-step auth-done"><b>You're in — welcome to Blaksyd.</b><br />Taking you into your world…</p>
       </div>
     </div>
 
@@ -489,21 +492,25 @@
     });
 
     // ── local-dev only: email + password sign-in (no redirect; for testing on localhost) ──
-    var devForm = modal.querySelector('[data-auth-form="password"]');
-    var devEmail = modal.querySelector('[data-auth-dev-email]');
-    var devPass = modal.querySelector('[data-auth-dev-pass]');
-    var IS_LOCAL = /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname);
-    if (IS_LOCAL && devForm) devForm.hidden = false;   // reveal only on localhost
-    if (devForm) devForm.addEventListener('submit', function (e) {
-      e.preventDefault(); if (busy) return;
-      if (!supabaseConfigured || !supabase) { setNote('Supabase env vars are not set.', 'error'); return; }
-      var em = (devEmail.value || '').trim(), pw = (devPass.value || '');
-      if (!EMAIL_RE.test(em) || !pw) { setNote('Enter the dev email and password.', 'error'); if (!pw) devPass.focus(); return; }
-      setBusy(true); setNote('Signing in…', 'ok');
-      supabase.auth.signInWithPassword({ email: em, password: pw })
-        .then(function (r) { setBusy(false); if (r.error) { setNote(r.error.message || 'Could not sign in.', 'error'); } else { setNote('Signed in — entering…', 'ok'); goToApp(); } })
-        .catch(function () { setBusy(false); setNote('Network error — please try again.', 'error'); });
-    });
+    // Wrapped in import.meta.env.DEV so Vite dead-code-eliminates the whole block — including
+    // the selector strings — from the production bundle. It exists only during `astro dev`.
+    if (import.meta.env.DEV) {
+      var devForm = modal.querySelector('[data-auth-form="password"]');
+      var devEmail = modal.querySelector('[data-auth-dev-email]');
+      var devPass = modal.querySelector('[data-auth-dev-pass]');
+      var IS_LOCAL = /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname);
+      if (IS_LOCAL && devForm) devForm.hidden = false;   // reveal only on localhost
+      if (devForm) devForm.addEventListener('submit', function (e) {
+        e.preventDefault(); if (busy) return;
+        if (!supabaseConfigured || !supabase) { setNote('Supabase env vars are not set.', 'error'); return; }
+        var em = (devEmail.value || '').trim(), pw = (devPass.value || '');
+        if (!EMAIL_RE.test(em) || !pw) { setNote('Enter the dev email and password.', 'error'); if (!pw) devPass.focus(); return; }
+        setBusy(true); setNote('Signing in…', 'ok');
+        supabase.auth.signInWithPassword({ email: em, password: pw })
+          .then(function (r) { setBusy(false); if (r.error) { setNote(r.error.message || 'Could not sign in.', 'error'); } else { setNote('Signed in — entering…', 'ok'); goToApp(); } })
+          .catch(function () { setBusy(false); setNote('Network error — please try again.', 'error'); });
+      });
+    }
 
     // ── WhatsApp: send code (Supabase phone OTP, delivered by the Meta hook) ──
     if (phoneForm) phoneForm.addEventListener('submit', function (e) {
@@ -549,7 +556,7 @@
       try { var w = safeBeta(sessionStorage.getItem('blk_redirect')); if (w) dest = w; sessionStorage.removeItem('blk_redirect'); } catch (e) {}
       window.location.replace(dest);
     }
-    function onSignedIn() { showView('done'); }
+    function onSignedIn() { showView('done'); goToApp(); }
     function showAuthError(msg) { try { open(null, null); setNote(msg, 'error'); } catch (e) {} }
 
     // Auth params come back in the hash (implicit) or the query (PKCE / magic link).

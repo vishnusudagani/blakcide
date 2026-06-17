@@ -28,4 +28,4 @@ The more you study together, the sharper it gets at pushing you the way that act
 
 Exam season just got a whole lot more winnable — and honestly, a lot more fun.
 
-*Build your study buddy — [join the waitlist](/#waitlist), or meet all of [Persona](/persona/).*
+*Build your study buddy — [try the beta](/#waitlist), or meet all of [Persona](/persona/).*

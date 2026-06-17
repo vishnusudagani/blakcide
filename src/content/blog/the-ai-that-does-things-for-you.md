@@ -29,4 +29,4 @@ Through an open integration layer, any app can plug into Blaksyd — and every a
 
 Less tapping through ten apps. More living. Blak does the legwork so you don't have to.
 
-*Put your day on autopilot — [join the waitlist](/#waitlist), or [meet Blak](/blak/).*
+*Put your day on autopilot — [try the beta](/#waitlist), or [meet Blak](/blak/).*

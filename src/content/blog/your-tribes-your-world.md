@@ -29,4 +29,4 @@ And you can be exactly who you want to be — fully yourself, a fresh start, or 
 
 This is what online community should've felt like all along.
 
-*[Join the waitlist](/#waitlist) and find your people — or meet [Blak, your AI friend](/blak/).*
+*[Try the beta](/#waitlist) and find your people — or meet [Blak, your AI friend](/blak/).*

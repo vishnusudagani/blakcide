@@ -28,4 +28,4 @@ Here's the magic: there's only one Blak like yours. It isn't a personality picke
 
 This is what AI was always supposed to feel like: not a robot you operate, but a friend who makes everything a little bit better.
 
-*Meet yours — [join the waitlist](/#waitlist), or see [the whole world we're building](/about/).*
+*Meet yours — [try the beta](/#waitlist), or see [the whole world we're building](/about/).*

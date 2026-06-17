@@ -31,4 +31,4 @@ The trip's booked (Blak did the boring bits). You drop a post in your tribe, you
 
 That's a regular Tuesday on Blaksyd. And honestly? It feels a little like living in the future.
 
-*[Join the waitlist](/#waitlist) — your world is almost ready. Or see [how it all fits together](/about/).*
+*[Try the beta](/#waitlist) — your world is almost ready. Or see [how it all fits together](/about/).*

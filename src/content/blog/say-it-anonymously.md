@@ -28,4 +28,4 @@ The point isn't hiding — it's freedom. When the pressure to perform disappears
 
 The internet's better when you can drop the act. On Blaksyd, you can.
 
-*Speak freely — [join the waitlist](/#waitlist), or explore [Nexus](/nexus/).*
+*Speak freely — [try the beta](/#waitlist), or explore [Nexus](/nexus/).*

@@ -26,4 +26,4 @@ The fun part comes when you let your twin out into your world. Share it with fri
 
 It's the most personal thing you'll ever build: a second you, growing alongside the real one.
 
-*Build your twin — [join the waitlist](/#waitlist), or explore all of [Persona](/persona/).*
+*Build your twin — [try the beta](/#waitlist), or explore all of [Persona](/persona/).*
