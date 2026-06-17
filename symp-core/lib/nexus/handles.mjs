@@ -27,7 +27,7 @@ const ADJECTIVES = [
 const NOUNS = [
     'Ocean','Mountain','River','Sky','Forest','Meadow','Wave','Cloud','Stone','Flame',
     'Bird','Tide','Star','Moon','Lantern','Path','Bridge','Harbor','Garden','Compass',
-    'Echo','Spark','Breeze','Petal','Lake','Trail','Peak','Shore','Vale','Brook',
+    'Ember','Spark','Breeze','Petal','Lake','Trail','Peak','Shore','Vale','Brook',
     'Falcon','Heron','Sparrow','Otter','Fox','Wolf','Deer','Whale','Dove','Phoenix',
 ];
 
