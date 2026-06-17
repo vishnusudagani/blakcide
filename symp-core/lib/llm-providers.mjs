@@ -55,21 +55,9 @@ export function chatProviders({ tier = 'quality' } = {}) {
             azure: true,
             supportsTools: true,
         },
-        {
-            // Google Gemini — quality secondary (promote to primary when the
-            // Google-for-Startups grant lands). The org
-            // disallows Google API keys, so this points at the ADC Cloud Run
-            // proxy (services/gemini-proxy) via GEMINI_BASE_URL — the proxy
-            // authenticates to Vertex with ADC (no keys) and draws the credits.
-            // GEMINI_API_KEY here is the proxy's shared secret, NOT a Google key.
-            // Strong multilingual incl. Hindi; verify Telugu via the bake-off.
-            // Unset GEMINI_API_KEY → falls through to the OSS Qwen/Llama floor.
-            id: 'gemini',
-            baseUrl: env('GEMINI_BASE_URL') || 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions',
-            model: env('GEMINI_CHAT_MODEL') || 'gemini-2.5-flash',
-            apiKey: env('GEMINI_API_KEY'),
-            supportsTools: true,
-        },
+        // Gemini removed from the TEXT chat router (cost / consolidation). The
+        // realtime voice call still uses Gemini Live separately via the /live
+        // bridge — this only affects text/chat + the cascade's LLM step.
         {
             id: 'together',
             baseUrl: 'https://api.together.xyz/v1/chat/completions',
@@ -119,11 +107,11 @@ export function chatProviders({ tier = 'quality' } = {}) {
 
     if (tier === 'cheap') {
         // Background + tool-grounding work must NEVER burn paid/credit capacity:
-        // free floor (Groq) first, OSS hosts next, Azure/Gemini only as last resort.
-        const rank = (p) => (p.id === 'groq' ? 0 : (p.id === 'azure' || p.id === 'gemini') ? 2 : 1);
+        // free floor (Groq) first, OSS hosts next, Azure only as last resort.
+        const rank = (p) => (p.id === 'groq' ? 0 : p.id === 'azure' ? 2 : 1);
         return live.slice().sort((a, b) => rank(a) - rank(b));
     }
-    return live; // 'quality': Azure → Gemini → Qwen hosts → Groq floor
+    return live; // 'quality': Azure → Qwen hosts → Groq floor
 }
 
 /**
