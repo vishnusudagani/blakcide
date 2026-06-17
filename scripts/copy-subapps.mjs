@@ -7,7 +7,6 @@
 // build, so a single publish dir (dist/) serves the whole site:
 //   /               -> Astro landing
 //   /privacy /terms -> Astro pages
-//   /app/*          -> app/        (static)
 //   /team-os/*      -> team-os/    (static PWA; SPA fallback handled in netlify.toml)
 //   /symp-core/*    -> symp-core/  (static)
 // Netlify functions (netlify/functions) are separate from the publish dir and
@@ -18,7 +17,7 @@ import { fileURLToPath } from 'node:url';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const dist = join(root, 'dist');
-const subapps = ['app', 'team-os', 'symp-core'];
+const subapps = ['team-os', 'symp-core'];
 
 if (!existsSync(dist)) mkdirSync(dist, { recursive: true });
 
