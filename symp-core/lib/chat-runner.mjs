@@ -56,13 +56,6 @@ const META_TOOLS = new Set([
     'swap_persona',
 ]);
 
-// Tools whose execution should also surface a UI hint to the frontend.
-const META_TOOLS = new Set([
-    'escalate_to_human',
-    'suggest_switch_to_text',
-    'swap_persona',
-]);
-
 /**
  * Run a streaming chat with tool support. Writes SSE chunks to `writer`.
  *
