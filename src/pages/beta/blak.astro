@@ -504,7 +504,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
     // Preferred when the Vertex bridge is configured; falls back to the
     // turn-based cascade below if it isn't reachable (unset env / billing /
     // error). Mic 16kHz PCM in, 24kHz PCM out, full-duplex with barge-in.
-    let gws = null, gproc = null, gsrcNode = null, gNextPlay = 0, gAiSpeaking = false, liveMode = false, gCap = '';
+    let gws = null, gproc = null, gsrcNode = null, gNextPlay = 0, gAiSpeaking = false, liveMode = false, gCap = '', gDuckTimer = null;
     function gPlay(b64) {
       if (!actx || callState === 'idle') return;
       const bin = atob(b64), bytes = new Uint8Array(bin.length);
@@ -513,19 +513,42 @@ import AppLayout from '../../layouts/AppLayout.astro';
       for (let i = 0; i < i16.length; i++) f32[i] = i16[i] / 32768;
       const b = actx.createBuffer(1, f32.length, 24000); b.copyToChannel(f32, 0);
       const s = actx.createBufferSource(); s.buffer = b; s.connect(actx.destination);
-      const t = Math.max(actx.currentTime + 0.06, gNextPlay); s.start(t); gNextPlay = t + b.duration; gsrcNode = s;
+      const now = actx.currentTime;
+      // Fresh utterance → bigger lead-in so the first phoneme (e.g. the "w" in
+      // "what") isn't clipped by audio-output latency.
+      const fresh = gNextPlay <= now + 0.02;
+      const t = fresh ? now + 0.18 : gNextPlay;
+      s.start(t); gNextPlay = t + b.duration; gsrcNode = s;
       if (!gAiSpeaking) { gAiSpeaking = true; setCall('speaking', 'speaking…'); }
+      // Keep the mic DUCKED until the audio truly finishes (not just until
+      // turnComplete) — otherwise the speaker output echoes into the mic and
+      // Gemini's VAD fires a false "barge-in" that cuts the reply short.
+      if (gDuckTimer) clearTimeout(gDuckTimer);
+      gDuckTimer = setTimeout(() => {
+        gAiSpeaking = false;
+        if (callState !== 'idle' && !muted) setCall('listening', 'listening… just talk');
+      }, Math.max(0, (gNextPlay - now) * 1000) + 300);
     }
     function gHandle(o) {
       if (!o) return;
       const sc = o.serverContent; if (!sc) return;
-      if (sc.interrupted) { gNextPlay = actx ? actx.currentTime : 0; gAiSpeaking = false; setCall('listening', 'listening…'); return; }
+      if (sc.interrupted) {
+        if (gsrcNode) { try { gsrcNode.stop(); } catch (e) {} }
+        gNextPlay = actx ? actx.currentTime : 0;
+        if (gDuckTimer) { clearTimeout(gDuckTimer); gDuckTimer = null; }
+        gAiSpeaking = false; setCall('listening', 'listening…'); return;
+      }
       if (sc.modelTurn && sc.modelTurn.parts) sc.modelTurn.parts.forEach((p) => {
         if (p.inlineData && p.inlineData.data && String(p.inlineData.mimeType || '').indexOf('audio') === 0) gPlay(p.inlineData.data);
       });
       if (sc.outputTranscription && sc.outputTranscription.text) gCap += sc.outputTranscription.text;
       if (sc.inputTranscription && sc.inputTranscription.text) callCap.innerHTML = '<p class="cc-you">' + escHtml(sc.inputTranscription.text) + '</p>' + (gCap ? '<p class="cc-blak">' + escHtml(gCap) + '</p>' : '');
-      if (sc.turnComplete) { if (gCap.trim()) { const you = callCap.querySelector('.cc-you'); callCap.innerHTML = (you ? you.outerHTML : '') + '<p class="cc-blak">' + escHtml(gCap.trim()) + '</p>'; } gCap = ''; gAiSpeaking = false; setCall('listening', 'listening…'); }
+      if (sc.turnComplete) {
+        if (gCap.trim()) { const you = callCap.querySelector('.cc-you'); callCap.innerHTML = (you ? you.outerHTML : '') + '<p class="cc-blak">' + escHtml(gCap.trim()) + '</p>'; }
+        gCap = '';
+        // Do NOT un-duck here — audio is still scheduled ahead. The duck timer
+        // in gPlay flips back to "listening" once playback actually drains.
+      }
     }
     function gStartMic() {
       const sr = actx.sampleRate, srcN = actx.createMediaStreamSource(micStream);
