@@ -4,16 +4,10 @@ import AppLayout from '../../layouts/AppLayout.astro';
 <AppLayout active="blak" title="Blak">
   <div class="bx">
     <header class="bx-head">
-      <span class="bx-orb"></span>
+      <span class="bx-orb"><span class="bx-orb-spark">✦</span></span>
       <span class="bx-who"><b>Blak</b><i><span class="bx-live"></span>with you · always</i></span>
       <div class="bx-head-actions">
-        <button type="button" class="bx-call" id="bx-call" title="Voice call with Blak" aria-label="Voice call with Blak">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
-        </button>
         <a class="bx-human" href="/beta/minit/" title="Talk to a real person">Talk to a human</a>
-        <button type="button" class="bx-clear" id="bx-clear" title="Start a fresh chat" aria-label="Start a fresh chat">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6M10 11v6M14 11v6"/></svg>
-        </button>
         <button type="button" class="bx-hist" id="bx-history" title="Your chats" aria-label="Your chats">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h10"/></svg>
         </button>
@@ -22,26 +16,66 @@ import AppLayout from '../../layouts/AppLayout.astro';
 
     <div class="bx-stream" id="bx-stream" aria-live="polite"></div>
 
+    <!-- Resting / home state — shown (via pure CSS) only when #bx-stream is empty -->
+    <div class="bx-home" id="bx-home">
+      <span class="bx-tag"><span class="bx-tag-spark">✦</span>Learning quietly</span>
+
+      <div class="bx-insights">
+        <div class="bx-insight">
+          <span class="bx-insight-ic ic-mint">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h2.5l2-7 4 16 3-11 1.5 4H21"/></svg>
+          </span>
+          <span class="bx-insight-tx">
+            <b>Blak is getting to know you</b>
+            <i>the more you talk, the more it remembers</i>
+          </span>
+        </div>
+        <div class="bx-insight">
+          <span class="bx-insight-ic ic-coral">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="17" rx="2.5"/><path d="M3 9.5h18M8 2.5v4M16 2.5v4M7.5 14h2M14.5 14h2M7.5 18h2M14.5 18h2"/></svg>
+          </span>
+          <span class="bx-insight-tx">
+            <b>Your patterns &amp; nudges land here</b>
+            <i>moods, reminders, the things that matter to you</i>
+          </span>
+        </div>
+      </div>
+
+      <div class="bx-presence" aria-hidden="true">
+        <span class="bx-presence-orb"><span class="bx-presence-spark">✦</span></span>
+      </div>
+
+      <div class="bx-chips" id="bx-chips">
+        <button type="button" class="bx-chip" data-msg="I'm overwhelmed">I'm overwhelmed</button>
+        <button type="button" class="bx-chip" data-msg="Plan my weekend">Plan my weekend</button>
+        <button type="button" class="bx-chip" data-msg="Help me focus">Help me focus</button>
+      </div>
+    </div>
+
     <button type="button" class="bx-jump" id="bx-jump" aria-label="Jump to latest" hidden>
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M19 12l-7 7-7-7"/></svg>
     </button>
 
-    <div class="bx-chips" id="bx-chips">
-      <button type="button" class="bx-chip" data-msg="I'm overwhelmed">I'm overwhelmed</button>
-      <button type="button" class="bx-chip" data-msg="Plan my weekend">Plan my weekend</button>
-      <button type="button" class="bx-chip" data-msg="Help me focus">Help me focus</button>
+    <div class="bx-dock">
+      <form class="bx-composer" id="bx-form">
+        <div class="bx-field">
+          <textarea id="bx-input" rows="1" placeholder="Message Blak…" autocomplete="off"></textarea>
+          <button type="submit" id="bx-send" aria-label="Send">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+          </button>
+          <button type="button" id="bx-stop" aria-label="Stop" hidden>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="7" y="7" width="10" height="10" rx="2"/></svg>
+          </button>
+        </div>
+        <button type="button" class="bx-call" id="bx-call" title="Voice call with Blak" aria-label="Voice call with Blak">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+        </button>
+        <button type="button" class="bx-clear" id="bx-clear" title="New chat" aria-label="Start a fresh chat">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+        </button>
+      </form>
+      <p class="bx-note">Beta — the real Blak. Talks, listens, remembers you, any language. Be kind, it's still learning. 🤍</p>
     </div>
-
-    <form class="bx-composer" id="bx-form">
-      <textarea id="bx-input" rows="1" placeholder="Message Blak…" autocomplete="off"></textarea>
-      <button type="submit" id="bx-send" aria-label="Send">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
-      </button>
-      <button type="button" id="bx-stop" aria-label="Stop" hidden>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="7" y="7" width="10" height="10" rx="2"/></svg>
-      </button>
-    </form>
-    <p class="bx-note">Beta — the real Blak. Talks, listens, remembers you, any language. Be kind, it's still learning. 🤍</p>
 
     <!-- Voice call (turn-based: tap-to-talk) -->
     <div class="bx-call-ov" id="bx-call-overlay" hidden>
@@ -72,33 +106,41 @@ import AppLayout from '../../layouts/AppLayout.astro';
   </div>
 
   <style is:global>
-    .bx { display: flex; flex-direction: column; height: calc(100svh - 0px); max-width: 820px; margin-inline: auto; padding: 0 clamp(.8rem, 3vw, 1.5rem); position: relative; }
+    .bx { display: flex; flex-direction: column; height: calc(100svh - 0px); max-width: 760px; margin-inline: auto; padding: 0 clamp(.9rem, 3vw, 1.5rem); position: relative; }
     @media (max-width: 820px) { .bx { height: calc(100svh - 124px); } }
-    .bx-head { display: flex; align-items: center; gap: .7rem; padding: 1rem .3rem .9rem; border-bottom: 1px solid var(--line); }
-    .bx-orb { width: 38px; height: 38px; border-radius: 50%; flex: none; background: var(--cta-grad); box-shadow: 0 0 16px rgba(255,107,157,.45); animation: bx-breathe 5s ease-in-out infinite; }
-    @keyframes bx-breathe { 0%,100%{transform:scale(1)} 50%{transform:scale(1.06)} }
-    .bx-who { display: flex; flex-direction: column; line-height: 1.25; }
-    .bx-who b { font-size: var(--fs-lg); font-weight: 650; }
-    .bx-who i { font-style: normal; font-size: var(--fs-sm); color: var(--ink-faint); display: inline-flex; align-items: center; gap: .35rem; }
-    .bx-live { width: 7px; height: 7px; border-radius: 50%; background: var(--mint-deep); box-shadow: 0 0 8px var(--mint-deep); }
-    .bx-head-actions { margin-left: auto; display: flex; align-items: center; gap: .6rem; }
-    .bx-human { font-size: var(--fs-xs); color: var(--mint); text-decoration: none; border: 1px solid rgba(106,211,184,.3); border-radius: var(--r-pill); padding: .3rem .7rem; transition: .18s var(--ease-out); white-space: nowrap; }
+
+    /* ── Header (minimal) ── */
+    .bx-head { display: flex; align-items: center; gap: .6rem; padding: 1rem .2rem .8rem; }
+    .bx-orb { position: relative; width: 30px; height: 30px; border-radius: 50%; flex: none; display: grid; place-items: center; background: var(--cta-grad); box-shadow: 0 0 14px rgba(255,107,157,.4); animation: bx-breathe 5s ease-in-out infinite; }
+    .bx-orb-spark { font-size: 11px; line-height: 1; color: #fff; opacity: .92; }
+    @keyframes bx-breathe { 0%,100%{transform:scale(1)} 50%{transform:scale(1.07)} }
+    .bx-who { display: flex; flex-direction: column; line-height: 1.2; }
+    .bx-who b { font-size: var(--fs-lg); font-weight: 650; letter-spacing: -.01em; }
+    .bx-who i { font-style: normal; font-size: var(--fs-xs); color: var(--ink-faint); display: inline-flex; align-items: center; gap: .35rem; }
+    .bx-live { width: 6px; height: 6px; border-radius: 50%; background: var(--mint-deep); box-shadow: 0 0 8px var(--mint-deep); animation: bx-pulse 2.4s ease-in-out infinite; }
+    @keyframes bx-pulse { 0%,100%{opacity:1} 50%{opacity:.45} }
+    .bx-head-actions { margin-left: auto; display: flex; align-items: center; gap: .55rem; }
+    .bx-human { font-size: var(--fs-xs); color: var(--mint); text-decoration: none; border: 1px solid rgba(106,211,184,.3); border-radius: var(--r-pill); padding: .35rem .75rem; transition: .18s var(--ease-out); white-space: nowrap; }
     .bx-human:hover { background: rgba(106,211,184,.12); border-color: var(--mint-deep); }
-    .bx-clear { width: 34px; height: 34px; flex: none; border-radius: 50%; display: grid; place-items: center; color: var(--ink-faint); background: var(--surface); border: 1px solid var(--line-strong); cursor: pointer; transition: .18s var(--ease-out); }
-    .bx-clear:hover { color: var(--coral); border-color: var(--coral); }
-    .bx-clear svg { width: 16px; height: 16px; }
+    .bx-hist { width: 36px; height: 36px; flex: none; border-radius: 50%; display: grid; place-items: center; color: var(--ink-faint); background: var(--surface); border: 1px solid var(--line); cursor: pointer; transition: .18s var(--ease-out); }
+    .bx-hist:hover { color: var(--ink); border-color: var(--line-strong); background: var(--surface-strong); }
+    .bx-hist svg { width: 17px; height: 17px; }
     html[data-theme="light"] .bx-human { color: var(--mint-ink); }
 
-    .bx-stream { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: .7rem; padding: 1.1rem .3rem 1.4rem; scrollbar-width: thin; scroll-behavior: smooth; }
+    /* ── Conversation stream ── */
+    .bx-stream { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: .7rem; padding: 1rem .2rem 1.4rem; scrollbar-width: thin; scroll-behavior: smooth; }
+    .bx-stream:empty { display: none; }                                   /* no messages → collapse, home shows */
+    .bx-stream:not(:empty) ~ .bx-home { display: none; }                  /* messages exist → hide the home hero */
     .bx-row { display: flex; align-items: flex-end; gap: .5rem; max-width: 84%; animation: bx-in .28s var(--ease-out) both; }
     .bx-row.them { align-self: flex-start; } .bx-row.me { align-self: flex-end; flex-direction: row-reverse; }
     @keyframes bx-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
-    .bx-av { width: 26px; height: 26px; border-radius: 50%; flex: none; background: var(--cta-grad); box-shadow: 0 0 10px rgba(255,107,157,.4); }
+    .bx-av { position: relative; width: 26px; height: 26px; border-radius: 50%; flex: none; background: var(--cta-grad); box-shadow: 0 0 10px rgba(255,107,157,.4); }
     .bx-col { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
     .bx-row.me .bx-col { align-items: flex-end; }
-    .bx-bub { padding: .7rem .95rem; border-radius: 16px; font-size: var(--fs-base); line-height: 1.5; white-space: pre-wrap; word-wrap: break-word; }
-    .bx-row.them .bx-bub { background: rgba(255,107,157,.14); border: 1px solid rgba(255,107,157,.24); border-bottom-left-radius: 5px; color: var(--ink); }
-    .bx-row.me .bx-bub { background: rgba(91,192,255,.16); border: 1px solid rgba(91,192,255,.28); border-bottom-right-radius: 5px; color: var(--ink); }
+    .bx-bub { padding: .72rem .98rem; border-radius: var(--r-md); font-size: var(--fs-base); line-height: 1.55; white-space: pre-wrap; word-wrap: break-word; }
+    .bx-row.them .bx-bub { background: var(--surface-strong); border: 1px solid var(--line); border-bottom-left-radius: 6px; color: var(--ink); }
+    .bx-row.me .bx-bub { background: rgba(91,192,255,.14); border: 1px solid rgba(91,192,255,.26); border-bottom-right-radius: 6px; color: var(--ink); }
+    html[data-theme="light"] .bx-row.me .bx-bub { background: rgba(24,114,176,.1); border-color: rgba(24,114,176,.22); }
     .bx-time { font-family: var(--font-mono); font-size: var(--fs-3xs); color: var(--ink-faint); padding: 0 .35rem; opacity: .8; }
     .bx-meta { display: flex; gap: .6rem; align-items: center; padding: 0 .35rem; }
     .bx-regen { font-family: var(--font-mono); font-size: var(--fs-3xs); letter-spacing: .04em; color: var(--ink-faint); background: none; border: 0; cursor: pointer; display: inline-flex; align-items: center; gap: .25rem; padding: 0; transition: color .18s; }
@@ -111,31 +153,71 @@ import AppLayout from '../../layouts/AppLayout.astro';
     .bx-typing { display: inline-flex; gap: 4px; padding: .1rem 0; } .bx-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--coral); animation: bx-blink 1.2s infinite; } .bx-dot:nth-child(2){animation-delay:.18s} .bx-dot:nth-child(3){animation-delay:.36s}
     @keyframes bx-blink { 0%,100%{opacity:.3; transform: translateY(0)} 50%{opacity:1; transform: translateY(-2px)} }
 
-    .bx-jump { position: absolute; right: clamp(1rem, 4vw, 2rem); bottom: 150px; width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; border: 1px solid var(--line-strong); background: var(--surface-strong); color: var(--ink); cursor: pointer; box-shadow: var(--shadow-soft); z-index: 4; animation: bx-in .2s var(--ease-out) both; }
+    .bx-jump { position: absolute; right: clamp(1rem, 4vw, 2rem); bottom: 180px; width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; border: 1px solid var(--line-strong); background: var(--surface-strong); backdrop-filter: blur(10px); color: var(--ink); cursor: pointer; box-shadow: var(--shadow-soft); z-index: 4; animation: bx-in .2s var(--ease-out) both; }
     .bx-jump svg { width: 18px; height: 18px; }
     .bx-jump[hidden] { display: none; }
 
-    .bx-chips { display: flex; flex-wrap: wrap; gap: .5rem; padding: 0 .3rem .6rem; transition: opacity .25s var(--ease-out); }
+    /* ── Resting / home state (presence hero) ── */
+    .bx-home { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: clamp(1.1rem, 3.5vh, 1.8rem); text-align: center; padding: clamp(1rem, 4vh, 2rem) .2rem 1.4rem; animation: bx-in .4s var(--ease-out) both; }
+    .bx-home[hidden] { display: none; }
+
+    .bx-tag { display: inline-flex; align-items: center; gap: .4rem; font-size: var(--fs-xs); font-weight: 550; letter-spacing: .01em; padding: .38rem .9rem; border-radius: var(--r-pill); color: var(--ink-soft); background: var(--glass); border: 1px solid var(--line-strong); backdrop-filter: blur(8px); }
+    .bx-tag-spark { background: var(--accent-grad); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: transparent; font-size: .9em; }
+
+    /* insights card — glassy, glowing gradient border + outer glow */
+    .bx-insights { width: 100%; max-width: 420px; border: 1px solid transparent; border-radius: var(--r-lg); background: linear-gradient(var(--glass-strong), var(--glass-strong)) padding-box, var(--line-grad) border-box; box-shadow: 0 0 38px -8px rgba(255,182,138,.32), var(--shadow-soft); backdrop-filter: blur(16px); overflow: hidden; }
+    .bx-insight { display: flex; align-items: center; gap: .85rem; text-align: left; padding: 1rem 1.1rem; }
+    .bx-insight + .bx-insight { border-top: 1px solid var(--line); }
+    .bx-insight-ic { flex: none; width: 38px; height: 38px; border-radius: var(--r-sm); display: grid; place-items: center; }
+    .bx-insight-ic svg { width: 20px; height: 20px; }
+    .bx-insight-ic.ic-mint { color: var(--mint-deep); background: rgba(106,211,184,.14); border: 1px solid rgba(106,211,184,.26); }
+    .bx-insight-ic.ic-coral { color: var(--coral); background: rgba(255,107,157,.13); border: 1px solid rgba(255,107,157,.26); }
+    html[data-theme="light"] .bx-insight-ic.ic-mint { color: var(--mint-ink); }
+    html[data-theme="light"] .bx-insight-ic.ic-coral { color: var(--coral-ink); }
+    .bx-insight-tx { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+    .bx-insight-tx b { font-size: var(--fs-md); font-weight: 600; color: var(--ink); }
+    .bx-insight-tx i { font-style: normal; font-size: var(--fs-xs); color: var(--ink-faint); line-height: 1.45; }
+
+    /* central presence orb */
+    .bx-presence { display: grid; place-items: center; padding: .4rem 0 .2rem; }
+    .bx-presence-orb { position: relative; width: clamp(116px, 32vw, 136px); aspect-ratio: 1; border-radius: 50%; display: grid; place-items: center; background: var(--cta-grad); box-shadow: 0 0 60px -4px rgba(255,107,157,.5), 0 0 120px -20px rgba(255,210,122,.4), inset 0 2px 14px rgba(255,255,255,.35); animation: bx-breathe 4.5s ease-in-out infinite; }
+    .bx-presence-spark { font-size: 30px; line-height: 1; color: #fff; opacity: .95; filter: drop-shadow(0 1px 6px rgba(255,255,255,.5)); }
+
+    /* quick-prompt pills */
+    .bx-chips { display: flex; flex-wrap: wrap; justify-content: center; gap: .5rem; transition: opacity .25s var(--ease-out); }
     .bx-chips[hidden] { display: none; }
-    .bx-chip { font-family: inherit; font-size: var(--fs-sm); color: var(--ink-soft); background: var(--surface); border: 1px solid var(--line-strong); border-radius: var(--r-pill); padding: .5rem .85rem; cursor: pointer; transition: .18s var(--ease-out); }
+    .bx-chip { font-family: inherit; font-size: var(--fs-sm); color: var(--ink-soft); background: var(--glass); border: 1px solid var(--line-strong); border-radius: var(--r-pill); padding: .5rem .95rem; cursor: pointer; backdrop-filter: blur(8px); transition: .18s var(--ease-out); }
     .bx-chip:hover { color: var(--ink); border-color: var(--coral); transform: translateY(-1px); }
     .bx-chip:active { transform: translateY(0); }
 
-    .bx-composer { display: flex; gap: .5rem; padding: 0 .3rem .5rem; align-items: flex-end; }
-    .bx-composer textarea { flex: 1; min-width: 0; resize: none; max-height: 140px; padding: .8rem 1.1rem; border-radius: 22px; background: var(--surface); border: 1px solid var(--line-strong); color: var(--ink); font: inherit; font-size: var(--fs-lg); line-height: 1.4; transition: border-color .18s, background .18s; }
-    .bx-composer textarea:focus { outline: none; border-color: var(--coral); background: var(--surface-strong); }
-    .bx-composer button { flex: none; width: 48px; height: 48px; border-radius: 50%; border: 0; cursor: pointer; color: var(--cta-ink); background: var(--cta); box-shadow: var(--shadow-cta); display: grid; place-items: center; transition: transform .16s var(--ease-out), opacity .16s; }
-    .bx-composer button:hover { transform: scale(1.06); } .bx-composer button:active { transform: scale(.94); }
-    .bx-composer button[hidden] { display: none; }
+    /* ── Composer dock ── */
+    .bx-dock { padding-bottom: .5rem; }
+    .bx-composer { display: flex; gap: .55rem; padding: 0 .1rem .45rem; align-items: flex-end; }
+    /* glowing rounded field wrapping the textarea + trailing send/stop */
+    .bx-field { flex: 1; min-width: 0; display: flex; align-items: flex-end; gap: .35rem; padding: .35rem .4rem .35rem 0; border: 1px solid transparent; border-radius: var(--r-lg); background: linear-gradient(var(--glass-strong), var(--glass-strong)) padding-box, var(--line-grad) border-box; box-shadow: 0 0 24px -10px rgba(255,182,138,.4); backdrop-filter: blur(14px); transition: box-shadow .2s var(--ease-out); }
+    .bx-field:focus-within { box-shadow: 0 0 30px -8px rgba(255,107,157,.45); }
+    .bx-field textarea { flex: 1; min-width: 0; resize: none; max-height: 140px; padding: .72rem .4rem .72rem 1.1rem; background: transparent; border: 0; color: var(--ink); font: inherit; font-size: var(--fs-lg); line-height: 1.45; }
+    .bx-field textarea:focus { outline: none; }
+    .bx-field button { flex: none; width: 40px; height: 40px; border-radius: 50%; border: 0; cursor: pointer; color: var(--cta-ink); background: var(--cta); box-shadow: var(--shadow-cta); display: grid; place-items: center; transition: transform .16s var(--ease-out), opacity .16s; }
+    .bx-field button:hover { transform: scale(1.06); } .bx-field button:active { transform: scale(.94); }
+    .bx-field button[hidden] { display: none; }
+    .bx-field button svg { width: 19px; height: 19px; }
     #bx-stop { background: var(--surface-strong); color: var(--ink); border: 1px solid var(--line-strong); box-shadow: none; }
-    .bx-composer button svg { width: 20px; height: 20px; }
-    .bx-note { margin: 0 .3rem; padding-bottom: .8rem; font-size: var(--fs-xs); color: var(--ink-faint); text-align: center; }
-    html[data-theme="light"] .bx-tag { color: var(--coral-ink); }
 
-    /* ── Voice call ── */
-    .bx-call { width: 34px; height: 34px; flex: none; border-radius: 50%; display: grid; place-items: center; color: var(--mint); background: var(--surface); border: 1px solid rgba(106,211,184,.3); cursor: pointer; transition: .18s var(--ease-out); }
-    .bx-call:hover { color: var(--mint-deep); border-color: var(--mint-deep); background: rgba(106,211,184,.12); }
-    .bx-call svg { width: 16px; height: 16px; }
+    /* circular call (teal/mint glow) + new-chat (coral glow) buttons */
+    .bx-call, .bx-clear { flex: none; width: 50px; height: 50px; border-radius: 50%; display: grid; place-items: center; border: 1px solid transparent; cursor: pointer; transition: transform .16s var(--ease-out), box-shadow .2s var(--ease-out); }
+    .bx-call:active, .bx-clear:active { transform: scale(.94); }
+    .bx-call { color: var(--mint-deep); background: linear-gradient(var(--glass-strong), var(--glass-strong)) padding-box, linear-gradient(135deg, var(--mint), var(--aqua)) border-box; box-shadow: 0 0 22px -8px rgba(106,211,184,.5); }
+    .bx-call:hover { box-shadow: 0 0 28px -6px rgba(106,211,184,.65); }
+    .bx-clear { color: var(--coral); background: linear-gradient(var(--glass-strong), var(--glass-strong)) padding-box, linear-gradient(135deg, var(--coral), var(--lavender)) border-box; box-shadow: 0 0 22px -8px rgba(255,107,157,.5); }
+    .bx-clear:hover { box-shadow: 0 0 28px -6px rgba(255,107,157,.65); }
+    .bx-call svg, .bx-clear svg { width: 19px; height: 19px; }
+    html[data-theme="light"] .bx-call { color: var(--mint-ink); }
+    html[data-theme="light"] .bx-clear { color: var(--coral-ink); }
+
+    .bx-note { margin: 0 .2rem; padding-bottom: .7rem; font-size: var(--fs-xs); color: var(--ink-faint); text-align: center; }
+
+    /* ── Voice call overlay ── (the trigger button .bx-call lives in the composer above) */
     .bx-call-ov { position: fixed; inset: 0; z-index: 50; display: flex; flex-direction: column; align-items: center; background: radial-gradient(120% 80% at 50% 0%, rgba(255,107,157,.12), var(--bg) 60%); backdrop-filter: blur(8px); animation: bx-in .25s var(--ease-out) both; }
     .bx-call-ov[hidden] { display: none; }
     .bx-call-bar { width: 100%; max-width: 820px; display: flex; align-items: center; justify-content: space-between; padding: 1rem clamp(.8rem,3vw,1.5rem); }
@@ -156,14 +238,11 @@ import AppLayout from '../../layouts/AppLayout.astro';
     .bx-call-mic svg { width: 30px; height: 30px; }
     @keyframes bx-callpulse { 0%,100%{box-shadow:0 0 0 6px rgba(255,107,107,.18)} 50%{box-shadow:0 0 0 16px rgba(255,107,107,.05)} }
 
-    /* ── Chat history drawer ── */
-    .bx-hist { width: 34px; height: 34px; flex: none; border-radius: 50%; display: grid; place-items: center; color: var(--ink-faint); background: var(--surface); border: 1px solid var(--line-strong); cursor: pointer; transition: .18s var(--ease-out); }
-    .bx-hist:hover { color: var(--ink); border-color: var(--coral); }
-    .bx-hist svg { width: 16px; height: 16px; }
+    /* ── Chat history drawer ── (the trigger button .bx-hist lives in the header above) */
     .bx-cv-drawer { position: fixed; inset: 0; z-index: 60; }
     .bx-cv-drawer[hidden] { display: none; }
-    .bx-cv-scrim { position: absolute; inset: 0; background: rgba(0,0,0,.4); animation: bx-in .2s var(--ease-out) both; }
-    .bx-cv-panel { position: absolute; top: 0; left: 0; bottom: 0; width: min(300px, 82vw); background: var(--bg); border-right: 1px solid var(--line); box-shadow: var(--shadow-soft); display: flex; flex-direction: column; padding: 1rem .8rem; animation: bx-slidein .22s var(--ease-out) both; }
+    .bx-cv-scrim { position: absolute; inset: 0; background: rgba(0,0,0,.4); backdrop-filter: blur(2px); animation: bx-in .2s var(--ease-out) both; }
+    .bx-cv-panel { position: absolute; top: 0; left: 0; bottom: 0; width: min(300px, 82vw); background: var(--glass-strong); backdrop-filter: blur(18px); border-right: 1px solid var(--line-strong); box-shadow: var(--shadow-soft); display: flex; flex-direction: column; padding: 1rem .8rem; animation: bx-slidein .22s var(--ease-out) both; }
     @keyframes bx-slidein { from { transform: translateX(-100%); } to { transform: none; } }
     .bx-cv-head { display: flex; align-items: center; justify-content: space-between; padding: .3rem .3rem 1rem; }
     .bx-cv-head b { font-size: var(--fs-lg); }
@@ -177,6 +256,23 @@ import AppLayout from '../../layouts/AppLayout.astro';
     .bx-cv-item:hover .bx-cv-del { opacity: 1; }
     .bx-cv-del:hover { color: var(--coral); }
     .bx-cv-empty { color: var(--ink-faint); font-size: var(--fs-sm); padding: 1rem .6rem; }
+
+    /* ── Mobile (the screen is mostly used on phones) ── */
+    @media (max-width: 480px) {
+      .bx { padding: 0 .8rem; }
+      .bx-head { padding: .8rem .1rem .7rem; }
+      .bx-home { gap: 1.1rem; }
+      .bx-call, .bx-clear { width: 46px; height: 46px; }
+      .bx-composer { gap: .45rem; }
+      .bx-row { max-width: 90%; }
+    }
+
+    /* ── Respect reduced-motion: no infinite breathing/pulsing ── */
+    @media (prefers-reduced-motion: reduce) {
+      .bx-orb, .bx-presence-orb, .bx-call-orb { animation: none !important; }
+      .bx-live { animation: none !important; opacity: 1; }
+      .bx-call-mic.rec { animation: none !important; }
+    }
   </style>
 
   <script>
