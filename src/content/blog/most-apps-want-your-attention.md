@@ -28,4 +28,4 @@ When the goal is *your life*, not your minutes, everything is built to leave you
 
 A platform that's actually on your side. Imagine that.
 
-*Come build a better everyday — [join the waitlist](/#waitlist), or read [what we stand for](/manifesto/).*
+*Come build a better everyday — [try the beta](/#waitlist), or read [what we stand for](/manifesto/).*

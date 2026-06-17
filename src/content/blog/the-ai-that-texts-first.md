@@ -28,4 +28,4 @@ There's a reason this lands differently. Something that only ever reacts feels l
 
 You'll feel it the first morning your world is already sorted before you've even picked up your phone. That's not the far-off future of AI. That's just a normal day on Blaksyd.
 
-*Want an AI that texts first? [Join the waitlist](/#waitlist) — or [meet Blak](/blak/).*
+*Want an AI that texts first? [Try the beta](/#waitlist) — or [meet Blak](/blak/).*

@@ -28,4 +28,4 @@ Build one. Build a dozen. Each AI character lives in its own little world and kn
 
 This is the most fun you'll have with AI — not one assistant, but a crew you dreamed up yourself.
 
-*Start building — [join the waitlist](/#waitlist), or meet your [Real Persona](/persona/) too.*
+*Start building — [try the beta](/#waitlist), or meet your [Real Persona](/persona/) too.*

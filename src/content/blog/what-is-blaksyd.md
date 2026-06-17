@@ -28,4 +28,4 @@ Blaksyd isn't four features in a trench coat. Everything connects, with Blak as 
 
 That's the whole promise: one place where your AI, a digital you, real people, and your world all revolve around one person — you.
 
-*Step into it — [join the waitlist](/#waitlist), or see [the whole world we're building](/about/).*
+*Step into it — [try the beta](/#waitlist), or see [the whole world we're building](/about/).*

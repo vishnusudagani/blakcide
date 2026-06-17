@@ -38,14 +38,24 @@
       </figcaption>
     </figure>
 
-    <form class="finale-form" data-reveal data-wl novalidate>
-      <input type="email" class="finale-email" name="email" inputmode="email" autocomplete="email" placeholder="you@example.com" aria-label="Your email" required />
-      <button type="submit" class="btn btn-primary">
-        <span>Get early access</span>
+    <div class="finale-cta" data-reveal>
+      <button type="button" class="btn btn-primary" data-open-auth>
+        <span>Try the beta</span>
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
       </button>
+      <p class="finale-reassure">Free during beta · continue with Google or email · anonymous by default.</p>
+    </div>
+
+    <form class="finale-updates" data-reveal data-wl novalidate>
+      {/* honeypot — real people never see or fill this; bots do. The server silently
+          drops any submission that has it set (see netlify/functions/waitlist.mjs). */}
+      <input type="text" class="hp-field" name="website" tabindex="-1" autocomplete="off" aria-hidden="true" />
+      <span class="finale-updates-q">Not ready to dive in? Get the occasional update —</span>
+      <span class="finale-updates-row">
+        <input type="email" class="finale-email" name="email" inputmode="email" autocomplete="email" placeholder="you@example.com" aria-label="Email for product updates" required />
+        <button type="submit" class="btn btn-ghost"><span>Keep me posted</span></button>
+      </span>
     </form>
-    <p class="finale-reassure" data-reveal>Anonymous by default · we never sell your data · free early access.</p>
     <p class="finale-wl-note" data-wl-note role="status" aria-live="polite" hidden></p>
 
     <div class="constellation" id="finale-constellation" data-reveal aria-hidden="true">
@@ -133,6 +143,25 @@
   .finale-wl-note.is-ok { color: var(--mint-deep); border-color: rgba(106, 211, 184, .4); background: rgba(106, 211, 184, .08); }
   html[data-theme="light"] .finale-wl-note.is-error { color: var(--coral-ink); }
   html[data-theme="light"] .finale-wl-note.is-ok { color: var(--mint-ink); }
+
+  /* primary beta CTA — the dominant action; the email capture below is the quiet alt */
+  .finale-cta { margin-top: 2.6rem; display: flex; flex-direction: column; align-items: center; gap: 1rem; }
+  .finale-cta .finale-reassure { margin-top: 0; }
+  /* secondary "not ready? get updates" — quieter, smaller, set apart from the CTA */
+  .finale-updates { margin: 2.1rem auto 0; max-width: 440px; display: flex; flex-direction: column; gap: .55rem; }
+  .finale-updates-q { font-size: var(--fs-sm); color: var(--ink-faint); }
+  .finale-updates-row { display: flex; flex-wrap: wrap; gap: .6rem; }
+  .finale-updates .finale-email { flex: 1 1 200px; font-size: var(--fs-md); }
+  .finale-updates .btn-ghost { flex: 0 0 auto; }
+  /* honeypot field — off-screen (not display:none, so bots still fill it) */
+  .hp-field { position: absolute; left: -9999px; top: auto; width: 1px; height: 1px; overflow: hidden; opacity: 0; pointer-events: none; }
+  @media (max-width: 600px) {
+    .finale-updates-row { flex-direction: column; }
+    /* kill the 200px flex-basis in the column layout so the input keeps its natural
+       height instead of ballooning into a 200px-tall pill (the hero form's old trap) */
+    .finale-updates .finale-email { flex: 0 0 auto; width: 100%; }
+    .finale-updates .btn-ghost { width: 100%; justify-content: center; }
+  }
   @media (max-width: 600px) {
     .finale-form { flex-direction: column; max-width: 360px; }
     /* kill the 220px flex-basis so the stacked input keeps its natural height
@@ -251,10 +280,11 @@
       var val = (input.value || '').trim();
       if (!RE.test(val)) { setNote('Enter a valid email to continue.', 'error'); input.focus(); return; }
       busy = true; if (btn) btn.disabled = true; setNote('One moment…', 'ok');
-      fetch('/api/waitlist', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: val }) })
+      var hp = (form.querySelector('.hp-field') || {}).value || '';
+      fetch('/api/waitlist', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: val, website: hp }) })
         .then(function (r) { return r.json().catch(function () { return {}; }).then(function (d) { return { ok: r.ok, d: d }; }); })
         .then(function (r) {
-          if (r.ok && r.d && r.d.ok) { setNote('You\'re in — welcome to Blaksyd. We\'ll email you the moment we open. Meanwhile, <a href="/manifesto/">see why we\'re building this →</a>', 'ok'); form.reset(); }
+          if (r.ok && r.d && r.d.ok) { setNote('You\'re on the list — we\'ll send the occasional update, no spam. Or <a href="#" data-open-auth>try the beta now →</a>', 'ok'); form.reset(); }
           else { setNote((r.d && r.d.error) || 'Could not save right now. Please try again.', 'error'); }
         })
         .catch(function () { setNote('Network error — please try again.', 'error'); })

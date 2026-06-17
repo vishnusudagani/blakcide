@@ -32,4 +32,4 @@ We're building the most exciting place to be a person online — a Human + AI wo
 
 And the best part? It's almost here.
 
-*Want first access? [Join the waitlist](/#waitlist) — or see [how it all works](/about/).*
+*Want first access? [Try the beta](/#waitlist) — or see [how it all works](/about/).*

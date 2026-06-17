@@ -26,4 +26,4 @@ Here's the simple version of our promise: most apps want your attention. Blaksyd
 
 When something is genuinely yours, you can relax into it. That's exactly how Blaksyd is meant to feel.
 
-*Step into a world that's yours — [join the waitlist](/#waitlist), or see [what we stand for](/manifesto/).*
+*Step into a world that's yours — [try the beta](/#waitlist), or see [what we stand for](/manifesto/).*

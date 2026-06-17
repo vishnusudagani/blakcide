@@ -25,4 +25,4 @@ Here's the part that makes it feel like one caring system: before you talk to a 
 
 And it keeps getting better. Everything you do feeds Blak's understanding of you, so every conversation — with AI or a human — is more *you* than the last.
 
-*See how it all fits — [join the waitlist](/#waitlist), or explore [the four pillars](/about/).*
+*See how it all fits — [try the beta](/#waitlist), or explore [the four pillars](/about/).*

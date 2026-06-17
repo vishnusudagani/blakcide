@@ -31,4 +31,4 @@ Sharing a version of yourself only works if it's *safe*, so you hold the control
 
 Your world keeps moving — warmly, in your voice — even when you step away.
 
-*Clone yourself (the good way) — [join the waitlist](/#waitlist), or explore [Persona](/persona/).*
+*Clone yourself (the good way) — [try the beta](/#waitlist), or explore [Persona](/persona/).*

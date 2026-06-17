@@ -28,4 +28,4 @@ Once Sam's done, switch to your Real Persona and hear how *you* would approach i
 
 Walk into the room already knowing where the weak spots are. That's an unfair advantage — and it's yours.
 
-*Build your sparring partner — [join the waitlist](/#waitlist), or meet [Persona](/persona/).*
+*Build your sparring partner — [try the beta](/#waitlist), or meet [Persona](/persona/).*

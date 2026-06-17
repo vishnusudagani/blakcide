@@ -28,4 +28,4 @@ Because your Persona shares everything [Blak](/blak/) knows about you, it doesn'
 
 The best part? There's no awkwardness, no performance — it's just you, getting to know you better.
 
-*Meet your Persona — [join the waitlist](/#waitlist), or explore all of [Persona](/persona/).*
+*Meet your Persona — [try the beta](/#waitlist), or explore all of [Persona](/persona/).*

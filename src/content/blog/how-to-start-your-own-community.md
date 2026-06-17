@@ -28,4 +28,4 @@ Every tribe has [Blak](/blak/) as a quiet default member — watching, keeping t
 
 The next great community is one you haven't made yet. Go make it.
 
-*Start your tribe — [join the waitlist](/#waitlist), or explore [Nexus](/nexus/).*
+*Start your tribe — [try the beta](/#waitlist), or explore [Nexus](/nexus/).*

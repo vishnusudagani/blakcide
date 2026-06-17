@@ -26,4 +26,4 @@ This isn't a robot reading you results. It's a back-and-forth — quick, warm, e
 
 Type when you want. Talk when you'd rather. Your world, your way, always.
 
-*Hear it for yourself — [join the waitlist](/#waitlist), or [meet Blak](/blak/).*
+*Hear it for yourself — [try the beta](/#waitlist), or [meet Blak](/blak/).*

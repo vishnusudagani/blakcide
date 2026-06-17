@@ -28,4 +28,4 @@ The wild part: it works. Having someone in your corner — even one you built �
 
 Big day tomorrow? You've already got someone hyped for you.
 
-*Build your hype person — [join the waitlist](/#waitlist), or meet all of [Persona](/persona/).*
+*Build your hype person — [try the beta](/#waitlist), or meet all of [Persona](/persona/).*
