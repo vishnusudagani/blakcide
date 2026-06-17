@@ -500,17 +500,89 @@ import AppLayout from '../../layouts/AppLayout.astro';
 
     const SPEECH_RMS = 0.020, SILENCE_RMS = 0.013, START_FRAMES = 3, SILENCE_END_MS = 1100, FRAME_MS = 60, MAX_UTTER_MS = 14000;
 
+    // ── Realtime Gemini Live (speech-to-speech) ──────────────────────────
+    // Preferred when the Vertex bridge is configured; falls back to the
+    // turn-based cascade below if it isn't reachable (unset env / billing /
+    // error). Mic 16kHz PCM in, 24kHz PCM out, full-duplex with barge-in.
+    let gws = null, gproc = null, gsrcNode = null, gNextPlay = 0, gAiSpeaking = false, liveMode = false, gCap = '';
+    function gPlay(b64) {
+      if (!actx || callState === 'idle') return;
+      const bin = atob(b64), bytes = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+      const i16 = new Int16Array(bytes.buffer), f32 = new Float32Array(i16.length);
+      for (let i = 0; i < i16.length; i++) f32[i] = i16[i] / 32768;
+      const b = actx.createBuffer(1, f32.length, 24000); b.copyToChannel(f32, 0);
+      const s = actx.createBufferSource(); s.buffer = b; s.connect(actx.destination);
+      const t = Math.max(actx.currentTime + 0.06, gNextPlay); s.start(t); gNextPlay = t + b.duration; gsrcNode = s;
+      if (!gAiSpeaking) { gAiSpeaking = true; setCall('speaking', 'speaking…'); }
+    }
+    function gHandle(o) {
+      if (!o) return;
+      const sc = o.serverContent; if (!sc) return;
+      if (sc.interrupted) { gNextPlay = actx ? actx.currentTime : 0; gAiSpeaking = false; setCall('listening', 'listening…'); return; }
+      if (sc.modelTurn && sc.modelTurn.parts) sc.modelTurn.parts.forEach((p) => {
+        if (p.inlineData && p.inlineData.data && String(p.inlineData.mimeType || '').indexOf('audio') === 0) gPlay(p.inlineData.data);
+      });
+      if (sc.outputTranscription && sc.outputTranscription.text) gCap += sc.outputTranscription.text;
+      if (sc.inputTranscription && sc.inputTranscription.text) callCap.innerHTML = '<p class="cc-you">' + escHtml(sc.inputTranscription.text) + '</p>' + (gCap ? '<p class="cc-blak">' + escHtml(gCap) + '</p>' : '');
+      if (sc.turnComplete) { if (gCap.trim()) { const you = callCap.querySelector('.cc-you'); callCap.innerHTML = (you ? you.outerHTML : '') + '<p class="cc-blak">' + escHtml(gCap.trim()) + '</p>'; } gCap = ''; gAiSpeaking = false; setCall('listening', 'listening…'); }
+    }
+    function gStartMic() {
+      const sr = actx.sampleRate, srcN = actx.createMediaStreamSource(micStream);
+      gproc = actx.createScriptProcessor(2048, 1, 1);
+      gproc.onaudioprocess = (e) => {
+        if (!liveMode || muted || !gws || gws.readyState !== 1 || gAiSpeaking) return;
+        const inp = e.inputBuffer.getChannelData(0), ratio = sr / 16000, n = Math.floor(inp.length / ratio);
+        const pcm = new Int16Array(n);
+        for (let i = 0; i < n; i++) { const v = inp[Math.round(i * ratio)] || 0; pcm[i] = Math.max(-32768, Math.min(32767, Math.round(v * 32767))); }
+        const u8 = new Uint8Array(pcm.buffer); let str = '';
+        for (let i = 0; i < u8.length; i += 8192) str += String.fromCharCode.apply(null, u8.subarray(i, i + 8192));
+        gws.send(JSON.stringify({ realtimeInput: { audio: { data: btoa(str), mimeType: 'audio/pcm;rate=16000' } } }));
+      };
+      srcN.connect(gproc); gproc.connect(actx.destination);
+    }
+    async function geminiLiveTry() {
+      let cfg;
+      try { const r = await fetch('/api/gemini-live-session', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }); if (!r.ok) return false; cfg = await r.json(); }
+      catch (e) { return false; }
+      if (!cfg || !cfg.wsUrl) return false;
+      const jwt = await getToken(); if (!jwt) return false;
+      return await new Promise((resolve) => {
+        let ws; try { ws = new WebSocket(cfg.wsUrl, ['blak.v1', 'blak.jwt.' + jwt]); } catch (e) { return resolve(false); }
+        gws = ws; gNextPlay = 0; gAiSpeaking = false; gCap = ''; let settled = false;
+        const done = (v) => { if (settled) return; settled = true; resolve(v); };
+        const to = setTimeout(() => { if (!settled) { try { ws.close(); } catch (e) {} done(false); } }, 9000);
+        const langSel = (callLang && callLang.value && callLang.value !== 'auto') ? ('\nThe user picked ' + callLang.value + ' for this call — speak that language.') : '';
+        ws.onopen = () => { setCall('', 'connecting…'); ws.send(JSON.stringify({ setup: {
+          model: cfg.model,
+          generationConfig: { responseModalities: ['AUDIO'], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: cfg.voice || 'Aoede' } } } },
+          systemInstruction: { parts: [{ text: (cfg.instructions || '') + langSel }] },
+          inputAudioTranscription: {}, outputAudioTranscription: {},
+        } })); };
+        const onObj = (o) => { if (o && o.setupComplete && !settled) { clearTimeout(to); liveMode = true; gStartMic(); setCall('listening', 'listening… just talk'); done(true); } gHandle(o); };
+        ws.onmessage = (ev) => { if (typeof ev.data === 'string') { try { onObj(JSON.parse(ev.data)); } catch (e) {} } else if (ev.data && ev.data.text) { ev.data.text().then((t) => { try { onObj(JSON.parse(t)); } catch (e) {} }); } };
+        ws.onerror = () => { clearTimeout(to); done(false); };
+        ws.onclose = (e) => { clearTimeout(to); if (!settled) done(false); else if (liveMode && callState !== 'idle') { liveMode = false; setCall('', e.reason ? ('call ended — ' + e.reason) : 'call ended'); } };
+      });
+    }
+
     async function openCall() {
-      callOv.hidden = false; callCap.innerHTML = ''; muted = false; callMic.classList.remove('muted');
+      callOv.hidden = false; callCap.innerHTML = ''; muted = false; callMic.classList.remove('muted'); liveMode = false;
       try { micStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } }); }
       catch (e) { setCall('', 'mic blocked — allow microphone access'); return; }
       try { actx = actx || new (window.AudioContext || window.webkitAudioContext)(); if (actx.state === 'suspended') await actx.resume(); } catch (e) {}
+      callState = 'listening'; setCall('', 'connecting…');
+      if (await geminiLiveTry()) return;   // realtime Gemini Live running
+      // Fallback — turn-based cascade (Whisper STT → LLM → Sarvam TTS).
       const src = actx.createMediaStreamSource(micStream);
       analyser = actx.createAnalyser(); analyser.fftSize = 1024; src.connect(analyser);
       startListening(); vadLoop();
     }
     function endCall() {
-      callState = 'idle';
+      callState = 'idle'; liveMode = false;
+      if (gws) { try { gws.close(); } catch (e) {} gws = null; }
+      if (gproc) { try { gproc.disconnect(); } catch (e) {} gproc = null; }
+      if (gsrcNode) { try { gsrcNode.stop(); } catch (e) {} gsrcNode = null; }
       if (vadTimer) { clearTimeout(vadTimer); vadTimer = null; }
       if (mrec && mrec.state !== 'inactive') { try { mrec.stop(); } catch (e) {} }
       if (callSrc) { try { callSrc.stop(); } catch (e) {} callSrc = null; }
@@ -583,6 +655,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
     if (callEnd) callEnd.addEventListener('click', endCall);
     if (callMic) callMic.addEventListener('click', () => {   // mute / unmute
       muted = !muted; callMic.classList.toggle('muted', muted);
+      if (liveMode) { setCall(muted ? '' : 'listening', muted ? 'muted — tap mic to resume' : 'listening… just talk'); return; }
       if (muted) { if (mrec && mrec.state !== 'inactive') { try { mrec.stop(); } catch (e) {} } if (callSrc) { try { callSrc.stop(); } catch (e) {} } }
       startListening();
     });
