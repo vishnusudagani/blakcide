@@ -617,8 +617,17 @@ import AppLayout from '../../layouts/AppLayout.astro';
         saveIndex([{ id, title: titleOf(Array.isArray(legacy) ? legacy : []), ts: Date.now() }]);
         idx = loadIndex();
       }
-      loadConvo(idx[0].id);
+      // Home deep links: ?c=<id> opens that past chat; ?q=<text> prefills the composer.
+      let params; try { params = new URLSearchParams(location.search); } catch (e) { params = null; }
+      const want = params && params.get('c');
+      const startId = (want && idx.some((c) => c.id === want)) ? want : idx[0].id;
+      loadConvo(startId);
       save();
+      try {
+        const q = params && params.get('q');
+        if (q) { input.value = q; autogrow(); input.focus(); }   // they tap send (no auto-fire)
+        if (params && (q || want)) history.replaceState(null, '', location.pathname);
+      } catch (e) {}
       maybeProactiveOpener();
     })();
   </script>

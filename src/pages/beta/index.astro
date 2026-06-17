@@ -1,99 +1,254 @@
 ---
 import AppLayout from '../../layouts/AppLayout.astro';
 
-const pillars = [
-  { id: 'blak',    href: '/beta/blak/',    name: 'Blak',    c: 'coral', tag: 'your AI friend',    line: 'Here before you ask. Text it anything.', snip: '“Your 4pm shifted — want me to move the run to morning?”' },
-  { id: 'persona', href: '/beta/persona/', name: 'Persona', c: 'lav',   soon: true, tag: 'your digital self', line: 'A you that thinks. And anyone you build.', snip: '“Hype me before the pitch.” → “Walk in like it’s yours.”' },
-  { id: 'minit',   href: '/beta/minit/',   name: 'Minit',   c: 'mint',  tag: 'real people',       line: 'A real, friendly person in about a minute.', snip: 'Anonymous by default · someone real, now' },
-  { id: 'nexus',   href: '/beta/nexus/',   name: 'Nexus',   c: 'aqua',  tag: 'your community',    line: 'The few who genuinely resonate with you.', snip: 'Starting Over · 840 here · “day 1, terrified, here anyway.”' },
-];
+// Home — an app-grade "Today" for Blaksyd: a conversational Blak core (talk + your
+// real recent chats) above rich, real content modules for your people & places.
+// Conversational (Pi/Claude) × content-social (Discord/Spotify). No abstract shapes.
+// Honest signals only — availability, not fabricated counts.
+const tribes = ['Founders Who Overthink', 'Starting Over', 'Made It Through Today'];
+const starters = ["I'm overwhelmed", 'Plan my day', 'Help me focus', 'Just talk'];
 ---
 <AppLayout active="home" title="Home">
-  <div class="ap-page home">
-    <p class="ap-kicker" id="greet">your world · beta</p>
-    <h1 class="ap-h1">Welcome in. <span class="home-accent">It revolves around you.</span></h1>
-    <p class="ap-sub">Four ways Blaksyd shows up — pick where to begin. <span class="home-soft">(Beta: the rooms are taking shape; tap in to look around.)</span></p>
+  <div class="ap-page hx">
+    <header class="hx-top">
+      <p class="ap-kicker" id="hx-kick">your world · beta</p>
+      <h1 class="hx-h1">Good afternoon<span id="hx-name"></span>.</h1>
+    </header>
 
-    <div class="home-grid">
-      {pillars.map((p) => (
-        <a href={p.href} class={`home-card ap-card c-${p.c}`}>
-          <div class="home-card-top">
-            <span class="home-orb"></span>
-            <span class="home-who"><b>{p.name}</b><i>{p.tag}</i></span>
-            <span class={`home-badge ${p.soon ? 'soon' : 'live'}`}>{p.soon ? 'Soon' : 'Live'}</span>
-            <span class="home-go" aria-hidden="true">→</span>
-          </div>
-          <p class="home-line">{p.line}</p>
-          <p class="home-snip">{p.snip}</p>
-        </a>
-      ))}
-    </div>
-
-    <div class="home-blak ap-card">
-      <span class="home-blak-orb"></span>
-      <div>
-        <p class="home-blak-k">Blak, just now</p>
-        <p class="home-blak-msg">Good to see you. Want me to catch you up, or should we just talk?</p>
+    <!-- ── Blak: the conversational core ── -->
+    <section class="hx-blak ap-card">
+      <div class="hx-blak-head">
+        <span class="hx-blak-orb" aria-hidden="true"></span>
+        <span class="hx-blak-id"><b>Blak</b><i><span class="hx-dot"></span>always on · knows you</i></span>
+        <a class="hx-blak-open" href="/beta/blak/">Open<span aria-hidden="true"> →</span></a>
       </div>
-      <a href="/beta/blak/" class="home-blak-cta">Open Blak</a>
+      <p class="hx-blak-say" id="hx-blak-say">What's on your mind? I'm right here.</p>
+      <form class="hx-ask" action="/beta/blak/" method="get">
+        <input type="text" id="hx-ask-input" name="q" autocomplete="off" enterkeyhint="send" placeholder="Message Blak…" aria-label="Message Blak" />
+        <button type="submit" aria-label="Send to Blak">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </button>
+      </form>
+
+      <!-- real recent chats (filled from localStorage); falls back to starters -->
+      <div class="hx-recent" id="hx-recent" hidden>
+        <p class="hx-mini">Continue</p>
+        <div class="hx-recent-list" id="hx-recent-list"></div>
+      </div>
+      <div class="hx-chips" id="hx-chips">
+        {starters.map((s) => <a class="hx-chip" href={`/beta/blak/?q=${encodeURIComponent(s)}`}>{s}</a>)}
+      </div>
+    </section>
+
+    <!-- ── Your people & places: real content modules ── -->
+    <p class="hx-sec">Your people &amp; places</p>
+    <div class="hx-mods">
+      <a class="hx-mod c-mint" href="/beta/minit/">
+        <span class="hx-faces" aria-hidden="true"><i></i><i></i><i></i></span>
+        <span class="hx-mod-body">
+          <span class="hx-mod-top"><b>Minit</b><span class="hx-badge live"><i class="hx-bdot"></i>real people</span></span>
+          <span class="hx-mod-line">Someone friendly, usually in about a minute — anonymous by default.</span>
+        </span>
+        <span class="hx-mod-go">Talk now<span class="hx-arr" aria-hidden="true">→</span></span>
+      </a>
+
+      <a class="hx-mod c-aqua" href="/beta/nexus/">
+        <span class="hx-mod-ic" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v3M12 18v3M3 12h3M18 12h3M6 6l2 2M16 16l2 2M18 6l-2 2M8 16l-2 2"/><circle cx="12" cy="12" r="3"/></svg>
+        </span>
+        <span class="hx-mod-body">
+          <span class="hx-mod-top"><b>Nexus</b><span class="hx-badge live"><i class="hx-bdot"></i>rooms &amp; tribes</span></span>
+          <span class="hx-mod-line">Drop into a live room, or settle into your tribe.</span>
+          <span class="hx-tags">{tribes.map((t) => <span class="hx-tag">{t}</span>)}</span>
+        </span>
+        <span class="hx-mod-go">Step in<span class="hx-arr" aria-hidden="true">→</span></span>
+      </a>
+
+      <a class="hx-mod c-lav is-soon" href="/beta/persona/">
+        <span class="hx-mod-ic" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M5 20a7 7 0 0 1 14 0"/></svg>
+        </span>
+        <span class="hx-mod-body">
+          <span class="hx-mod-top"><b>Persona</b><span class="hx-badge soon">Soon</span></span>
+          <span class="hx-mod-line">Your digital self — and any character you build.</span>
+        </span>
+        <span class="hx-mod-go">Preview<span class="hx-arr" aria-hidden="true">→</span></span>
+      </a>
     </div>
   </div>
 
   <style>
-    .home-accent { font-family: var(--font-serif); font-style: italic; font-weight: 400;
-      background: var(--accent-grad); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
-    .home-soft { color: var(--ink-faint); }
-    .home-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: clamp(1.4rem, 4vh, 2.2rem); }
-    @media (max-width: 700px) { .home-grid { grid-template-columns: 1fr; } }
+    .hx { max-width: 680px; }
+    .hx-top { margin-bottom: clamp(1.1rem, 3vh, 1.6rem); }
+    .hx-kick { margin-bottom: .45rem; }
+    .hx-h1 { font-family: var(--font-display); font-weight: 600; font-size: clamp(1.55rem, 1.1rem + 1.8vw, 2.1rem); letter-spacing: -.02em; margin: 0; }
+    #hx-name { color: var(--ink); }
 
-    .home-card { display: block; padding: 1.2rem 1.3rem 1.3rem; transition: transform .25s var(--ease-spring), border-color .2s; }
-    .home-card:hover { transform: translateY(-3px); }
-    .c-coral:hover { border-color: rgba(255,107,157,.45); } .c-lav:hover { border-color: rgba(201,184,255,.45); }
-    .c-mint:hover { border-color: rgba(106,211,184,.45); } .c-aqua:hover { border-color: rgba(91,192,255,.45); }
-    .home-card-top { display: flex; align-items: center; gap: .7rem; }
-    .home-orb { width: 34px; height: 34px; border-radius: 50%; flex: none; }
-    .c-coral .home-orb { background: radial-gradient(circle at 35% 30%, #fff, var(--coral)); box-shadow: 0 0 14px var(--coral); }
-    .c-lav .home-orb   { background: radial-gradient(circle at 35% 30%, #fff, var(--lavender)); box-shadow: 0 0 14px var(--lavender); }
-    .c-mint .home-orb  { background: radial-gradient(circle at 35% 30%, #fff, var(--mint-deep)); box-shadow: 0 0 14px var(--mint-deep); }
-    .c-aqua .home-orb  { background: radial-gradient(circle at 35% 30%, #fff, var(--aqua)); box-shadow: 0 0 14px var(--aqua); }
-    .home-who { display: flex; flex-direction: column; line-height: 1.2; }
-    .home-who b { font-size: var(--fs-xl); font-weight: 650; }
-    .home-who i { font-style: normal; font-size: var(--fs-sm); color: var(--ink-faint); }
-    .home-go { margin-left: .5rem; font-size: 1.3rem; color: var(--ink-faint); }
-    .home-badge { margin-left: auto; align-self: center; font-family: var(--font-mono); font-size: var(--fs-3xs); letter-spacing: .08em; text-transform: uppercase; padding: .2rem .5rem; border-radius: 999px; white-space: nowrap; }
-    .home-badge.soon { color: var(--gold); background: rgba(255, 210, 122, .12); border: 1px solid rgba(255, 210, 122, .25); }
-    .home-badge.live { color: var(--mint); background: rgba(106, 211, 184, .14); border: 1px solid rgba(106, 211, 184, .28); }
-    html[data-theme="light"] .home-badge.soon { color: var(--gold-ink); border-color: rgba(138, 100, 16, .3); }
-    html[data-theme="light"] .home-badge.live { color: var(--mint-ink); border-color: rgba(30, 125, 98, .3); }
-    .home-line { margin: .9rem 0 .5rem; font-size: var(--fs-lg); color: var(--ink); }
-    .home-snip { margin: 0; font-size: var(--fs-sm); color: var(--ink-soft); padding: .55rem .7rem; border-radius: var(--r-sm); background: var(--surface); border: 1px solid var(--line); }
+    /* ── Blak conversational card ── */
+    .hx-blak { padding: clamp(1.1rem, 3vw, 1.4rem); }
+    .hx-blak-head { display: flex; align-items: center; gap: .65rem; }
+    .hx-blak-orb { width: 34px; height: 34px; border-radius: 50%; flex: none; background: var(--cta-grad); box-shadow: 0 0 16px rgba(255,107,157,.45); animation: hx-breathe 5s ease-in-out infinite; }
+    @keyframes hx-breathe { 0%,100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+    .hx-blak-id { display: flex; flex-direction: column; line-height: 1.2; }
+    .hx-blak-id b { font-size: var(--fs-lg); font-weight: 650; }
+    .hx-blak-id i { font-style: normal; font-size: var(--fs-xs); color: var(--ink-faint); display: inline-flex; align-items: center; gap: .35rem; }
+    .hx-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--mint-deep); box-shadow: 0 0 7px var(--mint-deep); animation: hx-pulse 2.4s ease-in-out infinite; }
+    @keyframes hx-pulse { 0%,100% { opacity: 1; } 50% { opacity: .4; } }
+    .hx-blak-open { margin-left: auto; flex: none; font-size: var(--fs-sm); font-weight: 600; color: var(--coral); text-decoration: none; padding: .35rem .7rem; border-radius: var(--r-pill); transition: background .18s var(--ease-out); }
+    .hx-blak-open:hover { background: rgba(255,107,157,.1); }
+    html[data-theme="light"] .hx-blak-open { color: var(--coral-ink); }
+    .hx-blak-say { margin: 1rem 0 .9rem; font-size: var(--fs-xl); line-height: 1.4; color: var(--ink); }
 
-    .home-blak { display: flex; align-items: center; gap: 1rem; margin-top: 1rem; padding: 1rem 1.2rem; }
-    .home-blak-orb { width: 30px; height: 30px; border-radius: 50%; flex: none; background: var(--cta-grad); box-shadow: 0 0 14px rgba(255,107,157,.5); }
-    .home-blak-k { margin: 0 0 .15rem; font-family: var(--font-mono); font-size: var(--fs-3xs); letter-spacing: .08em; text-transform: uppercase; color: var(--coral); }
-    .home-blak-msg { margin: 0; font-size: var(--fs-md); color: var(--ink); }
-    .home-blak-cta { margin-left: auto; flex: none; font-size: var(--fs-md); font-weight: 600; color: var(--cta-ink); background: var(--cta); padding: .5rem 1rem; border-radius: var(--r-pill); white-space: nowrap; }
-    /* LIGHT theme: deepen accent text so it reads on cream */
-    html[data-theme="light"] .home-accent { background: linear-gradient(110deg, var(--gold-ink) 0%, var(--coral-ink) 50%, var(--lavender-ink) 95%); -webkit-background-clip: text; background-clip: text; }
-    html[data-theme="light"] .home-blak-k { color: var(--coral-ink); }
+    .hx-ask { display: flex; align-items: center; gap: .5rem; padding: .35rem .35rem .35rem 1rem; border-radius: var(--r-pill); background: var(--surface); border: 1px solid var(--line-strong); transition: border-color .18s var(--ease-out), box-shadow .18s var(--ease-out); }
+    .hx-ask:focus-within { border-color: var(--coral); box-shadow: 0 0 0 3px rgba(255,107,157,.14); }
+    .hx-ask input { flex: 1; min-width: 0; border: 0; background: none; color: var(--ink); font: inherit; font-size: var(--fs-md); padding: .55rem 0; }
+    .hx-ask input::placeholder { color: var(--ink-faint); }
+    .hx-ask input:focus { outline: none; }
+    .hx-ask button { flex: none; width: 40px; height: 40px; border-radius: 50%; border: 0; cursor: pointer; color: var(--cta-ink); background: var(--cta); box-shadow: var(--shadow-cta); display: grid; place-items: center; transition: transform .16s var(--ease-out); }
+    .hx-ask button:hover { transform: scale(1.06); }
+    .hx-ask button svg { width: 18px; height: 18px; }
+
+    .hx-mini { font-family: var(--font-mono); font-size: var(--fs-2xs); letter-spacing: .1em; text-transform: uppercase; color: var(--ink-faint); margin: 1.1rem 0 .5rem; }
+    .hx-recent[hidden] { display: none; }
+    .hx-recent-list { display: flex; flex-direction: column; gap: .4rem; }
+    .hx-rthread { display: flex; align-items: center; gap: .6rem; padding: .55rem .7rem; border-radius: var(--r-md); background: var(--surface); border: 1px solid var(--line); text-decoration: none; color: inherit; transition: border-color .18s var(--ease-out), transform .18s var(--ease-out); }
+    .hx-rthread:hover { border-color: rgba(255,107,157,.4); transform: translateX(2px); }
+    .hx-rthread-orb { width: 22px; height: 22px; border-radius: 50%; flex: none; background: var(--cta-grad); opacity: .85; }
+    .hx-rthread b { font-size: var(--fs-sm); font-weight: 550; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; min-width: 0; }
+    .hx-rthread time { font-size: var(--fs-2xs); color: var(--ink-faint); flex: none; font-family: var(--font-mono); }
+
+    .hx-chips { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: 1rem; }
+    .hx-chips[hidden] { display: none; }
+    .hx-chip { font-size: var(--fs-sm); color: var(--ink-soft); text-decoration: none; background: var(--surface); border: 1px solid var(--line-strong); border-radius: var(--r-pill); padding: .4rem .8rem; transition: color .18s var(--ease-out), border-color .18s var(--ease-out), transform .18s var(--ease-out); }
+    .hx-chip:hover { color: var(--ink); border-color: var(--coral); transform: translateY(-1px); }
+
+    /* ── worlds (content modules) ── */
+    .hx-sec { font-family: var(--font-mono); font-size: var(--fs-2xs); letter-spacing: .12em; text-transform: uppercase; color: var(--ink-faint); margin: clamp(1.5rem, 4vh, 2rem) 0 .8rem; }
+    .hx-mods { display: flex; flex-direction: column; gap: .7rem; }
+    .hx-mod {
+      display: flex; align-items: center; gap: .9rem; padding: .9rem 1rem; text-decoration: none; color: inherit;
+      background: var(--glass-strong); border: 1px solid var(--line-strong); border-radius: var(--r-lg); backdrop-filter: blur(12px);
+      transition: transform .2s var(--ease-out), border-color .2s var(--ease-out), background .2s var(--ease-out);
+    }
+    .hx-mod:hover { transform: translateY(-2px); background: var(--surface-strong); }
+    .c-mint:hover { border-color: rgba(106,211,184,.45); }
+    .c-aqua:hover { border-color: rgba(91,192,255,.45); }
+    .c-lav:hover  { border-color: rgba(201,184,255,.45); }
+
+    .hx-mod-ic { width: 46px; height: 46px; border-radius: 14px; flex: none; display: grid; place-items: center; }
+    .c-aqua .hx-mod-ic { color: var(--aqua); background: rgba(91,192,255,.12); border: 1px solid rgba(91,192,255,.22); }
+    .c-lav .hx-mod-ic  { color: var(--lavender); background: rgba(201,184,255,.12); border: 1px solid rgba(201,184,255,.22); }
+    .hx-mod-ic svg { width: 22px; height: 22px; }
+    html[data-theme="light"] .c-aqua .hx-mod-ic { color: var(--aqua-ink); }
+    html[data-theme="light"] .c-lav .hx-mod-ic  { color: var(--lavender-ink); }
+    .is-soon .hx-mod-ic { opacity: .8; }
+
+    /* Minit avatar cluster (anonymous, representative) */
+    .hx-faces { display: inline-flex; flex: none; width: 46px; justify-content: center; }
+    .hx-faces i { width: 26px; height: 26px; border-radius: 50%; border: 2px solid var(--bg); margin-left: -10px; box-shadow: inset 0 1px 2px rgba(255,255,255,.3); }
+    .hx-faces i:first-child { margin-left: 0; }
+    .hx-faces i:nth-child(1) { background: linear-gradient(135deg, var(--mint), var(--mint-deep)); }
+    .hx-faces i:nth-child(2) { background: linear-gradient(135deg, var(--aqua), #4f7fd8); }
+    .hx-faces i:nth-child(3) { background: linear-gradient(135deg, var(--gold), var(--coral)); }
+
+    .hx-mod-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: .1rem; }
+    .hx-mod-top { display: flex; align-items: center; gap: .55rem; }
+    .hx-mod-top b { font-size: var(--fs-lg); font-weight: 650; }
+    .hx-badge { display: inline-flex; align-items: center; gap: .3rem; font-family: var(--font-mono); font-size: var(--fs-3xs); letter-spacing: .04em; text-transform: uppercase; padding: .15rem .45rem; border-radius: 999px; }
+    .hx-badge.live { color: var(--mint); background: rgba(106,211,184,.12); border: 1px solid rgba(106,211,184,.24); }
+    .hx-badge.soon { color: var(--gold); background: rgba(255,210,122,.12); border: 1px solid rgba(255,210,122,.25); }
+    .hx-bdot { width: 5px; height: 5px; border-radius: 50%; background: var(--mint); box-shadow: 0 0 6px var(--mint); animation: hx-pulse 2.4s ease-in-out infinite; }
+    html[data-theme="light"] .hx-badge.live { color: var(--mint-ink); border-color: rgba(30,125,98,.3); }
+    html[data-theme="light"] .hx-badge.soon { color: var(--gold-ink); border-color: rgba(138,100,16,.3); }
+    .hx-mod-line { font-size: var(--fs-sm); color: var(--ink-soft); line-height: 1.45; }
+    .hx-tags { display: flex; flex-wrap: wrap; gap: .35rem; margin-top: .45rem; }
+    .hx-tag { font-size: var(--fs-2xs); color: var(--ink-faint); background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-pill); padding: .15rem .5rem; white-space: nowrap; }
+    .hx-mod-go { flex: none; align-self: center; display: inline-flex; align-items: center; gap: .3rem; font-size: var(--fs-sm); font-weight: 600; color: var(--ink-soft); white-space: nowrap; transition: color .2s var(--ease-out); }
+    .hx-arr { transition: transform .2s var(--ease-out); }
+    .hx-mod:hover .hx-mod-go { color: var(--ink); }
+    .hx-mod:hover .hx-arr { transform: translateX(3px); }
+    .is-soon .hx-mod-go { color: var(--ink-faint); }
+    @media (max-width: 560px) {
+      .hx-mod { gap: .75rem; padding: .85rem; }
+      .hx-mod-go .hx-arr { display: none; }
+      .hx-mod-go { font-size: 0; }            /* arrow-only on phones to save width */
+      .hx-mod-go::after { content: '→'; font-size: var(--fs-lg); }
+      .hx-tags { display: none; }
+    }
+
+    /* calm entrance */
+    .hx-top, .hx-blak, .hx-sec, .hx-mod { animation: hx-rise .5s var(--ease-out) both; }
+    .hx-blak { animation-delay: .06s; } .hx-sec { animation-delay: .14s; }
+    .hx-mod:nth-child(1) { animation-delay: .18s; } .hx-mod:nth-child(2) { animation-delay: .25s; } .hx-mod:nth-child(3) { animation-delay: .32s; }
+    @keyframes hx-rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+    @media (prefers-reduced-motion: reduce) {
+      .hx-top, .hx-blak, .hx-sec, .hx-mod, .hx-blak-orb, .hx-dot, .hx-bdot { animation: none !important; opacity: 1 !important; transform: none !important; }
+    }
   </style>
 
   <script is:inline>
     (function () {
       var h = new Date().getHours();
-      var g = h < 12 ? 'good morning' : h < 17 ? 'good afternoon' : 'good evening';
-      var el = document.getElementById('greet'); if (el) el.textContent = g + ' · beta';
+      var g = h < 5 ? 'Still up' : h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : h < 21 ? 'Good evening' : 'Winding down';
+      var k = document.getElementById('hx-kick'); if (k) k.textContent = g.toLowerCase() + ' · your world';
+      var hEl = document.querySelector('.hx-h1'); var nm = document.getElementById('hx-name');
+      if (hEl && nm) { hEl.firstChild.textContent = g; }
+      // a softly varied opener so the home doesn't feel canned
+      var lines = [
+        "What's on your mind? I'm right here.",
+        "Good to see you. Where should we start?",
+        "I'm caught up on your day — want to talk, or get things moving?",
+        "Here whenever you are. What's going on?"
+      ];
+      var say = document.getElementById('hx-blak-say'); if (say) say.textContent = lines[h % lines.length];
     })();
   </script>
+
   <script>
-    // Listeners get sent straight to their console after login.
     import { supabase } from '../../lib/supabaseClient';
+    const fmt = (ts) => {
+      const d = (Date.now() - ts) / 1000;
+      if (d < 90) return 'just now';
+      if (d < 3600) return Math.round(d / 60) + 'm';
+      if (d < 86400) return Math.round(d / 3600) + 'h';
+      return Math.round(d / 86400) + 'd';
+    };
+    function showRecent(userId) {
+      try {
+        const idx = JSON.parse(localStorage.getItem('blak_convos_' + userId) || '[]') || [];
+        const real = idx.filter((c) => c && c.title && c.title !== 'New chat').slice(0, 3);
+        if (!real.length) return;
+        const wrap = document.getElementById('hx-recent');
+        const list = document.getElementById('hx-recent-list');
+        const chips = document.getElementById('hx-chips');
+        if (!wrap || !list) return;
+        list.innerHTML = '';
+        real.forEach((c) => {
+          const a = document.createElement('a');
+          a.className = 'hx-rthread';
+          a.href = '/beta/blak/?c=' + encodeURIComponent(c.id);
+          a.innerHTML = '<span class="hx-rthread-orb"></span><b></b><time></time>';
+          a.querySelector('b').textContent = c.title;
+          a.querySelector('time').textContent = c.ts ? fmt(c.ts) : '';
+          list.appendChild(a);
+        });
+        wrap.hidden = false;
+        if (chips) chips.hidden = true;
+      } catch (e) {}
+    }
     (async () => {
+      // recent chats render for the anon store immediately; refine once we know the user
+      showRecent('anon');
       if (!supabase) return;
       try {
         const { data: { session } } = await supabase.auth.getSession();
         if (!session) return;
-        const { data: lp } = await supabase.from('listeners').select('id').eq('user_id', session.user.id).maybeSingle();
+        const u = session.user || {};
+        const raw = (u.user_metadata && (u.user_metadata.full_name || u.user_metadata.name)) || (u.email ? u.email.split('@')[0] : '');
+        const first = raw ? String(raw).split(/[\s._-]+/)[0] : '';
+        if (first) { const nm = document.getElementById('hx-name'); if (nm) nm.textContent = ', ' + first.charAt(0).toUpperCase() + first.slice(1); }
+        showRecent(u.id);
+        const { data: lp } = await supabase.from('listeners').select('id').eq('user_id', u.id).maybeSingle();
         if (lp) window.location.replace('/beta/listen/');
       } catch (e) {}
     })();
