@@ -101,6 +101,11 @@
   status = 200
 
 [[redirects]]
+  from = "/api/gemini-live-session"
+  to = "/.netlify/functions/gemini-live-session"
+  status = 200
+
+[[redirects]]
   from = "/api/ice-servers"
   to = "/.netlify/functions/ice-servers"
   status = 200
