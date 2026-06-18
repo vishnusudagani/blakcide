@@ -289,41 +289,70 @@ import AppLayout from '../../layouts/AppLayout.astro';
           historyBtn = $('bx-history'), convoDrawer = $('bx-convos'),
           convoList = $('bx-cv-list'), cvNew = $('bx-cv-new'), cvScrim = $('bx-cv-scrim');
 
-    const GREETING = "Hey — good to see you. What's going on for you right now?";
     const MAX_TURNS = 24; // how many recent messages to send as context
 
-    let history = [];          // [{role, content, ts}]
-    let userId = 'anon';
-    let activeId = 'default';
-    let storeKey = 'blak_chat_anon';   // = convoKey(activeId)
+    let history = [];          // [{role, content, ts, id?}] — current thread, in memory
+    let userId = null;
+    let activeChatId = null;   // uuid of the open chat (server-persisted in `chats`)
     let sending = false;
     let controller = null;
     let atBottom = true;
+    let titled = {};           // chatId -> true once auto-titled
 
-    // ── Conversations (multi-chat history, per-user, in localStorage) ────
-    const idxKey   = () => 'blak_convos_' + userId;
-    const convoKey = (id) => 'blak_chat_' + userId + '_' + id;
-    const newId    = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-    const loadIndex = () => { try { return JSON.parse(localStorage.getItem(idxKey()) || '[]') || []; } catch (e) { return []; } };
-    const saveIndex = (arr) => { try { localStorage.setItem(idxKey(), JSON.stringify(arr.slice(0, 100))); } catch (e) {} };
-    const titleOf   = (hist) => { const u = (hist || []).find(m => m.role === 'user'); return u ? u.content.slice(0, 42) : 'New chat'; };
-    function touchIndex() {
-      const arr = loadIndex();
-      const existing = arr.find(c => c.id === activeId);
-      const rest = arr.filter(c => c.id !== activeId);
-      // Preserve a real title once set (first-message fallback, then upgraded to
-      // the smart LLM title); only (re)derive while it's still "New chat".
-      const title = (existing && existing.title && existing.title !== 'New chat') ? existing.title : titleOf(history);
-      rest.unshift({ id: activeId, title, ts: Date.now() });
-      saveIndex(rest);
+    // ── Server-persisted threads (chats + messages tables, owner-only RLS) ──
+    // The browser client reads/writes the signed-in user's own rows directly —
+    // no localStorage — so threads are durable, real, and cross-device.
+    const titleOf = (hist) => { const u = (hist || []).find(m => m.role === 'user'); return u ? u.content.slice(0, 42) : 'New chat'; };
+
+    async function dbListChats() {
+      if (!supabase || !userId) return [];
+      try {
+        const { data } = await supabase.from('chats').select('id,title,created_at')
+          .eq('user_id', userId).order('created_at', { ascending: false }).limit(100);
+        return data || [];
+      } catch (e) { return []; }
     }
-    // Smart thread name: after the first exchange, ask the free Groq title
-    // endpoint for a 2–5 word name in the user's language; overwrite the index.
-    let titledConvos = {};
+    async function dbCreateChat(title) {
+      if (!supabase || !userId) return null;
+      try {
+        const { data } = await supabase.from('chats')
+          .insert({ user_id: userId, title: title || 'New chat' }).select('id,title,created_at').single();
+        return data || null;
+      } catch (e) { return null; }
+    }
+    async function dbLoadMessages(chatId) {
+      try {
+        const { data } = await supabase.from('messages')
+          .select('id,role,content,created_at,media_url,media_type')
+          .eq('chat_id', chatId).order('created_at', { ascending: true }).limit(500);
+        return (data || []).map(m => ({
+          id: m.id, role: m.role === 'user' ? 'user' : 'assistant',
+          content: m.content || '', ts: m.created_at ? new Date(m.created_at).getTime() : Date.now(),
+          media_url: m.media_url || null, media_type: m.media_type || null,
+        }));
+      } catch (e) { return []; }
+    }
+    async function dbInsertMessage(role, content, media) {
+      if (!supabase || !activeChatId) return null;
+      const row = { chat_id: activeChatId, role, content: content || (media ? '📎' : '') };
+      if (role === 'user') row.sender_id = userId;
+      if (media) { row.media_url = media.url || null; row.media_type = media.type || null; }
+      try { const { data } = await supabase.from('messages').insert(row).select('id').single(); return data ? data.id : null; }
+      catch (e) { return null; }
+    }
+    async function dbDeleteMessage(id) { if (supabase && id) { try { await supabase.from('messages').delete().eq('id', id); } catch (e) {} } }
+    async function dbDeleteChat(chatId) {
+      if (!supabase) return;
+      try { await supabase.from('messages').delete().eq('chat_id', chatId); } catch (e) {}
+      try { await supabase.from('chats').delete().eq('id', chatId); } catch (e) {}
+    }
+    async function dbSetTitle(chatId, title) { if (supabase && chatId && title) { try { await supabase.from('chats').update({ title }).eq('id', chatId); } catch (e) {} } }
+
+    // Smart thread name after the first user turn (free Groq title endpoint).
     async function maybeTitleConvo() {
-      if (titledConvos[activeId]) return;
-      if (history.filter(m => m.role === 'user').length !== 1) return; // only after the first user turn
-      const id = activeId; titledConvos[id] = true;
+      if (!activeChatId || titled[activeChatId]) return;
+      if (history.filter(m => m.role === 'user').length !== 1) return;
+      const id = activeChatId; titled[id] = true;
       const jwt = await getToken(); if (!jwt) return;
       try {
         const r = await fetch('/api/blaksyd/symp/title', {
@@ -332,16 +361,11 @@ import AppLayout from '../../layouts/AppLayout.astro';
         });
         const j = await r.json().catch(() => null);
         const t = j && j.data && j.data.title;
-        if (t) {
-          const rest = loadIndex().filter(c => c.id !== id);
-          rest.unshift({ id, title: t, ts: Date.now() });
-          saveIndex(rest);
-        }
-      } catch (e) { /* keep the first-message fallback title */ }
+        if (t) await dbSetTitle(id, t);
+      } catch (e) { /* the chat keeps its first-message title */ }
     }
 
     const fmtTime = (ts) => { try { return new Date(ts).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }); } catch { return ''; } };
-    const save = () => { try { localStorage.setItem(storeKey, JSON.stringify(history.slice(-100))); touchIndex(); } catch (e) {} };
 
     function nearBottom() { return stream.scrollHeight - stream.scrollTop - stream.clientHeight < 80; }
     function scrollToBottom(force) { if (force || atBottom) stream.scrollTop = stream.scrollHeight; }
@@ -492,13 +516,15 @@ import AppLayout from '../../layouts/AppLayout.astro';
         acc = acc.trim();
         typing.bub.textContent = acc || "Mmm — I didn't catch that. Say it once more?";
         stamp(typing);
-        history.push({ role: 'assistant', content: acc, ts: typing.ts }); save();
+        const am = { role: 'assistant', content: acc, ts: typing.ts };
+        history.push(am);
+        dbInsertMessage('assistant', acc).then((id) => { if (id) am.id = id; });
         maybeTitleConvo();
         setBusy(false);
       } catch (e) {
         if (e.name === 'AbortError') {
           const partial = (typing.bub.textContent || '').trim();
-          if (partial) { stamp(typing); history.push({ role: 'assistant', content: partial, ts: typing.ts }); save(); }
+          if (partial) { stamp(typing); const am = { role: 'assistant', content: partial, ts: typing.ts }; history.push(am); dbInsertMessage('assistant', partial).then((id) => { if (id) am.id = id; }); }
           else typing.row.remove();
           setBusy(false);
         } else {
@@ -512,19 +538,21 @@ import AppLayout from '../../layouts/AppLayout.astro';
     async function send(text) {
       text = (text || '').trim();
       if (!text || sending) return;
-      history.push({ role: 'user', content: text, ts: Date.now() });
-      addRow('me', text); save();
+      if (!activeChatId) { const c = await dbCreateChat(text.slice(0, 42)); if (c) activeChatId = c.id; }
+      const um = { role: 'user', content: text, ts: Date.now() };
+      history.push(um);
+      addRow('me', text);
       updateChips();
+      dbInsertMessage('user', text).then((id) => { if (id) um.id = id; });
       await runTurn(text);
     }
 
     function regenerate() {
       if (sending || history.length < 2) return;
-      // drop the last assistant turn (history + DOM) and re-ask the prior user msg
-      if (history[history.length - 1].role === 'assistant') history.pop();
+      // drop the last assistant turn (history + DOM + server) and re-ask the prior user msg
+      if (history[history.length - 1].role === 'assistant') { const dropped = history.pop(); dbDeleteMessage(dropped && dropped.id); }
       const lastThem = [...stream.querySelectorAll('.bx-row.them')].pop();
       if (lastThem) lastThem.remove();
-      save();
       const lastUser = [...history].reverse().find(m => m.role === 'user');
       if (lastUser) runTurn(lastUser.content);
     }
@@ -538,42 +566,44 @@ import AppLayout from '../../layouts/AppLayout.astro';
     form.addEventListener('submit', (e) => { e.preventDefault(); const v = input.value; input.value = ''; autogrow(); send(v); });
     chips.addEventListener('click', (e) => { const b = e.target.closest('.bx-chip'); if (b) send(b.getAttribute('data-msg')); });
     stopBtn.addEventListener('click', () => { if (controller) controller.abort(); });
-    clearBtn.addEventListener('click', () => {
-      if (sending && controller) controller.abort();
-      history = [{ role: 'assistant', content: GREETING, ts: Date.now() }];
-      save(); render(); updateChips(); input.focus();
-    });
+    clearBtn.addEventListener('click', () => { newConvo(); });
 
-    // ── Conversation switching + history drawer ──────────────────────────
-    function loadConvo(id) {
-      activeId = id; storeKey = convoKey(id);
-      let saved = null; try { saved = JSON.parse(localStorage.getItem(storeKey) || 'null'); } catch (e) {}
-      history = (Array.isArray(saved) && saved.length) ? saved : [{ role: 'assistant', content: GREETING, ts: Date.now() }];
+    // ── Conversation switching + history drawer (server-backed) ───────────
+    async function openChat(id) {
+      activeChatId = id;
+      history = await dbLoadMessages(id);
       render(); updateChips();
     }
-    function renderConvoList() {
-      const arr = loadIndex();
+    async function newConvo() {
+      if (sending && controller) controller.abort();
+      const c = await dbCreateChat('New chat');
+      activeChatId = c ? c.id : null;
+      history = [];
+      render(); updateChips(); closeDrawer(); input.focus();
+    }
+    async function renderConvoList() {
+      convoList.innerHTML = '<p class="bx-cv-empty">Loading…</p>';
+      const arr = await dbListChats();
       convoList.innerHTML = '';
       if (!arr.length) { convoList.innerHTML = '<p class="bx-cv-empty">No chats yet</p>'; return; }
       for (const c of arr) {
         const row = document.createElement('div');
-        row.className = 'bx-cv-item' + (c.id === activeId ? ' on' : '');
+        row.className = 'bx-cv-item' + (c.id === activeChatId ? ' on' : '');
         row.innerHTML = '<button class="bx-cv-open" type="button"></button><button class="bx-cv-del" type="button" aria-label="Delete chat">✕</button>';
         row.querySelector('.bx-cv-open').textContent = c.title || 'New chat';
-        row.querySelector('.bx-cv-open').onclick = () => { if (c.id !== activeId) loadConvo(c.id); closeDrawer(); };
+        row.querySelector('.bx-cv-open').onclick = () => { if (c.id !== activeChatId) openChat(c.id); closeDrawer(); };
         row.querySelector('.bx-cv-del').onclick = (e) => { e.stopPropagation(); deleteConvo(c.id); };
         convoList.appendChild(row);
       }
     }
-    function deleteConvo(id) {
-      try { localStorage.removeItem(convoKey(id)); } catch (e) {}
-      const arr = loadIndex().filter(c => c.id !== id); saveIndex(arr);
-      if (id === activeId) { if (arr.length) loadConvo(arr[0].id); else { loadConvo(newId()); save(); } }
+    async function deleteConvo(id) {
+      await dbDeleteChat(id);
+      if (id === activeChatId) {
+        const arr = await dbListChats();
+        if (arr.length) await openChat(arr[0].id);
+        else await newConvo();
+      }
       renderConvoList();
-    }
-    function newConvo() {
-      if (sending && controller) controller.abort();
-      loadConvo(newId()); save(); closeDrawer(); input.focus();
     }
     function openDrawer() { renderConvoList(); convoDrawer.hidden = false; }
     function closeDrawer() { convoDrawer.hidden = true; }
@@ -784,8 +814,22 @@ import AppLayout from '../../layouts/AppLayout.astro';
     });
 
     // ── Proactive opener: Blak reaches out first, aware of the user ──────
+    // Fires AT MOST once/day, and only into a genuinely empty chat — so it's a
+    // welcome, not a wall you hit on every single open. The endpoint grounds it
+    // in the user's Vault + profile; if there's nothing real to say it stays a
+    // soft check-in, which we still show only once a day.
+    function proactiveGateOk() {
+      try {
+        const k = 'blak_proactive_' + userId;
+        const today = new Date().toISOString().slice(0, 10);
+        if (localStorage.getItem(k) === today) return false;
+        localStorage.setItem(k, today);
+        return true;
+      } catch (e) { return true; }
+    }
     async function maybeProactiveOpener() {
-      if (history.length > 1) return;           // only on a fresh conversation
+      if (history.length > 0 || !activeChatId) return;   // only into an empty chat
+      if (!proactiveGateOk()) return;                    // at most once per day
       const jwt = await getToken(); if (!jwt) return;
       try {
         const r = await fetch('/api/blaksyd/symp/proactive-checkin', {
@@ -794,35 +838,30 @@ import AppLayout from '../../layouts/AppLayout.astro';
         });
         const j = await r.json().catch(() => null);
         const msg = j && j.data && j.data.message;
-        if (msg && history.length <= 1) {
-          history = [{ role: 'assistant', content: msg, ts: Date.now() }];
-          save(); render(); updateChips();
+        if (msg && history.length === 0) {
+          const am = { role: 'assistant', content: msg, ts: Date.now() };
+          history = [am];
+          render(); updateChips();
+          dbInsertMessage('assistant', msg).then((id) => { if (id) am.id = id; });
         }
-      } catch (e) { /* fall back to the static greeting already shown */ }
+      } catch (e) { /* no opener — the home hero already welcomes them */ }
     }
 
-    // ── Boot: restore this user's conversation (or greet) ────────────────
+    // ── Boot: restore this user's chats from the server (or start one) ────
     (async () => {
       try { const u = (await supabase?.auth.getUser())?.data?.user; if (u?.id) userId = u.id; } catch (e) {}
-      let idx = loadIndex();
-      if (!idx.length) {
-        // First run for this user — migrate any legacy single-thread store.
-        const id = newId();
-        let legacy = null; try { legacy = JSON.parse(localStorage.getItem('blak_chat_' + userId) || 'null'); } catch (e) {}
-        if (Array.isArray(legacy) && legacy.length) { try { localStorage.setItem(convoKey(id), JSON.stringify(legacy)); } catch (e) {} }
-        saveIndex([{ id, title: titleOf(Array.isArray(legacy) ? legacy : []), ts: Date.now() }]);
-        idx = loadIndex();
-      }
-      // Home deep links: ?c=<id> opens that past chat; ?q=<text> prefills the composer.
+      if (!userId) return;   // not signed in — AppLayout's auth gate redirects to login
+      let chats = await dbListChats();
+      if (!chats.length) { const c = await dbCreateChat('New chat'); if (c) chats = [c]; }
+      // Deep links: ?c=<id> opens that chat; ?q=<text> prefills the composer.
       let params; try { params = new URLSearchParams(location.search); } catch (e) { params = null; }
       const want = params && params.get('c');
-      const startId = (want && idx.some((c) => c.id === want)) ? want : idx[0].id;
-      loadConvo(startId);
-      save();
+      const startId = (want && chats.some((c) => c.id === want)) ? want : (chats[0] && chats[0].id);
+      if (startId) await openChat(startId);
       try {
         const q = params && params.get('q');
         if (q) { input.value = q; autogrow(); input.focus(); }   // they tap send (no auto-fire)
-        if (params && (q || want)) history.replaceState(null, '', location.pathname);
+        if (params && (q || want)) window.history.replaceState(null, '', location.pathname);
       } catch (e) {}
       maybeProactiveOpener();
     })();
