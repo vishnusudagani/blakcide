@@ -6,6 +6,22 @@ Source of truth for scope: `blaksyd_minit.md`. Status legend: ✅ built & workin
 
 ---
 
+## ✅ Shipped status — 2026-06-19 (Phases 0–4 complete)
+
+Live on blaksyd.com (Supabase T2MWEB), PRs #25–#30, 7 migrations:
+- **0 Matching** · **1 Security** · **2a In-app notifications + priority callbacks** · **3 all four connect modes** (Instant · Smart Match · Listener Discovery · Reconnect + history-consent) · **4 two-sided safety** (moderation + `/beta/admin` console · seeker crisis surface · listener wellbeing/debrief · boundary nudges).
+
+**Remaining — each needs your infra/decisions (can't be completed solo) or is optional polish:**
+- **Crisis helplines** — fill `CRISIS_HELPLINES` in `src/pages/beta/minit.astro` with verified numbers.
+- **2b/2c/2d push + WhatsApp** — needs VAPID keys + a `notify-send` edge-function deploy + DB webhook + WhatsApp opt-in.
+- **5 reliability** — TURN servers (provider credentials — mobile calls fail on STUN-only) + PWA install + reconnection (authorable).
+- **6 monetization** — payment provider + the unresolved pricing decision.
+- **7 polish + admin metrics view** (authorable).
+
+The detailed gap analysis + phase plan below is the original map (historical).
+
+---
+
 ## 1. Where Minit is today
 
 **Working:** Instant matching (now queue-aware, Phase 0), realtime text chat (typing / delivered / seen), WebRTC voice, anonymous-by-default, basic Reconnect, read-only past-conversation history, post-session feeling+rating review, listener console (availability + presence heartbeat, live incoming queue, accept/decline, private notes, flag-session, stats), free-credit cap (10/day · 30/week), reaper crons, append-only analytics (`minit_events`), "set a time" scheduled pool.
