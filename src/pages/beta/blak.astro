@@ -885,6 +885,10 @@ import AppLayout from '../../layouts/AppLayout.astro';
       try { const r = await fetch('/api/gemini-live-session', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }); if (!r.ok) return false; cfg = await r.json(); }
       catch (e) { return false; }
       if (!cfg || !cfg.wsUrl) return false;
+      // Preview override: point THIS browser at a tagged Cloud Run revision
+      // (e.g. the Vertex-backend preview) without touching prod env. Dormant
+      // unless localStorage.blak_live_ws_override is set — for testing only.
+      try { const ov = localStorage.getItem('blak_live_ws_override'); if (ov) cfg.wsUrl = ov; } catch (e) {}
       const jwt = await getToken(); if (!jwt) return false;
       return await new Promise((resolve) => {
         let ws; try { ws = new WebSocket(cfg.wsUrl, ['blak.v1', 'blak.jwt.' + jwt]); } catch (e) { return resolve(false); }

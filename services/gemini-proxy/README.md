@@ -83,6 +83,31 @@ Send the bare model id (`gemini-2.5-flash`); the proxy prefixes `google/` as
 Vertex's OpenAI endpoint requires. If you get a 404 on the model, confirm it's
 enabled in your project's Model Garden.
 
+## Voice (live calls) backend — `VOICE_BACKEND`
+
+The same service also bridges Blak's realtime **voice** calls (WebSocket `/live`).
+Pick the upstream with `VOICE_BACKEND`:
+
+| Var | Values / default | Notes |
+|---|---|---|
+| `VOICE_BACKEND` | `vertex` \| `aistudio` (default: inferred — `aistudio` if `GEMINI_LIVE_API_KEY` is set, else `vertex`) | Which Live backend serves voice. |
+| `VERTEX_LIVE_MODEL` | `gemini-live-2.5-flash-native-audio` | Vertex GA native-audio model (us-central1). |
+| `AISTUDIO_LIVE_MODEL` | `gemini-2.5-flash-native-audio-preview-12-2025` | AI Studio native-audio model (needs `GEMINI_LIVE_API_KEY`). |
+
+- **Vertex** authenticates via the service account (ADC) — no key — so voice draws the GCP credits.
+- **AI Studio** authenticates with `GEMINI_LIVE_API_KEY` and bills to AI Studio.
+
+Flip the backend with an env update (no rebuild needed):
+
+```bash
+# → Vertex (credits)
+gcloud run services update blak-vertex-proxy --region us-central1 \
+  --update-env-vars VOICE_BACKEND=vertex
+# → roll back to AI Studio instantly
+gcloud run services update blak-vertex-proxy --region us-central1 \
+  --update-env-vars VOICE_BACKEND=aistudio
+```
+
 ## Security note
 
 The proxy is deployed `--allow-unauthenticated` and gated by `PROXY_SECRET`

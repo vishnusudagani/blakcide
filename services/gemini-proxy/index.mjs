@@ -31,7 +31,21 @@ const PORT    = process.env.PORT || 8080;
 // frames to/from Vertex. The Google token NEVER reaches the browser.
 const SUPABASE_URL      = process.env.SUPABASE_URL || '';
 const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || '';
-const VERTEX_LIVE_MODEL = process.env.VERTEX_LIVE_MODEL || 'gemini-live-2.5-flash';
+
+// ── Voice backend selection ──────────────────────────────────────────────────
+// VOICE_BACKEND = 'vertex' | 'aistudio'. The explicit flag wins; if it's unset
+// we infer from whether an AI Studio key is present (back-compat with the old
+// behaviour). The two backends need DIFFERENT model ids — they are NOT
+// interchangeable, so we keep both and pick by backend, which lets AI Studio
+// remain a fully-working instant fallback after the Vertex cutover:
+//   • Vertex    → gemini-live-2.5-flash-native-audio  (GA native audio, us-central1)
+//   • AI Studio → gemini-2.5-flash-native-audio-preview-12-2025
+const GEMINI_LIVE_API_KEY = process.env.GEMINI_LIVE_API_KEY || '';
+const VOICE_BACKEND = (process.env.VOICE_BACKEND || (GEMINI_LIVE_API_KEY ? 'aistudio' : 'vertex')).toLowerCase();
+const AISTUDIO = VOICE_BACKEND === 'aistudio';
+const VERTEX_LIVE_MODEL   = process.env.VERTEX_LIVE_MODEL   || 'gemini-live-2.5-flash-native-audio';
+const AISTUDIO_LIVE_MODEL = process.env.AISTUDIO_LIVE_MODEL || 'gemini-2.5-flash-native-audio-preview-12-2025';
+const LIVE_MODEL = AISTUDIO ? AISTUDIO_LIVE_MODEL : VERTEX_LIVE_MODEL;
 // Override only if Google moves the service path.
 const VERTEX_LIVE_WS_PATH = process.env.VERTEX_LIVE_WS_PATH ||
     'google.cloud.aiplatform.v1beta1.LlmBidiService/BidiGenerateContent';
@@ -125,14 +139,13 @@ const server = http.createServer(async (req, res) => {
 });
 
 // ── WebSocket bridge: /live  (Gemini Live, speech-to-speech) ────────────────
-// Two upstream modes:
-//   • AI Studio (when GEMINI_LIVE_API_KEY is set): browser <-> bridge <-> the
-//     generativelanguage Live endpoint, authed with the key (held here, never
-//     sent to the browser). This is the only path with native-audio models.
-//   • Vertex (default): browser <-> bridge <-> Vertex Live, ADC-authed.
-const GEMINI_LIVE_API_KEY = process.env.GEMINI_LIVE_API_KEY || '';
-const AISTUDIO = Boolean(GEMINI_LIVE_API_KEY);
-
+// Two upstream modes (selected by VOICE_BACKEND, configured at the top):
+//   • Vertex (preferred): browser <-> bridge <-> Vertex Live, ADC-authed (the
+//     attached service account — no key — so usage draws the GCP credits).
+//     Supports native audio (gemini-live-2.5-flash-native-audio).
+//   • AI Studio (fallback): browser <-> bridge <-> the generativelanguage Live
+//     endpoint, authed with GEMINI_LIVE_API_KEY (held here, never sent to the
+//     browser). Bills to AI Studio, not the GCP credits.
 function upstreamWsUrl() {
   if (AISTUDIO) {
     return 'wss://generativelanguage.googleapis.com/ws/'
@@ -144,8 +157,8 @@ function upstreamWsUrl() {
 }
 const modelResourcePath = () =>
   AISTUDIO
-    ? `models/${VERTEX_LIVE_MODEL}`
-    : `projects/${PROJECT}/locations/${REGION}/publishers/google/models/${VERTEX_LIVE_MODEL}`;
+    ? `models/${LIVE_MODEL}`
+    : `projects/${PROJECT}/locations/${REGION}/publishers/google/models/${LIVE_MODEL}`;
 
 const wss = new WebSocketServer({
   noServer: true,
@@ -224,4 +237,4 @@ async function bridgeToVertex(browserWs) {
   browserWs.on('error', () => { try { upstream.close(); } catch {} });
 }
 
-server.listen(PORT, () => console.log(`[vertex-proxy] listening on :${PORT} (HTTP + WS /live; mode=${AISTUDIO ? 'aistudio' : 'vertex'} model=${VERTEX_LIVE_MODEL})`));
+server.listen(PORT, () => console.log(`[vertex-proxy] listening on :${PORT} (HTTP + WS /live; backend=${VOICE_BACKEND} model=${LIVE_MODEL})`));
