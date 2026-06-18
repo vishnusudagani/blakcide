@@ -122,6 +122,19 @@ import AppLayout from '../../layouts/AppLayout.astro';
     .lsn-row.me .lsn-bubble { background: linear-gradient(135deg, var(--mint), var(--mint-deep)); color: #06231C; border-bottom-right-radius: 5px; }
     .lsn-row.me.temp .lsn-bubble { opacity: .6; }
     .lsn-row.lsn-hist .lsn-bubble { opacity: .5; }
+    .lsn-modal { position: fixed; inset: 0; z-index: 9000; display: flex; align-items: center; justify-content: center; padding: 1.2rem; background: var(--glass-strong); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
+    .lsn-modal-card { width: 100%; max-width: 360px; background: var(--bg-warm); border: 1px solid var(--line-strong); border-radius: var(--r-lg); box-shadow: var(--shadow-soft); padding: 1.6rem 1.4rem; text-align: center; }
+    .lsn-modal-card h3 { font-size: var(--fs-xl); color: var(--ink); font-weight: 600; }
+    .lsn-modal-card p { font-size: var(--fs-sm); color: var(--ink-soft); margin-top: .3rem; }
+    .lsn-break { color: var(--gold); margin-top: .9rem; }
+    html[data-theme="light"] .lsn-break { color: var(--gold-ink); }
+    .lsn-feel { display: flex; justify-content: center; gap: .5rem; margin: 1rem 0; }
+    .lsn-feel button { font-size: 1.7rem; background: var(--surface); border: 1px solid var(--line-strong); border-radius: var(--r-md); width: 52px; height: 52px; cursor: pointer; transition: border-color var(--t-fast) var(--ease-out), transform var(--t-fast) var(--ease-out); }
+    .lsn-feel button:hover { transform: translateY(-2px); }
+    .lsn-feel button.on { border-color: var(--mint-deep); background: rgba(106,211,184,.14); }
+    .lsn-modal-actions { display: flex; gap: .6rem; margin-top: 1rem; }
+    .lsn-btn-ghost { flex: 1; padding: .7rem; border-radius: var(--r-pill); background: var(--surface); border: 1px solid var(--line-strong); color: var(--ink-soft); font: inherit; font-size: var(--fs-sm); cursor: pointer; }
+    .lsn-btn-go { flex: 2; padding: .7rem; border-radius: var(--r-pill); border: 0; color: #06231C; font: inherit; font-size: var(--fs-sm); font-weight: 650; cursor: pointer; background: linear-gradient(135deg, var(--mint), var(--mint-deep)); }
     .lsn-row.them .lsn-bubble { background: var(--surface-strong); border: 1px solid var(--line); color: var(--ink); border-bottom-left-radius: 5px; }
     html[data-theme="light"] .lsn-row.them .lsn-bubble { background: #fff; border-color: var(--line-strong); }
     .lsn-meta { display: flex; align-items: center; margin: .14rem .2rem 0; }
@@ -174,6 +187,9 @@ import AppLayout from '../../layouts/AppLayout.astro';
     const NOTE_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4v16h16v-7"/><path d="M18.5 2.5a2.1 2.1 0 0 1 3 3L12 15l-4 1 1-4z"/></svg>';
     const SHIELD_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v6c0 4.4-3 7.6-7 9-4-1.4-7-4.6-7-9V6z"/></svg>';
     const PHONE_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6.6 10.8a15 15 0 0 0 6.6 6.6l2.2-2.2a1 1 0 0 1 1-.24 11.4 11.4 0 0 0 3.6.58 1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1 11.4 11.4 0 0 0 .58 3.6 1 1 0 0 1-.24 1z"/></svg>';
+    // Boundary protection (4d): nudge once on contact-sharing / offline-meeting language.
+    const CONTACT_RE = /(\+?\d[\d\s().-]{6,}\d)|([\w.+-]+@[\w-]+\.[a-z]{2,})|\b(whats\s?app|telegram|insta(gram)?|snap(chat)?|signal)\b|@[\w.]{3,}|\b(meet\s?(up|me)|in person|my number|your number|call me)\b/i;
+    let boundaryNudged = false;
     const fmtTime = (iso) => { try { return new Date(iso).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' }); } catch { return ''; } };
     const relTime = (iso) => { const d = Date.now() - new Date(iso).getTime(); const m = Math.floor(d / 60000), h = Math.floor(m / 60), day = Math.floor(h / 24); if (day > 6) return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }); if (day >= 1) return day + (day === 1 ? ' day ago' : ' days ago'); if (h >= 1) return h + (h === 1 ? ' hr ago' : ' hrs ago'); if (m >= 1) return m + ' min ago'; return 'just now'; };
 
@@ -551,6 +567,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
           input.value = '';
           const feed = document.getElementById('lsn-feed'); let temp;
           if (feed) { temp = document.createElement('div'); temp.className = 'lsn-row me temp'; temp.innerHTML = '<div class="lsn-bubble"></div>'; temp.querySelector('.lsn-bubble').textContent = text; feed.appendChild(temp); feed.scrollTop = feed.scrollHeight; setTimeout(() => temp && temp.classList.remove('temp'), 4000); }
+          if (feed && !boundaryNudged && CONTACT_RE.test(text)) { boundaryNudged = true; const bn = document.createElement('div'); bn.className = 'lsn-sys'; bn.textContent = '🔒 Keep Minit on-platform and anonymous — no personal contacts or offline meetings, for everyone’s safety.'; feed.appendChild(bn); feed.scrollTop = feed.scrollHeight; }
           const { error } = await supabase.from('messages').insert([{ session_id: activeSessionId, sender_id: user.id, content: text }]);
           if (error) { temp?.remove(); input.value = text; }
         } finally { sending = false; sendBtn?.removeAttribute('disabled'); }
@@ -558,7 +575,23 @@ import AppLayout from '../../layouts/AppLayout.astro';
 
       let endArmed = false;
       function confirmEnd(e) { const btn = e.currentTarget; if (!endArmed) { endArmed = true; btn.classList.add('confirm'); btn.textContent = 'Tap to confirm'; setTimeout(() => { endArmed = false; btn.classList.remove('confirm'); btn.textContent = 'End'; }, 3000); return; } endSession(); }
-      async function endSession() { if (!activeSessionId) return; const sid = activeSessionId; isEnding = true; endCall(true); logEvent('ended', { by: 'listener' }); teardownChat(); await supabase.from('connect_sessions').update({ status: 'completed', ended_at: new Date().toISOString() }).eq('id', sid); renderHome(); }
+      async function endSession() { if (!activeSessionId) return; const sid = activeSessionId; isEnding = true; endCall(true); logEvent('ended', { by: 'listener' }); teardownChat(); await supabase.from('connect_sessions').update({ status: 'completed', ended_at: new Date().toISOString() }).eq('id', sid); showDebrief(); }
+      // Listener wellbeing (4c): a quick check-in after each session, with a gentle
+      // break nudge once they've supported several people today.
+      async function showDebrief() {
+        let today = 0;
+        try { const { count } = await supabase.from('connect_sessions').select('id', { count: 'exact', head: true }).eq('listener_id', profile.id).eq('status', 'completed').gte('created_at', startOfToday()); today = count || 0; } catch (e) {}
+        const heavy = today >= 6;
+        const modal = document.createElement('div'); modal.className = 'lsn-modal';
+        modal.innerHTML = `<div class="lsn-modal-card"><h3>Session ended</h3><p>How are you after that one?</p><div class="lsn-feel" id="lsn-feel"><button data-f="ok" title="OK">🙂</button><button data-f="heavy" title="A bit heavy">😕</button><button data-f="drained" title="Drained">😣</button></div>${heavy ? `<p class="lsn-break">You’ve been there for ${today} people today. It’s okay to take a break — you matter too.</p>` : ''}<div class="lsn-modal-actions">${heavy ? '<button type="button" class="lsn-btn-ghost" id="lsn-break">Take a break</button>' : ''}<button type="button" class="lsn-btn-go" id="lsn-debrief-done">Done</button></div></div>`;
+        document.body.appendChild(modal);
+        let feel = null;
+        modal.querySelectorAll('#lsn-feel button').forEach((b) => b.addEventListener('click', () => { feel = b.getAttribute('data-f'); modal.querySelectorAll('#lsn-feel button').forEach((x) => x.classList.toggle('on', x === b)); }));
+        const finish = (goOffline) => { try { logEvent('debrief', { feel, today }); } catch (e) {} modal.remove(); if (goOffline && profile.is_online) { toggleAvailability(); } else { renderHome(); } };
+        modal.querySelector('#lsn-debrief-done').addEventListener('click', () => finish(false));
+        modal.querySelector('#lsn-break')?.addEventListener('click', () => finish(true));
+        modal.addEventListener('click', (e) => { if (e.target === modal) finish(false); });
+      }
 
       init();
     }
