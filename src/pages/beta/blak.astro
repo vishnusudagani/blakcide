@@ -35,6 +35,17 @@ import AppLayout from '../../layouts/AppLayout.astro';
         </span>
       </a>
 
+      <div class="bx-mood" id="bx-mood">
+        <span class="bx-mood-q">How are you feeling today?</span>
+        <div class="bx-mood-row">
+          <button type="button" class="bx-mood-b" data-mood="great" aria-label="Great">😄</button>
+          <button type="button" class="bx-mood-b" data-mood="okay" aria-label="Okay">🙂</button>
+          <button type="button" class="bx-mood-b" data-mood="low" aria-label="Low">😔</button>
+          <button type="button" class="bx-mood-b" data-mood="anxious" aria-label="Anxious">😰</button>
+          <button type="button" class="bx-mood-b" data-mood="angry" aria-label="Frustrated">😤</button>
+        </div>
+      </div>
+
       <div class="bx-chips" id="bx-chips">
         <button type="button" class="bx-chip" data-msg="I'm overwhelmed">I'm overwhelmed</button>
         <button type="button" class="bx-chip" data-msg="Help me focus">Help me focus</button>
@@ -170,6 +181,14 @@ import AppLayout from '../../layouts/AppLayout.astro';
     .bx-insight-ic svg { width: 20px; height: 20px; }
     .bx-insight-why { display: block; font-style: normal; font-size: var(--fs-xs); color: var(--coral); margin-top: .4rem; line-height: 1.45; animation: bx-in .2s var(--ease-out) both; }
     html[data-theme="light"] .bx-insight-why { color: var(--coral-ink); }
+    .bx-mood { width: 100%; max-width: 420px; display: flex; flex-direction: column; align-items: center; gap: .7rem; }
+    .bx-mood-q { font-size: var(--fs-sm); color: var(--ink-soft); transition: color var(--t-base) var(--ease-out); }
+    .bx-mood-done .bx-mood-q { color: var(--coral); }
+    html[data-theme="light"] .bx-mood-done .bx-mood-q { color: var(--coral-ink); }
+    .bx-mood-row { display: flex; gap: .5rem; }
+    .bx-mood-b { width: 46px; height: 46px; border-radius: 50%; border: 1px solid var(--line-strong); background: var(--surface); font-size: 1.45rem; line-height: 1; cursor: pointer; display: grid; place-items: center; transition: transform var(--t-fast) var(--ease-out), border-color var(--t-fast) var(--ease-out), background var(--t-fast) var(--ease-out); }
+    .bx-mood-b:hover { transform: translateY(-2px); }
+    .bx-mood-b.on { border-color: var(--coral); background: rgba(255,107,157,.14); transform: translateY(-2px); }
     .bx-insight-ic.ic-mint { color: var(--mint-deep); background: rgba(106,211,184,.14); border: 1px solid rgba(106,211,184,.26); }
     .bx-insight-ic.ic-coral { color: var(--coral); background: rgba(255,107,157,.13); border: 1px solid rgba(255,107,157,.26); }
     html[data-theme="light"] .bx-insight-ic.ic-mint { color: var(--mint-ink); }
@@ -1071,6 +1090,20 @@ import AppLayout from '../../layouts/AppLayout.astro';
       if (h < 22) return 'Evening';
       return 'Late one';
     }
+    // Daily mood check-in → mood_logs → feeds blak_insights(). The warm little ritual.
+    async function setupMood() {
+      const wrap = document.getElementById('bx-mood'); if (!wrap || !supabase) return;
+      const done = (m) => { wrap.querySelectorAll('.bx-mood-b').forEach((x) => x.classList.toggle('on', x.getAttribute('data-mood') === m)); wrap.classList.add('bx-mood-done'); const q = wrap.querySelector('.bx-mood-q'); if (q) q.textContent = 'Noted — Blak’s listening 💛'; };
+      try {
+        const since = new Date(); since.setHours(0, 0, 0, 0);
+        const { data } = await supabase.from('mood_logs').select('mood').gte('created_at', since.toISOString()).order('created_at', { ascending: false }).limit(1);
+        if (data && data[0]) done(data[0].mood);
+      } catch (e) {}
+      wrap.querySelectorAll('.bx-mood-b').forEach((b) => b.addEventListener('click', async () => {
+        const mood = b.getAttribute('data-mood'); done(mood);
+        try { const u = (await supabase.auth.getUser())?.data?.user; if (u) await supabase.from('mood_logs').insert([{ user_id: u.id, mood }]); } catch (e) {}
+      }));
+    }
     async function loadGreetingAndInsight() {
       let name = '';
       try {
@@ -1129,6 +1162,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
         if (params && (q || want)) window.history.replaceState(null, '', location.pathname);
       } catch (e) {}
       loadGreetingAndInsight();
+      setupMood();
     })();
   </script>
 </AppLayout>
