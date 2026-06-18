@@ -111,12 +111,20 @@ export async function runStreamingChatWithTools(opts) {
             // floor (Groq only) can still recover from a transient rate limit
             // instead of dead-ending the whole turn.
             for (let attempt = 0; attempt < 3 && !res; attempt++) {
+                // Hard timeout on getting the RESPONSE HEADERS. Without this, a provider
+                // that accepts the connection but never responds hangs forever — the
+                // user just sees no reply, with no failover. On timeout we abort and
+                // fall through to the next provider (the real "Blak went silent" cause).
+                const ctrl = new AbortController();
+                const to = setTimeout(() => ctrl.abort(), 12000);
                 try {
                     const r = await fetch(p.baseUrl, {
                         method:  'POST',
                         headers: { 'Content-Type': 'application/json', ...authHeadersFor(p), ...(p.headers || {}) },
                         body:    JSON.stringify(body),
+                        signal:  ctrl.signal,
                     });
+                    clearTimeout(to);            // headers in — let the body stream freely
                     if (!r.ok) {
                         lastErr = `${p.id}:${r.status} ${(await r.text().catch(() => '')).slice(0, 160)}`;
                         if (RETRYABLE_STATUS.has(r.status) && attempt < 2) {
@@ -130,8 +138,9 @@ export async function runStreamingChatWithTools(opts) {
                     res = r;
                     preferred = p;
                 } catch (e) {
+                    clearTimeout(to);
                     lastErr = `${p.id}:${(e?.message || e).toString().slice(0, 100)}`;
-                    if (attempt < 2) { await sleep(400); continue; }  // transient network blip
+                    if (attempt < 2) { await sleep(400); continue; }  // transient network blip / timeout
                     break;
                 }
             }
