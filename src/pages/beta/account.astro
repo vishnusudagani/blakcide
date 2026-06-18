@@ -1,0 +1,145 @@
+---
+import AppLayout from '../../layouts/AppLayout.astro';
+// Account — the user's own space: details (name + WhatsApp), a tile into "what Blak
+// knows", an apps teaser (future integrations), a Persona teaser, theme, and Log out.
+// Opened from the profile avatar. Details persist to the auth user's metadata.
+---
+<AppLayout title="Account">
+  <div class="ap-page ac">
+    <header class="ac-top">
+      <div class="ac-ava" id="ac-ava" aria-hidden="true">Y</div>
+      <div class="ac-id">
+        <h1 class="ac-hello" id="ac-hello">Your account</h1>
+        <p class="ac-email" id="ac-email"></p>
+      </div>
+    </header>
+
+    <section class="ac-card">
+      <h2 class="ac-h">Your details</h2>
+      <label class="ac-field"><span>Name</span><input id="ac-name" type="text" autocomplete="name" placeholder="What should we call you?" /></label>
+      <label class="ac-field"><span>WhatsApp <i>so we can reach you when it matters</i></span><input id="ac-wa" type="tel" inputmode="tel" autocomplete="tel" placeholder="+91 98765 43210" /></label>
+      <div class="ac-save-row"><button type="button" class="ac-save" id="ac-save">Save</button><span class="ac-saved" id="ac-saved"></span></div>
+    </section>
+
+    <a class="ac-tile" href="/beta/profile/">
+      <span class="ac-tile-ic ac-coral"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4l1.7 5 5 1.7-5 1.7L12 17.4l-1.7-5L5.3 10.7l5-1.7z"/><path d="M18.8 3.6l.5 1.6 1.6.5-1.6.5-.5 1.6-.5-1.6-1.6-.5 1.6-.5z"/></svg></span>
+      <span class="ac-tile-tx"><b>What Blak knows about you</b><i>Everything Blak has learned — see, edit, or delete any of it.</i></span>
+      <span class="ac-tile-go">→</span>
+    </a>
+
+    <section class="ac-card">
+      <div class="ac-head"><h2 class="ac-h">Your apps</h2><span class="ac-soon">soon</span></div>
+      <p class="ac-sub">Connect the apps you live in. Blak will quietly act across them for you — your calendar, messages, music, and more.</p>
+      <div class="ac-apps" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+    </section>
+
+    <div class="ac-tile ac-tile-soon" role="note">
+      <span class="ac-tile-ic ac-lav"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="5.5"/><circle cx="12" cy="10" r="2.5"/><path d="M7.9 17.3a4.5 4.5 0 0 1 8.2 0"/></svg></span>
+      <span class="ac-tile-tx"><b>Persona <span class="ac-soon">soon</span></b><i>Your evolving digital self — train it, and one day share it.</i></span>
+    </div>
+
+    <section class="ac-card">
+      <div class="ac-row"><span>Appearance</span><button type="button" class="ac-pref" id="ac-theme">Theme</button></div>
+    </section>
+
+    <button type="button" class="ac-out" id="ac-out">Log out</button>
+    <p class="ac-ver">Blaksyd beta</p>
+  </div>
+
+  <style is:global>
+    .ac { max-width: 540px; margin: 0 auto; padding-bottom: 2rem; }
+    .ac-top { display: flex; align-items: center; gap: .9rem; margin: .4rem 0 1.4rem; }
+    .ac-ava { width: 58px; height: 58px; flex: none; border-radius: 50%; display: grid; place-items: center; font-size: var(--fs-2xl); font-weight: 650; color: #fff; background: var(--cta-grad); box-shadow: 0 8px 26px -6px rgba(255,107,157,.5); }
+    .ac-hello { font-size: clamp(1.4rem, 1.1rem + 1.8vw, 1.9rem); font-weight: 600; letter-spacing: -.02em; color: var(--ink); }
+    .ac-email { font-size: var(--fs-sm); color: var(--ink-faint); margin-top: .15rem; }
+    .ac-card { background: var(--glass-strong); border: 1px solid var(--line); border-radius: var(--r-lg); padding: 1.1rem 1.2rem; margin-bottom: .8rem; }
+    .ac-head { display: flex; align-items: center; gap: .6rem; }
+    .ac-h { font-size: var(--fs-md); font-weight: 600; color: var(--ink); }
+    .ac-sub { font-size: var(--fs-sm); color: var(--ink-soft); margin-top: .5rem; line-height: 1.5; }
+    .ac-field { display: block; margin-top: .9rem; }
+    .ac-field span { display: block; font-size: var(--fs-2xs); font-family: var(--font-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--ink-faint); margin-bottom: .4rem; }
+    .ac-field span i { font-style: normal; text-transform: none; letter-spacing: 0; font-family: var(--font-body); color: var(--ink-ghost); }
+    .ac-field input { width: 100%; box-sizing: border-box; background: var(--surface); border: 1px solid var(--line-strong); border-radius: var(--r-md); padding: .7rem .85rem; color: var(--ink); font: inherit; font-size: 16px; outline: none; transition: border-color var(--t-fast) var(--ease-out); }
+    .ac-field input:focus { border-color: rgba(106,211,184,.55); }
+    .ac-save-row { display: flex; align-items: center; gap: .8rem; margin-top: 1rem; }
+    .ac-save { min-height: 42px; padding: .6rem 1.6rem; border: 0; border-radius: var(--r-pill); color: #06231C; font: inherit; font-weight: 650; cursor: pointer; background: linear-gradient(135deg, var(--mint), var(--mint-deep)); transition: transform var(--t-fast) var(--ease-out); }
+    .ac-save:hover { transform: translateY(-1px); }
+    .ac-save[disabled] { opacity: .55; cursor: default; transform: none; }
+    .ac-saved { font-size: var(--fs-sm); color: var(--mint-deep); }
+    html[data-theme="light"] .ac-saved { color: var(--mint-ink); }
+    .ac-tile { display: flex; align-items: center; gap: .9rem; width: 100%; text-align: left; padding: 1rem 1.1rem; margin-bottom: .8rem; background: var(--glass-strong); border: 1px solid var(--line); border-radius: var(--r-lg); text-decoration: none; cursor: pointer; transition: border-color var(--t-fast) var(--ease-out), transform var(--t-fast) var(--ease-out); }
+    a.ac-tile:hover { border-color: rgba(255,107,157,.4); transform: translateY(-1px); }
+    .ac-tile-soon { cursor: default; opacity: .82; }
+    .ac-tile-ic { width: 44px; height: 44px; flex: none; border-radius: 14px; display: grid; place-items: center; }
+    .ac-tile-ic svg { width: 23px; height: 23px; }
+    .ac-coral { color: var(--coral); background: rgba(255,107,157,.12); }
+    html[data-theme="light"] .ac-coral { color: var(--coral-ink); }
+    .ac-lav { color: var(--lavender); background: rgba(201,184,255,.14); }
+    html[data-theme="light"] .ac-lav { color: var(--lavender-ink); }
+    .ac-tile-tx { flex: 1; min-width: 0; }
+    .ac-tile-tx b { display: block; font-size: var(--fs-md); color: var(--ink); font-weight: 600; }
+    .ac-tile-tx i { font-style: normal; font-size: var(--fs-xs); color: var(--ink-soft); display: block; margin-top: .1rem; line-height: 1.45; }
+    .ac-tile-go { color: var(--ink-faint); font-size: 1.1rem; flex: none; }
+    .ac-soon { font-family: var(--font-mono); font-size: var(--fs-3xs); letter-spacing: .08em; text-transform: uppercase; color: var(--gold); background: rgba(255,210,122,.12); border: 1px solid rgba(255,210,122,.3); border-radius: var(--r-pill); padding: .1rem .5rem; }
+    html[data-theme="light"] .ac-soon { color: var(--gold-ink); border-color: rgba(138,100,16,.3); }
+    .ac-apps { display: flex; gap: .6rem; margin-top: .9rem; }
+    .ac-apps i { width: 42px; height: 42px; border-radius: 13px; background: var(--surface-strong); border: 1px solid var(--line); }
+    .ac-row { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+    .ac-row > span { font-size: var(--fs-md); color: var(--ink); }
+    .ac-pref { min-height: 38px; padding: .45rem 1.1rem; border-radius: var(--r-pill); background: var(--surface); border: 1px solid var(--line-strong); color: var(--ink); font: inherit; font-size: var(--fs-sm); cursor: pointer; }
+    .ac-pref:hover { border-color: rgba(106,211,184,.5); }
+    .ac-out { display: block; width: 100%; margin-top: 1.4rem; min-height: 48px; border-radius: var(--r-pill); background: var(--surface); border: 1px solid rgba(255,107,157,.3); color: var(--coral); font: inherit; font-size: var(--fs-md); font-weight: 600; cursor: pointer; transition: border-color var(--t-fast) var(--ease-out); }
+    html[data-theme="light"] .ac-out { color: var(--coral-ink); }
+    .ac-out:hover { border-color: rgba(255,107,157,.65); }
+    .ac-ver { text-align: center; font-size: var(--fs-xs); color: var(--ink-ghost); margin-top: 1rem; }
+  </style>
+
+  <script>
+    import { supabase } from '../../lib/supabaseClient';
+    const $ = (id) => document.getElementById(id);
+    if (!supabase) {
+      const h = $('ac-hello'); if (h) h.textContent = 'Sign-in isn’t configured here.';
+    } else {
+      (async () => {
+        const { data } = await supabase.auth.getUser();
+        const u = data?.user;
+        if (!u) { location.replace('/?auth=1'); return; }
+        const md = u.user_metadata || {};
+        const name = (md.full_name || md.name || '').trim();
+        const initial = (name || u.email || 'Y')[0].toUpperCase();
+        $('ac-ava').textContent = initial;
+        $('ac-hello').textContent = name ? `Hi ${name.split(' ')[0]}` : 'Your account';
+        $('ac-email').textContent = u.email || '';
+        $('ac-name').value = name;
+        $('ac-wa').value = md.whatsapp || '';
+
+        const save = $('ac-save'), saved = $('ac-saved');
+        save.addEventListener('click', async () => {
+          save.setAttribute('disabled', ''); saved.textContent = 'Saving…';
+          const full_name = $('ac-name').value.trim(), whatsapp = $('ac-wa').value.trim();
+          const { error } = await supabase.auth.updateUser({ data: { full_name, whatsapp } });
+          save.removeAttribute('disabled');
+          saved.textContent = error ? 'Couldn’t save — try again' : 'Saved ✓';
+          if (!error) { $('ac-ava').textContent = (full_name || u.email || 'Y')[0].toUpperCase(); $('ac-hello').textContent = full_name ? `Hi ${full_name.split(' ')[0]}` : 'Your account'; setTimeout(() => { saved.textContent = ''; }, 2500); }
+        });
+
+        const theme = $('ac-theme');
+        const paintTheme = () => { theme.textContent = (document.documentElement.getAttribute('data-theme') === 'light') ? 'Light' : 'Dark'; };
+        paintTheme();
+        theme.addEventListener('click', () => {
+          const next = document.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+          document.documentElement.setAttribute('data-theme', next);
+          try { localStorage.setItem('theme', next); } catch (e) {}
+          const m = document.querySelector('meta[name="theme-color"]'); if (m) m.setAttribute('content', next === 'light' ? '#FAF4EC' : '#0B0D1F');
+          paintTheme();
+        });
+
+        $('ac-out').addEventListener('click', async () => {
+          $('ac-out').setAttribute('disabled', ''); $('ac-out').textContent = 'Logging out…';
+          try { await supabase.auth.signOut(); } catch (e) {}
+          location.href = '/';
+        });
+      })();
+    }
+  </script>
+</AppLayout>
