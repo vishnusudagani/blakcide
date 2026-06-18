@@ -146,9 +146,11 @@ export async function getOrCreateIdentity(phone, waName) {
     });
 
     // Auto-save the verified WhatsApp number into the knowledge profile.
+    // area/source MUST satisfy the symp_knowledge_facts CHECK constraints:
+    //   area ∈ identity|people|world|inner|goals|tastes|other ; source ∈ user|blak.
     await upsertKnowledgeFact({
-        userId, area: 'contact', key: 'whatsapp_number', label: 'WhatsApp number',
-        value: phone, source: 'whatsapp', confidence: 1.0, evidence: 'Verified by WhatsApp',
+        userId, area: 'identity', key: 'whatsapp_number', label: 'WhatsApp number',
+        value: phone, source: 'blak', confidence: 1.0, evidence: 'Verified via the WhatsApp channel',
     }).catch(() => {});
 
     return { userId, chatId, phone, waName: waName || null, identity: idRes.ok ? idRes.data?.[0] : null, isNew: true };
