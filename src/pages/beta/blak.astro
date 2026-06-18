@@ -95,7 +95,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
         <div class="bx-cv-list" id="bx-cv-list"></div>
         <div class="bx-cv-foot">
           <a class="bx-cv-foot-link" href="/beta/">Home</a>
-          <a class="bx-cv-foot-link" href="/beta/profile/">Your profile</a>
+          <a class="bx-cv-foot-link" href="/beta/account/">Your profile</a>
           <button type="button" class="bx-cv-foot-link" id="bx-cv-theme">Theme</button>
           <button type="button" class="bx-cv-foot-link" id="bx-cv-signout">Sign out</button>
         </div>
@@ -1040,7 +1040,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
     }
 
     // ── Header wiring + Gemini-style greeting ────────────────────────────
-    if (profileBtn) profileBtn.addEventListener('click', () => { window.location.href = '/beta/profile/'; });
+    if (profileBtn) profileBtn.addEventListener('click', () => { window.location.href = '/beta/account/'; });
     if (personaBtn) personaBtn.addEventListener('click', () => { window.location.href = '/beta/persona/'; });
 
     // Burger drawer account footer (theme toggle + sign out).

@@ -10,12 +10,14 @@ interface Props { active?: 'home' | 'blak' | 'persona' | 'minit' | 'nexus' | 'pr
 const { active = 'home', title = 'Home', soon = false } = Astro.props;
 
 // soon: feature is a preview, not yet live (Blak / Persona / Minit). Nexus is live.
+// Each pillar carries a distinct glyph + its brand colour (tokens.css):
+// Blak = spark (coral) · Minit = caring message (mint) · Nexus = constellation (aqua) · Persona = identity frame (lavender).
 const nav = [
-  { id: 'home',    href: '/beta/',         label: 'Home',    c: 'gold',  d: 'M3 11l9-7 9 7M5 10v10h14V10' },
-  { id: 'blak',    href: '/beta/blak/',    label: 'Blak',    c: 'coral', d: 'M4 5h16v11H8l-4 4z' },
-  { id: 'persona', href: '/beta/persona/', label: 'Persona', c: 'lav',   soon: true, d: 'M12 12a4 4 0 100-8 4 4 0 000 8zM5 20a7 7 0 0114 0' },
-  { id: 'minit',   href: '/beta/minit/',   label: 'Minit',   c: 'mint',  d: 'M9 11a3 3 0 100-6 3 3 0 000 6zM2.5 19a6.5 6.5 0 0113 0M16 5.5a3 3 0 010 6M21.5 19a6.5 6.5 0 00-3-5.5' },
-  { id: 'nexus',   href: '/beta/nexus/',   label: 'Nexus',   c: 'aqua',  d: 'M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5L18 18M18 6l-2.5 2.5M8.5 15.5L6 18' },
+  { id: 'home',    href: '/beta/',         label: 'Home',    c: 'gold',  svg: '<path d="M3 11l9-7 9 7M5 10v10h14V10"/>' },
+  { id: 'blak',    href: '/beta/blak/',    label: 'Blak',    c: 'coral', svg: '<path d="M12 4l1.7 5 5 1.7-5 1.7L12 17.4l-1.7-5L5.3 10.7l5-1.7z"/><path d="M18.8 3.6l.5 1.6 1.6.5-1.6.5-.5 1.6-.5-1.6-1.6-.5 1.6-.5z"/>' },
+  { id: 'persona', href: '/beta/persona/', label: 'Persona', c: 'lav',   soon: true, svg: '<rect x="4" y="4" width="16" height="16" rx="5.5"/><circle cx="12" cy="10" r="2.5"/><path d="M7.9 17.3a4.5 4.5 0 0 1 8.2 0"/>' },
+  { id: 'minit',   href: '/beta/minit/',   label: 'Minit',   c: 'mint',  svg: '<path d="M20 11.5a7.5 7.5 0 0 1-10.8 6.7L4 20l1.8-4.7A7.5 7.5 0 1 1 20 11.5z"/><path d="M12 14.7l-2.3-2.2a1.55 1.55 0 1 1 2.3-2.05 1.55 1.55 0 1 1 2.3 2.05z"/>' },
+  { id: 'nexus',   href: '/beta/nexus/',   label: 'Nexus',   c: 'aqua',  svg: '<circle cx="6" cy="7" r="2.1"/><circle cx="18" cy="7" r="2.1"/><circle cx="12" cy="17.5" r="2.1"/><path d="M7.9 8 10.6 15.6M16.1 8 13.4 15.6M8.1 7h7.8"/>' },
 ];
 ---
 <!doctype html>
@@ -53,7 +55,7 @@ const nav = [
       <nav class="ap-nav" aria-label="Blaksyd">
         {nav.map((n) => (
           <a href={n.href} data-nav={n.id} class={`ap-link c-${n.c} ${active === n.id ? 'is-on' : ''}`} aria-current={active === n.id ? 'page' : undefined}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d={n.d} /></svg>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" set:html={n.svg} />
             <span>{n.label}</span>
             {n.soon && <span class="ap-link-soon">soon</span>}
           </a>
@@ -223,10 +225,10 @@ const nav = [
       .ap-nav .ap-link[data-nav="minit"] { order: 1; }
       .ap-nav .ap-link[data-nav="blak"]  { order: 2; }
       .ap-nav .ap-link[data-nav="nexus"] { order: 3; }
-      /* the active icon takes on its pillar's colour */
-      .ap-nav .ap-link[data-nav="blak"].is-on  { color: var(--coral); }
-      .ap-nav .ap-link[data-nav="minit"].is-on { color: var(--mint-deep); }
-      .ap-nav .ap-link[data-nav="nexus"].is-on { color: var(--aqua); }
+      /* each icon carries its pillar colour — muted at rest, vivid + pill when active */
+      .ap-nav .ap-link[data-nav="minit"] { color: var(--mint-deep); }
+      .ap-nav .ap-link[data-nav="blak"]  { color: var(--coral); }
+      .ap-nav .ap-link[data-nav="nexus"] { color: var(--aqua); }
 
       /* On the Blak screen, blak.astro owns the header — hide the shell's top row */
       .ap--chat .ap-brand, .ap--chat .ap-me { display: none; }
@@ -250,7 +252,7 @@ const nav = [
       // email if a Supabase session exists; wire sign-out. Real gating comes later.
       var av = document.getElementById('ap-avatar');
       var out = document.getElementById('ap-signout');
-      if (av) av.addEventListener('click', function () { window.location.href = '/beta/profile/'; });
+      if (av) av.addEventListener('click', function () { window.location.href = '/beta/account/'; });
       // Manual light/dark toggle — persists the choice (shared with the marketing
       // site) and from then on overrides OS-follow until cleared.
       var themeBtn = document.getElementById('ap-theme');
