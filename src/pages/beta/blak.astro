@@ -57,8 +57,16 @@ import AppLayout from '../../layouts/AppLayout.astro';
     </button>
 
     <div class="bx-dock">
+      <div class="bx-attach-preview" id="bx-attach-preview" hidden></div>
       <form class="bx-composer" id="bx-form">
         <div class="bx-field">
+          <button type="button" class="bx-tool" id="bx-attach" aria-label="Add an image" title="Add an image">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-8.49 8.49a5 5 0 0 1-7.07-7.07l8.49-8.49a3 3 0 0 1 4.24 4.24l-8.49 8.49a1 1 0 0 1-1.41-1.41l7.78-7.78"/></svg>
+          </button>
+          <button type="button" class="bx-tool" id="bx-mic" aria-label="Record a voice note" title="Voice note">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v4"/></svg>
+          </button>
+          <input type="file" id="bx-file" accept="image/*" hidden />
           <textarea id="bx-input" rows="1" placeholder="Message Blak…" autocomplete="off"></textarea>
           <button type="submit" id="bx-send" aria-label="Send">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
@@ -204,6 +212,20 @@ import AppLayout from '../../layouts/AppLayout.astro';
     .bx-field button svg { width: 19px; height: 19px; }
     #bx-stop { background: var(--surface-strong); color: var(--ink); border: 1px solid var(--line-strong); box-shadow: none; }
 
+    /* composer tools (attach image + voice note) — quiet, leading the field */
+    .bx-field .bx-tool { flex: none; width: 34px; height: 34px; border-radius: 50%; border: 0; cursor: pointer; color: var(--ink-faint); background: transparent; box-shadow: none; display: grid; place-items: center; align-self: flex-end; transition: color .16s var(--ease-out), background .16s; }
+    .bx-field .bx-tool:hover { color: var(--coral); background: var(--surface); transform: none; }
+    .bx-field .bx-tool svg { width: 18px; height: 18px; }
+    .bx-field .bx-tool.rec { color: #fff; background: #ff6b6b; box-shadow: none; animation: bx-callpulse 1.2s ease-in-out infinite; }
+    .bx-field .bx-tool.busy { opacity: .5; pointer-events: none; }
+    .bx-attach-preview { display: flex; align-items: center; gap: .6rem; padding: .2rem .2rem .5rem; }
+    .bx-attach-preview[hidden] { display: none; }
+    .bx-attach-preview img { width: 56px; height: 56px; object-fit: cover; border-radius: var(--r-sm); border: 1px solid var(--line-strong); }
+    .bx-attach-x { font: inherit; font-size: var(--fs-sm); color: var(--ink-faint); background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-pill); padding: .25rem .7rem; cursor: pointer; }
+    .bx-attach-x:hover { color: var(--coral); }
+    .bx-img { max-width: 240px; max-height: 240px; border-radius: var(--r-sm); display: block; margin-bottom: .35rem; }
+    .bx-bub .bx-img + span { display: block; }
+
     /* circular call (teal/mint glow) + new-chat (coral glow) buttons */
     .bx-call, .bx-clear { flex: none; width: 50px; height: 50px; border-radius: 50%; display: grid; place-items: center; border: 1px solid transparent; cursor: pointer; transition: transform .16s var(--ease-out), box-shadow .2s var(--ease-out); }
     .bx-call:active, .bx-clear:active { transform: scale(.94); }
@@ -323,20 +345,20 @@ import AppLayout from '../../layouts/AppLayout.astro';
     async function dbLoadMessages(chatId) {
       try {
         const { data } = await supabase.from('messages')
-          .select('id,role,content,created_at,media_url,media_type')
+          .select('id,role,content,created_at,media_url,media_type,media_description')
           .eq('chat_id', chatId).order('created_at', { ascending: true }).limit(500);
         return (data || []).map(m => ({
           id: m.id, role: m.role === 'user' ? 'user' : 'assistant',
           content: m.content || '', ts: m.created_at ? new Date(m.created_at).getTime() : Date.now(),
-          media_url: m.media_url || null, media_type: m.media_type || null,
+          media_url: m.media_url || null, media_type: m.media_type || null, media_description: m.media_description || null,
         }));
       } catch (e) { return []; }
     }
     async function dbInsertMessage(role, content, media) {
       if (!supabase || !activeChatId) return null;
-      const row = { chat_id: activeChatId, role, content: content || (media ? '📎' : '') };
+      const row = { chat_id: activeChatId, role, content: content || '' };
       if (role === 'user') row.sender_id = userId;
-      if (media) { row.media_url = media.url || null; row.media_type = media.type || null; }
+      if (media) { row.media_url = media.url || null; row.media_type = media.type || null; if (media.description) row.media_description = media.description; }
       try { const { data } = await supabase.from('messages').insert(row).select('id').single(); return data ? data.id : null; }
       catch (e) { return null; }
     }
@@ -384,7 +406,8 @@ import AppLayout from '../../layouts/AppLayout.astro';
       if (opts.typing) {
         bub.innerHTML = '<span class="bx-typing"><span class="bx-dot"></span><span class="bx-dot"></span><span class="bx-dot"></span></span>';
       } else {
-        bub.textContent = text;
+        if (opts.media_url) { const im = document.createElement('img'); im.className = 'bx-img'; im.src = opts.media_url; im.alt = 'shared image'; im.loading = 'lazy'; bub.appendChild(im); }
+        if (text || !opts.media_url) { const tx = document.createElement('span'); tx.textContent = text; bub.appendChild(tx); }
         const time = document.createElement('time');
         time.className = 'bx-time';
         time.textContent = fmtTime(ts);
@@ -404,7 +427,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
 
     function render() {
       stream.innerHTML = '';
-      for (const m of history) addRow(m.role === 'user' ? 'me' : 'them', m.content, { ts: m.ts });
+      for (const m of history) addRow(m.role === 'user' ? 'me' : 'them', m.content, { ts: m.ts, media_url: m.media_url });
       attachRegen();
       scrollToBottom(true);
     }
@@ -446,7 +469,12 @@ import AppLayout from '../../layouts/AppLayout.astro';
     function payload() {
       return history.filter(m => m.role === 'user' || m.role === 'assistant')
                     .slice(-MAX_TURNS)
-                    .map(({ role, content }) => ({ role, content }));
+                    .map((m) => {
+                      let c = m.content || '';
+                      if (m.media_description) c = (c ? c + '\n\n' : '') + '[Image I shared — it shows: ' + m.media_description + ']';
+                      else if (!c && m.media_url) c = '[I shared an image.]';
+                      return { role: m.role, content: c };
+                    });
     }
 
     // One streaming attempt. Throws on transport error; returns accumulated text.
@@ -537,13 +565,16 @@ import AppLayout from '../../layouts/AppLayout.astro';
 
     async function send(text) {
       text = (text || '').trim();
-      if (!text || sending) return;
-      if (!activeChatId) { const c = await dbCreateChat(text.slice(0, 42)); if (c) activeChatId = c.id; }
-      const um = { role: 'user', content: text, ts: Date.now() };
+      const img = pendingImage; pendingImage = null; showPreview(null);
+      if ((!text && !img) || sending) return;
+      if (!activeChatId) { const c = await dbCreateChat((text || 'Shared an image').slice(0, 42)); if (c) activeChatId = c.id; }
+      const um = { role: 'user', content: text, ts: Date.now(), media_url: img ? img.url : null, media_type: img ? img.type : null, media_description: null };
       history.push(um);
-      addRow('me', text);
+      addRow('me', text, { media_url: um.media_url });
       updateChips();
-      dbInsertMessage('user', text).then((id) => { if (id) um.id = id; });
+      // For an image, describe it so Blak can respond to what's actually in it.
+      if (img) { const desc = await visionDescribe(img.url); um.media_description = desc || null; }
+      dbInsertMessage('user', text, img ? { url: img.url, type: img.type, description: um.media_description } : null).then((id) => { if (id) um.id = id; });
       await runTurn(text);
     }
 
@@ -567,6 +598,95 @@ import AppLayout from '../../layouts/AppLayout.astro';
     chips.addEventListener('click', (e) => { const b = e.target.closest('.bx-chip'); if (b) send(b.getAttribute('data-msg')); });
     stopBtn.addEventListener('click', () => { if (controller) controller.abort(); });
     clearBtn.addEventListener('click', () => { newConvo(); });
+
+    // ── Image attach + voice note (text composer) ─────────────────────────
+    const attachBtn = $('bx-attach'), micBtn = $('bx-mic'), fileInput = $('bx-file'), attachPreview = $('bx-attach-preview');
+    let pendingImage = null;   // { url, type } once uploaded to storage
+
+    const MAX_IMG = 5 * 1024 * 1024;
+    async function processImage(file) {
+      // Re-encode via canvas to STRIP EXIF (incl. GPS) and cap dimensions.
+      try {
+        const bmp = await createImageBitmap(file);
+        const max = 1600; let w = bmp.width, h = bmp.height;
+        if (w > max || h > max) { const s = max / Math.max(w, h); w = Math.round(w * s); h = Math.round(h * s); }
+        const c = document.createElement('canvas'); c.width = w; c.height = h;
+        c.getContext('2d').drawImage(bmp, 0, 0, w, h);
+        const blob = await new Promise((res) => c.toBlob(res, 'image/jpeg', 0.85));
+        return blob || file;
+      } catch (e) { return file; }
+    }
+    async function uploadChatImage(file) {
+      if (!supabase || !file) return null;
+      if (file.size > MAX_IMG) { alert('That image is over 5MB — try a smaller one.'); return null; }
+      const blob = await processImage(file);
+      const path = (userId || 'anon') + '/' + ((window.crypto && crypto.randomUUID) ? crypto.randomUUID() : (Date.now() + '-' + Math.round(Math.random() * 1e9))) + '.jpg';
+      const { error } = await supabase.storage.from('chat_images').upload(path, blob, { contentType: 'image/jpeg', upsert: false });
+      if (error) { alert('Image upload failed — try again.'); return null; }
+      return supabase.storage.from('chat_images').getPublicUrl(path).data.publicUrl;
+    }
+    function showPreview(url) {
+      if (!attachPreview) return;
+      if (!url) { attachPreview.hidden = true; attachPreview.innerHTML = ''; return; }
+      attachPreview.hidden = false;
+      attachPreview.innerHTML = '<img alt="attachment"/><button type="button" class="bx-attach-x">remove</button>';
+      attachPreview.querySelector('img').src = url;
+      attachPreview.querySelector('.bx-attach-x').onclick = () => { pendingImage = null; showPreview(null); };
+    }
+    async function visionDescribe(url) {
+      try {
+        const jwt = await getToken(); if (!jwt) return '';
+        const r = await fetch('/api/blaksyd/symp/vision', {
+          method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + jwt },
+          body: JSON.stringify({ imageUrl: url }),
+        });
+        const j = await r.json().catch(() => null);
+        return (j && j.data && (j.data.description || j.data.text)) || '';
+      } catch (e) { return ''; }
+    }
+    if (attachBtn) attachBtn.addEventListener('click', () => { if (fileInput) fileInput.click(); });
+    if (fileInput) fileInput.addEventListener('change', async () => {
+      const file = fileInput.files && fileInput.files[0]; fileInput.value = '';
+      if (!file) return;
+      attachBtn.classList.add('busy');
+      const url = await uploadChatImage(file);
+      attachBtn.classList.remove('busy');
+      if (url) { pendingImage = { url, type: 'image' }; showPreview(url); input.focus(); }
+    });
+
+    // Voice note: record → transcribe → drop the text into the composer (review, then send).
+    let vnRec = null, vnChunks = [], vnStream = null;
+    async function toggleVoiceNote() {
+      if (vnRec && vnRec.state === 'recording') { try { vnRec.stop(); } catch (e) {} return; }
+      try { vnStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } }); }
+      catch (e) { alert('Allow microphone access to record a voice note.'); return; }
+      vnChunks = [];
+      const mime = (window.MediaRecorder && MediaRecorder.isTypeSupported('audio/webm')) ? 'audio/webm' : '';
+      vnRec = new MediaRecorder(vnStream, mime ? { mimeType: mime } : undefined);
+      vnRec.ondataavailable = (e) => { if (e.data && e.data.size) vnChunks.push(e.data); };
+      vnRec.onstop = async () => {
+        if (vnStream) { vnStream.getTracks().forEach(t => t.stop()); vnStream = null; }
+        micBtn.classList.remove('rec'); micBtn.classList.add('busy');
+        const type = vnRec ? (vnRec.mimeType || 'audio/webm') : 'audio/webm';
+        const blob = new Blob(vnChunks, { type });
+        const prev = input.value;
+        try {
+          if (blob.size < 1200) return;
+          const b64 = await new Promise(r => { const fr = new FileReader(); fr.onloadend = () => r(String(fr.result).split(',')[1]); fr.readAsDataURL(blob); });
+          const jwt = await getToken(); if (!jwt) return;
+          const r = await fetch('/api/blaksyd/symp/transcribe', {
+            method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + jwt },
+            body: JSON.stringify({ audioBase64: b64, mimeType: type }),
+          });
+          const j = await r.json().catch(() => null);
+          const txt = ((j && j.data && j.data.text) || (j && j.text) || '').trim();
+          if (txt) { input.value = (prev ? prev.trim() + ' ' : '') + txt; autogrow(); input.focus(); }
+        } catch (e) { /* keep whatever was typed */ }
+        finally { micBtn.classList.remove('busy'); }
+      };
+      vnRec.start(); micBtn.classList.add('rec');
+    }
+    if (micBtn) micBtn.addEventListener('click', toggleVoiceNote);
 
     // ── Conversation switching + history drawer (server-backed) ───────────
     async function openChat(id) {
