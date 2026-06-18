@@ -204,7 +204,7 @@ const nav = [
         box-shadow: 0 12px 36px rgba(60, 40, 20, .16), inset 0 1px 0 rgba(255, 255, 255, .9);
       }
       /* three level icon buttons; the active one gets a lighter rounded-rect highlight */
-      .ap-link { flex: none; padding: .5rem 1.3rem; gap: 0; border-radius: 16px; justify-content: center; align-items: center; transition: background var(--t-fast) var(--ease-out); }
+      .ap-link { flex: none; padding: .5rem 1.25rem; gap: 0; border-radius: var(--r-pill); justify-content: center; align-items: center; transition: background var(--t-base) var(--ease-soft); }
       .ap-link span { display: none; }                              /* icons only — Instagram-style */
       .ap-link svg { width: 26px; height: 26px; opacity: .62; transition: opacity var(--t-fast) var(--ease-out); }
       .ap-link:hover { background: transparent; }
@@ -220,8 +220,8 @@ const nav = [
       /* ── Instagram-style bar: Blak · Minit · Nexus — three level icons, active highlighted ── */
       .ap-nav .ap-link[data-nav="home"],
       .ap-nav .ap-link[data-nav="persona"] { display: none; }
-      .ap-nav .ap-link[data-nav="blak"]  { order: 1; }
-      .ap-nav .ap-link[data-nav="minit"] { order: 2; }
+      .ap-nav .ap-link[data-nav="minit"] { order: 1; }
+      .ap-nav .ap-link[data-nav="blak"]  { order: 2; }
       .ap-nav .ap-link[data-nav="nexus"] { order: 3; }
       /* the active icon takes on its pillar's colour */
       .ap-nav .ap-link[data-nav="blak"].is-on  { color: var(--coral); }
@@ -323,6 +323,7 @@ const nav = [
       if (email) { const av = document.getElementById('ap-avatar'); if (av) av.textContent = email[0].toUpperCase(); }
 
       initNotifications(session.user.id);
+      setupSwipe();
     })();
 
     // App-wide in-app notification banner. Listens to the `notifications` inbox
@@ -351,6 +352,29 @@ const nav = [
       latestUnread();
       try { supabase.channel('notif_' + uid).on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications', filter: 'user_id=eq.' + uid }, (p) => render(p.new)).subscribe(); } catch (e) {}
       setInterval(latestUnread, 20000);
+    }
+    // Swipe left/right between the three pillars (Minit ↔ Blak ↔ Nexus), matching the bar order.
+    function setupSwipe() {
+      const order = [['minit', '/beta/minit/'], ['blak', '/beta/blak/'], ['nexus', '/beta/nexus/']];
+      const onLink = document.querySelector('.ap-link.is-on');
+      const idx = onLink ? order.findIndex((o) => o[0] === onLink.getAttribute('data-nav')) : -1;
+      if (idx < 0) return;                                            // home / profile / admin → no swipe
+      const hScrollable = (el) => { for (let n = el; n && n !== document.body; n = n.parentElement) { const s = getComputedStyle(n); if ((s.overflowX === 'auto' || s.overflowX === 'scroll') && n.scrollWidth > n.clientWidth + 4) return true; } return false; };
+      let x0 = 0, y0 = 0, t0 = 0, ok = false;
+      document.addEventListener('touchstart', (e) => {
+        const t = e.touches[0]; if (!t) { ok = false; return; }
+        if (e.target.closest('input,textarea,[contenteditable],[data-noswipe],.bx-cv-drawer,.bx-call-ov,.mnx-modal,.mnx-drawer') || hScrollable(e.target)) { ok = false; return; }
+        x0 = t.clientX; y0 = t.clientY; t0 = Date.now(); ok = true;
+      }, { passive: true });
+      document.addEventListener('touchend', (e) => {
+        if (!ok) return; ok = false;
+        const t = e.changedTouches[0]; if (!t) return;
+        const dx = t.clientX - x0, dy = t.clientY - y0, dt = Date.now() - t0;
+        if (Math.abs(dx) > 70 && Math.abs(dx) > Math.abs(dy) * 1.8 && dt < 600) {
+          const ni = idx + (dx < 0 ? 1 : -1);                         // swipe left → next-right pillar
+          if (ni >= 0 && ni < order.length) location.href = order[ni][1];
+        }
+      }, { passive: true });
     }
   </script>
 </body>
