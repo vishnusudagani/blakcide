@@ -121,6 +121,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
     @keyframes lsn-bub { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
     .lsn-row.me .lsn-bubble { background: linear-gradient(135deg, var(--mint), var(--mint-deep)); color: #06231C; border-bottom-right-radius: 5px; }
     .lsn-row.me.temp .lsn-bubble { opacity: .6; }
+    .lsn-row.lsn-hist .lsn-bubble { opacity: .5; }
     .lsn-row.them .lsn-bubble { background: var(--surface-strong); border: 1px solid var(--line); color: var(--ink); border-bottom-left-radius: 5px; }
     html[data-theme="light"] .lsn-row.them .lsn-bubble { background: #fff; border-color: var(--line-strong); }
     .lsn-meta { display: flex; align-items: center; margin: .14rem .2rem 0; }
@@ -458,6 +459,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
         helpBtn.addEventListener('click', () => { const open = helpBox.classList.toggle('open'); helpBtn.classList.toggle('on', open); notesBox.classList.remove('open'); notesBtn.classList.remove('on'); });
         document.getElementById('lsn-flag').addEventListener('click', async (e) => { await supabase.from('connect_sessions').update({ flagged_at: new Date().toISOString(), flag_reason: 'listener-flagged' }).eq('id', activeSessionId); logEvent('flagged'); e.currentTarget.textContent = 'Flagged ✓'; e.currentTarget.disabled = true; });
 
+        if (session.intake && session.intake.share_history && session.user_id) { try { await loadSharedHistory(session, feed); } catch (e) {} }
         const { data: msgs } = await supabase.from('messages').select('*').eq('session_id', activeSessionId).order('created_at', { ascending: true });
         (msgs || []).forEach(renderMessage);
         if (msgs && msgs.length) lastMsgAt = msgs[msgs.length - 1].created_at;
@@ -484,6 +486,28 @@ import AppLayout from '../../layouts/AppLayout.astro';
       function sendTyping() { const n = Date.now(); if (n - lastTypingSent < 1500) return; lastTypingSent = n; chatChannel?.send({ type: 'broadcast', event: 'typing', payload: { from: user.id } }); }
       function showTyping() { const feed = document.getElementById('lsn-feed'); if (!feed) return; let t = document.getElementById('lsn-typing'); if (!t) { t = document.createElement('div'); t.id = 'lsn-typing'; t.className = 'lsn-typing'; t.innerHTML = '<span></span><span></span><span></span>'; feed.appendChild(t); if (nearBottom(feed)) feed.scrollTop = feed.scrollHeight; } if (typingTimer) clearTimeout(typingTimer); typingTimer = setTimeout(() => document.getElementById('lsn-typing')?.remove(), 2400); }
       function markSeen() { if (lastOwnStatusEl) lastOwnStatusEl.textContent = 'Seen'; }
+      // When the seeker consented (intake.share_history), surface prior conversations
+      // with this same person so the listener has continuity. UI-gated consent.
+      async function loadSharedHistory(session, feed) {
+        const { data: prior } = await supabase.from('connect_sessions')
+          .select('id').eq('listener_id', profile.id).eq('user_id', session.user_id)
+          .eq('status', 'completed').neq('id', session.id).order('created_at', { ascending: true });
+        if (!prior || !prior.length) return;
+        const { data: pmsgs } = await supabase.from('messages').select('*')
+          .in('session_id', prior.map((p) => p.id)).order('created_at', { ascending: true });
+        const real = (pmsgs || []).filter((m) => m.content && !String(m.content).startsWith('###'));
+        if (!real.length) return;
+        const wrap = document.createElement('div');
+        const tag = document.createElement('div'); tag.className = 'lsn-sys'; tag.textContent = '↑ shared from your earlier conversations'; wrap.appendChild(tag);
+        real.forEach((m) => {
+          const me = m.sender_id === user.id;
+          const row = document.createElement('div'); row.className = 'lsn-row ' + (me ? 'me' : 'them') + ' lsn-hist';
+          const b = document.createElement('div'); b.className = 'lsn-bubble'; b.textContent = m.content; row.appendChild(b);
+          wrap.appendChild(row);
+        });
+        const now = document.createElement('div'); now.className = 'lsn-sys'; now.textContent = '— this conversation —'; wrap.appendChild(now);
+        feed.appendChild(wrap);
+      }
       // How many people are queued for me right now (cap 1) — keeps me aware during a
       // live chat so I can wrap up and pick up the next person.
       async function updateWaiting() {
