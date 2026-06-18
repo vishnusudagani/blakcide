@@ -31,6 +31,7 @@ import { runStreamingChatWithTools } from '../../symp-core/lib/chat-runner.mjs';
 import { chatProviders } from '../../symp-core/lib/llm-providers.mjs';
 import { recordEventAsync } from '../../symp-core/lib/vibe-tracker.mjs';
 import { updateRollingMemoryAsync } from '../../symp-core/lib/memory-updater.mjs';
+import { extractKnowledgeAsync } from '../../symp-core/lib/knowledge-extractor.mjs';
 import { analyseTurn } from '../../symp-core/lib/diagnostic.mjs';
 import SympContract from '../../symp-core/contract/endpoints.js';
 
@@ -90,9 +91,10 @@ export default async (req) => {
     const activeTools = floorOnly ? [] : TOOL_DEFS;
 
     // ── Build the layered system stack ───────────────────────────────────
+    const latestUserText = [...messages].reverse().find(m => m.role === 'user')?.content || '';
     let systemStack = [];
     try {
-        systemStack = await buildChatSystemStack(user_id);
+        systemStack = await buildChatSystemStack(user_id, { latestUserText });
     } catch (e) {
         console.warn(`[symp-v1-chat] system-stack build failed for ${user_id}: ${e.message}`);
         // Soft fall-through: the chat still goes out, just less personalised.
@@ -147,6 +149,7 @@ export default async (req) => {
             evidence: `User: ${lastUser}\n\nAssistant: ${assembled}`,
         });
         updateRollingMemoryAsync(user_id, { userText: lastUser, assistantText: assembled });
+        extractKnowledgeAsync(user_id, { userText: lastUser, assistantText: assembled });
 
         // Self-correction analysis — synchronous but cheap (regex-only).
         try {
@@ -208,6 +211,7 @@ export default async (req) => {
                 evidence: `User: ${lastUser}\n\nAssistant: ${assembledForVibe}`,
             });
             updateRollingMemoryAsync(user_id, { userText: lastUser, assistantText: assembledForVibe });
+            extractKnowledgeAsync(user_id, { userText: lastUser, assistantText: assembledForVibe });
 
             // Self-correction analysis — pins next-turn corrective hint.
             try {

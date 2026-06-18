@@ -6,7 +6,7 @@
 import '../styles/fonts.css';
 import '../styles/tokens.css';
 
-interface Props { active?: 'home' | 'blak' | 'persona' | 'minit' | 'nexus'; title?: string; soon?: boolean; }
+interface Props { active?: 'home' | 'blak' | 'persona' | 'minit' | 'nexus' | 'profile'; title?: string; soon?: boolean; }
 const { active = 'home', title = 'Home', soon = false } = Astro.props;
 
 // soon: feature is a preview, not yet live (Blak / Persona / Minit). Nexus is live.
@@ -207,6 +207,7 @@ const nav = [
       // email if a Supabase session exists; wire sign-out. Real gating comes later.
       var av = document.getElementById('ap-avatar');
       var out = document.getElementById('ap-signout');
+      if (av) av.addEventListener('click', function () { window.location.href = '/beta/profile/'; });
       // Manual light/dark toggle — persists the choice (shared with the marketing
       // site) and from then on overrides OS-follow until cleared.
       var themeBtn = document.getElementById('ap-theme');
