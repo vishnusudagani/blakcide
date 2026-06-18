@@ -278,6 +278,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
     const CHAT_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.5 8.5 0 0 1-12.5 7.5L3 21l2-5.5A8.5 8.5 0 1 1 21 11.5z"/></svg>';
     const SPARK_SVG = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l1.7 5.7L19.5 9l-5.8 1.3L12 16l-1.7-5.7L4.5 9l5.8-1.3z"/></svg>';
     const COMPASS_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M15.5 8.5l-2 5-5 2 2-5z"/></svg>';
+    const HISTORY_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v5h5"/><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"/><path d="M12 7v5l3 2"/></svg>';
     const FRESH = () => new Date(Date.now() - 120000).toISOString();
     const fmtTime = (iso) => { try { return new Date(iso).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' }); } catch { return ''; } };
     const relTime = (iso) => { const d = Date.now() - new Date(iso).getTime(); const m = Math.floor(d / 60000), h = Math.floor(m / 60), day = Math.floor(h / 24); if (day > 6) return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }); if (day >= 1) return day + (day === 1 ? ' day ago' : ' days ago'); if (h >= 1) return h + (h === 1 ? ' hr ago' : ' hrs ago'); if (m >= 1) return m + ' min ago'; return 'just now'; };
@@ -554,18 +555,26 @@ import AppLayout from '../../layouts/AppLayout.astro';
 
       function showChoice(isAnonymous, preferredId, intake) {
         immersive(true);
+        const shareRow = preferredId
+          ? `<button type="button" class="mnx-anon-min" id="mnx-share" aria-pressed="false" style="margin-top:1.1rem"><span class="mnx-anon-ico">${HISTORY_SVG}</span> Let them see our past chats <i>off</i><span class="mnx-sw2"></span></button>`
+          : '';
         root.innerHTML = `<div class="mnx-ring">
           <div class="mnx-ring-avatar"><i></i><i></i><span class="core"></span></div>
           <h3>How would you like to talk?</h3>
-          <p>You can switch to a call anytime once you’re connected.</p>
+          <p>${preferredId ? 'Picking up with someone you’ve spoken to before.' : 'You can switch to a call anytime once you’re connected.'}</p>
           <div class="mnx-choice">
             <button type="button" class="mnx-go" id="mnx-pick-chat">${CHAT_SVG} Start chat</button>
             <button type="button" class="mnx-go mnx-go-alt" id="mnx-pick-call">${PHONE_SVG} Start call</button>
           </div>
+          ${shareRow}
           <div class="mnx-ring-actions"><button type="button" class="mnx-cancel" id="mnx-pick-back">Back</button></div>
         </div>`;
-        document.getElementById('mnx-pick-chat')?.addEventListener('click', () => { if (busy) return; busy = true; startTalking(isAnonymous, preferredId, false, intake); });
-        document.getElementById('mnx-pick-call')?.addEventListener('click', () => { if (busy) return; busy = true; startTalking(isAnonymous, preferredId, true, intake); });
+        let share = false;
+        const shareBtn = document.getElementById('mnx-share');
+        shareBtn?.addEventListener('click', () => { share = !share; shareBtn.classList.toggle('on', share); shareBtn.setAttribute('aria-pressed', String(share)); const i = shareBtn.querySelector('i'); if (i) i.textContent = share ? 'on' : 'off'; });
+        const withShare = () => (share ? { ...(intake || {}), share_history: true } : intake);
+        document.getElementById('mnx-pick-chat')?.addEventListener('click', () => { if (busy) return; busy = true; startTalking(isAnonymous, preferredId, false, withShare()); });
+        document.getElementById('mnx-pick-call')?.addEventListener('click', () => { if (busy) return; busy = true; startTalking(isAnonymous, preferredId, true, withShare()); });
         document.getElementById('mnx-pick-back')?.addEventListener('click', showEntry);
       }
 
