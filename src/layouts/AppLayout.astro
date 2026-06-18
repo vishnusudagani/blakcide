@@ -44,7 +44,7 @@ const nav = [
 <body>
   <div class="ap-atmos" aria-hidden="true"></div>
 
-  <div class="ap">
+  <div class={`ap ${active === 'blak' ? 'ap--chat' : ''}`}>
     <!-- ── side / brand rail ── -->
     <aside class="ap-rail">
       <a href="/beta/" class="ap-brand" aria-label="Blaksyd beta">
@@ -52,7 +52,7 @@ const nav = [
       </a>
       <nav class="ap-nav" aria-label="Blaksyd">
         {nav.map((n) => (
-          <a href={n.href} class={`ap-link c-${n.c} ${active === n.id ? 'is-on' : ''}`} aria-current={active === n.id ? 'page' : undefined}>
+          <a href={n.href} data-nav={n.id} class={`ap-link c-${n.c} ${active === n.id ? 'is-on' : ''}`} aria-current={active === n.id ? 'page' : undefined}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d={n.d} /></svg>
             <span>{n.label}</span>
             {n.soon && <span class="ap-link-soon">soon</span>}
@@ -188,6 +188,26 @@ const nav = [
       .ap-signout { display: none; }
       .ap-link-soon { display: none; }
       .ap-main { padding-bottom: 72px; }
+
+      /* ── Snapchat-style bottom bar: Minit · Blak(center, raised) · Nexus ── */
+      .ap-nav .ap-link[data-nav="home"],
+      .ap-nav .ap-link[data-nav="persona"] { display: none; }
+      .ap-nav { justify-content: space-evenly; align-items: flex-end; padding-bottom: calc(.5rem + env(safe-area-inset-bottom, 0)); }
+      .ap-nav .ap-link[data-nav="minit"] { order: 1; }
+      .ap-nav .ap-link[data-nav="blak"]  { order: 2; }
+      .ap-nav .ap-link[data-nav="nexus"] { order: 3; }
+      .ap-nav .ap-link[data-nav="blak"] {
+        background: var(--cta-grad); color: #1b1030; border-radius: 50%;
+        width: 56px; height: 56px; margin-top: -20px; align-self: center;
+        box-shadow: 0 0 22px rgba(255,107,157,.5); flex: none;
+      }
+      .ap-nav .ap-link[data-nav="blak"] svg { width: 25px; height: 25px; opacity: 1; }
+      .ap-nav .ap-link[data-nav="blak"] span { display: none; }
+      .ap-nav .ap-link[data-nav="blak"].is-on { box-shadow: 0 0 28px rgba(255,107,157,.75); }
+
+      /* On the Blak screen, blak.astro owns the header — hide the shell's top row */
+      .ap--chat .ap-brand, .ap--chat .ap-me { display: none; }
+      .ap--chat .ap-rail { padding: 0; border-bottom: 0; min-height: 0; }
     }
 
     /* shared content primitives */
