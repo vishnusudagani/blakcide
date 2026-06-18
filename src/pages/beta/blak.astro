@@ -10,7 +10,6 @@ import AppLayout from '../../layouts/AppLayout.astro';
       <button type="button" class="bx-icon bx-icon-soon" id="bx-persona" aria-label="Personas — coming soon" title="Personas — coming soon">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.1"/><path d="M3.6 19a5.4 5.4 0 0 1 10.8 0"/><path d="M16 6.6a3 3 0 0 1 0 5.4M18.6 19a5.2 5.2 0 0 0-3-4.8"/></svg>
       </button>
-      <span class="bx-who"><b>Blak</b><i><span class="bx-live"></span>with you · always</i></span>
       <div class="bx-head-actions">
         <button type="button" class="bx-avatar" id="bx-profile" aria-label="Your profile" title="Your profile">Y</button>
       </div>
@@ -73,7 +72,6 @@ import AppLayout from '../../layouts/AppLayout.astro';
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
         </button>
       </form>
-      <p class="bx-note">Beta — the real Blak. Talks, listens, remembers you, any language. Be kind, it's still learning. 🤍</p>
     </div>
 
     <!-- Voice call (turn-based: tap-to-talk) -->
@@ -199,19 +197,20 @@ import AppLayout from '../../layouts/AppLayout.astro';
     .bx-dock { padding-bottom: .5rem; }
     .bx-composer { display: flex; gap: .55rem; padding: 0 .1rem .45rem; align-items: flex-end; }
     /* glowing rounded field wrapping the textarea + trailing send/stop */
-    .bx-field { position: relative; flex: 1; min-width: 0; display: flex; align-items: flex-end; gap: .35rem; padding: .35rem .4rem .35rem 0; border: 1px solid transparent; border-radius: var(--r-lg); background: linear-gradient(var(--glass-strong), var(--glass-strong)) padding-box, var(--line-grad) border-box; backdrop-filter: blur(14px); }
-    /* living gold→coral→lavender glow ring — alive at rest, intensifies on focus/typing, pulses on send */
+    .bx-field { position: relative; flex: 1; min-width: 0; min-height: 50px; display: flex; align-items: center; gap: .25rem; padding: .2rem .35rem .2rem .25rem; border: 1px solid transparent; border-radius: var(--r-pill); background: linear-gradient(var(--glass-strong), var(--glass-strong)) padding-box, var(--line-grad) border-box; backdrop-filter: blur(14px); }
+    /* Elegant, contained brand halo (no rotation): a soft gold→coral→lavender
+       glow hugging the pill — gently breathes at rest, brightens on focus, lifts on send. */
     .bx-field::before {
-      content: ''; position: absolute; inset: -2.5px; border-radius: inherit; z-index: -1;
-      background: conic-gradient(from 0deg, var(--gold), var(--coral), var(--lavender), var(--aqua), var(--coral), var(--gold));
-      filter: blur(11px); opacity: .42;
-      transition: opacity .35s var(--ease-out), filter .35s var(--ease-out);
-      animation: bx-glow-spin 9s linear infinite;
+      content: ''; position: absolute; inset: -1px; border-radius: inherit; z-index: -1;
+      background: linear-gradient(115deg, var(--gold), var(--coral) 50%, var(--lavender));
+      filter: blur(9px); opacity: .2;
+      transition: opacity .4s var(--ease-out);
+      animation: bx-glow-breathe 5.5s ease-in-out infinite;
     }
-    .bx-field:focus-within::before { opacity: .82; filter: blur(14px); animation-duration: 4.5s; }
-    .bx-composer.bx-sending .bx-field::before { opacity: .95; filter: blur(16px); animation-duration: 1.8s; }
-    @keyframes bx-glow-spin { to { transform: rotate(1turn); } }
-    .bx-field textarea { flex: 1; min-width: 0; resize: none; max-height: 140px; padding: .72rem .4rem .72rem 1.1rem; background: transparent; border: 0; color: var(--ink); font: inherit; font-size: var(--fs-lg); line-height: 1.45; }
+    .bx-field:focus-within::before { opacity: .5; animation: none; }
+    .bx-composer.bx-sending .bx-field::before { opacity: .62; animation: none; }
+    @keyframes bx-glow-breathe { 0%, 100% { opacity: .16; } 50% { opacity: .3; } }
+    .bx-field textarea { flex: 1; min-width: 0; resize: none; max-height: 140px; padding: .5rem .4rem .5rem .9rem; background: transparent; border: 0; color: var(--ink); font: inherit; font-size: var(--fs-lg); line-height: 1.4; }
     .bx-field textarea:focus { outline: none; }
     .bx-field button { flex: none; width: 40px; height: 40px; border-radius: 50%; border: 0; cursor: pointer; color: var(--cta-ink); background: var(--cta); box-shadow: var(--shadow-cta); display: grid; place-items: center; transition: transform .16s var(--ease-out), opacity .16s; }
     .bx-field button:hover { transform: scale(1.06); } .bx-field button:active { transform: scale(.94); }
@@ -292,6 +291,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
       .bx-head { padding: .8rem .1rem .7rem; }
       .bx-home { gap: 1.1rem; }
       .bx-call, .bx-clear { width: 46px; height: 46px; }
+      .bx-field { min-height: 46px; }
       .bx-composer { gap: .45rem; }
       .bx-row { max-width: 90%; }
     }
@@ -472,7 +472,10 @@ import AppLayout from '../../layouts/AppLayout.astro';
 
     function render() {
       stream.innerHTML = '';
-      for (const m of history) addRow(m.role === 'user' ? 'me' : 'them', m.content, { ts: m.ts, media_url: m.media_url });
+      for (const m of history) {
+        if (!m.content && !m.media_url) continue;   // skip empty/failed turns (don't render blank bubbles)
+        addRow(m.role === 'user' ? 'me' : 'them', m.content, { ts: m.ts, media_url: m.media_url });
+      }
       attachRegen();
       scrollToBottom(true);
     }
@@ -588,11 +591,12 @@ import AppLayout from '../../layouts/AppLayout.astro';
           acc = await attempt(typing);
         }
         acc = acc.trim();
-        typing.bub.textContent = acc || "Mmm — I didn't catch that. Say it once more?";
+        const shown = acc || "Mmm — I didn't catch that. Say it once more?";
+        typing.bub.textContent = shown;
         stamp(typing);
-        const am = { role: 'assistant', content: acc, ts: typing.ts };
+        const am = { role: 'assistant', content: shown, ts: typing.ts };
         history.push(am);
-        dbInsertMessage('assistant', acc).then((id) => { if (id) am.id = id; });
+        dbInsertMessage('assistant', shown).then((id) => { if (id) am.id = id; });
         maybeTitleConvo();
         setBusy(false);
       } catch (e) {

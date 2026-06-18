@@ -174,36 +174,47 @@ const nav = [
         backdrop-filter: none; background: rgba(8, 9, 26, .92);
       }
       html[data-theme="light"] .ap-rail { background: rgba(255, 252, 244, .94); }
+      /* Floating liquid-glass capsule (Apple Vision Pro vibe) — centered, frosted */
       .ap-nav {
-        position: fixed; bottom: 0; left: 0; right: 0; margin: 0;
-        flex-direction: row; justify-content: space-around;
-        padding: .4rem .3rem calc(.4rem + env(safe-area-inset-bottom, 0)); gap: 0;
-        background: rgba(8, 9, 26, .92); backdrop-filter: blur(16px); border-top: 1px solid var(--line-strong); z-index: 30;
+        position: fixed; bottom: calc(.7rem + env(safe-area-inset-bottom, 0)); left: 50%; transform: translateX(-50%);
+        width: auto; margin: 0; flex-direction: row; justify-content: center; align-items: center; gap: .35rem;
+        padding: .4rem .6rem; border-radius: var(--r-pill); z-index: 30;
+        background: rgba(255, 255, 255, .12);
+        -webkit-backdrop-filter: blur(26px) saturate(1.6); backdrop-filter: blur(26px) saturate(1.6);
+        border: 1px solid rgba(255, 255, 255, .22);
+        box-shadow: 0 12px 36px rgba(0, 0, 0, .3), inset 0 1px 0 rgba(255, 255, 255, .4), inset 0 -1px 0 rgba(255, 255, 255, .07);
       }
-      html[data-theme="light"] .ap-nav { background: rgba(255, 252, 244, .94); }
+      html[data-theme="light"] .ap-nav {
+        background: rgba(255, 255, 255, .55); border-color: rgba(255, 255, 255, .8);
+        box-shadow: 0 12px 36px rgba(60, 40, 20, .16), inset 0 1px 0 rgba(255, 255, 255, .9);
+      }
       .ap-link { flex-direction: column; gap: 2px; padding: .35rem .5rem; font-size: var(--fs-2xs); border-radius: var(--r-sm); }
       .ap-link.is-on { box-shadow: none !important; background: transparent; }
       .ap-link svg { width: 22px; height: 22px; opacity: 1; }
       .ap-me { margin-top: 0; padding-top: 0; border-top: 0; }
       .ap-signout { display: none; }
       .ap-link-soon { display: none; }
-      .ap-main { padding-bottom: 72px; }
+      .ap-main { padding-bottom: 96px; }
+      .ap--chat .ap-main { padding-bottom: 0; }
 
       /* ── Snapchat-style bottom bar: Minit · Blak(center, raised) · Nexus ── */
       .ap-nav .ap-link[data-nav="home"],
       .ap-nav .ap-link[data-nav="persona"] { display: none; }
-      .ap-nav { justify-content: space-evenly; align-items: flex-end; padding-bottom: calc(.5rem + env(safe-area-inset-bottom, 0)); }
       .ap-nav .ap-link[data-nav="minit"] { order: 1; }
       .ap-nav .ap-link[data-nav="blak"]  { order: 2; }
       .ap-nav .ap-link[data-nav="nexus"] { order: 3; }
+      /* Minit / Nexus — glassy icon tiles inside the capsule */
+      .ap-nav .ap-link[data-nav="minit"], .ap-nav .ap-link[data-nav="nexus"] { padding: .4rem .7rem; border-radius: var(--r-pill); }
+      /* Blak — the prominent, raised liquid-glass center */
       .ap-nav .ap-link[data-nav="blak"] {
         background: var(--cta-grad); color: #1b1030; border-radius: 50%;
-        width: 56px; height: 56px; margin-top: -20px; align-self: center;
-        box-shadow: 0 0 22px rgba(255,107,157,.5); flex: none;
+        width: 56px; height: 56px; margin-top: -22px; align-self: center; flex: none;
+        border: 1px solid rgba(255, 255, 255, .35);
+        box-shadow: 0 8px 22px rgba(255, 107, 157, .5), inset 0 1.5px 1px rgba(255, 255, 255, .55), inset 0 -2px 4px rgba(180, 60, 110, .3);
       }
       .ap-nav .ap-link[data-nav="blak"] svg { width: 25px; height: 25px; opacity: 1; }
       .ap-nav .ap-link[data-nav="blak"] span { display: none; }
-      .ap-nav .ap-link[data-nav="blak"].is-on { box-shadow: 0 0 28px rgba(255,107,157,.75); }
+      .ap-nav .ap-link[data-nav="blak"].is-on { box-shadow: 0 8px 28px rgba(255, 107, 157, .75), inset 0 1.5px 1px rgba(255, 255, 255, .6); }
 
       /* On the Blak screen, blak.astro owns the header — hide the shell's top row */
       .ap--chat .ap-brand, .ap--chat .ap-me { display: none; }
