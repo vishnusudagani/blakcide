@@ -29,6 +29,7 @@ const EXTRACTOR_SYSTEM = [
     '<<TAXONOMY>>',
     '',
     'RULES:',
+    '- ALWAYS capture stated BASICS first: if the user gives their name, save identity:preferred_name (and identity:full_name when it is clearly their full name). Likewise where they live (identity:location) and what they do (world:work / world:study). NEVER skip a name the user states, even in a short message like "I am Vishnu".',
     '- Map each fact to the BEST (area, key) above. If something important fits no field, use area "other" with a short snake_case key you invent (e.g. other: favourite_cricket_team).',
     '- value: one concise plain-English statement (e.g. "Has a younger sister, Ananya, studying medicine"). English only — this is internal context.',
     '- source: "user" if the user stated or clearly implied it; "blak" if you are inferring it.',
