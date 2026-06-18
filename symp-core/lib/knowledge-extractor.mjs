@@ -8,7 +8,9 @@
 
 import { fetchKnowledgeFacts, upsertKnowledgeFact } from './supabase.mjs';
 import { allFields, isValidArea, fieldMeta, OPEN_AREA_ID } from './knowledge-schema.mjs';
-import { chatComplete } from './inference.mjs';
+// Failover (Groq-first → OSS hosts → Azure) so a Groq rate-limit doesn't silently
+// drop the extraction — learning has to be reliable, not best-effort-on-a-free-tier.
+import { chatCompleteFailover } from './llm-providers.mjs';
 
 function taxonomyText() {
     const byArea = {};
@@ -76,18 +78,15 @@ export async function extractKnowledge(userId, { userText, assistantText } = {})
             `Blak: ${String(assistantText || '').slice(0, 1200)}\n\n` +
             `Extract new/changed durable facts as JSON now.`;
 
-        const out = await chatComplete({
-            task:        'summary',   // → free Groq floor
-            messages:    [
+        const out = await chatCompleteFailover(
+            [
                 { role: 'system', content: sys },
                 { role: 'user',   content: userMsg },
             ],
-            temperature: 0.2,
-            max_tokens:  500,
-            timeoutMs:   15000,
-        });
+            { temperature: 0.2, maxTokens: 500, timeoutMs: 15000, tier: 'cheap' }
+        );
 
-        const facts = parseFacts(out.content);
+        const facts = parseFacts(out.text);
         for (const f of facts) {
             if (!f || typeof f !== 'object') continue;
             let area  = String(f.area || '').trim();
