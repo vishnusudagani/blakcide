@@ -89,18 +89,18 @@ const nav = [
       font-family: var(--font-body); color: var(--ink); background: var(--bg);
       -webkit-font-smoothing: antialiased;
     }
+    /* Subtle Gemini-style wash — clean up top, a soft warm Blaksyd tint pooled
+       low (behind the composer). Low intensity, even — not loud blooms. */
     .ap-atmos {
       position: fixed; inset: 0; z-index: 0; pointer-events: none;
       background:
-        radial-gradient(70% 50% at 18% -8%, rgba(255, 150, 120, .16), transparent 60%),
-        radial-gradient(60% 50% at 92% 4%, rgba(201, 184, 255, .12), transparent 60%),
-        radial-gradient(80% 60% at 50% 120%, rgba(91, 192, 255, .10), transparent 60%);
+        radial-gradient(120% 55% at 50% 113%, rgba(255, 150, 120, .10), transparent 60%),
+        linear-gradient(180deg, transparent 46%, rgba(201, 184, 255, .05));
     }
     html[data-theme="light"] .ap-atmos {
       background:
-        radial-gradient(70% 50% at 18% -8%, rgba(255, 138, 108, .16), transparent 60%),
-        radial-gradient(60% 50% at 92% 4%, rgba(150, 131, 230, .12), transparent 60%),
-        radial-gradient(80% 60% at 50% 120%, rgba(70, 180, 192, .10), transparent 60%);
+        radial-gradient(120% 55% at 50% 112%, rgba(255, 138, 108, .12), transparent 62%),
+        linear-gradient(180deg, transparent 50%, rgba(255, 182, 138, .06));
     }
 
     .ap { position: relative; z-index: 1; display: grid; grid-template-columns: 248px 1fr; min-height: 100vh; min-height: 100svh; }
@@ -208,7 +208,7 @@ const nav = [
       /* Blak — the prominent, raised liquid-glass center */
       .ap-nav .ap-link[data-nav="blak"] {
         background: var(--cta-grad); color: #1b1030; border-radius: 50%;
-        width: 56px; height: 56px; margin-top: -22px; align-self: center; flex: none;
+        width: 52px; height: 52px; margin-top: -16px; align-self: center; flex: none;
         border: 1px solid rgba(255, 255, 255, .35);
         box-shadow: 0 8px 22px rgba(255, 107, 157, .5), inset 0 1.5px 1px rgba(255, 255, 255, .55), inset 0 -2px 4px rgba(180, 60, 110, .3);
       }
