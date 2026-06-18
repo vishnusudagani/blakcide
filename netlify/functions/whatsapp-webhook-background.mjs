@@ -87,16 +87,68 @@ async function handleEvent(payload) {
     ]);
 }
 
-// Run the SAME brain the web chat uses, in-process (no HTTP self-call).
+// Extra WhatsApp voice tuning, appended LAST (strongest position) — targets the
+// exact complaints: blandness, inconsistent register, awkward romanized Telugu/Hindi.
+const WA_VOICE_NUDGE = {
+    role: 'system',
+    content: [
+        'TEXTING ON WHATSAPP — extra tuning (highest priority):',
+        '- Bring REAL emotion and a point of view. React with genuine feeling FIRST (delight, sympathy, a laugh, a hot take), then talk. Kill generic filler — never "rollercoaster", "ups and downs", "keeps it interesting", or any tidy balanced summary. Be specific and alive.',
+        '- Match the user\'s EXACT register + slang. If they\'re casual (ra, macha, bro, yaar, abey), be FULLY casual — never formal/textbook (no "mee", no stiff constructions). Keep ONE consistent register within a reply.',
+        '- Romanized Telugu/Hindi must read like a real native person texting — natural, grammatical, simple. If a phrase would sound off to a native, simplify it instead of forcing odd or invented words.',
+        '- 1–2 short lines, the rhythm of a real WhatsApp text. No essays.',
+    ].join('\n'),
+};
+
+// Indian-language signal: native scripts OR common romanized Telugu/Hindi tokens.
+function looksIndian(t = '') {
+    if (/[ऀ-ॿঀ-৿਀-੿઀-૿଀-୿஀-௿ఀ-౿ಀ-೿ഀ-ൿ]/.test(t)) return true;
+    return /\b(undi|undhi|le?dhu|ledu|ela|em(anna|ti)?|ra+|macha|maccha|cheppu|chesa|chestu|chestun|kavali|kya|hai|hain|nahi|nahin|yaar|kaise|kaisa|kaun|bhai|bhaisaab|matlab|ach+a|theek|karo|karna|bata|tera|mera|kyun)\b/i.test(t);
+}
+
+// One OpenAI-Chat-Completions-compatible call. Returns '' on any failure.
+async function callOpenAIStyle(url, key, model, messages) {
+    if (!url || !key || !model) return '';
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 25000);
+    try {
+        const r = await fetch(url, {
+            method: 'POST', signal: ctrl.signal,
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
+            body: JSON.stringify({ model, messages, temperature: 0.9, max_tokens: 600 }),
+        });
+        if (!r.ok) return '';
+        const d = await r.json();
+        return (d?.choices?.[0]?.message?.content || '').trim();
+    } catch (_) { return ''; }
+    finally { clearTimeout(timer); }
+}
+
+const trySarvam = (messages) => callOpenAIStyle(
+    process.env.SARVAM_BASE_URL || 'https://api.sarvam.ai/v1/chat/completions',
+    process.env.SARVAM_API_KEY, process.env.SARVAM_CHAT_MODEL || 'sarvam-m', messages);
+const tryGemini = (messages) => callOpenAIStyle(
+    process.env.GEMINI_BASE_URL, process.env.GEMINI_API_KEY,
+    process.env.GEMINI_CHAT_MODEL || 'gemini-2.5-flash', messages);
+
+// Run the SAME prompt the web chat uses, but route to a model that's genuinely
+// expressive + natively fluent: Sarvam (India-native) for Indian-language turns,
+// Gemini 2.5 Flash otherwise; fall back to the shared OSS router (Azure → Qwen → Groq).
 async function runBlak(userId, messages, latestUserText) {
     let systemStack = [];
     try { systemStack = await buildChatSystemStack(userId, { latestUserText }); }
     catch (e) { console.warn('[wa-bg] system-stack build failed:', e?.message || e); }
-    const finalMessages = [...systemStack, ...messages];
-    const { text } = await chatCompleteFailover(finalMessages, {
-        tier: 'quality', maxTokens: 600, temperature: 0.9, timeoutMs: 25000,
-    });
-    return (text || '').trim();
+    const finalMessages = [...systemStack, WA_VOICE_NUDGE, ...messages];
+
+    const chain = looksIndian(latestUserText) ? [trySarvam, tryGemini] : [tryGemini, trySarvam];
+    for (const fn of chain) {
+        try { const text = await fn(finalMessages); if (text) return text; } catch (_) { /* next */ }
+    }
+    // Floor: shared OSS failover (Azure gpt-4o-mini → Qwen → Groq) — never worse than today.
+    try {
+        const { text } = await chatCompleteFailover(finalMessages, { tier: 'quality', maxTokens: 600, temperature: 0.9, timeoutMs: 25000 });
+        return (text || '').trim();
+    } catch (e) { console.error('[wa-bg] all providers failed:', e?.message || e); return ''; }
 }
 
 // text | audio (voice note) | image → plain text Blak can read. All in-process.
