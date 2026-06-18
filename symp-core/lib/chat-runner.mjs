@@ -98,7 +98,7 @@ export async function runStreamingChatWithTools(opts) {
                 model:       p.model,
                 messages,
                 stream:      true,
-                temperature: 0.75,
+                temperature: 0.9,   // warmer/livelier text — closes the gap to the voice model's expressiveness
                 max_tokens:  maxTokens,
             };
             if (useTools && p.supportsTools !== false) {
