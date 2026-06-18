@@ -48,10 +48,10 @@ function buildSystemPrompt(vaultContext) {
     return [
         CRITICAL_OVERRIDE_TEXT,
         '',
-        '=== PROACTIVE CHECK-IN MODE ===',
-        'You are about to send a SINGLE proactive push notification to the user.',
-        'You are NOT in a conversation — there is no user message to reply to.',
-        'You are reaching out first, like a close friend texting unprompted.',
+        '=== PROACTIVE OPENER MODE ===',
+        'You are greeting the user as they OPEN THE APP — a single, warm opener line, the first thing they see.',
+        'There is no user message yet; you are reaching out first, like a close friend who has been thinking of them.',
+        'Ground it in what you actually KNOW about them from the Vault/profile below — reference a real detail (their name, an ongoing thing, a recent theme). Do NOT assume the time of day and do NOT say it is morning. If you know little about them yet, keep it simply warm and lightly curious — NEVER a generic "Hope you\'re well!".',
         '',
         'OUTPUT RULES:',
         '- Output a single valid JSON object — nothing else, no prose.',
@@ -76,10 +76,8 @@ function buildSystemPrompt(vaultContext) {
     ].join('\n');
 }
 
-const USER_TURN = [
-    'Generate the proactive check-in JSON now.',
-    'It is morning local time. The user has not opened the app yet today.',
-].join(' ');
+const USER_TURN =
+    'Generate the proactive opener JSON now — the user just opened the app. Greet them like a friend reaching out first, grounded in what you actually know about them. Do not assume the time of day.';
 
 /** Clip and trim a message string. */
 function clipMessage(s) {
@@ -91,7 +89,7 @@ function clipMessage(s) {
 /** Last-resort message if the model errors or returns garbage. */
 function fallbackPayload() {
     return {
-        message:           'Just thinking of you. How\'s your morning going?',
+        message:           'Hey, you crossed my mind — how are you doing?',
         language:          'en',
         tone:              'warm',
         intent:            'check_in',
