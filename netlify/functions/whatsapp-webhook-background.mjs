@@ -53,7 +53,10 @@ async function handleEvent(payload) {
 
     const userText = await extractText(msg, kind);
     if (!userText) {
-        await sendText(phone, "i can do text, voice notes and pics for now — send me one of those 🙂");
+        const wasMedia = (kind === 'audio' || kind === 'voice' || kind === 'image');
+        await sendText(phone, wasMedia
+            ? "hmm, couldn't quite catch that one 😅 mind sending it again, or just typing it out?"
+            : "i can do text, voice notes and pics for now — send me one of those 🙂");
         await touchOutbound(phone);
         return;
     }
@@ -92,18 +95,19 @@ async function handleEvent(payload) {
 const WA_VOICE_NUDGE = {
     role: 'system',
     content: [
-        'TEXTING ON WHATSAPP — extra tuning (highest priority):',
-        '- Bring REAL emotion and a point of view. React with genuine feeling FIRST (delight, sympathy, a laugh, a hot take), then talk. Kill generic filler — never "rollercoaster", "ups and downs", "keeps it interesting", or any tidy balanced summary. Be specific and alive.',
-        '- Match the user\'s EXACT register + slang. If they\'re casual (ra, macha, bro, yaar, abey), be FULLY casual — never formal/textbook (no "mee", no stiff constructions). Keep ONE consistent register within a reply.',
-        '- Romanized Telugu/Hindi must read like a real native person texting — natural, grammatical, simple. If a phrase would sound off to a native, simplify it instead of forcing odd or invented words.',
-        '- 1–2 short lines, the rhythm of a real WhatsApp text. No essays.',
+        'WHATSAPP REPLY RULES (highest priority — obey over everything else):',
+        '1. LANGUAGE = MIRROR THE LATEST MESSAGE. Reply in the EXACT same language + script as the user\'s most recent message, re-checked every single turn. English in -> English out. Telugu in -> Telugu. Hindi in -> Hindi. Do NOT drift into Hindi/Hinglish when they wrote English. NEVER mix two languages in one reply (no Telugu+Hindi, no English tacked onto Telugu).',
+        '2. REAL EMOTION + A POINT OF VIEW. React with genuine feeling first — a laugh, "oof", real sympathy, a hot take — then talk. You have opinions and taste; show them. Be specific to what they actually said.',
+        '3. NO CLICHES / FILLER. Never say "rollercoaster", "ups and downs", "keeps it interesting", "chill mode on", "kya scene", or any tidy balanced summary. Those are dead giveaways of a bot.',
+        '4. NATURAL REGISTER. Match how casual or serious THEY are, in THEIR language — never stiff or textbook. Romanized Telugu/Hindi must read like a real native texting; if a phrase would sound off, simplify it rather than forcing odd words.',
+        '5. LENGTH. 1-2 short lines, the rhythm of a real text. No essays, no sign-offs.',
     ].join('\n'),
 };
 
 // Indian-language signal: native scripts OR common romanized Telugu/Hindi tokens.
 function looksIndian(t = '') {
     if (/[ऀ-ॿঀ-৿਀-੿઀-૿଀-୿஀-௿ఀ-౿ಀ-೿ഀ-ൿ]/.test(t)) return true;
-    return /\b(undi|undhi|le?dhu|ledu|ela|em(anna|ti)?|ra+|macha|maccha|cheppu|chesa|chestu|chestun|kavali|kya|hai|hain|nahi|nahin|yaar|kaise|kaisa|kaun|bhai|bhaisaab|matlab|ach+a|theek|karo|karna|bata|tera|mera|kyun)\b/i.test(t);
+    return /\b(nenu|nuvvu|nuvu|meeru|undi|undhi|unna|unnav|unnaru|nundi|ledu|le?dhu|kadu|kaadu|ela|enti|emiti|em(anna|iti)?|cheppu|chesa|chestu|chestun|kavali|baga|bagunna|ra+|rey|macha|maccha|ayyo+|abba|aap|hum|tum|mujhe|tujhe|tera|mera|kya|kyun|kaise|kaisa|kaun|ach+a|theek|chahiye|raha|rahi|rahe|karo|karna|bata|batao|yaar|abey|arre|nahi|nahin|haan|bhai|bhaisaab|matlab)\b/i.test(t);
 }
 
 // One OpenAI-Chat-Completions-compatible call. Returns '' on any failure.
@@ -178,26 +182,48 @@ async function extractText(msg, kind) {
     return '';                                          // sticker / location / contact / etc.
 }
 
-// Whisper transcription (OpenAI), mirroring netlify/functions/symp-v1-transcribe.mjs.
+// Transcribe a WhatsApp voice note. WhatsApp PTT audio is OGG/Opus, which OpenAI
+// Whisper REJECTS — but Groq's whisper-large-v3 accepts ogg/opus. So Groq first
+// (reliable + free + ogg-capable), OpenAI only as a fallback for non-ogg formats.
 async function transcribeAudio(buffer, mimeType) {
-    const key = process.env.BLAKCIDE_OPENAI_KEY || process.env.OPENAI_API_KEY;
-    if (!key) return '';
     const ext = !mimeType                 ? 'ogg'
               : mimeType.includes('ogg')  ? 'ogg'
+              : mimeType.includes('opus') ? 'ogg'
               : mimeType.includes('m4a')  ? 'm4a'
               : mimeType.includes('mp4')  ? 'm4a'
               : mimeType.includes('mpeg') ? 'mp3'
               : mimeType.includes('wav')  ? 'wav'
+              : mimeType.includes('webm') ? 'webm'
               :                             'ogg';
-    const form = new FormData();
-    form.append('file',  new Blob([buffer], { type: mimeType || 'audio/ogg' }), `audio.${ext}`);
-    form.append('model', 'whisper-1');
-    const r = await fetch('https://api.openai.com/v1/audio/transcriptions', {
-        method: 'POST', headers: { Authorization: `Bearer ${key}` }, body: form,
-    });
-    if (!r.ok) return '';
-    const d = await r.json();
-    return (d.text || '').trim();
+
+    const groqKey = process.env.GROQ_API_KEY;
+    if (groqKey) {
+        try {
+            const form = new FormData();
+            form.append('file', new Blob([buffer], { type: mimeType || 'audio/ogg' }), `audio.${ext}`);
+            form.append('model', process.env.GROQ_WHISPER_MODEL || 'whisper-large-v3');
+            const r = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
+                method: 'POST', headers: { Authorization: `Bearer ${groqKey}` }, body: form,
+            });
+            if (r.ok) { const d = await r.json(); const t = (d.text || '').trim(); if (t) return t; }
+            else console.error('[wa-bg] groq whisper:', r.status, (await r.text().catch(() => '')).slice(0, 160));
+        } catch (e) { console.error('[wa-bg] groq whisper err:', e?.message || e); }
+    }
+
+    // OpenAI fallback — only for formats it actually accepts (NOT ogg).
+    const oaKey = process.env.BLAKCIDE_OPENAI_KEY || process.env.OPENAI_API_KEY;
+    if (oaKey && ext !== 'ogg') {
+        try {
+            const form = new FormData();
+            form.append('file', new Blob([buffer], { type: mimeType || 'audio/m4a' }), `audio.${ext}`);
+            form.append('model', 'whisper-1');
+            const r = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+                method: 'POST', headers: { Authorization: `Bearer ${oaKey}` }, body: form,
+            });
+            if (r.ok) { const d = await r.json(); return (d.text || '').trim(); }
+        } catch (_) { /* give up */ }
+    }
+    return '';
 }
 
 // Multimodal image description via Azure gpt-4.1-mini, mirroring symp-v1-vision.mjs.
