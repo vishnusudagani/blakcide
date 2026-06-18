@@ -198,6 +198,32 @@ import AppLayout from '../../layouts/AppLayout.astro';
     .mnx-chip:hover { color: var(--ink); border-color: rgba(106,211,184,.5); }
     .mnx-chip.on { background: rgba(106,211,184,.14); border-color: var(--mint-deep); color: var(--ink); }
     html[data-theme="light"] .mnx-chip.on { border-color: var(--mint-ink); }
+    /* connect-mode row + listener discovery */
+    .mnx-modes { display: flex; gap: .6rem; margin-top: .7rem; }
+    .mnx-mode { flex: 1; margin-top: 0; font-size: var(--fs-sm); padding: .8rem .6rem; }
+    .mnx-mode svg { width: 15px; height: 15px; }
+    .mnx-dir { max-width: 520px; margin: 0 auto; padding-top: clamp(.5rem, 3vh, 1.2rem); }
+    .mnx-dir-head { text-align: center; }
+    .mnx-prem { display: inline-flex; align-items: center; vertical-align: middle; margin-left: .5rem; padding: .15rem .55rem; border-radius: var(--r-pill); font-family: var(--font-mono); font-size: var(--fs-3xs); letter-spacing: .08em; text-transform: uppercase; color: var(--gold); background: rgba(255,210,122,.14); border: 1px solid rgba(255,210,122,.32); }
+    html[data-theme="light"] .mnx-prem { color: var(--gold-ink); border-color: rgba(138,100,16,.3); }
+    .mnx-dir-list { margin-top: 1.2rem; display: flex; flex-direction: column; gap: .55rem; }
+    .mnx-dir-card { display: flex; align-items: center; gap: .8rem; width: 100%; text-align: left; padding: .8rem .9rem; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); cursor: pointer; font: inherit; transition: border-color var(--t-fast) var(--ease-out), transform var(--t-fast) var(--ease-out); }
+    .mnx-dir-card:hover { border-color: rgba(106,211,184,.5); transform: translateY(-1px); }
+    .mnx-dir-orb { width: 44px; height: 44px; border-radius: 50%; flex: none; display: grid; place-items: center; color: #06231C; overflow: hidden; background: linear-gradient(135deg, var(--mint), var(--aqua)); }
+    .mnx-dir-orb svg { width: 22px; height: 22px; }
+    .mnx-dir-orb img { width: 100%; height: 100%; object-fit: cover; }
+    .mnx-dir-meta { flex: 1; min-width: 0; }
+    .mnx-dir-meta b { display: block; font-size: var(--fs-md); color: var(--ink); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .mnx-dir-meta i { font-style: normal; font-size: var(--fs-xs); color: var(--ink-soft); display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .mnx-dir-side { flex: none; text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: .25rem; }
+    .mnx-dir-rate { font-size: var(--fs-xs); color: var(--gold); font-family: var(--font-mono); white-space: nowrap; }
+    html[data-theme="light"] .mnx-dir-rate { color: var(--gold-ink); }
+    .mnx-dir-status { font-size: var(--fs-3xs); font-family: var(--font-mono); letter-spacing: .04em; text-transform: uppercase; padding: .12rem .45rem; border-radius: var(--r-pill); white-space: nowrap; }
+    .mnx-dir-status.available { color: var(--mint-deep); background: rgba(106,211,184,.12); }
+    html[data-theme="light"] .mnx-dir-status.available { color: var(--mint-ink); }
+    .mnx-dir-status.busy { color: var(--gold); background: rgba(255,210,122,.12); }
+    html[data-theme="light"] .mnx-dir-status.busy { color: var(--gold-ink); }
+    .mnx-dir-status.offline { color: var(--ink-faint); background: var(--surface-strong); }
     .mnx-go svg { width: 18px; height: 18px; }
     .mnx-go-alt { background: var(--surface-strong); color: var(--ink); box-shadow: none; border: 1px solid rgba(106,211,184,.45); }
     .mnx-go-alt:hover { border-color: rgba(106,211,184,.7); }
@@ -251,6 +277,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
     const LOCK_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>';
     const CHAT_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.5 8.5 0 0 1-12.5 7.5L3 21l2-5.5A8.5 8.5 0 1 1 21 11.5z"/></svg>';
     const SPARK_SVG = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l1.7 5.7L19.5 9l-5.8 1.3L12 16l-1.7-5.7L4.5 9l5.8-1.3z"/></svg>';
+    const COMPASS_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M15.5 8.5l-2 5-5 2 2-5z"/></svg>';
     const FRESH = () => new Date(Date.now() - 120000).toISOString();
     const fmtTime = (iso) => { try { return new Date(iso).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' }); } catch { return ''; } };
     const relTime = (iso) => { const d = Date.now() - new Date(iso).getTime(); const m = Math.floor(d / 60000), h = Math.floor(m / 60), day = Math.floor(h / 24); if (day > 6) return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }); if (day >= 1) return day + (day === 1 ? ' day ago' : ' days ago'); if (h >= 1) return h + (h === 1 ? ' hr ago' : ' hrs ago'); if (m >= 1) return m + ' min ago'; return 'just now'; };
@@ -428,7 +455,10 @@ import AppLayout from '../../layouts/AppLayout.astro';
             <p class="mnx-greet-sub">Whenever you need them — anonymous by default, both sides cared for.</p>
             ${live}
             <button type="button" class="mnx-go" id="mnx-start"${credits.ok ? '' : ' disabled'}>Start talking <span class="mnx-cta-arrow">→</span></button>
-            <button type="button" class="mnx-go mnx-go-alt mnx-smart" id="mnx-smart"${credits.ok ? '' : ' disabled'}>${SPARK_SVG} Smart match — find the right person</button>
+            <div class="mnx-modes">
+              <button type="button" class="mnx-go mnx-go-alt mnx-mode" id="mnx-smart"${credits.ok ? '' : ' disabled'}>${SPARK_SVG} Smart match</button>
+              <button type="button" class="mnx-go mnx-go-alt mnx-mode" id="mnx-browse"${credits.ok ? '' : ' disabled'}>${COMPASS_SVG} Browse</button>
+            </div>
             <button type="button" class="mnx-anon-min ${anonPref ? 'on' : ''}" id="mnx-anon" aria-pressed="${anonPref}"><span class="mnx-anon-ico">${LOCK_SVG}</span> Anonymous <i>${anonPref ? 'on' : 'off'}</i><span class="mnx-sw2"></span></button>
             <div class="mnx-meter">
               <div class="mnx-meter-top"><span class="mnx-meter-label">Today’s minits</span><span class="mnx-meter-val">${credits.leftToday} left</span></div>
@@ -452,6 +482,12 @@ import AppLayout from '../../layouts/AppLayout.astro';
           const c = await checkCredits();
           if (!c.ok) { showCapped(); return; }
           logEvent('smart_tapped', { anon }); showSmartIntake(anon);
+        });
+        document.getElementById('mnx-browse')?.addEventListener('click', async (e) => {
+          if (e.currentTarget.hasAttribute('disabled')) return;
+          const c = await checkCredits();
+          if (!c.ok) { showCapped(); return; }
+          logEvent('browse_tapped', { anon }); showDirectory(anon);
         });
         const drawerEl = document.getElementById('mnx-drawer');
         const openDrawer = () => { if (!drawerEl) return; drawerEl.hidden = false; requestAnimationFrame(() => drawerEl.classList.add('open')); };
@@ -520,7 +556,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
         immersive(true);
         root.innerHTML = `<div class="mnx-ring">
           <div class="mnx-ring-avatar"><i></i><i></i><span class="core"></span></div>
-          <h3>${preferredId ? 'Reconnect' : 'How would you like to talk?'}</h3>
+          <h3>How would you like to talk?</h3>
           <p>You can switch to a call anytime once you’re connected.</p>
           <div class="mnx-choice">
             <button type="button" class="mnx-go" id="mnx-pick-chat">${CHAT_SVG} Start chat</button>
@@ -561,6 +597,33 @@ import AppLayout from '../../layouts/AppLayout.astro';
           showChoice(isAnonymous, null, Object.keys(intake).length ? intake : null);
         });
         document.getElementById('mnx-intake-back')?.addEventListener('click', showEntry);
+      }
+
+      // Listener Discovery (L4, premium): browse who's here and pick exactly who to talk to.
+      async function showDirectory(isAnonymous) {
+        immersive(true);
+        root.innerHTML = `<div class="mnx-dir">
+          <div class="mnx-dir-head"><h3 class="mnx-intake-h">Choose your listener <span class="mnx-prem">Premium</span></h3><p class="mnx-intake-sub">Browse who’s here and pick someone whose style fits. Tap to connect — or we’ll let you know when they’re free.</p></div>
+          <div class="mnx-dir-list" id="mnx-dir-list"><div class="mnx-skel"><i></i><i></i><i></i></div></div>
+          <div class="mnx-ring-actions"><button type="button" class="mnx-cancel" id="mnx-dir-back">Back</button></div>
+        </div>`;
+        document.getElementById('mnx-dir-back')?.addEventListener('click', showEntry);
+        const list = document.getElementById('mnx-dir-list');
+        const { data, error } = await supabase.rpc('minit_list_listeners');
+        if (!list) return;
+        if (error) { list.innerHTML = '<p class="mnx-sys" style="padding:1.6rem">Couldn’t load listeners just now.</p>'; return; }
+        const rows = data || [];
+        if (!rows.length) { list.innerHTML = '<p class="mnx-sys" style="padding:1.6rem">No listeners to show yet — try Smart match or check back soon.</p>'; return; }
+        const label = { available: 'Available now', busy: 'With someone', offline: 'Offline' };
+        list.innerHTML = rows.map((l) => {
+          const name = esc(l.display_name || 'Listener');
+          const tags = [(Array.isArray(l.specialties) ? l.specialties.slice(0, 3).join(' · ') : ''), (Array.isArray(l.languages) ? l.languages.join(', ') : '')].filter(Boolean).join('  ·  ');
+          const sub = l.style ? esc(l.style) : (tags || label[l.status] || '');
+          const rate = l.rating != null ? `★ ${Number(l.rating).toFixed(1)}${l.reviews_count ? ' · ' + l.reviews_count : ''}` : 'New';
+          const av = l.profile_pic ? `<span class="mnx-dir-orb"><img src="${esc(l.profile_pic)}" alt="" /></span>` : `<span class="mnx-dir-orb" style="${orbStyle(l.id)}">${PERSON_SVG}</span>`;
+          return `<button type="button" class="mnx-dir-card" data-id="${l.id}">${av}<span class="mnx-dir-meta"><b>${name}</b><i>${sub}</i></span><span class="mnx-dir-side"><span class="mnx-dir-rate">${rate}</span><span class="mnx-dir-status ${l.status}">${label[l.status] || ''}</span></span></button>`;
+        }).join('');
+        list.querySelectorAll('.mnx-dir-card').forEach((c) => c.addEventListener('click', () => showChoice(isAnonymous, c.getAttribute('data-id'))));
       }
 
       function showBusyAll(isAnonymous) {
