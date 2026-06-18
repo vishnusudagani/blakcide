@@ -8,6 +8,7 @@
 // can never drift.
 
 import { buildVaultContextMessage } from './vault-context.mjs';
+import { buildKnowledgeBlock }      from './knowledge-context.mjs';
 import { getPersonaCard, renderPersonaCard } from './persona-engine.mjs';
 import { getVibe, renderVibeSnapshot } from './vibe-tracker.mjs';
 import { fetchPersonaState, fetchPersonaFacts } from './supabase.mjs';
@@ -143,7 +144,7 @@ async function resolveActivePersona(userId) {
  * Returns an array of {role,content} system messages so the chat handler
  * can spread them into the OpenAI request.
  */
-export async function buildChatSystemStack(userId) {
+export async function buildChatSystemStack(userId, opts = {}) {
     const stack = [
         { role: 'system', content: CORE_IDENTITY_TEXT },
         { role: 'system', content: CARE_AND_SAFETY_TEXT },
@@ -171,6 +172,10 @@ export async function buildChatSystemStack(userId) {
         try {
             const vaultMsg = await buildVaultContextMessage(userId);
             if (vaultMsg && vaultMsg.content) stack.push(vaultMsg);
+        } catch (_) { /* ignore */ }
+        try {
+            const knowledge = await buildKnowledgeBlock(userId, { latestUserText: opts.latestUserText });
+            if (knowledge) stack.push({ role: 'system', content: knowledge });
         } catch (_) { /* ignore */ }
     }
 
@@ -221,6 +226,10 @@ export async function buildInstructionsText(userId) {
         } catch (e) {
             console.warn('[system-prompt] vault context fetch failed:', e.message);
         }
+        try {
+            const knowledge = await buildKnowledgeBlock(userId, {});
+            if (knowledge) parts.push(knowledge);
+        } catch (_) { /* ignore */ }
     }
 
     parts.push(CALL_FRAMING_TEXT);

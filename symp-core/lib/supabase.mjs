@@ -212,6 +212,64 @@ export async function upsertVaultAnalysis({ userId, analysis }) {
     return { ok: ins.ok, action: 'created', error: ins.ok ? null : ins.data };
 }
 
+// ── Knowledge profile (structured "what Blak knows about you") ────────────
+//
+// Service-role helpers for the knowledge-extractor (writes) and the context
+// engine (reads). The /beta/profile page reads/edits/deletes via the browser
+// client under owner-only RLS — NOT through these.
+
+export async function fetchKnowledgeFacts(userId) {
+    const { ok, data } = await sbFetch(
+        `symp_knowledge_facts?user_id=eq.${encodeURIComponent(userId)}` +
+        `&order=area.asc,updated_at.desc` +
+        `&select=id,area,key,label,value,source,confidence,status,evidence,updated_at,last_seen_at`
+    );
+    return (ok && Array.isArray(data)) ? data : [];
+}
+
+/**
+ * Upsert one extracted fact, keyed by (user_id, area, key).
+ *  - If the existing row was edited by the user (status='user_edited'), we
+ *    NEVER overwrite its value — only bump last_seen_at (the user owns it).
+ *  - Otherwise we refine value/label/confidence/source/evidence + bump dates.
+ * Returns { ok, action:'created'|'updated'|'locked-skip'|'noop' }.
+ */
+export async function upsertKnowledgeFact({ userId, area, key, label, value, source = 'blak', confidence = 0.6, evidence = null }) {
+    if (!userId || !area || !key || !value) return { ok: false, action: 'noop' };
+    const u = encodeURIComponent(userId);
+    const a = encodeURIComponent(area);
+    const k = encodeURIComponent(key);
+    const nowIso = new Date().toISOString();
+
+    const existing = await sbFetch(
+        `symp_knowledge_facts?user_id=eq.${u}&area=eq.${a}&key=eq.${k}&select=id,status`
+    );
+    const row = (existing.ok && Array.isArray(existing.data) && existing.data[0]) ? existing.data[0] : null;
+
+    if (row) {
+        if (row.status === 'user_edited') {
+            await sbFetch(`symp_knowledge_facts?id=eq.${row.id}`, {
+                method: 'PATCH', body: { last_seen_at: nowIso }, prefer: 'return=minimal',
+            });
+            return { ok: true, action: 'locked-skip' };
+        }
+        const body = { value, source, confidence, last_seen_at: nowIso };
+        if (label)    body.label    = label;
+        if (evidence) body.evidence = evidence;
+        const upd = await sbFetch(`symp_knowledge_facts?id=eq.${row.id}`, {
+            method: 'PATCH', body, prefer: 'return=minimal',
+        });
+        return { ok: upd.ok, action: 'updated' };
+    }
+
+    const ins = await sbFetch('symp_knowledge_facts', {
+        method: 'POST',
+        body:   { user_id: userId, area, key, label: label || null, value, source, confidence, evidence: evidence || null },
+        prefer: 'return=minimal',
+    });
+    return { ok: ins.ok, action: 'created', error: ins.ok ? null : ins.data };
+}
+
 // ── Vibe state / events ─────────────────────────────────────────────────
 
 export async function fetchVibeState(userId) {
