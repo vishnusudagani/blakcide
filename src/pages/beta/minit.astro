@@ -549,6 +549,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
           logEvent('listener_found', { outcome });
           watchSession(activeSessionId); showConnecting(outcome === 'queued');
         } else if (outcome === 'preferred_unavailable') { logEvent('preferred_unavailable'); showPreferredUnavailable(isAnonymous, withCall, preferredId); }
+        else if (outcome === 'banned') { logEvent('banned'); showRestricted(); }
         else if (outcome === 'busy_full') { logEvent('busy_full'); showBusyAll(isAnonymous); }
         else { logEvent('no_listener'); showSchedule(isAnonymous); }
       }
@@ -635,6 +636,12 @@ import AppLayout from '../../layouts/AppLayout.astro';
         list.querySelectorAll('.mnx-dir-card').forEach((c) => c.addEventListener('click', () => showChoice(isAnonymous, c.getAttribute('data-id'))));
       }
 
+      // Two-sided safety: a moderated user can't start a Minit session.
+      function showRestricted() {
+        immersive(false);
+        root.innerHTML = `<div class="mnx-schedule"><div class="mnx-empty-orb"></div><h3>Your Minit access is paused</h3><p>Minit is built to stay safe for everyone on both sides, so it doesn’t run on “the customer is always right.” Talking with listeners is restricted on your account right now. If you think this is a mistake, reach out and we’ll take a look.</p><div class="mnx-ring-actions"><a class="mnx-go" href="https://wa.me/917702063434" target="_blank" rel="noopener" style="width:auto;padding:.7rem 1.4rem;text-decoration:none">Contact Blaksyd</a><button type="button" class="mnx-cancel" id="mnx-restricted-back">Back</button></div></div>`;
+        document.getElementById('mnx-restricted-back')?.addEventListener('click', showEntry);
+      }
       function showBusyAll(isAnonymous) {
         immersive(false);
         root.innerHTML = `<div class="mnx-schedule"><div class="mnx-empty-orb"></div><h3>Every listener’s with someone right now</h3><p>Rather than wait in a line, let us ping you the moment one’s free — you’ll be first up. Or text Blak in the meantime.</p><div class="mnx-choice"><button type="button" class="mnx-go" id="mnx-notify">Notify me when one’s free</button><a class="mnx-go mnx-go-alt" href="/beta/blak/" style="text-decoration:none">Text Blak instead</a></div><div class="mnx-ring-actions"><button type="button" class="mnx-cancel" id="mnx-busyback">Back</button></div></div>`;

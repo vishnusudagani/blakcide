@@ -1,0 +1,134 @@
+---
+import AppLayout from '../../layouts/AppLayout.astro';
+// Minit — Trust & Safety / admin console. is_admin-gated (via minit_admin_overview,
+// which errors for non-admins). Flag triage + ban/unban + listener provisioning.
+---
+<AppLayout active="minit" title="Trust & Safety">
+  <div class="ap-page adm">
+    <p class="ap-kicker">Minit · Trust &amp; Safety</p>
+    <h1 class="ap-h1">Admin <span class="adm-accent">console</span></h1>
+    <div id="adm-root" class="adm-root" role="region" aria-live="polite">
+      <div class="adm-loading"><span class="adm-spin" aria-hidden="true"></span> Loading…</div>
+    </div>
+  </div>
+
+  <style is:global>
+    .adm-accent { font-family: var(--font-serif); font-style: italic; font-weight: 400; background: linear-gradient(110deg, var(--mint), var(--aqua)); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+    .adm-root { margin-top: 1.4rem; }
+    .adm-loading { display: flex; align-items: center; gap: .6rem; color: var(--ink-soft); padding: 1.2rem 0; }
+    .adm-spin { width: 15px; height: 15px; border-radius: 50%; border: 2px solid var(--line-strong); border-top-color: var(--mint-deep); animation: adm-spin 1s linear infinite; }
+    @keyframes adm-spin { to { transform: rotate(360deg); } }
+    .adm-msg { padding: 2rem 1.4rem; text-align: center; color: var(--ink-soft); }
+    .adm-stats { display: flex; gap: .7rem; flex-wrap: wrap; margin-bottom: 1.6rem; }
+    .adm-stat { padding: .6rem 1.1rem; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); }
+    .adm-stat b { display: block; font-size: var(--fs-2xl); color: var(--ink); font-weight: 650; }
+    .adm-stat span { font-size: var(--fs-2xs); font-family: var(--font-mono); letter-spacing: .06em; text-transform: uppercase; color: var(--ink-faint); }
+    .adm-sec { margin-bottom: 1.8rem; }
+    .adm-sec > h2 { font-size: var(--fs-lg); color: var(--ink); font-weight: 600; margin-bottom: .8rem; display: flex; align-items: center; gap: .5rem; }
+    .adm-sec .adm-count { font-size: var(--fs-xs); font-family: var(--font-mono); color: var(--ink-faint); }
+    .adm-row { display: flex; align-items: center; gap: .8rem; padding: .8rem 1rem; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); margin-bottom: .5rem; }
+    .adm-row.flag { border-left: 3px solid var(--coral); }
+    .adm-row-main { flex: 1; min-width: 0; }
+    .adm-row-main b { font-size: var(--fs-md); color: var(--ink); font-weight: 600; }
+    .adm-row-main .mono { font-family: var(--font-mono); font-size: var(--fs-2xs); color: var(--ink-faint); }
+    .adm-row-main i { display: block; font-style: normal; font-size: var(--fs-xs); color: var(--ink-soft); margin-top: .15rem; }
+    .adm-tag { font-size: var(--fs-3xs); font-family: var(--font-mono); text-transform: uppercase; letter-spacing: .04em; padding: .12rem .5rem; border-radius: var(--r-pill); }
+    .adm-tag.on { color: var(--mint-deep); background: rgba(106,211,184,.12); }
+    .adm-tag.off { color: var(--ink-faint); background: var(--surface-strong); }
+    .adm-tag.banned { color: var(--coral); background: rgba(255,107,157,.12); }
+    .adm-btn { flex: none; min-height: 36px; padding: .4rem .9rem; border-radius: var(--r-pill); font: inherit; font-size: var(--fs-sm); font-weight: 600; cursor: pointer; border: 1px solid var(--line-strong); background: var(--surface); color: var(--ink); }
+    .adm-btn:hover { border-color: rgba(106,211,184,.5); }
+    .adm-btn.danger { color: var(--coral); border-color: rgba(255,107,157,.35); background: rgba(255,107,157,.08); }
+    .adm-empty { color: var(--ink-faint); font-size: var(--fs-sm); padding: .6rem 0; }
+    .adm-form { display: grid; grid-template-columns: 1fr 1fr; gap: .6rem; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); padding: 1rem; }
+    .adm-form input { width: 100%; box-sizing: border-box; background: var(--bg-warm); border: 1px solid var(--line-strong); border-radius: var(--r-sm); padding: .55rem .7rem; color: var(--ink); font: inherit; font-size: var(--fs-sm); outline: none; }
+    .adm-form input:focus { border-color: rgba(106,211,184,.5); }
+    .adm-form .full { grid-column: 1 / -1; }
+    .adm-form button { grid-column: 1 / -1; min-height: 42px; border: 0; border-radius: var(--r-pill); color: #06231C; font: inherit; font-weight: 650; cursor: pointer; background: linear-gradient(135deg, var(--mint), var(--mint-deep)); }
+    .adm-toast { margin-top: .6rem; font-size: var(--fs-sm); }
+    @media (max-width: 560px) { .adm-form { grid-template-columns: 1fr; } .adm-row { flex-wrap: wrap; } }
+  </style>
+
+  <script>
+    import { supabase } from '../../lib/supabaseClient';
+    const root = document.getElementById('adm-root');
+    const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+    const shortId = (id) => String(id || '').slice(0, 8);
+    const fmt = (iso) => { try { return new Date(iso).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }); } catch { return ''; } };
+
+    if (!root) { /* no root */ }
+    else if (!supabase) { root.innerHTML = '<div class="adm-msg">Sign-in isn’t configured here.</div>'; }
+    else {
+      async function load() {
+        const { data, error } = await supabase.rpc('minit_admin_overview');
+        if (error) { root.innerHTML = '<div class="adm-msg">This area is for the Blaksyd Trust &amp; Safety team.</div>'; return; }
+        render(data);
+      }
+
+      function render(d) {
+        const s = d.stats || {};
+        const flagged = d.flagged || [], bans = d.bans || [], listeners = d.listeners || [];
+        const stat = (n, l) => `<div class="adm-stat"><b>${n ?? 0}</b><span>${l}</span></div>`;
+        const flagRow = (f) => `<div class="adm-row flag"><div class="adm-row-main"><b>Flagged session</b> <span class="mono">seeker ${shortId(f.user_id)} · ${fmt(f.flagged_at)}</span><i>${esc(f.flag_reason || 'flagged')} · status: ${esc(f.status)}</i></div>${f.banned ? '<span class="adm-tag banned">banned</span><button type="button" class="adm-btn" data-unban="' + f.user_id + '">Unban</button>' : '<button type="button" class="adm-btn danger" data-ban="' + f.user_id + '">Ban seeker</button>'}</div>`;
+        const banRow = (b) => `<div class="adm-row"><div class="adm-row-main"><b class="mono">user ${shortId(b.user_id)}</b><i>${esc(b.reason || 'no reason')} · ${b.expires_at ? 'until ' + fmt(b.expires_at) : 'permanent'} · since ${fmt(b.created_at)}</i></div><button type="button" class="adm-btn" data-unban="${b.user_id}">Unban</button></div>`;
+        const lRow = (l) => `<div class="adm-row"><div class="adm-row-main"><b>${esc(l.display_name || 'Listener')}</b> <span class="adm-tag ${l.is_online ? 'on' : 'off'}">${l.is_online ? 'online' : 'offline'}</span><i>★ ${l.rating != null ? Number(l.rating).toFixed(1) : '—'} · ${l.reviews_count || 0} reviews · ${shortId(l.id)}</i></div></div>`;
+
+        root.innerHTML = `
+          <div class="adm-stats">${stat(s.completed, 'completed')}${stat(s.active, 'active now')}${stat(s.flagged, 'flagged')}${stat(bans.length, 'banned')}${stat(listeners.length, 'listeners')}</div>
+          <div class="adm-sec"><h2>Flagged sessions <span class="adm-count">${flagged.length}</span></h2>${flagged.length ? flagged.map(flagRow).join('') : '<div class="adm-empty">No flags. All quiet.</div>'}</div>
+          <div class="adm-sec"><h2>Banned users <span class="adm-count">${bans.length}</span></h2>${bans.length ? bans.map(banRow).join('') : '<div class="adm-empty">No active bans.</div>'}</div>
+          <div class="adm-sec"><h2>Listeners <span class="adm-count">${listeners.length}</span></h2>${listeners.length ? listeners.map(lRow).join('') : '<div class="adm-empty">No listeners yet.</div>'}</div>
+          <div class="adm-sec"><h2>Provision a listener</h2>
+            <form class="adm-form" id="adm-prov">
+              <input class="full" type="email" id="pv-email" placeholder="Email (must have signed in)" required />
+              <input type="text" id="pv-name" placeholder="Display name" />
+              <input type="text" id="pv-gender" placeholder="Gender (optional)" />
+              <input class="full" type="text" id="pv-langs" placeholder="Languages, comma-separated (e.g. English, Hindi)" />
+              <input class="full" type="text" id="pv-spec" placeholder="Specialties, comma-separated (e.g. Stress, Work)" />
+              <input class="full" type="text" id="pv-style" placeholder="Listening style (one line)" />
+              <button type="submit">Provision listener</button>
+              <div class="adm-toast full" id="pv-toast"></div>
+            </form>
+          </div>`;
+
+        root.querySelectorAll('[data-ban]').forEach((b) => b.addEventListener('click', async () => {
+          const uid = b.getAttribute('data-ban');
+          const reason = window.prompt('Reason for banning this user?', 'T&S: flagged session');
+          if (reason === null) return;
+          b.disabled = true;
+          const { error } = await supabase.rpc('minit_admin_ban', { p_user_id: uid, p_reason: reason, p_days: null });
+          if (error) { b.disabled = false; alert('Ban failed: ' + error.message); return; }
+          load();
+        }));
+        root.querySelectorAll('[data-unban]').forEach((b) => b.addEventListener('click', async () => {
+          b.disabled = true;
+          const { error } = await supabase.rpc('minit_admin_unban', { p_user_id: b.getAttribute('data-unban') });
+          if (error) { b.disabled = false; alert('Unban failed: ' + error.message); return; }
+          load();
+        }));
+        const splitList = (v) => v.split(',').map((x) => x.trim()).filter(Boolean);
+        document.getElementById('adm-prov')?.addEventListener('submit', async (e) => {
+          e.preventDefault();
+          const toast = document.getElementById('pv-toast');
+          const email = document.getElementById('pv-email').value.trim();
+          if (!email) return;
+          const args = {
+            p_email: email,
+            p_display_name: document.getElementById('pv-name').value.trim() || null,
+            p_languages: splitList(document.getElementById('pv-langs').value),
+            p_specialties: splitList(document.getElementById('pv-spec').value),
+            p_gender: document.getElementById('pv-gender').value.trim() || null,
+            p_style: document.getElementById('pv-style').value.trim() || null,
+          };
+          toast.style.color = 'var(--ink-soft)'; toast.textContent = 'Provisioning…';
+          const { error } = await supabase.rpc('admin_provision_listener', args);
+          if (error) { toast.style.color = 'var(--coral)'; toast.textContent = 'Failed: ' + error.message; return; }
+          toast.style.color = 'var(--mint-deep)'; toast.textContent = 'Done — ' + esc(email) + ' is now a listener.';
+          load();
+        });
+      }
+
+      load();
+    }
+  </script>
+</AppLayout>
