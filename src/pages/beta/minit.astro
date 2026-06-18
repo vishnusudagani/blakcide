@@ -185,6 +185,19 @@ import AppLayout from '../../layouts/AppLayout.astro';
     @media (prefers-reduced-motion: reduce) { .mnx-scan-sweep { animation: none; } }
     /* chat/call choice */
     .mnx-choice { display: flex; flex-direction: column; gap: .6rem; max-width: 320px; margin: 1.4rem auto 0; }
+    /* smart-match entry + intake */
+    .mnx-smart { margin-top: .7rem; font-size: var(--fs-md); }
+    .mnx-smart svg { width: 16px; height: 16px; }
+    .mnx-intake { max-width: 460px; margin: 0 auto; padding-top: clamp(.5rem, 3vh, 1.2rem); text-align: center; }
+    .mnx-intake-h { font-size: clamp(1.4rem, 1.1rem + 1.6vw, 1.8rem); font-weight: 600; letter-spacing: -.02em; color: var(--ink); }
+    .mnx-intake-sub { font-size: var(--fs-md); color: var(--ink-soft); margin: .5rem auto 1.5rem; max-width: 34ch; line-height: 1.5; }
+    .mnx-field { text-align: left; margin-bottom: 1.1rem; }
+    .mnx-field > label { display: block; font-family: var(--font-mono); font-size: var(--fs-2xs); letter-spacing: .1em; text-transform: uppercase; color: var(--ink-faint); margin-bottom: .55rem; }
+    .mnx-chips { display: flex; flex-wrap: wrap; gap: .5rem; }
+    .mnx-chip { padding: .5rem .9rem; border-radius: var(--r-pill); background: var(--surface); border: 1px solid var(--line-strong); color: var(--ink-soft); font: inherit; font-size: var(--fs-sm); cursor: pointer; transition: border-color var(--t-fast) var(--ease-out), color var(--t-fast) var(--ease-out), background var(--t-fast) var(--ease-out); }
+    .mnx-chip:hover { color: var(--ink); border-color: rgba(106,211,184,.5); }
+    .mnx-chip.on { background: rgba(106,211,184,.14); border-color: var(--mint-deep); color: var(--ink); }
+    html[data-theme="light"] .mnx-chip.on { border-color: var(--mint-ink); }
     .mnx-go svg { width: 18px; height: 18px; }
     .mnx-go-alt { background: var(--surface-strong); color: var(--ink); box-shadow: none; border: 1px solid rgba(106,211,184,.45); }
     .mnx-go-alt:hover { border-color: rgba(106,211,184,.7); }
@@ -237,6 +250,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
     const PHONE_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6.6 10.8a15 15 0 0 0 6.6 6.6l2.2-2.2a1 1 0 0 1 1-.24 11.4 11.4 0 0 0 3.6.58 1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1 11.4 11.4 0 0 0 .58 3.6 1 1 0 0 1-.24 1z"/></svg>';
     const LOCK_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>';
     const CHAT_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.5 8.5 0 0 1-12.5 7.5L3 21l2-5.5A8.5 8.5 0 1 1 21 11.5z"/></svg>';
+    const SPARK_SVG = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l1.7 5.7L19.5 9l-5.8 1.3L12 16l-1.7-5.7L4.5 9l5.8-1.3z"/></svg>';
     const FRESH = () => new Date(Date.now() - 120000).toISOString();
     const fmtTime = (iso) => { try { return new Date(iso).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' }); } catch { return ''; } };
     const relTime = (iso) => { const d = Date.now() - new Date(iso).getTime(); const m = Math.floor(d / 60000), h = Math.floor(m / 60), day = Math.floor(h / 24); if (day > 6) return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }); if (day >= 1) return day + (day === 1 ? ' day ago' : ' days ago'); if (h >= 1) return h + (h === 1 ? ' hr ago' : ' hrs ago'); if (m >= 1) return m + ' min ago'; return 'just now'; };
@@ -295,8 +309,10 @@ import AppLayout from '../../layouts/AppLayout.astro';
 
       // ---- voice calling (WebRTC over Supabase Realtime signalling) ----
       const RTC_CFG = { iceServers: [{ urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] }] };
-      let pc = null, localStream = null, callState = 'idle', callTimer = 0, callStart = 0, pendingCands = [], remoteOffer = null, callTimeout = 0, callMuted = false, chatReady = false;
+      let pc = null, localStream = null, callState = 'idle', callTimer = 0, callStart = 0, pendingCands = [], remoteOffer = null, callTimeout = 0, callMuted = false, chatReady = false, peerReady = false;
       function callSend(kind, data) { try { chatChannel?.send({ type: 'broadcast', event: 'call', payload: { from: user.id, kind, data } }); } catch (e) {} }
+      function sendReady() { try { chatChannel?.send({ type: 'broadcast', event: 'ready', payload: { from: user.id } }); } catch (e) {} }
+      function onPeerReady() { if (peerReady) return; peerReady = true; sendReady(); }
       function fmtDur(s) { const m = Math.floor(s / 60), x = s % 60; return m + ':' + String(x).padStart(2, '0'); }
       function renderCallBar(state) {
         const bar = document.getElementById('mnx-call'); if (!bar) return;
@@ -327,7 +343,10 @@ import AppLayout from '../../layouts/AppLayout.astro';
       const getMic = () => navigator.mediaDevices.getUserMedia({ audio: true, video: false });
       async function startCall() {
         if (callState !== 'idle' || !activeSessionId) return;
-        if (!chatReady) { for (let i = 0; i < 12 && !chatReady; i++) await wait(150); }
+        // Wait for our channel AND the peer to be present. The auto-call fires the
+        // instant the chat opens — before the other side may have subscribed — so the
+        // first SDP offer would otherwise broadcast into the void (~6s fallback).
+        for (let i = 0; i < 40 && (!chatReady || !peerReady); i++) await wait(150);
         try { localStream = await getMic(); } catch (e) { alert('Microphone access is needed for a voice call.'); return; }
         callState = 'calling'; renderCallBar('calling'); logEvent('call_started');
         createPC(); localStream.getTracks().forEach((t) => pc.addTrack(t, localStream));
@@ -377,12 +396,12 @@ import AppLayout from '../../layouts/AppLayout.astro';
         try { const { data: lp } = await supabase.from('listeners').select('id').eq('user_id', user.id).maybeSingle(); if (lp) { window.location.replace('/beta/listen/'); return; } } catch (e) {}
         const { data: existing } = await supabase.from('connect_sessions').select('*').eq('user_id', user.id).in('status', ['pending', 'active']).order('created_at', { ascending: false }).limit(1);
         const s = existing && existing[0];
-        if (s) { activeSessionId = s.id; activeListenerId = s.listener_id; watchSession(s.id); if (s.status === 'active') openChat(); else showConnecting(); return; }
+        if (s) { activeSessionId = s.id; activeListenerId = s.listener_id; watchSession(s.id); if (s.status === 'active') openChat(); else showConnecting(false); return; }
         showEntry();
       }
 
       async function availableCount() {
-        try { const { data } = await supabase.from('listeners').select('id,last_seen').eq('is_online', true); return (data || []).filter((l) => !l.last_seen || Date.now() - new Date(l.last_seen).getTime() < 120000).length; } catch { return 0; }
+        try { const { data } = await supabase.rpc('minit_available_count'); return Math.max(0, Number(data) || 0); } catch { return 0; }
       }
       async function lastListenerId() {
         try { const { data } = await supabase.from('connect_sessions').select('listener_id').eq('user_id', user.id).eq('status', 'completed').not('listener_id', 'is', null).order('created_at', { ascending: false }).limit(1); return data && data[0] ? data[0].listener_id : null; } catch { return null; }
@@ -409,6 +428,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
             <p class="mnx-greet-sub">Whenever you need them — anonymous by default, both sides cared for.</p>
             ${live}
             <button type="button" class="mnx-go" id="mnx-start"${credits.ok ? '' : ' disabled'}>Start talking <span class="mnx-cta-arrow">→</span></button>
+            <button type="button" class="mnx-go mnx-go-alt mnx-smart" id="mnx-smart"${credits.ok ? '' : ' disabled'}>${SPARK_SVG} Smart match — find the right person</button>
             <button type="button" class="mnx-anon-min ${anonPref ? 'on' : ''}" id="mnx-anon" aria-pressed="${anonPref}"><span class="mnx-anon-ico">${LOCK_SVG}</span> Anonymous <i>${anonPref ? 'on' : 'off'}</i><span class="mnx-sw2"></span></button>
             <div class="mnx-meter">
               <div class="mnx-meter-top"><span class="mnx-meter-label">Today’s minits</span><span class="mnx-meter-val">${credits.leftToday} left</span></div>
@@ -425,7 +445,13 @@ import AppLayout from '../../layouts/AppLayout.astro';
           if (busy) return; busy = true; e.currentTarget.setAttribute('disabled', '');
           const c = await checkCredits();
           if (!c.ok) { busy = false; showCapped(); return; }
-          logEvent('start_tapped', { anon }); startTalking(anon);
+          busy = false; logEvent('start_tapped', { anon }); showChoice(anon);
+        });
+        document.getElementById('mnx-smart')?.addEventListener('click', async (e) => {
+          if (e.currentTarget.hasAttribute('disabled')) return;
+          const c = await checkCredits();
+          if (!c.ok) { showCapped(); return; }
+          logEvent('smart_tapped', { anon }); showSmartIntake(anon);
         });
         const drawerEl = document.getElementById('mnx-drawer');
         const openDrawer = () => { if (!drawerEl) return; drawerEl.hidden = false; requestAnimationFrame(() => drawerEl.classList.add('open')); };
@@ -458,8 +484,8 @@ import AppLayout from '../../layouts/AppLayout.astro';
           <div class="mnx-input" style="gap:.6rem"><button type="button" class="mnx-go" id="mnx-recon" style="flex:1;font-size:var(--fs-md)">↩ Reconnect</button><button type="button" class="mnx-cancel" id="mnx-newchat">New chat</button></div>
         </div>`;
         document.getElementById('mnx-tback')?.addEventListener('click', showEntry);
-        document.getElementById('mnx-recon')?.addEventListener('click', () => { busy = true; startTalking(localStorage.getItem('mnx_anon') !== 'false', listenerId || undefined); });
-        document.getElementById('mnx-newchat')?.addEventListener('click', () => { busy = true; startTalking(localStorage.getItem('mnx_anon') !== 'false'); });
+        document.getElementById('mnx-recon')?.addEventListener('click', () => showChoice(localStorage.getItem('mnx_anon') !== 'false', listenerId || undefined));
+        document.getElementById('mnx-newchat')?.addEventListener('click', () => showChoice(localStorage.getItem('mnx_anon') !== 'false'));
         const feed = document.getElementById('mnx-feed');
         const { data: msgs } = await supabase.from('messages').select('*').eq('session_id', sessionId).order('created_at', { ascending: true });
         const real = (msgs || []).filter((m) => m.content && !String(m.content).startsWith('###'));
@@ -468,66 +494,130 @@ import AppLayout from '../../layouts/AppLayout.astro';
         feed.scrollTop = feed.scrollHeight;
       }
 
-      async function startTalking(isAnonymous, preferredId) {
+      async function startTalking(isAnonymous, preferredId, withCall, intake) {
         immersive(true);
-        root.innerHTML = `<div class="mnx-ring"><div class="mnx-scan"><span class="mnx-scan-sweep"></span><span class="mnx-scan-core"></span></div><h3>Scanning for listeners…</h3><p>${preferredId ? 'Looking for your listener.' : 'Finding someone real and available for you.'}</p></div>`;
-        const [r] = await Promise.all([supabase.from('listeners').select('id,last_seen').eq('is_online', true), wait(1700)]);
+        root.innerHTML = `<div class="mnx-ring"><div class="mnx-scan"><span class="mnx-scan-sweep"></span><span class="mnx-scan-core"></span></div><h3>${intake ? 'Finding your match…' : 'Scanning for listeners…'}</h3><p>${preferredId ? 'Looking for your listener.' : (intake ? 'Matching you with someone who fits.' : 'Finding someone real and available for you.')}</p></div>`;
+        const [res] = await Promise.all([supabase.rpc('minit_start_session', { preferred: preferredId || null, is_anon: !!isAnonymous, p_intake: intake || null }), wait(1400)]);
         busy = false;
-        if (r.error) { showError('Couldn’t reach the room just now.', () => { busy = true; startTalking(isAnonymous, preferredId); }); return; }
-        const ids = (r.data || []).filter((l) => !l.last_seen || Date.now() - new Date(l.last_seen).getTime() < 120000).map((l) => l.id);
-        const chosen = preferredId && ids.includes(preferredId) ? preferredId : ids[0];
-        if (chosen) { logEvent('listener_found'); showChoice(chosen, isAnonymous); }
+        if (res.error) {
+          console.error('[minit] start_session failed:', res.error?.code, res.error?.message);
+          if (await sessionExpired() || res.error?.code === '42501') { showSessionExpired(); return; }
+          showError('Couldn’t reach the room just now.', () => { busy = true; startTalking(isAnonymous, preferredId, withCall, intake); }); return;
+        }
+        const row = Array.isArray(res.data) ? res.data[0] : res.data;
+        const outcome = row && row.outcome;
+        if (outcome === 'open' || outcome === 'queued') {
+          activeSessionId = row.session_id; activeListenerId = row.listener_id; pendingWithCall = !!withCall;
+          try { supabase.from('minit_callbacks').update({ status: 'fulfilled' }).eq('user_id', user.id).in('status', ['waiting', 'notified']); } catch (e) {}
+          logEvent('listener_found', { outcome });
+          watchSession(activeSessionId); showConnecting(outcome === 'queued');
+        } else if (outcome === 'preferred_unavailable') { logEvent('preferred_unavailable'); showPreferredUnavailable(isAnonymous, withCall, preferredId); }
+        else if (outcome === 'busy_full') { logEvent('busy_full'); showBusyAll(isAnonymous); }
         else { logEvent('no_listener'); showSchedule(isAnonymous); }
       }
 
-      function showChoice(listenerId, isAnonymous) {
+      function showChoice(isAnonymous, preferredId, intake) {
         immersive(true);
         root.innerHTML = `<div class="mnx-ring">
           <div class="mnx-ring-avatar"><i></i><i></i><span class="core"></span></div>
-          <h3>Someone’s available</h3>
-          <p>How would you like to talk? You can switch to a call anytime once you’re connected.</p>
+          <h3>${preferredId ? 'Reconnect' : 'How would you like to talk?'}</h3>
+          <p>You can switch to a call anytime once you’re connected.</p>
           <div class="mnx-choice">
             <button type="button" class="mnx-go" id="mnx-pick-chat">${CHAT_SVG} Start chat</button>
             <button type="button" class="mnx-go mnx-go-alt" id="mnx-pick-call">${PHONE_SVG} Start call</button>
           </div>
           <div class="mnx-ring-actions"><button type="button" class="mnx-cancel" id="mnx-pick-back">Back</button></div>
         </div>`;
-        document.getElementById('mnx-pick-chat')?.addEventListener('click', () => connect(listenerId, isAnonymous, false));
-        document.getElementById('mnx-pick-call')?.addEventListener('click', () => connect(listenerId, isAnonymous, true));
+        document.getElementById('mnx-pick-chat')?.addEventListener('click', () => { if (busy) return; busy = true; startTalking(isAnonymous, preferredId, false, intake); });
+        document.getElementById('mnx-pick-call')?.addEventListener('click', () => { if (busy) return; busy = true; startTalking(isAnonymous, preferredId, true, intake); });
         document.getElementById('mnx-pick-back')?.addEventListener('click', showEntry);
       }
 
-      async function connect(listenerId, isAnonymous, withCall) {
-        pendingWithCall = !!withCall;
-        showConnecting();
-        let id = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : null;
-        const row = { user_id: user.id, listener_id: listenerId, session_type: 'chat', is_anonymous: isAnonymous, status: 'pending' };
-        if (id) row.id = id;
-        const ins = await supabase.from('connect_sessions').insert([row]).select('id').single();
-        if (ins.error || !ins.data) {
-          console.error('[minit] connect insert failed:', ins.error?.code, ins.error?.message);
-          if (await sessionExpired() || ins.error?.code === '42501') { showSessionExpired(); return; }
-          showError('Couldn’t start the session. Please try again.', () => { busy = true; startTalking(isAnonymous); });
-          return;
-        }
-        activeSessionId = ins.data.id; activeListenerId = listenerId;
-        watchSession(activeSessionId);
+      // Smart Match (L2): a light, all-optional intake → matched on language / topic /
+      // gender preference (the matcher falls back to anyone if nothing fits).
+      function showSmartIntake(isAnonymous) {
+        immersive(true);
+        const langs = ['English', 'Hindi', 'Telugu', 'Tamil', 'Marathi', 'Kannada'];
+        const topics = ['Stress', 'Anxiety', 'Relationships', 'Work', 'Loneliness', 'Sleep', 'Family', 'Just venting'];
+        const chip = (v, on) => `<button type="button" class="mnx-chip${on ? ' on' : ''}" data-v="${esc(v)}">${esc(v)}</button>`;
+        root.innerHTML = `<div class="mnx-intake">
+          <h3 class="mnx-intake-h">Find the right person</h3>
+          <p class="mnx-intake-sub">A few quick taps — all optional. We’ll match you with someone who fits, and they’ll walk in with a little context.</p>
+          <div class="mnx-field"><label>Language</label><div class="mnx-chips" id="mnx-langs">${langs.map((l) => chip(l)).join('')}</div></div>
+          <div class="mnx-field"><label>What’s on your mind?</label><div class="mnx-chips" id="mnx-topics">${topics.map((t) => chip(t)).join('')}</div></div>
+          <div class="mnx-field"><label>Listener preference</label><div class="mnx-chips" id="mnx-gender">${['Any', 'Woman', 'Man'].map((g) => chip(g, g === 'Any')).join('')}</div></div>
+          <div class="mnx-choice" style="max-width:none;margin-top:1.3rem"><button type="button" class="mnx-go" id="mnx-intake-go">Find my match <span class="mnx-cta-arrow">→</span></button></div>
+          <div class="mnx-ring-actions"><button type="button" class="mnx-cancel" id="mnx-intake-back">Back</button></div>
+        </div>`;
+        let lang = null, gender = null; const chosen = new Set();
+        root.querySelectorAll('#mnx-langs .mnx-chip').forEach((c) => c.addEventListener('click', () => { const was = c.classList.contains('on'); root.querySelectorAll('#mnx-langs .mnx-chip').forEach((x) => x.classList.remove('on')); if (!was) { c.classList.add('on'); lang = c.dataset.v; } else lang = null; }));
+        root.querySelectorAll('#mnx-topics .mnx-chip').forEach((c) => c.addEventListener('click', () => { const v = c.dataset.v; if (c.classList.toggle('on')) chosen.add(v); else chosen.delete(v); }));
+        root.querySelectorAll('#mnx-gender .mnx-chip').forEach((c) => c.addEventListener('click', () => { root.querySelectorAll('#mnx-gender .mnx-chip').forEach((x) => x.classList.remove('on')); c.classList.add('on'); gender = c.dataset.v; }));
+        document.getElementById('mnx-intake-go')?.addEventListener('click', () => {
+          const intake = {};
+          if (lang) intake.language = lang;
+          if (chosen.size) intake.topics = Array.from(chosen);
+          if (gender && gender !== 'Any') intake.gender = gender;
+          showChoice(isAnonymous, null, Object.keys(intake).length ? intake : null);
+        });
+        document.getElementById('mnx-intake-back')?.addEventListener('click', showEntry);
       }
 
-      function showConnecting() {
+      function showBusyAll(isAnonymous) {
+        immersive(false);
+        root.innerHTML = `<div class="mnx-schedule"><div class="mnx-empty-orb"></div><h3>Every listener’s with someone right now</h3><p>Rather than wait in a line, let us ping you the moment one’s free — you’ll be first up. Or text Blak in the meantime.</p><div class="mnx-choice"><button type="button" class="mnx-go" id="mnx-notify">Notify me when one’s free</button><a class="mnx-go mnx-go-alt" href="/beta/blak/" style="text-decoration:none">Text Blak instead</a></div><div class="mnx-ring-actions"><button type="button" class="mnx-cancel" id="mnx-busyback">Back</button></div></div>`;
+        document.getElementById('mnx-notify')?.addEventListener('click', () => requestCallback(isAnonymous, null));
+        document.getElementById('mnx-busyback')?.addEventListener('click', showEntry);
+      }
+      // Layer-1 placeholder: records intent in the scheduled pool so "notify me" isn't a
+      // dead end. Layer 2 replaces this with a minit_callbacks row + real notifications
+      // (in-app banner / web push / WhatsApp) fired when a listener frees up.
+      async function requestCallback(isAnonymous, preferredId) {
+        try { await supabase.rpc('minit_request_callback', { preferred: preferredId || null, is_anon: !!isAnonymous }); } catch (e) {}
+        logEvent('callback_requested', { preferred: !!preferredId });
+        root.innerHTML = `<div class="mnx-ring"><div class="mnx-ring-check">✓</div><h3>You’re on the priority list</h3><p>We’ll ping you the moment a listener’s free — you’ll be first up. Keep using Blaksyd in the meantime.</p><div class="mnx-ring-actions"><button type="button" class="mnx-cancel" id="mnx-cbdone">Done</button></div></div>`;
+        document.getElementById('mnx-cbdone')?.addEventListener('click', showEntry);
+      }
+      // Reconnect to a specific past listener who isn't free — let the seeker choose
+      // rather than silently handing them to a stranger.
+      function showPreferredUnavailable(isAnonymous, withCall, preferredId) {
+        immersive(false);
+        root.innerHTML = `<div class="mnx-schedule"><div class="mnx-empty-orb"></div><h3>Your listener isn’t free right now</h3><p>They may be offline or with someone else. Talk with another listener who’s here, or we’ll let you know when yours is free.</p><div class="mnx-choice"><button type="button" class="mnx-go" id="mnx-someone">Talk with someone else</button><button type="button" class="mnx-go mnx-go-alt" id="mnx-pu-notify">Notify me when they’re free</button></div><div class="mnx-ring-actions"><button type="button" class="mnx-cancel" id="mnx-pu-back">Back</button></div></div>`;
+        document.getElementById('mnx-someone')?.addEventListener('click', () => { if (busy) return; busy = true; startTalking(isAnonymous, null, withCall); });
+        document.getElementById('mnx-pu-notify')?.addEventListener('click', () => requestCallback(isAnonymous, preferredId));
+        document.getElementById('mnx-pu-back')?.addEventListener('click', showEntry);
+      }
+
+      function showConnecting(queued, substituted) {
         immersive(true);
-        root.innerHTML = `<div class="mnx-ring"><div class="mnx-ring-avatar"><i></i><i></i><span class="core"></span></div><h3>Connecting you…</h3><p>Someone’s coming to the chat. This is usually quick.</p>${stepsHTML(2)}<div class="mnx-ring-actions"><button type="button" class="mnx-cancel" id="mnx-cancel">Cancel</button></div></div>`;
+        const head = queued ? 'You’re next in line' : 'Connecting you…';
+        const sub = queued
+          ? 'Your listener’s just finishing another conversation — you’re first up. Hang tight, this is usually quick.'
+          : (substituted ? 'Your usual listener’s busy, so we’re bringing in someone else who’s here for you.' : 'Someone’s coming to the chat. This is usually quick.');
+        root.innerHTML = `<div class="mnx-ring"><div class="mnx-ring-avatar"><i></i><i></i><span class="core"></span></div><h3 id="mnx-conn-h">${head}</h3><p id="mnx-conn-p">${sub}</p>${stepsHTML(2)}<div class="mnx-ring-actions"><button type="button" class="mnx-cancel" id="mnx-cancel">Cancel</button></div></div>`;
         document.getElementById('mnx-cancel')?.addEventListener('click', () => cancelPending().then(showEntry));
+        pollPosition();
         if (connectWatchdog) clearTimeout(connectWatchdog);
         connectWatchdog = setTimeout(() => {
           if (chatOpen) return;
-          const h = root.querySelector('.mnx-ring h3'), p = root.querySelector('.mnx-ring p'), a = root.querySelector('.mnx-ring-actions');
-          if (h) h.textContent = 'Still looking…';
+          const h = document.getElementById('mnx-conn-h'), p = document.getElementById('mnx-conn-p'), a = root.querySelector('.mnx-ring-actions');
+          if (h) h.textContent = 'Still here with you…';
           if (p) p.textContent = 'It’s taking longer than usual. Keep waiting, or set a time and check back.';
           if (a) a.innerHTML = '<button type="button" class="mnx-cancel" id="mnx-cancel">Cancel</button><button type="button" class="mnx-go" id="mnx-sched2" style="width:auto;padding:.6rem 1.2rem">Set a time</button>';
           document.getElementById('mnx-cancel')?.addEventListener('click', () => cancelPending().then(showEntry));
           document.getElementById('mnx-sched2')?.addEventListener('click', () => { cancelPending().then(() => showSchedule(localStorage.getItem('mnx_anon') !== 'false')); });
         }, 45000);
+      }
+      async function pollPosition() {
+        if (!activeSessionId || chatOpen) return;
+        try {
+          const { data } = await supabase.rpc('minit_queue_position', { sid: activeSessionId });
+          const row = Array.isArray(data) ? data[0] : data;
+          const h = document.getElementById('mnx-conn-h'), p = document.getElementById('mnx-conn-p');
+          if (!row || !h || !p || chatOpen) return;
+          if (row.listener_busy) { if (h.textContent !== 'You’re next in line') h.textContent = 'You’re next in line'; }
+          else if (h.textContent !== 'Connecting you…') { h.textContent = 'Connecting you…'; p.textContent = 'Your listener’s free — bringing you in now.'; }
+        } catch (e) {}
       }
 
       function showError(text, retry) {
@@ -567,6 +657,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
         else if (s.status === 'completed') endByOther();
         else if (s.status === 'rejected') { isEnding = true; teardown(); immersive(false); root.innerHTML = '<div class="mnx-msg">Your listener got pulled away. Please try again in a little while.<div class="mnx-retry"><button type="button" class="mnx-go" id="mnx-retry" style="width:auto;padding:.7rem 1.4rem">Back</button></div></div>'; document.getElementById('mnx-retry')?.addEventListener('click', resetToEntry); }
         else if (s.status === 'cancelled') resetToEntry();
+        else if (s.status === 'pending' && !chatOpen) pollPosition();
       }
       function resetToEntry() { isEnding = false; teardown(); activeSessionId = null; activeListenerId = null; chatOpen = false; rendered.clear(); lastMsgAt = null; lastOwnStatusEl = null; showEntry(); }
       async function cancelPending() { if (!activeSessionId) return; isEnding = true; pendingWithCall = false; teardown(); await supabase.from('connect_sessions').update({ status: 'cancelled' }).eq('id', activeSessionId); activeSessionId = null; isEnding = false; }
@@ -598,13 +689,14 @@ import AppLayout from '../../layouts/AppLayout.astro';
         if (msgs && msgs.length) lastMsgAt = msgs[msgs.length - 1].created_at;
         feed.scrollTop = feed.scrollHeight;
 
-        chatReady = false;
+        chatReady = false; peerReady = false;
         chatChannel = supabase.channel('minit_sig_' + activeSessionId)
           .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `session_id=eq.${activeSessionId}` }, (p) => renderMessage(p.new))
           .on('broadcast', { event: 'typing' }, (p) => { if (p.payload?.from !== user.id) showTyping(); })
           .on('broadcast', { event: 'seen' }, (p) => { if (p.payload?.from !== user.id) markSeen(); })
+          .on('broadcast', { event: 'ready' }, (p) => { if (p.payload?.from !== user.id) onPeerReady(); })
           .on('broadcast', { event: 'call' }, (p) => { if (p.payload?.from !== user.id) handleCallSignal(p.payload); })
-          .subscribe((s) => { chatReady = (s === 'SUBSCRIBED'); });
+          .subscribe((s) => { chatReady = (s === 'SUBSCRIBED'); if (chatReady) sendReady(); });
         if (msgPoll) clearInterval(msgPoll);
         msgPoll = setInterval(pollMessages, 1800);
         logEvent('connected');

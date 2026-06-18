@@ -96,6 +96,9 @@ import AppLayout from '../../layouts/AppLayout.astro';
     .lsn-chat-orb svg { width: 18px; height: 18px; }
     .lsn-chat-who b { font-size: var(--fs-md); color: var(--ink); font-weight: 600; display: block; }
     .lsn-chat-who i { font-style: normal; font-size: var(--fs-2xs); color: var(--mint-deep); }
+    .lsn-waiting { flex: none; margin-left: .5rem; padding: .2rem .6rem; border-radius: var(--r-pill); background: rgba(255,210,122,.14); border: 1px solid rgba(255,210,122,.3); color: var(--gold); font-size: var(--fs-2xs); font-family: var(--font-mono); white-space: nowrap; }
+    html[data-theme="light"] .lsn-waiting { color: var(--gold-ink); border-color: rgba(138,100,16,.3); }
+    .lsn-waiting[hidden] { display: none; }
     .lsn-hbtns { margin-left: auto; display: flex; gap: .4rem; }
     .lsn-hbtn { display: inline-flex; align-items: center; gap: .35rem; min-height: 40px; padding: .4rem .8rem; border-radius: var(--r-pill); background: var(--surface); border: 1px solid var(--line-strong); color: var(--ink-soft); font: inherit; font-size: var(--fs-sm); cursor: pointer; }
     .lsn-hbtn svg { width: 15px; height: 15px; flex: none; }
@@ -179,7 +182,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
       const SB_URL = import.meta.env.PUBLIC_SUPABASE_URL || '', SB_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY || '';
       let user = null, profile = null, accessToken = null;
       let activeSessionId = null, isEnding = false, sending = false, accepting = false;
-      let queueChannel = null, sessionChannel = null, chatChannel = null, sessionPoll = null, msgPoll = null, queuePoll = 0, heartbeat = 0;
+      let queueChannel = null, sessionChannel = null, chatChannel = null, sessionPoll = null, msgPoll = null, queuePoll = 0, heartbeat = 0, waitPoll = 0;
       let lastMsgAt = null, typingTimer = 0, lastTypingSent = 0, notesTimer = 0, audioCtx = null, lastOwnStatusEl = null, titleFlash = 0;
       const rendered = new Set(), seen = new Set();
       const baseTitle = document.title;
@@ -207,7 +210,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
       function stopHeartbeat() { if (heartbeat) clearInterval(heartbeat); heartbeat = 0; }
       async function touch() { try { await supabase.from('listeners').update({ last_seen: new Date().toISOString() }).eq('id', profile.id); } catch (e) {} }
 
-      function teardownChat() { try { endCall(false); } catch (e) {} [sessionChannel, chatChannel].forEach((c) => { if (c) supabase.removeChannel(c); }); sessionChannel = chatChannel = null; if (sessionPoll) clearInterval(sessionPoll); if (msgPoll) clearInterval(msgPoll); }
+      function teardownChat() { try { endCall(false); } catch (e) {} [sessionChannel, chatChannel].forEach((c) => { if (c) supabase.removeChannel(c); }); sessionChannel = chatChannel = null; if (sessionPoll) clearInterval(sessionPoll); if (msgPoll) clearInterval(msgPoll); if (waitPoll) clearInterval(waitPoll); waitPoll = 0; }
       function paintAvailability() { const on = !!profile.is_online; statusEl.textContent = on ? 'Online' : 'Offline'; statusEl.classList.toggle('on', on); toggleEl.setAttribute('aria-checked', on ? 'true' : 'false'); }
       function nearBottom(f) { return f.scrollHeight - f.scrollTop - f.clientHeight < 90; }
 
@@ -216,8 +219,10 @@ import AppLayout from '../../layouts/AppLayout.astro';
 
       // ---- voice calling (WebRTC over Supabase Realtime signalling) ----
       const RTC_CFG = { iceServers: [{ urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] }] };
-      let pc = null, localStream = null, callState = 'idle', callTimer = 0, callStart = 0, pendingCands = [], remoteOffer = null, callTimeout = 0, callMuted = false, chatReady = false;
+      let pc = null, localStream = null, callState = 'idle', callTimer = 0, callStart = 0, pendingCands = [], remoteOffer = null, callTimeout = 0, callMuted = false, chatReady = false, peerReady = false;
       function callSend(kind, data) { try { chatChannel?.send({ type: 'broadcast', event: 'call', payload: { from: user.id, kind, data } }); } catch (e) {} }
+      function sendReady() { try { chatChannel?.send({ type: 'broadcast', event: 'ready', payload: { from: user.id } }); } catch (e) {} }
+      function onPeerReady() { if (peerReady) return; peerReady = true; sendReady(); }
       function fmtDur(s) { const m = Math.floor(s / 60), x = s % 60; return m + ':' + String(x).padStart(2, '0'); }
       function renderCallBar(state) {
         const bar = document.getElementById('lsn-call'); if (!bar) return;
@@ -248,7 +253,8 @@ import AppLayout from '../../layouts/AppLayout.astro';
       const getMic = () => navigator.mediaDevices.getUserMedia({ audio: true, video: false });
       async function startCall() {
         if (callState !== 'idle' || !activeSessionId) return;
-        if (!chatReady) { for (let i = 0; i < 12 && !chatReady; i++) await wait(150); }
+        // Wait for our channel AND the peer to be present (mirrors the seeker side).
+        for (let i = 0; i < 40 && (!chatReady || !peerReady); i++) await wait(150);
         try { localStream = await getMic(); } catch (e) { alert('Microphone access is needed for a voice call.'); return; }
         callState = 'calling'; renderCallBar('calling'); logEvent('call_started');
         createPC(); localStream.getTracks().forEach((t) => pc.addTrack(t, localStream));
@@ -347,7 +353,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
         }
         root.innerHTML = stats + sched + `<p class="lsn-section-label">Incoming · live</p><div id="lsn-queue"></div>`;
         subscribeQueue();
-        const { data: pend } = await supabase.from('connect_sessions').select('*').eq('listener_id', profile.id).eq('status', 'pending').gte('created_at', new Date(Date.now() - 10 * 60 * 1000).toISOString()).order('created_at', { ascending: true });
+        const { data: pend } = await supabase.from('connect_sessions').select('*').eq('listener_id', profile.id).eq('status', 'pending').gte('created_at', new Date(Date.now() - 15 * 60 * 1000).toISOString()).order('created_at', { ascending: true });
         seen.clear();
         (pend || []).forEach((r) => addRequest(r, true));
         checkEmptyQueue();
@@ -366,7 +372,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
 
       async function refreshQueue() {
         if (!profile.is_online || activeSessionId) return;
-        const { data: pend } = await supabase.from('connect_sessions').select('*').eq('listener_id', profile.id).eq('status', 'pending').gte('created_at', new Date(Date.now() - 10 * 60 * 1000).toISOString()).order('created_at', { ascending: true });
+        const { data: pend } = await supabase.from('connect_sessions').select('*').eq('listener_id', profile.id).eq('status', 'pending').gte('created_at', new Date(Date.now() - 15 * 60 * 1000).toISOString()).order('created_at', { ascending: true });
         (pend || []).forEach((r) => { if (!seen.has(r.id)) { addRequest(r); alertRequest(); } });
       }
 
@@ -404,7 +410,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
         if (session.is_anonymous) who = 'Someone · anonymous';
         else { try { const { data } = await supabase.rpc('session_seeker_name', { sid: session.id }); const nm = data && String(data).trim(); if (nm) who = nm; } catch (e) {} }
         root.innerHTML = `<div class="lsn-chat">
-          <div class="lsn-chat-head"><div class="lsn-chat-orb">${PERSON_SVG}</div><div class="lsn-chat-who"><b>${who}</b><i>connected · private</i></div>
+          <div class="lsn-chat-head"><div class="lsn-chat-orb">${PERSON_SVG}</div><div class="lsn-chat-who"><b>${who}</b><i>connected · private</i></div><span class="lsn-waiting" id="lsn-waiting" hidden></span>
             <div class="lsn-hbtns"><button type="button" class="lsn-hbtn" id="lsn-call-btn" title="Voice call">${PHONE_SVG}<span class="lbl">Call</span></button><button type="button" class="lsn-hbtn" id="lsn-notes-btn">${NOTE_SVG}<span class="lbl">Notes</span></button><button type="button" class="lsn-hbtn" id="lsn-help-btn">${SHIELD_SVG}<span class="lbl">Safety</span></button></div>
             <button type="button" class="lsn-chat-end" id="lsn-end">End</button></div>
           <div class="lsn-call" id="lsn-call" hidden></div>
@@ -425,7 +431,20 @@ import AppLayout from '../../layouts/AppLayout.astro';
         input.addEventListener('input', sendTyping);
         input.addEventListener('focus', () => setTimeout(() => input.scrollIntoView({ block: 'center' }), 200));
 
-        // surface a brief if one exists (server-generated; usually none yet)
+        // Smart Match context the seeker shared (topics / language) — controlled
+        // vocabulary, but inject the dynamic part as a text node to be safe.
+        try {
+          const ik = session.intake || null;
+          if (ik) {
+            const bits = [];
+            if (Array.isArray(ik.topics) && ik.topics.length) bits.push(ik.topics.join(', '));
+            if (ik.mood) bits.push('feeling ' + ik.mood);
+            if (ik.language) bits.push(ik.language);
+            const cx = document.getElementById('lsn-ctx');
+            if (cx && bits.length) { cx.innerHTML = '<b>They mentioned:</b> '; cx.appendChild(document.createTextNode(bits.join(' · '))); }
+          }
+        } catch (e) {}
+        // surface a brief if one exists (server-generated; usually none yet) — overrides the intake line
         try { const { data: br } = await supabase.from('symp_listener_briefs').select('brief').eq('connect_session_id', session.id).maybeSingle(); if (br && br.brief) { const txt = typeof br.brief === 'string' ? br.brief : (br.brief.summary || br.brief.recommended_focus || ''); if (txt) document.getElementById('lsn-ctx').innerHTML = '<b>Blak brief:</b> ' + String(txt); } } catch (e) {}
 
         // private notes
@@ -444,18 +463,20 @@ import AppLayout from '../../layouts/AppLayout.astro';
         if (msgs && msgs.length) lastMsgAt = msgs[msgs.length - 1].created_at;
         feed.scrollTop = feed.scrollHeight;
 
-        chatReady = false;
+        chatReady = false; peerReady = false;
         chatChannel = supabase.channel('minit_sig_' + activeSessionId)
           .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `session_id=eq.${activeSessionId}` }, (p) => renderMessage(p.new))
           .on('broadcast', { event: 'typing' }, (p) => { if (p.payload?.from !== user.id) showTyping(); })
           .on('broadcast', { event: 'seen' }, (p) => { if (p.payload?.from !== user.id) markSeen(); })
+          .on('broadcast', { event: 'ready' }, (p) => { if (p.payload?.from !== user.id) onPeerReady(); })
           .on('broadcast', { event: 'call' }, (p) => { if (p.payload?.from !== user.id) handleCallSignal(p.payload); })
-          .subscribe((s) => { chatReady = (s === 'SUBSCRIBED'); });
+          .subscribe((s) => { chatReady = (s === 'SUBSCRIBED'); if (chatReady) sendReady(); });
         if (msgPoll) clearInterval(msgPoll);
         msgPoll = setInterval(pollMessages, 1800);
         sessionChannel = supabase.channel('lsn_session_' + activeSessionId).on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'connect_sessions', filter: `id=eq.${activeSessionId}` }, syncSession).subscribe();
         if (sessionPoll) clearInterval(sessionPoll);
         sessionPoll = setInterval(syncSession, 1500);
+        updateWaiting(); if (waitPoll) clearInterval(waitPoll); waitPoll = setInterval(updateWaiting, 6000);
         logEvent('connected');
         input.focus();
       }
@@ -463,6 +484,17 @@ import AppLayout from '../../layouts/AppLayout.astro';
       function sendTyping() { const n = Date.now(); if (n - lastTypingSent < 1500) return; lastTypingSent = n; chatChannel?.send({ type: 'broadcast', event: 'typing', payload: { from: user.id } }); }
       function showTyping() { const feed = document.getElementById('lsn-feed'); if (!feed) return; let t = document.getElementById('lsn-typing'); if (!t) { t = document.createElement('div'); t.id = 'lsn-typing'; t.className = 'lsn-typing'; t.innerHTML = '<span></span><span></span><span></span>'; feed.appendChild(t); if (nearBottom(feed)) feed.scrollTop = feed.scrollHeight; } if (typingTimer) clearTimeout(typingTimer); typingTimer = setTimeout(() => document.getElementById('lsn-typing')?.remove(), 2400); }
       function markSeen() { if (lastOwnStatusEl) lastOwnStatusEl.textContent = 'Seen'; }
+      // How many people are queued for me right now (cap 1) — keeps me aware during a
+      // live chat so I can wrap up and pick up the next person.
+      async function updateWaiting() {
+        if (!activeSessionId) return;
+        try {
+          const { count } = await supabase.from('connect_sessions').select('id', { count: 'exact', head: true }).eq('listener_id', profile.id).eq('status', 'pending');
+          const el = document.getElementById('lsn-waiting'); if (!el) return;
+          const n = count || 0;
+          if (n > 0) { el.hidden = false; el.textContent = n + ' waiting'; } else { el.hidden = true; el.textContent = ''; }
+        } catch (e) {}
+      }
 
       async function syncSession() { if (!activeSessionId || isEnding) return; const { data: s } = await supabase.from('connect_sessions').select('status').eq('id', activeSessionId).maybeSingle(); if (!s) return; if (s.status === 'completed' || s.status === 'cancelled') { isEnding = true; teardownChat(); renderHome(); } }
       async function pollMessages() { if (!activeSessionId) return; let q = supabase.from('messages').select('*').eq('session_id', activeSessionId).order('created_at', { ascending: true }); if (lastMsgAt) q = q.gte('created_at', lastMsgAt); const { data: msgs } = await q; if (msgs && msgs.length) msgs.forEach(renderMessage); }

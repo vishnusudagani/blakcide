@@ -81,9 +81,24 @@ const nav = [
     </main>
   </div>
 
+  <!-- app-wide in-app notification banner (Minit "listener free", etc.) -->
+  <div class="ap-notif" id="ap-notif" hidden role="status" aria-live="polite"></div>
+
   <style is:global>
     /* color-scheme follows the theme via tokens.css (:root = dark, [data-theme=light] = light) */
     * { box-sizing: border-box; }
+    /* in-app notification banner */
+    .ap-notif { position: fixed; z-index: 9500; left: 50%; top: 16px; transform: translateX(-50%) translateY(-150%); width: min(440px, calc(100vw - 24px)); display: flex; align-items: center; gap: .7rem; padding: .65rem .7rem .65rem .9rem; border-radius: var(--r-pill); background: var(--glass-strong); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); border: 1px solid rgba(106,211,184,.4); box-shadow: 0 18px 50px rgba(0,0,0,.4), 0 0 30px rgba(106,211,184,.12); opacity: 0; transition: transform .42s var(--ease-soft), opacity .3s ease; cursor: pointer; }
+    .ap-notif.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+    .ap-notif[hidden] { display: none; }
+    .ap-notif-dot { width: 10px; height: 10px; border-radius: 50%; flex: none; background: var(--mint-deep); box-shadow: 0 0 10px var(--mint-deep); }
+    .ap-notif-tx { flex: 1; min-width: 0; }
+    .ap-notif-tx b { display: block; font-size: var(--fs-sm); color: var(--ink); font-weight: 650; }
+    .ap-notif-tx span { display: block; font-size: var(--fs-xs); color: var(--ink-soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .ap-notif-x { flex: none; width: 28px; height: 28px; border-radius: 50%; border: 0; background: var(--surface); color: var(--ink-faint); cursor: pointer; font-size: .95rem; line-height: 1; }
+    .ap-notif-x:hover { color: var(--ink); }
+    @media (max-width: 560px) { .ap-notif { top: auto; bottom: 86px; transform: translateX(-50%) translateY(180%); } .ap-notif.show { transform: translateX(-50%) translateY(0); } }
+    @media (prefers-reduced-motion: reduce) { .ap-notif { transition: opacity .3s ease; } }
     html, body { margin: 0; height: 100%; }
     body {
       font-family: var(--font-body); color: var(--ink); background: var(--bg);
@@ -309,7 +324,37 @@ const nav = [
 
       const email = session.user && session.user.email;
       if (email) { const av = document.getElementById('ap-avatar'); if (av) av.textContent = email[0].toUpperCase(); }
+
+      initNotifications(session.user.id);
     })();
+
+    // App-wide in-app notification banner. Listens to the `notifications` inbox
+    // (realtime + a poll fallback) and surfaces the latest unread — tap to act,
+    // ✕ to dismiss. Web push / WhatsApp (Phase 2b/2c) fan out from the same rows.
+    function escapeHtml(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
+    function initNotifications(uid) {
+      const el = document.getElementById('ap-notif');
+      if (!el || !supabase) return;
+      const shown = new Set();
+      let hideTimer = 0;
+      const markRead = (id) => { try { supabase.from('notifications').update({ read_at: new Date().toISOString() }).eq('id', id); } catch (e) {} };
+      const hide = () => { el.classList.remove('show'); setTimeout(() => { el.hidden = true; }, 440); if (hideTimer) { clearTimeout(hideTimer); hideTimer = 0; } };
+      const render = (n) => {
+        if (!n || shown.has(n.id)) return; shown.add(n.id);
+        el.innerHTML = '<span class="ap-notif-dot"></span><span class="ap-notif-tx"><b>' + escapeHtml(n.title) + '</b><span>' + escapeHtml(n.body || '') + '</span></span><button type="button" class="ap-notif-x" aria-label="Dismiss">✕</button>';
+        el.hidden = false; requestAnimationFrame(() => el.classList.add('show'));
+        el.onclick = () => { markRead(n.id); if (n.url) location.href = n.url; };
+        el.querySelector('.ap-notif-x').onclick = (e) => { e.stopPropagation(); markRead(n.id); hide(); };
+        if (hideTimer) clearTimeout(hideTimer);
+        hideTimer = setTimeout(hide, 12000);
+      };
+      const latestUnread = async () => {
+        try { const { data } = await supabase.from('notifications').select('*').is('read_at', null).order('created_at', { ascending: false }).limit(1); if (data && data[0]) render(data[0]); } catch (e) {}
+      };
+      latestUnread();
+      try { supabase.channel('notif_' + uid).on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications', filter: 'user_id=eq.' + uid }, (p) => render(p.new)).subscribe(); } catch (e) {}
+      setInterval(latestUnread, 20000);
+    }
   </script>
 </body>
 </html>
