@@ -30,8 +30,8 @@ import { TOOL_DEFS, executeTool } from '../../symp-core/lib/tools.mjs';
 import { runStreamingChatWithTools } from '../../symp-core/lib/chat-runner.mjs';
 import { chatProviders } from '../../symp-core/lib/llm-providers.mjs';
 import { recordEventAsync } from '../../symp-core/lib/vibe-tracker.mjs';
-import { updateRollingMemoryAsync } from '../../symp-core/lib/memory-updater.mjs';
-import { extractKnowledgeAsync } from '../../symp-core/lib/knowledge-extractor.mjs';
+import { updateRollingMemory } from '../../symp-core/lib/memory-updater.mjs';
+import { extractKnowledge } from '../../symp-core/lib/knowledge-extractor.mjs';
 import { analyseTurn } from '../../symp-core/lib/diagnostic.mjs';
 import SympContract from '../../symp-core/contract/endpoints.js';
 
@@ -148,8 +148,15 @@ export default async (req) => {
             sourceSessionId: source_session_id,
             evidence: `User: ${lastUser}\n\nAssistant: ${assembled}`,
         });
-        updateRollingMemoryAsync(user_id, { userText: lastUser, assistantText: assembled });
-        extractKnowledgeAsync(user_id, { userText: lastUser, assistantText: assembled });
+        // Persist learning BEFORE returning so the serverless runtime can't freeze
+        // mid-write. Bounded so a slow model can't blow the function budget.
+        await Promise.race([
+            Promise.allSettled([
+                updateRollingMemory(user_id, { userText: lastUser, assistantText: assembled }),
+                extractKnowledge(user_id, { userText: lastUser, assistantText: assembled }),
+            ]),
+            new Promise((r) => setTimeout(r, 9000)),
+        ]);
 
         // Self-correction analysis — synchronous but cheap (regex-only).
         try {
@@ -201,17 +208,23 @@ export default async (req) => {
         } catch (e) {
             await writer.write(encoder.encode(`data: ${JSON.stringify({ error: e.message || String(e) })}\n\n`));
         } finally {
-            await writer.close().catch(() => {});
-
-            // Vibe write — fire and forget.
+            // Run learning BEFORE closing the stream. The runner already emitted
+            // {"done":true}, so the client is unblocked; holding the stream open
+            // keeps the serverless function alive until this finishes. Work queued
+            // AFTER close gets dropped when the runtime freezes on response complete.
             const lastUser = [...messages].reverse().find(m => m.role === 'user')?.content || '';
             recordEventAsync(user_id, {
                 source: 'ai_chat',
                 sourceSessionId: source_session_id,
                 evidence: `User: ${lastUser}\n\nAssistant: ${assembledForVibe}`,
             });
-            updateRollingMemoryAsync(user_id, { userText: lastUser, assistantText: assembledForVibe });
-            extractKnowledgeAsync(user_id, { userText: lastUser, assistantText: assembledForVibe });
+            await Promise.race([
+                Promise.allSettled([
+                    updateRollingMemory(user_id, { userText: lastUser, assistantText: assembledForVibe }),
+                    extractKnowledge(user_id, { userText: lastUser, assistantText: assembledForVibe }),
+                ]),
+                new Promise((r) => setTimeout(r, 9000)),
+            ]);
 
             // Self-correction analysis — pins next-turn corrective hint.
             try {
@@ -223,6 +236,7 @@ export default async (req) => {
                 });
             } catch (_) { /* never block on diagnostic */ }
 
+            await writer.close().catch(() => {});
             logAccess({ requestId, endpoint: ENDPOINTS.CHAT, statusCode: 200, latencyMs: Date.now() - t0, userId: user_id });
         }
     })();
