@@ -10,7 +10,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
       <div class="mnx-loading"><span class="mnx-spinner" aria-hidden="true"></span> Getting things ready…</div>
     </div>
 
-    <p class="mnx-foot mnx-chrome"><span class="mnx-foot-q">Need it now?</span><button type="button" class="mnx-help-link crisis" id="mnx-crisis"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-4.5-9.5-9A5 5 0 0 1 12 6a5 5 0 0 1 9.5 6c-2.5 4.5-9.5 9-9.5 9z"/></svg>Urgent help</button><a class="mnx-help-link" href="/beta/blak/"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.5 8.5 0 0 1-12.5 7.5L3 21l2-5.5A8.5 8.5 0 1 1 21 11.5z"/></svg>Text with Blak</a><a class="mnx-help-link wa" href="https://wa.me/917702063434" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.5 14.4c-.3-.1-1.7-.8-2-.9-.3-.1-.5-.1-.7.2-.2.3-.7.9-.9 1.1-.2.2-.3.2-.6.1-.3-.1-1.2-.5-2.3-1.4-.9-.8-1.4-1.7-1.6-2-.2-.3 0-.5.1-.6.1-.1.3-.3.4-.5.1-.2.2-.3.3-.5.1-.2 0-.4 0-.5 0-.1-.7-1.6-.9-2.2-.2-.6-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.4-.3.3-1 1-1 2.5s1.1 2.9 1.2 3.1c.1.2 2.1 3.2 5.1 4.5.7.3 1.3.5 1.7.6.7.2 1.4.2 1.9.1.6-.1 1.7-.7 2-1.4.2-.7.2-1.2.2-1.4-.1-.1-.3-.2-.6-.3z"/><path d="M12 2a10 10 0 0 0-8.5 15.3L2 22l4.8-1.5A10 10 0 1 0 12 2zm0 18.2c-1.5 0-3-.4-4.3-1.2l-.3-.2-2.9.9.9-2.8-.2-.3A8.2 8.2 0 1 1 12 20.2z"/></svg>WhatsApp</a></p>
+    <p class="mnx-foot mnx-chrome"><button type="button" class="mnx-help-link crisis" id="mnx-crisis"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-4.5-9.5-9A5 5 0 0 1 12 6a5 5 0 0 1 9.5 6c-2.5 4.5-9.5 9-9.5 9z"/></svg>Urgent help</button></p>
     <audio id="mnx-rtc-audio" autoplay></audio>
   </div>
 
@@ -128,6 +128,9 @@ import AppLayout from '../../layouts/AppLayout.astro';
     .mnx-times { display: flex; flex-wrap: wrap; justify-content: center; gap: .55rem; margin-top: 1.3rem; }
     .mnx-time { display: inline-flex; align-items: center; min-height: 40px; padding: .6rem 1rem; border-radius: var(--r-pill); background: var(--surface); border: 1px solid var(--line-strong); color: var(--ink); font: inherit; font-size: var(--fs-sm); cursor: pointer; }
     .mnx-time:hover { border-color: rgba(106,211,184,.5); }
+    .mnx-timepick { display: flex; justify-content: center; margin: 1.4rem 0 .4rem; }
+    .mnx-time-input { font: inherit; font-size: var(--fs-2xl); font-weight: 600; letter-spacing: .02em; color: var(--ink); background: var(--surface); border: 1px solid var(--line-strong); border-radius: var(--r-md); padding: .7rem 1.1rem; text-align: center; outline: none; }
+    .mnx-time-input:focus { border-color: rgba(106,211,184,.6); }
 
     .mnx-chat { display: flex; flex-direction: column; width: 100%; max-width: 640px; margin-inline: auto; height: clamp(360px, 66dvh, 620px); background: var(--glass-strong); border: 1px solid var(--line-strong); border-radius: var(--r-lg); box-shadow: var(--shadow-soft); overflow: hidden; position: relative; }
     .mnx-chat-head { display: flex; align-items: center; gap: .7rem; padding: .8rem 1rem; border-bottom: 1px solid var(--line); flex: none; }
@@ -319,7 +322,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
       const SB_URL = import.meta.env.PUBLIC_SUPABASE_URL || '';
       const SB_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY || '';
       let user = null, accessToken = null;
-      let activeSessionId = null, activeListenerId = null, isEnding = false, busy = false, sending = false, pendingWithCall = false;
+      let activeSessionId = null, activeListenerId = null, isEnding = false, busy = false, sending = false, pendingWithCall = false, matchedName = '';
       let sessionChannel = null, chatChannel = null, sessionPoll = null, msgPoll = null, lastMsgAt = null;
       let chatOpen = false, connectWatchdog = 0, typingTimer = 0, lastTypingSent = 0, lastOwnStatusEl = null;
       const rendered = new Set();
@@ -462,10 +465,19 @@ import AppLayout from '../../layouts/AppLayout.astro';
       }
 
       async function showEntry() {
-        chatOpen = false; immersive(false);
+        chatOpen = false; immersive(false); matchedName = '';
         root.innerHTML = '<div class="mnx-skel" style="margin-top:1rem"><i></i><i></i><i></i></div>';
         const [count, history, credits] = await Promise.all([availableCount(), loadHistory(), checkCredits()]);
         const anonPref = localStorage.getItem('mnx_anon') !== 'false';
+        const fname = ((user && user.user_metadata && (user.user_metadata.full_name || user.user_metadata.name || user.user_metadata.given_name)) || '').trim().split(' ')[0];
+        const hr = new Date().getHours();
+        let gTitle, gSub;
+        if (hr < 5) { gTitle = 'Still awake?'; gSub = history.length ? 'I’m glad you’re back.' : 'Someone’s here if you need them.'; }
+        else if (hr < 12) { gTitle = 'Good morning'; gSub = 'How are you, really?'; }
+        else if (hr < 17) { gTitle = 'Good afternoon'; gSub = 'What’s on your mind?'; }
+        else if (hr < 21) { gTitle = 'Good evening'; gSub = history.length ? 'Good to see you again.' : 'Want to talk it through?'; }
+        else { gTitle = 'Winding down?'; gSub = 'Here whenever you need someone.'; }
+        const gTitleHtml = (hr >= 5 && hr < 21 && fname) ? `${gTitle}, <em>${esc(fname)}</em>` : gTitle;
         const live = count > 0
           ? '<div class="mnx-live"><span class="mnx-live-dot"></span> Someone’s available right now</div>'
           : '<div class="mnx-live off"><span class="mnx-live-dot"></span> Quiet right now — start anyway and we’ll look</div>';
@@ -478,14 +490,10 @@ import AppLayout from '../../layouts/AppLayout.astro';
             <span class="mnx-entry-glow" aria-hidden="true"></span>
             <div class="mnx-orb-wrap" aria-hidden="true"><i class="mnx-echo"></i><i class="mnx-echo"></i><span class="mnx-orb"></span></div>
             <p class="mnx-kick2">Minit · real people</p>
-            <h2 class="mnx-greet">Someone real is <em>here for you.</em></h2>
-            <p class="mnx-greet-sub">Whenever you need them — anonymous by default, both sides cared for.</p>
+            <h2 class="mnx-greet">${gTitleHtml}</h2>
+            <p class="mnx-greet-sub">${gSub}</p>
             ${live}
             <button type="button" class="mnx-go" id="mnx-start"${credits.ok ? '' : ' disabled'}>Start talking <span class="mnx-cta-arrow">→</span></button>
-            <div class="mnx-modes">
-              <button type="button" class="mnx-go mnx-go-alt mnx-mode" id="mnx-smart"${credits.ok ? '' : ' disabled'}>${SPARK_SVG} Smart match</button>
-              <button type="button" class="mnx-go mnx-go-alt mnx-mode" id="mnx-browse"${credits.ok ? '' : ' disabled'}>${COMPASS_SVG} Browse</button>
-            </div>
             <button type="button" class="mnx-anon-min ${anonPref ? 'on' : ''}" id="mnx-anon" aria-pressed="${anonPref}"><span class="mnx-anon-ico">${LOCK_SVG}</span> Anonymous <i>${anonPref ? 'on' : 'off'}</i><span class="mnx-sw2"></span></button>
             <div class="mnx-meter">
               <div class="mnx-meter-top"><span class="mnx-meter-label">Today’s minits</span><span class="mnx-meter-val">${credits.leftToday} left</span></div>
@@ -502,19 +510,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
           if (busy) return; busy = true; e.currentTarget.setAttribute('disabled', '');
           const c = await checkCredits();
           if (!c.ok) { busy = false; showCapped(); return; }
-          busy = false; logEvent('start_tapped', { anon }); showChoice(anon);
-        });
-        document.getElementById('mnx-smart')?.addEventListener('click', async (e) => {
-          if (e.currentTarget.hasAttribute('disabled')) return;
-          const c = await checkCredits();
-          if (!c.ok) { showCapped(); return; }
-          logEvent('smart_tapped', { anon }); showSmartIntake(anon);
-        });
-        document.getElementById('mnx-browse')?.addEventListener('click', async (e) => {
-          if (e.currentTarget.hasAttribute('disabled')) return;
-          const c = await checkCredits();
-          if (!c.ok) { showCapped(); return; }
-          logEvent('browse_tapped', { anon }); showDirectory(anon);
+          busy = false; logEvent('start_tapped', { anon }); startTalking(anon);
         });
         const drawerEl = document.getElementById('mnx-drawer');
         const openDrawer = () => { if (!drawerEl) return; drawerEl.hidden = false; requestAnimationFrame(() => drawerEl.classList.add('open')); };
@@ -547,8 +543,8 @@ import AppLayout from '../../layouts/AppLayout.astro';
           <div class="mnx-input" style="gap:.6rem"><button type="button" class="mnx-go" id="mnx-recon" style="flex:1;font-size:var(--fs-md)">↩ Reconnect</button><button type="button" class="mnx-cancel" id="mnx-newchat">New chat</button></div>
         </div>`;
         document.getElementById('mnx-tback')?.addEventListener('click', showEntry);
-        document.getElementById('mnx-recon')?.addEventListener('click', () => showChoice(localStorage.getItem('mnx_anon') !== 'false', listenerId || undefined));
-        document.getElementById('mnx-newchat')?.addEventListener('click', () => showChoice(localStorage.getItem('mnx_anon') !== 'false'));
+        document.getElementById('mnx-recon')?.addEventListener('click', () => startTalking(localStorage.getItem('mnx_anon') !== 'false', listenerId || undefined));
+        document.getElementById('mnx-newchat')?.addEventListener('click', () => startTalking(localStorage.getItem('mnx_anon') !== 'false'));
         const feed = document.getElementById('mnx-feed');
         const { data: msgs } = await supabase.from('messages').select('*').eq('session_id', sessionId).order('created_at', { ascending: true });
         const real = (msgs || []).filter((m) => m.content && !String(m.content).startsWith('###'));
@@ -557,109 +553,51 @@ import AppLayout from '../../layouts/AppLayout.astro';
         feed.scrollTop = feed.scrollHeight;
       }
 
-      async function startTalking(isAnonymous, preferredId, withCall, intake) {
+      async function startTalking(isAnonymous, preferredId) {
         immersive(true);
-        root.innerHTML = `<div class="mnx-ring"><div class="mnx-scan"><span class="mnx-scan-sweep"></span><span class="mnx-scan-core"></span></div><h3>${intake ? 'Finding your match…' : 'Scanning for listeners…'}</h3><p>${preferredId ? 'Looking for your listener.' : (intake ? 'Matching you with someone who fits.' : 'Finding someone real and available for you.')}</p></div>`;
-        const [res] = await Promise.all([supabase.rpc('minit_start_session', { preferred: preferredId || null, is_anon: !!isAnonymous, p_intake: intake || null }), wait(1400)]);
+        root.innerHTML = `<div class="mnx-ring"><div class="mnx-scan"><span class="mnx-scan-sweep"></span><span class="mnx-scan-core"></span></div><h3>Finding someone for you…</h3><p>${preferredId ? 'Looking for your listener.' : 'Connecting you with a real person who’s here.'}</p></div>`;
+        const [res] = await Promise.all([supabase.rpc('minit_start_session', { preferred: preferredId || null, is_anon: !!isAnonymous }), wait(1400)]);
         busy = false;
         if (res.error) {
           console.error('[minit] start_session failed:', res.error?.code, res.error?.message);
           if (await sessionExpired() || res.error?.code === '42501') { showSessionExpired(); return; }
-          showError('Couldn’t reach the room just now.', () => { busy = true; startTalking(isAnonymous, preferredId, withCall, intake); }); return;
+          showError('Couldn’t reach the room just now.', () => { busy = true; startTalking(isAnonymous, preferredId); }); return;
         }
         const row = Array.isArray(res.data) ? res.data[0] : res.data;
         const outcome = row && row.outcome;
         if (outcome === 'open' || outcome === 'queued') {
-          activeSessionId = row.session_id; activeListenerId = row.listener_id; pendingWithCall = !!withCall;
+          activeSessionId = row.session_id; activeListenerId = row.listener_id;
           try { supabase.from('minit_callbacks').update({ status: 'fulfilled' }).eq('user_id', user.id).in('status', ['waiting', 'notified']); } catch (e) {}
           logEvent('listener_found', { outcome });
-          watchSession(activeSessionId); showConnecting(outcome === 'queued');
-        } else if (outcome === 'preferred_unavailable') { logEvent('preferred_unavailable'); showPreferredUnavailable(isAnonymous, withCall, preferredId); }
+          matchedName = await fetchListenerName(activeSessionId);
+          showMatched(outcome === 'queued');
+        } else if (outcome === 'preferred_unavailable') { logEvent('preferred_unavailable'); showPreferredUnavailable(isAnonymous, preferredId); }
         else if (outcome === 'banned') { logEvent('banned'); showRestricted(); }
         else if (outcome === 'busy_full') { logEvent('busy_full'); showBusyAll(isAnonymous); }
         else { logEvent('no_listener'); showSchedule(isAnonymous); }
       }
+      async function fetchListenerName(sid) {
+        try { const { data } = await supabase.rpc('minit_session_listener', { sid }); const r = Array.isArray(data) ? data[0] : data; return (r && r.display_name) ? r.display_name : ''; } catch (e) { return ''; }
+      }
 
-      function showChoice(isAnonymous, preferredId, intake) {
+      // Rapido-style: after matching, reveal who you got + Talk/Chat, then connect.
+      function showMatched(queued) {
         immersive(true);
-        const shareRow = preferredId
-          ? `<button type="button" class="mnx-anon-min" id="mnx-share" aria-pressed="false" style="margin-top:1.1rem"><span class="mnx-anon-ico">${HISTORY_SVG}</span> Let them see our past chats <i>off</i><span class="mnx-sw2"></span></button>`
-          : '';
+        const who = matchedName ? esc(matchedName) : 'a listener';
         root.innerHTML = `<div class="mnx-ring">
           <div class="mnx-ring-avatar"><i></i><i></i><span class="core"></span></div>
-          <h3>How would you like to talk?</h3>
-          <p>${preferredId ? 'Picking up with someone you’ve spoken to before.' : 'You can switch to a call anytime once you’re connected.'}</p>
+          <h3>${queued ? 'You’re next with ' : 'Connecting you to '}<span class="mnx-accent">${who}</span></h3>
+          <p>${queued ? 'They’re just finishing another conversation — you’re first up.' : 'How would you like to talk?'}</p>
           <div class="mnx-choice">
-            <button type="button" class="mnx-go" id="mnx-pick-chat">${CHAT_SVG} Start chat</button>
-            <button type="button" class="mnx-go mnx-go-alt" id="mnx-pick-call">${PHONE_SVG} Start call</button>
+            <button type="button" class="mnx-go" id="mnx-pick-chat">${CHAT_SVG} Chat</button>
+            <button type="button" class="mnx-go mnx-go-alt" id="mnx-pick-call">${PHONE_SVG} Talk</button>
           </div>
-          ${shareRow}
-          <div class="mnx-ring-actions"><button type="button" class="mnx-cancel" id="mnx-pick-back">Back</button></div>
+          <div class="mnx-ring-actions"><button type="button" class="mnx-cancel" id="mnx-pick-back">Cancel</button></div>
         </div>`;
-        let share = false;
-        const shareBtn = document.getElementById('mnx-share');
-        shareBtn?.addEventListener('click', () => { share = !share; shareBtn.classList.toggle('on', share); shareBtn.setAttribute('aria-pressed', String(share)); const i = shareBtn.querySelector('i'); if (i) i.textContent = share ? 'on' : 'off'; });
-        const withShare = () => (share ? { ...(intake || {}), share_history: true } : intake);
-        document.getElementById('mnx-pick-chat')?.addEventListener('click', () => { if (busy) return; busy = true; startTalking(isAnonymous, preferredId, false, withShare()); });
-        document.getElementById('mnx-pick-call')?.addEventListener('click', () => { if (busy) return; busy = true; startTalking(isAnonymous, preferredId, true, withShare()); });
-        document.getElementById('mnx-pick-back')?.addEventListener('click', showEntry);
-      }
-
-      // Smart Match (L2): a light, all-optional intake → matched on language / topic /
-      // gender preference (the matcher falls back to anyone if nothing fits).
-      function showSmartIntake(isAnonymous) {
-        immersive(true);
-        const langs = ['English', 'Hindi', 'Telugu', 'Tamil', 'Marathi', 'Kannada'];
-        const topics = ['Stress', 'Anxiety', 'Relationships', 'Work', 'Loneliness', 'Sleep', 'Family', 'Just venting'];
-        const chip = (v, on) => `<button type="button" class="mnx-chip${on ? ' on' : ''}" data-v="${esc(v)}">${esc(v)}</button>`;
-        root.innerHTML = `<div class="mnx-intake">
-          <h3 class="mnx-intake-h">Find the right person</h3>
-          <p class="mnx-intake-sub">A few quick taps — all optional. We’ll match you with someone who fits, and they’ll walk in with a little context.</p>
-          <div class="mnx-field"><label>Language</label><div class="mnx-chips" id="mnx-langs">${langs.map((l) => chip(l)).join('')}</div></div>
-          <div class="mnx-field"><label>What’s on your mind?</label><div class="mnx-chips" id="mnx-topics">${topics.map((t) => chip(t)).join('')}</div></div>
-          <div class="mnx-field"><label>Listener preference</label><div class="mnx-chips" id="mnx-gender">${['Any', 'Woman', 'Man'].map((g) => chip(g, g === 'Any')).join('')}</div></div>
-          <div class="mnx-choice" style="max-width:none;margin-top:1.3rem"><button type="button" class="mnx-go" id="mnx-intake-go">Find my match <span class="mnx-cta-arrow">→</span></button></div>
-          <div class="mnx-ring-actions"><button type="button" class="mnx-cancel" id="mnx-intake-back">Back</button></div>
-        </div>`;
-        let lang = null, gender = null; const chosen = new Set();
-        root.querySelectorAll('#mnx-langs .mnx-chip').forEach((c) => c.addEventListener('click', () => { const was = c.classList.contains('on'); root.querySelectorAll('#mnx-langs .mnx-chip').forEach((x) => x.classList.remove('on')); if (!was) { c.classList.add('on'); lang = c.dataset.v; } else lang = null; }));
-        root.querySelectorAll('#mnx-topics .mnx-chip').forEach((c) => c.addEventListener('click', () => { const v = c.dataset.v; if (c.classList.toggle('on')) chosen.add(v); else chosen.delete(v); }));
-        root.querySelectorAll('#mnx-gender .mnx-chip').forEach((c) => c.addEventListener('click', () => { root.querySelectorAll('#mnx-gender .mnx-chip').forEach((x) => x.classList.remove('on')); c.classList.add('on'); gender = c.dataset.v; }));
-        document.getElementById('mnx-intake-go')?.addEventListener('click', () => {
-          const intake = {};
-          if (lang) intake.language = lang;
-          if (chosen.size) intake.topics = Array.from(chosen);
-          if (gender && gender !== 'Any') intake.gender = gender;
-          showChoice(isAnonymous, null, Object.keys(intake).length ? intake : null);
-        });
-        document.getElementById('mnx-intake-back')?.addEventListener('click', showEntry);
-      }
-
-      // Listener Discovery (L4, premium): browse who's here and pick exactly who to talk to.
-      async function showDirectory(isAnonymous) {
-        immersive(true);
-        root.innerHTML = `<div class="mnx-dir">
-          <div class="mnx-dir-head"><h3 class="mnx-intake-h">Choose your listener <span class="mnx-prem">Premium</span></h3><p class="mnx-intake-sub">Browse who’s here and pick someone whose style fits. Tap to connect — or we’ll let you know when they’re free.</p></div>
-          <div class="mnx-dir-list" id="mnx-dir-list"><div class="mnx-skel"><i></i><i></i><i></i></div></div>
-          <div class="mnx-ring-actions"><button type="button" class="mnx-cancel" id="mnx-dir-back">Back</button></div>
-        </div>`;
-        document.getElementById('mnx-dir-back')?.addEventListener('click', showEntry);
-        const list = document.getElementById('mnx-dir-list');
-        const { data, error } = await supabase.rpc('minit_list_listeners');
-        if (!list) return;
-        if (error) { list.innerHTML = '<p class="mnx-sys" style="padding:1.6rem">Couldn’t load listeners just now.</p>'; return; }
-        const rows = data || [];
-        if (!rows.length) { list.innerHTML = '<p class="mnx-sys" style="padding:1.6rem">No listeners to show yet — try Smart match or check back soon.</p>'; return; }
-        const label = { available: 'Available now', busy: 'With someone', offline: 'Offline' };
-        list.innerHTML = rows.map((l) => {
-          const name = esc(l.display_name || 'Listener');
-          const tags = [(Array.isArray(l.specialties) ? l.specialties.slice(0, 3).join(' · ') : ''), (Array.isArray(l.languages) ? l.languages.join(', ') : '')].filter(Boolean).join('  ·  ');
-          const sub = l.style ? esc(l.style) : (tags || label[l.status] || '');
-          const rate = l.rating != null ? `★ ${Number(l.rating).toFixed(1)}${l.reviews_count ? ' · ' + l.reviews_count : ''}` : 'New';
-          const av = l.profile_pic ? `<span class="mnx-dir-orb"><img src="${esc(l.profile_pic)}" alt="" /></span>` : `<span class="mnx-dir-orb" style="${orbStyle(l.id)}">${PERSON_SVG}</span>`;
-          return `<button type="button" class="mnx-dir-card" data-id="${l.id}">${av}<span class="mnx-dir-meta"><b>${name}</b><i>${sub}</i></span><span class="mnx-dir-side"><span class="mnx-dir-rate">${rate}</span><span class="mnx-dir-status ${l.status}">${label[l.status] || ''}</span></span></button>`;
-        }).join('');
-        list.querySelectorAll('.mnx-dir-card').forEach((c) => c.addEventListener('click', () => showChoice(isAnonymous, c.getAttribute('data-id'))));
+        const go = (call) => { if (busy) return; busy = true; pendingWithCall = call; watchSession(activeSessionId); showConnecting(queued); };
+        document.getElementById('mnx-pick-chat')?.addEventListener('click', () => go(false));
+        document.getElementById('mnx-pick-call')?.addEventListener('click', () => go(true));
+        document.getElementById('mnx-pick-back')?.addEventListener('click', () => cancelPending().then(showEntry));
       }
 
       // Two-sided safety: a moderated user can't start a Minit session.
@@ -685,20 +623,21 @@ import AppLayout from '../../layouts/AppLayout.astro';
       }
       // Reconnect to a specific past listener who isn't free — let the seeker choose
       // rather than silently handing them to a stranger.
-      function showPreferredUnavailable(isAnonymous, withCall, preferredId) {
+      function showPreferredUnavailable(isAnonymous, preferredId) {
         immersive(false);
         root.innerHTML = `<div class="mnx-schedule"><div class="mnx-empty-orb"></div><h3>Your listener isn’t free right now</h3><p>They may be offline or with someone else. Talk with another listener who’s here, or we’ll let you know when yours is free.</p><div class="mnx-choice"><button type="button" class="mnx-go" id="mnx-someone">Talk with someone else</button><button type="button" class="mnx-go mnx-go-alt" id="mnx-pu-notify">Notify me when they’re free</button></div><div class="mnx-ring-actions"><button type="button" class="mnx-cancel" id="mnx-pu-back">Back</button></div></div>`;
-        document.getElementById('mnx-someone')?.addEventListener('click', () => { if (busy) return; busy = true; startTalking(isAnonymous, null, withCall); });
+        document.getElementById('mnx-someone')?.addEventListener('click', () => { if (busy) return; busy = true; startTalking(isAnonymous, null); });
         document.getElementById('mnx-pu-notify')?.addEventListener('click', () => requestCallback(isAnonymous, preferredId));
         document.getElementById('mnx-pu-back')?.addEventListener('click', showEntry);
       }
 
-      function showConnecting(queued, substituted) {
+      function showConnecting(queued) {
         immersive(true);
-        const head = queued ? 'You’re next in line' : 'Connecting you…';
+        const who = matchedName ? esc(matchedName) : 'your listener';
+        const head = queued ? ('You’re next with ' + who) : ('Connecting you to ' + who);
         const sub = queued
-          ? 'Your listener’s just finishing another conversation — you’re first up. Hang tight, this is usually quick.'
-          : (substituted ? 'Your usual listener’s busy, so we’re bringing in someone else who’s here for you.' : 'Someone’s coming to the chat. This is usually quick.');
+          ? 'They’re just finishing another conversation — hang tight, you’re first up.'
+          : 'They’re joining you now. This is usually quick.';
         root.innerHTML = `<div class="mnx-ring"><div class="mnx-ring-avatar"><i></i><i></i><span class="core"></span></div><h3 id="mnx-conn-h">${head}</h3><p id="mnx-conn-p">${sub}</p>${stepsHTML(2)}<div class="mnx-ring-actions"><button type="button" class="mnx-cancel" id="mnx-cancel">Cancel</button></div></div>`;
         document.getElementById('mnx-cancel')?.addEventListener('click', () => cancelPending().then(showEntry));
         pollPosition();
@@ -707,8 +646,8 @@ import AppLayout from '../../layouts/AppLayout.astro';
           if (chatOpen) return;
           const h = document.getElementById('mnx-conn-h'), p = document.getElementById('mnx-conn-p'), a = root.querySelector('.mnx-ring-actions');
           if (h) h.textContent = 'Still here with you…';
-          if (p) p.textContent = 'It’s taking longer than usual. Keep waiting, or set a time and check back.';
-          if (a) a.innerHTML = '<button type="button" class="mnx-cancel" id="mnx-cancel">Cancel</button><button type="button" class="mnx-go" id="mnx-sched2" style="width:auto;padding:.6rem 1.2rem">Set a time</button>';
+          if (p) p.textContent = 'It’s taking longer than usual. Keep waiting, or pick a time and check back.';
+          if (a) a.innerHTML = '<button type="button" class="mnx-cancel" id="mnx-cancel">Cancel</button><button type="button" class="mnx-go" id="mnx-sched2" style="width:auto;padding:.6rem 1.2rem">Pick a time</button>';
           document.getElementById('mnx-cancel')?.addEventListener('click', () => cancelPending().then(showEntry));
           document.getElementById('mnx-sched2')?.addEventListener('click', () => { cancelPending().then(() => showSchedule(localStorage.getItem('mnx_anon') !== 'false')); });
         }, 45000);
@@ -720,8 +659,9 @@ import AppLayout from '../../layouts/AppLayout.astro';
           const row = Array.isArray(data) ? data[0] : data;
           const h = document.getElementById('mnx-conn-h'), p = document.getElementById('mnx-conn-p');
           if (!row || !h || !p || chatOpen) return;
-          if (row.listener_busy) { if (h.textContent !== 'You’re next in line') h.textContent = 'You’re next in line'; }
-          else if (h.textContent !== 'Connecting you…') { h.textContent = 'Connecting you…'; p.textContent = 'Your listener’s free — bringing you in now.'; }
+          const who = matchedName || 'your listener';
+          if (row.listener_busy) { const t = 'You’re next with ' + who; if (h.textContent !== t) h.textContent = t; }
+          else { const t = 'Connecting you to ' + who; if (h.textContent !== t) { h.textContent = t; p.textContent = 'They’re free — bringing you in now.'; } }
         } catch (e) {}
       }
 
@@ -737,14 +677,18 @@ import AppLayout from '../../layouts/AppLayout.astro';
 
       function showSchedule(isAnonymous) {
         immersive(false);
-        root.innerHTML = `<div class="mnx-schedule"><div class="mnx-empty-orb"></div><h3>All your listeners are quiet right now</h3><p>Everyone’s away for the moment. Tell us when suits you and we’ll have someone ready — or text Blak in the meantime.</p><div class="mnx-times"><button type="button" class="mnx-time" data-when="in about 30 minutes">In ~30 min</button><button type="button" class="mnx-time" data-when="tonight">Tonight</button><button type="button" class="mnx-time" data-when="tomorrow">Tomorrow</button></div><div class="mnx-ring-actions"><button type="button" class="mnx-cancel" id="mnx-sback">Back</button></div></div>`;
-        root.querySelectorAll('.mnx-time').forEach((b) => b.addEventListener('click', () => scheduleFor(b.getAttribute('data-when'), isAnonymous)));
+        let val = '';
+        try { const d = new Date(Date.now() + 3600000); val = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); } catch (e) {}
+        root.innerHTML = `<div class="mnx-schedule"><div class="mnx-empty-orb"></div><h3>No one’s free right now</h3><p>What time works for you? We’ll have someone ready.</p><div class="mnx-timepick"><input type="time" id="mnx-time-input" class="mnx-time-input" value="${val}" aria-label="Preferred time" /></div><div class="mnx-choice" style="margin-top:1.2rem"><button type="button" class="mnx-go" id="mnx-time-set">Set this time <span class="mnx-cta-arrow">→</span></button></div><div class="mnx-ring-actions"><button type="button" class="mnx-cancel" id="mnx-sback">Back</button></div></div>`;
+        document.getElementById('mnx-time-set')?.addEventListener('click', () => { const v = document.getElementById('mnx-time-input')?.value; if (v) scheduleFor(v, isAnonymous); });
         document.getElementById('mnx-sback')?.addEventListener('click', showEntry);
       }
+      function fmtClock(hhmm) { try { const [h, m] = String(hhmm).split(':').map(Number); const d = new Date(); d.setHours(h, m, 0, 0); return d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' }); } catch { return hhmm; } }
       async function scheduleFor(when, isAnonymous) {
-        try { await supabase.from('connect_sessions').insert([{ user_id: user.id, listener_id: null, session_type: 'chat', is_anonymous: isAnonymous, status: 'scheduled', listener_notes: 'requested: ' + when }]); } catch (e) {}
+        const pretty = fmtClock(when);
+        try { await supabase.from('connect_sessions').insert([{ user_id: user.id, listener_id: null, session_type: 'chat', is_anonymous: isAnonymous, status: 'scheduled', listener_notes: 'requested: ' + pretty }]); } catch (e) {}
         logEvent('scheduled', { when });
-        root.innerHTML = `<div class="mnx-ring"><div class="mnx-ring-check">✓</div><h3>Noted — thank you</h3><p>We’ve logged that you’d like to talk <b>${when}</b>. Check back soon.</p><div class="mnx-ring-actions"><button type="button" class="mnx-cancel" id="mnx-sdone">Done</button></div></div>`;
+        root.innerHTML = `<div class="mnx-ring"><div class="mnx-ring-check">✓</div><h3>Noted — thank you</h3><p>We’ll have someone ready around <b>${esc(pretty)}</b>. Check back then.</p><div class="mnx-ring-actions"><button type="button" class="mnx-cancel" id="mnx-sdone">Done</button></div></div>`;
         document.getElementById('mnx-sdone')?.addEventListener('click', showEntry);
       }
 
@@ -773,7 +717,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
         if (chatOpen) return; chatOpen = true; immersive(true);
         if (connectWatchdog) clearTimeout(connectWatchdog);
         root.innerHTML = `<div class="mnx-chat">
-          <div class="mnx-chat-head"><div class="mnx-chat-pic">${PERSON_SVG}</div><div class="mnx-chat-who"><b>Your listener</b><i><span style="width:6px;height:6px;border-radius:50%;background:currentColor;display:inline-block"></span> here with you · private</i></div><button type="button" class="mnx-icon-btn" id="mnx-call-btn" style="margin-left:auto" aria-label="Voice call" title="Voice call">${PHONE_SVG}</button><button type="button" class="mnx-chat-end" id="mnx-end">End</button></div>
+          <div class="mnx-chat-head"><div class="mnx-chat-pic">${PERSON_SVG}</div><div class="mnx-chat-who"><b id="mnx-who">${matchedName ? esc(matchedName) : 'Your listener'}</b><i><span style="width:6px;height:6px;border-radius:50%;background:currentColor;display:inline-block"></span> here with you · private</i></div><button type="button" class="mnx-icon-btn" id="mnx-call-btn" style="margin-left:auto" aria-label="Voice call" title="Voice call">${PHONE_SVG}</button><button type="button" class="mnx-chat-end" id="mnx-end">End</button></div>
           <div class="mnx-call" id="mnx-call" hidden></div>
           <div class="mnx-feed" id="mnx-feed" role="log" aria-live="polite"><div class="mnx-sys">🔒 You’re connected to a real person. Say what’s on your mind.</div></div>
           <button type="button" class="mnx-newmsgs" id="mnx-newmsgs">↓ New messages</button>
@@ -783,6 +727,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
         document.getElementById('mnx-send')?.addEventListener('click', sendMessage);
         document.getElementById('mnx-end')?.addEventListener('click', confirmEnd);
         document.getElementById('mnx-call-btn')?.addEventListener('click', startCall);
+        if (!matchedName) fetchListenerName(activeSessionId).then((n) => { if (n) { matchedName = n; const w = document.getElementById('mnx-who'); if (w) w.textContent = n; } });
         document.getElementById('mnx-newmsgs')?.addEventListener('click', () => { feed.scrollTop = feed.scrollHeight; document.getElementById('mnx-newmsgs').classList.remove('show'); });
         feed.addEventListener('scroll', () => { if (nearBottom(feed)) document.getElementById('mnx-newmsgs')?.classList.remove('show'); });
         input?.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); sendMessage(); } });
