@@ -36,7 +36,7 @@ const EXTRACTOR_SYSTEM = [
     '- value: one concise plain-English statement (e.g. "Has a younger sister, Ananya, studying medicine"). English only — this is internal context.',
     '- source: "user" if the user stated or clearly implied it; "blak" if you are inferring it.',
     '- confidence: 0.0–1.0. Stated facts ~0.9; fair inferences ~0.5; guesses ~0.3.',
-    '- ONLY durable facts about who they are / their life. NOT passing chit-chat, NOT one-off moods, NOT the assistant\'s own words.',
+    '- Capture ANYTHING they reveal about themselves: preferences, likes/dislikes (e.g. "I like Mercedes" -> a tastes fact), interests, people, plans, opinions, habits, small details. ERR TOWARD CAPTURING — a small fact is still useful context. Skip only pure pleasantries with zero info ("ok", "lol", "haha") and the assistant\'s own words.',
     '- Do NOT repeat a fact already on file unless this exchange CHANGES or ADDS to it.',
     '- If nothing durable is revealed, return an empty list. NEVER invent.',
     '',

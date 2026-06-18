@@ -30,12 +30,28 @@ import { TOOL_DEFS, executeTool } from '../../symp-core/lib/tools.mjs';
 import { runStreamingChatWithTools } from '../../symp-core/lib/chat-runner.mjs';
 import { chatProviders } from '../../symp-core/lib/llm-providers.mjs';
 import { recordEventAsync } from '../../symp-core/lib/vibe-tracker.mjs';
-import { updateRollingMemory } from '../../symp-core/lib/memory-updater.mjs';
-import { extractKnowledge } from '../../symp-core/lib/knowledge-extractor.mjs';
+// Post-turn learning (fact extraction + rolling memory) now runs in the
+// blak-learn-background function — off the request path, so it can't be cut off
+// by the response deadline. See fireLearn() below.
 import { analyseTurn } from '../../symp-core/lib/diagnostic.mjs';
 import SympContract from '../../symp-core/contract/endpoints.js';
 
 const { ENDPOINTS, ERROR_CODES, SYMP_REQUEST_ID_HEADER } = SympContract;
+
+// Fire-and-forget trigger to the background learning function. The 202 returns
+// fast (so awaiting it is safe within the request), then extraction + memory run
+// independently with no deadline. Best-effort — never blocks or breaks the chat.
+async function fireLearn(req, userId, userText, assistantText) {
+    if (!userId || !userText) return;
+    try {
+        const origin = new URL(req.url).origin;
+        await fetch(`${origin}/.netlify/functions/blak-learn-background`, {
+            method:  'POST',
+            headers: { 'Content-Type': 'application/json', 'x-blak-secret': process.env.SYMP_API_KEY || '' },
+            body:    JSON.stringify({ user_id: userId, userText, assistantText }),
+        });
+    } catch (e) { /* learning is best-effort */ }
+}
 
 // Open-source brain: Qwen 2.5 72B (Together / Fireworks / DeepInfra / OpenRouter)
 // with Groq + Llama 3.3 70B as the always-free downtime floor. The active model
@@ -148,15 +164,8 @@ export default async (req) => {
             sourceSessionId: source_session_id,
             evidence: `User: ${lastUser}\n\nAssistant: ${assembled}`,
         });
-        // Persist learning BEFORE returning so the serverless runtime can't freeze
-        // mid-write. Bounded so a slow model can't blow the function budget.
-        await Promise.race([
-            Promise.allSettled([
-                updateRollingMemory(user_id, { userText: lastUser, assistantText: assembled }),
-                extractKnowledge(user_id, { userText: lastUser, assistantText: assembled }),
-            ]),
-            new Promise((r) => setTimeout(r, 9000)),
-        ]);
+        // Hand learning off to the background function (reliable, off the request path).
+        await fireLearn(req, user_id, lastUser, assembled);
 
         // Self-correction analysis — synchronous but cheap (regex-only).
         try {
@@ -218,13 +227,7 @@ export default async (req) => {
                 sourceSessionId: source_session_id,
                 evidence: `User: ${lastUser}\n\nAssistant: ${assembledForVibe}`,
             });
-            await Promise.race([
-                Promise.allSettled([
-                    updateRollingMemory(user_id, { userText: lastUser, assistantText: assembledForVibe }),
-                    extractKnowledge(user_id, { userText: lastUser, assistantText: assembledForVibe }),
-                ]),
-                new Promise((r) => setTimeout(r, 9000)),
-            ]);
+            await fireLearn(req, user_id, lastUser, assembledForVibe);
 
             // Self-correction analysis — pins next-turn corrective hint.
             try {

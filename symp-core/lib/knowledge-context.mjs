@@ -40,7 +40,14 @@ export async function buildKnowledgeBlock(userId, { latestUserText = '', maxDeta
 
     let facts = [];
     try { facts = await fetchKnowledgeFacts(userId); } catch (_) { return null; }
-    if (!facts.length) return null; // cold start handled by CORE_IDENTITY curiosity
+    if (!facts.length) {
+        // Brand-new user: nudge Blak to actively (warmly) get to know them.
+        return [
+            '=== GETTING TO KNOW THEM ===',
+            'You barely know this person yet. As you chat, actively but warmly get to know them — their name, where they are, what they do, who matters to them, what they like. When something opens a thread, ask ONE natural follow-up. Never interrogate.',
+            '=== END ===',
+        ].join('\n');
+    }
 
     const core = coreKeySet();
     const coreFactsArr = facts.filter(f => core.has(`${f.area}:${f.key}`));
