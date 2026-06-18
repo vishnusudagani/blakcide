@@ -11,7 +11,8 @@
 // memory hiccup can never break a conversation.
 
 import { fetchBlaksydProfile, updateUserMemory } from './supabase.mjs';
-import { chatComplete } from './inference.mjs';
+// Failover (Groq-first → OSS → Azure) so a Groq rate-limit doesn't drop the memory update.
+import { chatCompleteFailover } from './llm-providers.mjs';
 
 const MEMORY_SYSTEM = [
     'You maintain a private, evolving MEMORY of a user for their AI friend "Blak".',
@@ -53,18 +54,15 @@ export async function updateRollingMemory(userId, { userText, assistantText } = 
             `Blak: ${String(assistantText || '').slice(0, 1500)}\n\n` +
             `Output the updated memory now.`;
 
-        const out = await chatComplete({
-            task:        'summary',           // → free Groq floor
-            messages: [
+        const out = await chatCompleteFailover(
+            [
                 { role: 'system', content: MEMORY_SYSTEM },
                 { role: 'user',   content: userMsg },
             ],
-            temperature: 0.3,
-            max_tokens:  400,
-            timeoutMs:   15000,
-        });
+            { temperature: 0.3, maxTokens: 400, timeoutMs: 15000, tier: 'cheap' }
+        );
 
-        const memory = (out.content || '').trim();
+        const memory = (out.text || '').trim();
         if (memory.length > 5) {
             await updateUserMemory(userId, memory.slice(0, 4000));
         }

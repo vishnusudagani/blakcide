@@ -189,22 +189,30 @@ import AppLayout from '../../layouts/AppLayout.astro';
     .bx-chip:active { transform: translateY(0); }
 
     /* ── Composer dock ── */
-    .bx-dock { padding-bottom: .5rem; }
+    .bx-dock { position: relative; padding-bottom: .5rem; }
+    /* Outward brand aura: the colour pools behind the bar and rises ~42% up the
+       empty space above it (soft, breathing; brighter on focus/send). It lives
+       BEHIND the bar — the bar interior stays clean glass. */
+    .bx-dock::before {
+      content: ''; position: absolute; z-index: -1; pointer-events: none;
+      left: 50%; bottom: 0; transform: translateX(-50%); transform-origin: 50% 100%;
+      width: min(760px, 106%); height: 42vh;
+      background: radial-gradient(ellipse 64% 56% at 50% 93%,
+        rgba(255, 107, 157, .24), rgba(255, 210, 122, .15) 38%, rgba(201, 184, 255, .13) 62%, transparent 80%);
+      filter: blur(46px); opacity: .85;
+      transition: opacity .85s var(--ease-out), transform .9s var(--ease-spring), filter .85s var(--ease-out);
+    }
+    .bx-dock:focus-within::before { opacity: 1; }
+    .bx-dock:has(.bx-composer.bx-sending)::before { opacity: 1; }
+    /* DARK MODE: the colour is CAPTURED into the bar — the aura collapses inward
+       and the bar itself lights up. Toggling back to light RELEASES it outward. */
+    html[data-theme="dark"] .bx-dock::before { transform: translateX(-50%) scale(.26); opacity: .34; filter: blur(26px); }
+    html[data-theme="dark"] .bx-field { box-shadow: 0 0 22px -2px rgba(255,107,157,.5), 0 0 48px -12px rgba(255,210,122,.42), 0 0 34px -10px rgba(201,184,255,.4); }
     .bx-composer { display: flex; gap: .55rem; padding: 0 .1rem .45rem; align-items: flex-end; }
     /* glowing rounded field wrapping the textarea + trailing send/stop */
-    .bx-field { position: relative; flex: 1; min-width: 0; min-height: 50px; display: flex; align-items: center; gap: .25rem; padding: .2rem .35rem .2rem .25rem; border: 1px solid transparent; border-radius: var(--r-pill); background: linear-gradient(var(--glass-strong), var(--glass-strong)) padding-box, var(--line-grad) border-box; backdrop-filter: blur(14px); }
-    /* Elegant, contained brand halo (no rotation): a soft gold→coral→lavender
-       glow hugging the pill — gently breathes at rest, brightens on focus, lifts on send. */
-    .bx-field::before {
-      content: ''; position: absolute; inset: -1px; border-radius: inherit; z-index: -1;
-      background: linear-gradient(115deg, var(--gold), var(--coral) 50%, var(--lavender));
-      filter: blur(9px); opacity: .2;
-      transition: opacity .4s var(--ease-out);
-      animation: bx-glow-breathe 5.5s ease-in-out infinite;
-    }
-    .bx-field:focus-within::before { opacity: .5; animation: none; }
-    .bx-composer.bx-sending .bx-field::before { opacity: .62; animation: none; }
-    @keyframes bx-glow-breathe { 0%, 100% { opacity: .16; } 50% { opacity: .3; } }
+    /* Clean glass interior + a thin brand-gradient edge. The colour is NOT inside
+       the bar — it radiates outward from it via the aura on .bx-dock below. */
+    .bx-field { position: relative; flex: 1; min-width: 0; min-height: 50px; display: flex; align-items: center; gap: .25rem; padding: .2rem .35rem .2rem .25rem; border: 1px solid transparent; border-radius: var(--r-pill); background: linear-gradient(var(--glass-strong), var(--glass-strong)) padding-box, var(--line-grad) border-box; backdrop-filter: blur(14px); transition: box-shadow .85s var(--ease-out), border-color .85s var(--ease-out); }
     .bx-field textarea { flex: 1; min-width: 0; resize: none; max-height: 140px; padding: .5rem .4rem .5rem .9rem; background: transparent; border: 0; color: var(--ink); font: inherit; font-size: var(--fs-lg); line-height: 1.4; }
     .bx-field textarea:focus { outline: none; }
     .bx-field button { flex: none; width: 40px; height: 40px; border-radius: 50%; border: 0; cursor: pointer; color: var(--cta-ink); background: var(--cta); box-shadow: var(--shadow-cta); display: grid; place-items: center; transition: transform .16s var(--ease-out), opacity .16s; }
@@ -310,7 +318,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
       .bx-orb, .bx-presence-orb, .bx-call-orb { animation: none !important; }
       .bx-live { animation: none !important; opacity: 1; }
       .bx-call-mic.rec { animation: none !important; }
-      .bx-field::before { animation: none !important; }
+      .bx-dock::before { animation: none !important; }
       .bx-hero-mark { animation: none !important; }
     }
 

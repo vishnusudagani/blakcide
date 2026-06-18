@@ -98,7 +98,7 @@ export async function runStreamingChatWithTools(opts) {
                 model:       p.model,
                 messages,
                 stream:      true,
-                temperature: 0.9,   // warmer/livelier text — closes the gap to the voice model's expressiveness
+                temperature: 0.5,   // warm but coherent — high temp (0.9) made the Telugu-weak model ramble into word-salad
                 max_tokens:  maxTokens,
             };
             if (useTools && p.supportsTools !== false) {
