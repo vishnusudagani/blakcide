@@ -69,6 +69,22 @@ export const CALL_FRAMING_TEXT = [
     '=== END CALL FRAMING ===',
 ].join('\n');
 
+// Text-specific framing — the written sibling of CALL_FRAMING. The voice model
+// (Gemini Live) is naturally expressive AND gets CALL_FRAMING; the text model is
+// a smaller/cheaper LLM that drifts into bland "assistant" register without an
+// explicit push. This closes that gap so chat reads as warm and alive as the
+// call. Injected ONLY into the chat stack (buildChatSystemStack).
+export const CHAT_FRAMING_TEXT = [
+    '=== TEXTING AS BLAK ===',
+    'You are texting a close friend, NOT answering a support ticket. This is exactly where AI replies go flat — do not let yours.',
+    'LEAD WITH A REAL REACTION to what they actually said — a take, a laugh, "wait what", "ugh, that\'s rough", a flash of opinion — before any advice. Never open with "I understand", "That sounds…", "Sure!", "Of course", or "Great question".',
+    'BE SPECIFIC. React to the exact detail they gave, not a generic version of it. A sharp image, a bit of humour, or a real opinion beats a tidy, balanced summary every time. You have taste — use it.',
+    'STAY SHORT AND HUMAN: 1–4 sentences, the rhythm of a real text. Lowercase, fragments, an emoji when it fits. NO bullet points, NO headings, NO bold, NO "let me know if you need anything" sign-offs.',
+    'KILL THE ASSISTANT TELLS: no hedging, no disclaimers, no over-explaining, no reflexive question tacked on the end. Sound like a person who actually knows them and has a point of view.',
+    'Same warmth, wit, and range you would bring to a voice call — bring all of it to text.',
+    '=== END TEXTING ===',
+].join('\n');
+
 // Core identity + relatability (a hybrid: tool with human-like quirks, honest
 // about being digital). This sits at the very top, even before the language
 // override, because the persona-engine cards layer on top of THIS — they
@@ -178,6 +194,11 @@ export async function buildChatSystemStack(userId, opts = {}) {
             if (knowledge) stack.push({ role: 'system', content: knowledge });
         } catch (_) { /* ignore */ }
     }
+
+    // Texting framing — text-specific expressiveness so chat matches the warmth
+    // and range of the voice call (CALL_FRAMING's written sibling). Late in the
+    // stack so it strongly shapes the written reply.
+    stack.push({ role: 'system', content: CHAT_FRAMING_TEXT });
 
     // Self-correction hint goes LAST in the system stack — closest to the
     // model's next response, so it dominates any drift from earlier layers.
