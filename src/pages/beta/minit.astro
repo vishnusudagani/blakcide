@@ -142,6 +142,12 @@ import AppLayout from '../../layouts/AppLayout.astro';
     .mnx-chat-end { margin-left: auto; padding: .4rem .9rem; border-radius: var(--r-pill); background: rgba(255,107,157,.1); border: 1px solid rgba(255,107,157,.25); color: var(--coral); font: inherit; font-size: var(--fs-sm); font-weight: 600; cursor: pointer; white-space: nowrap; }
     html[data-theme="light"] .mnx-chat-end { color: var(--coral-ink); }
     .mnx-chat-end.confirm { background: var(--coral); color: #fff; border-color: transparent; }
+    .mnx-budget { flex: none; margin-left: .55rem; padding: .2rem .55rem; border-radius: var(--r-pill); background: rgba(106,211,184,.12); border: 1px solid rgba(106,211,184,.3); color: var(--mint-deep); font-size: var(--fs-2xs); font-family: var(--font-mono); white-space: nowrap; }
+    html[data-theme="light"] .mnx-budget { color: var(--mint-ink); }
+    .mnx-budget.warn { background: rgba(255,210,122,.14); border-color: rgba(255,210,122,.35); color: var(--gold); }
+    html[data-theme="light"] .mnx-budget.warn { color: var(--gold-ink); }
+    .mnx-budget.crit { background: rgba(255,107,157,.14); border-color: rgba(255,107,157,.35); color: var(--coral); }
+    html[data-theme="light"] .mnx-budget.crit { color: var(--coral-ink); }
     .mnx-feed { flex: 1; overflow-y: auto; padding: 1rem .9rem; display: flex; flex-direction: column; gap: .35rem; justify-content: flex-start; }
     .mnx-sys { text-align: center; font-size: var(--fs-xs); color: var(--ink-faint); padding: .4rem 0; }
     .mnx-row { display: flex; flex-direction: column; }
@@ -343,6 +349,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
         if (sessionPoll) clearInterval(sessionPoll);
         if (msgPoll) clearInterval(msgPoll);
         if (connectWatchdog) clearTimeout(connectWatchdog);
+        if (budgetTimer) clearInterval(budgetTimer); budgetTimer = 0; budgetEndsAt = 0;
       }
 
       // ---- analytics (append-only events) ----
@@ -367,6 +374,8 @@ import AppLayout from '../../layouts/AppLayout.astro';
       // ---- voice calling (WebRTC over Supabase Realtime signalling) ----
       const RTC_CFG = { iceServers: [{ urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] }] };
       let pc = null, localStream = null, callState = 'idle', callTimer = 0, callStart = 0, pendingCands = [], remoteOffer = null, callTimeout = 0, callMuted = false, chatReady = false, peerReady = false;
+      // Time-cab: count DOWN the seeker's remaining daily Minit budget during a session.
+      let budgetTimer = 0, budgetEndsAt = 0, budgetTotalSec = 0, budgetWarn75 = false, budgetWarn90 = false;
       function callSend(kind, data) { try { chatChannel?.send({ type: 'broadcast', event: 'call', payload: { from: user.id, kind, data } }); } catch (e) {} }
       function sendReady() { try { chatChannel?.send({ type: 'broadcast', event: 'ready', payload: { from: user.id } }); } catch (e) {} }
       function onPeerReady() { if (peerReady) return; peerReady = true; sendReady(); }
@@ -377,7 +386,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
         bar.hidden = false;
         if (state === 'calling') bar.innerHTML = `<span class="mnx-call-status"><span class="mnx-call-dot"></span> Calling… <span class="mnx-call-sub">ringing your listener</span></span><button type="button" class="mnx-call-end" id="mnx-call-cancel">Cancel</button>`;
         else if (state === 'incoming') bar.innerHTML = `<span class="mnx-call-status"><span class="mnx-call-dot"></span> Incoming voice call</span><span class="mnx-call-actions"><button type="button" class="mnx-call-decline" id="mnx-call-decline">Decline</button><button type="button" class="mnx-call-accept" id="mnx-call-accept">Accept</button></span>`;
-        else bar.innerHTML = `<span class="mnx-call-status"><span class="mnx-call-dot live"></span> On call · <span id="mnx-call-time">0:00</span></span><span class="mnx-call-actions"><button type="button" class="mnx-call-mute ${callMuted ? 'on' : ''}" id="mnx-call-mute">${callMuted ? 'Unmute' : 'Mute'}</button><button type="button" class="mnx-call-end" id="mnx-call-hang">End call</button></span>`;
+        else bar.innerHTML = `<span class="mnx-call-status"><span class="mnx-call-dot live"></span> On call</span><span class="mnx-call-actions"><button type="button" class="mnx-call-mute ${callMuted ? 'on' : ''}" id="mnx-call-mute">${callMuted ? 'Unmute' : 'Mute'}</button><button type="button" class="mnx-call-end" id="mnx-call-hang">End call</button></span>`;
         document.getElementById('mnx-call-cancel')?.addEventListener('click', () => endCall(true));
         document.getElementById('mnx-call-hang')?.addEventListener('click', () => endCall(true));
         document.getElementById('mnx-call-decline')?.addEventListener('click', declineCall);
@@ -394,8 +403,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
         if (callState === 'connected') return; callState = 'connected'; callStart = Date.now();
         if (callTimeout) { clearTimeout(callTimeout); callTimeout = 0; }
         renderCallBar('connected'); logEvent('call_connected');
-        if (callTimer) clearInterval(callTimer);
-        callTimer = setInterval(() => { const t = document.getElementById('mnx-call-time'); if (t) t.textContent = fmtDur(Math.floor((Date.now() - callStart) / 1000)); }, 1000);
+        // No call count-up — the header shows the daily budget counting down instead.
       }
       const getMic = () => navigator.mediaDevices.getUserMedia({ audio: true, video: false });
       async function startCall() {
@@ -717,7 +725,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
         if (chatOpen) return; chatOpen = true; immersive(true);
         if (connectWatchdog) clearTimeout(connectWatchdog);
         root.innerHTML = `<div class="mnx-chat">
-          <div class="mnx-chat-head"><div class="mnx-chat-pic">${PERSON_SVG}</div><div class="mnx-chat-who"><b id="mnx-who">${matchedName ? esc(matchedName) : 'Your listener'}</b><i><span style="width:6px;height:6px;border-radius:50%;background:currentColor;display:inline-block"></span> here with you · private</i></div><button type="button" class="mnx-icon-btn" id="mnx-call-btn" style="margin-left:auto" aria-label="Voice call" title="Voice call">${PHONE_SVG}</button><button type="button" class="mnx-chat-end" id="mnx-end">End</button></div>
+          <div class="mnx-chat-head"><div class="mnx-chat-pic">${PERSON_SVG}</div><div class="mnx-chat-who"><b id="mnx-who">${matchedName ? esc(matchedName) : 'Your listener'}</b><i><span style="width:6px;height:6px;border-radius:50%;background:currentColor;display:inline-block"></span> here with you · private</i></div><span class="mnx-budget" id="mnx-budget"></span><button type="button" class="mnx-icon-btn" id="mnx-call-btn" style="margin-left:auto" aria-label="Voice call" title="Voice call">${PHONE_SVG}</button><button type="button" class="mnx-chat-end" id="mnx-end">End</button></div>
           <div class="mnx-call" id="mnx-call" hidden></div>
           <div class="mnx-feed" id="mnx-feed" role="log" aria-live="polite"><div class="mnx-sys">🔒 You’re connected to a real person. Say what’s on your mind.</div></div>
           <button type="button" class="mnx-newmsgs" id="mnx-newmsgs">↓ New messages</button>
@@ -750,6 +758,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
         if (msgPoll) clearInterval(msgPoll);
         msgPoll = setInterval(pollMessages, 1800);
         logEvent('connected');
+        startBudgetCountdown();
         input?.focus();
         if (pendingWithCall) { pendingWithCall = false; startCall(); }
       }
@@ -757,6 +766,35 @@ import AppLayout from '../../layouts/AppLayout.astro';
       function sendTyping() { const n = Date.now(); if (n - lastTypingSent < 1500) return; lastTypingSent = n; chatChannel?.send({ type: 'broadcast', event: 'typing', payload: { from: user.id } }); }
       function showTyping() { const feed = document.getElementById('mnx-feed'); if (!feed) return; let t = document.getElementById('mnx-typing'); if (!t) { t = document.createElement('div'); t.id = 'mnx-typing'; t.className = 'mnx-typing'; t.innerHTML = '<span></span><span></span><span></span>'; feed.appendChild(t); if (nearBottom(feed)) feed.scrollTop = feed.scrollHeight; } if (typingTimer) clearTimeout(typingTimer); typingTimer = setTimeout(() => document.getElementById('mnx-typing')?.remove(), 2400); }
       function markSeen() { if (lastOwnStatusEl) lastOwnStatusEl.textContent = 'Seen'; }
+      function sysNote(text) { const feed = document.getElementById('mnx-feed'); if (!feed) return; const n = document.createElement('div'); n.className = 'mnx-sys'; n.textContent = text; feed.appendChild(n); if (nearBottom(feed)) feed.scrollTop = feed.scrollHeight; }
+      // Daily budget counts down from activated_at; warn the user at 75%/90%, auto-end at 0.
+      async function startBudgetCountdown() {
+        budgetWarn75 = false; budgetWarn90 = false;
+        let today = 0, week = 0, startMs = Date.now();
+        try { const { data } = await supabase.rpc('minit_minutes_used'); const r = Array.isArray(data) ? data[0] : data; today = Math.max(0, Number(r?.today_min || 0)); week = Math.max(0, Number(r?.week_min || 0)); } catch (e) {}
+        try { const { data: s } = await supabase.from('connect_sessions').select('activated_at').eq('id', activeSessionId).maybeSingle(); if (s?.activated_at) startMs = Date.parse(s.activated_at); } catch (e) {}
+        budgetTotalSec = Math.max(60, Math.round(Math.min((10 - today) * 60, (30 - week) * 60)));
+        budgetEndsAt = startMs + budgetTotalSec * 1000;
+        if (budgetTimer) clearInterval(budgetTimer);
+        let n = 0;
+        const tick = () => {
+          if (!chatOpen || !budgetEndsAt) return;
+          const remSec = Math.max(0, Math.round((budgetEndsAt - Date.now()) / 1000));
+          const el = document.getElementById('mnx-budget');
+          if (el) el.textContent = '⏳ ' + fmtDur(remSec) + ' left today';
+          const elapsed = budgetTotalSec ? (budgetTotalSec - remSec) / budgetTotalSec : 0;
+          if (!budgetWarn75 && elapsed >= 0.75 && remSec > 0) { budgetWarn75 = true; el?.classList.add('warn'); sysNote('⏳ About ' + Math.max(1, Math.ceil(remSec / 60)) + ' min of your daily Minit time left.'); }
+          if (!budgetWarn90 && elapsed >= 0.90 && remSec > 0) { budgetWarn90 = true; el?.classList.remove('warn'); el?.classList.add('crit'); sysNote('⏳ Almost out of time for today — wrapping up soon.'); }
+          if ((n % 5) === 0) { try { chatChannel?.send({ type: 'broadcast', event: 'budget', payload: { from: user.id, endsAt: budgetEndsAt, totalSec: budgetTotalSec } }); } catch (e) {} }
+          n++;
+          if (remSec <= 0) { clearInterval(budgetTimer); budgetTimer = 0; budgetExpire(); }
+        };
+        tick(); budgetTimer = setInterval(tick, 1000);
+      }
+      function budgetExpire() {
+        sysNote('⏳ That’s your Minit time for today. Wrapping up — there’s more tomorrow.');
+        setTimeout(() => { if (activeSessionId && !isEnding) endSession(); }, 1800);
+      }
 
       async function pollMessages() {
         if (!activeSessionId) return;

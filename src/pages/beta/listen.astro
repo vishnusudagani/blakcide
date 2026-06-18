@@ -99,6 +99,11 @@ import AppLayout from '../../layouts/AppLayout.astro';
     .lsn-waiting { flex: none; margin-left: .5rem; padding: .2rem .6rem; border-radius: var(--r-pill); background: rgba(255,210,122,.14); border: 1px solid rgba(255,210,122,.3); color: var(--gold); font-size: var(--fs-2xs); font-family: var(--font-mono); white-space: nowrap; }
     html[data-theme="light"] .lsn-waiting { color: var(--gold-ink); border-color: rgba(138,100,16,.3); }
     .lsn-waiting[hidden] { display: none; }
+    .lsn-budget { flex: none; margin-left: .5rem; padding: .2rem .55rem; border-radius: var(--r-pill); background: rgba(106,211,184,.12); border: 1px solid rgba(106,211,184,.3); color: var(--mint-deep); font-size: var(--fs-2xs); font-family: var(--font-mono); white-space: nowrap; }
+    html[data-theme="light"] .lsn-budget { color: var(--mint-ink); }
+    .lsn-budget.crit { background: rgba(255,107,157,.14); border-color: rgba(255,107,157,.35); color: var(--coral); }
+    html[data-theme="light"] .lsn-budget.crit { color: var(--coral-ink); }
+    .lsn-budget[hidden] { display: none; }
     .lsn-hbtns { margin-left: auto; display: flex; gap: .4rem; }
     .lsn-hbtn { display: inline-flex; align-items: center; gap: .35rem; min-height: 40px; padding: .4rem .8rem; border-radius: var(--r-pill); background: var(--surface); border: 1px solid var(--line-strong); color: var(--ink-soft); font: inherit; font-size: var(--fs-sm); cursor: pointer; }
     .lsn-hbtn svg { width: 15px; height: 15px; flex: none; }
@@ -227,7 +232,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
       function stopHeartbeat() { if (heartbeat) clearInterval(heartbeat); heartbeat = 0; }
       async function touch() { try { await supabase.from('listeners').update({ last_seen: new Date().toISOString() }).eq('id', profile.id); } catch (e) {} }
 
-      function teardownChat() { try { endCall(false); } catch (e) {} [sessionChannel, chatChannel].forEach((c) => { if (c) supabase.removeChannel(c); }); sessionChannel = chatChannel = null; if (sessionPoll) clearInterval(sessionPoll); if (msgPoll) clearInterval(msgPoll); if (waitPoll) clearInterval(waitPoll); waitPoll = 0; }
+      function teardownChat() { try { endCall(false); } catch (e) {} [sessionChannel, chatChannel].forEach((c) => { if (c) supabase.removeChannel(c); }); sessionChannel = chatChannel = null; if (sessionPoll) clearInterval(sessionPoll); if (msgPoll) clearInterval(msgPoll); if (waitPoll) clearInterval(waitPoll); waitPoll = 0; if (budgetTimer) clearInterval(budgetTimer); budgetTimer = 0; budgetEndsAt = 0; budgetWarn90 = false; }
       function paintAvailability() { const on = !!profile.is_online; statusEl.textContent = on ? 'Online' : 'Offline'; statusEl.classList.toggle('on', on); toggleEl.setAttribute('aria-checked', on ? 'true' : 'false'); }
       function nearBottom(f) { return f.scrollHeight - f.scrollTop - f.clientHeight < 90; }
 
@@ -237,6 +242,8 @@ import AppLayout from '../../layouts/AppLayout.astro';
       // ---- voice calling (WebRTC over Supabase Realtime signalling) ----
       const RTC_CFG = { iceServers: [{ urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] }] };
       let pc = null, localStream = null, callState = 'idle', callTimer = 0, callStart = 0, pendingCands = [], remoteOffer = null, callTimeout = 0, callMuted = false, chatReady = false, peerReady = false;
+      // Time-cab: mirror the seeker's daily-budget countdown (sent via broadcast).
+      let budgetTimer = 0, budgetEndsAt = 0, budgetTotalSec = 0, budgetWarn90 = false;
       function callSend(kind, data) { try { chatChannel?.send({ type: 'broadcast', event: 'call', payload: { from: user.id, kind, data } }); } catch (e) {} }
       function sendReady() { try { chatChannel?.send({ type: 'broadcast', event: 'ready', payload: { from: user.id } }); } catch (e) {} }
       function onPeerReady() { if (peerReady) return; peerReady = true; sendReady(); }
@@ -247,7 +254,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
         bar.hidden = false;
         if (state === 'calling') bar.innerHTML = `<span class="lsn-call-status"><span class="lsn-call-dot"></span> Calling… <span class="lsn-call-sub">ringing them</span></span><button type="button" class="lsn-call-end" id="lsn-call-cancel">Cancel</button>`;
         else if (state === 'incoming') bar.innerHTML = `<span class="lsn-call-status"><span class="lsn-call-dot"></span> Incoming voice call</span><span class="lsn-call-actions"><button type="button" class="lsn-call-decline" id="lsn-call-decline">Decline</button><button type="button" class="lsn-call-accept" id="lsn-call-accept">Accept</button></span>`;
-        else bar.innerHTML = `<span class="lsn-call-status"><span class="lsn-call-dot live"></span> On call · <span id="lsn-call-time">0:00</span></span><span class="lsn-call-actions"><button type="button" class="lsn-call-mute ${callMuted ? 'on' : ''}" id="lsn-call-mute">${callMuted ? 'Unmute' : 'Mute'}</button><button type="button" class="lsn-call-end" id="lsn-call-hang">End call</button></span>`;
+        else bar.innerHTML = `<span class="lsn-call-status"><span class="lsn-call-dot live"></span> On call</span><span class="lsn-call-actions"><button type="button" class="lsn-call-mute ${callMuted ? 'on' : ''}" id="lsn-call-mute">${callMuted ? 'Unmute' : 'Mute'}</button><button type="button" class="lsn-call-end" id="lsn-call-hang">End call</button></span>`;
         document.getElementById('lsn-call-cancel')?.addEventListener('click', () => endCall(true));
         document.getElementById('lsn-call-hang')?.addEventListener('click', () => endCall(true));
         document.getElementById('lsn-call-decline')?.addEventListener('click', declineCall);
@@ -264,8 +271,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
         if (callState === 'connected') return; callState = 'connected'; callStart = Date.now();
         if (callTimeout) { clearTimeout(callTimeout); callTimeout = 0; }
         renderCallBar('connected'); logEvent('call_connected');
-        if (callTimer) clearInterval(callTimer);
-        callTimer = setInterval(() => { const t = document.getElementById('lsn-call-time'); if (t) t.textContent = fmtDur(Math.floor((Date.now() - callStart) / 1000)); }, 1000);
+        // No call count-up — the header mirrors the seeker's daily budget countdown.
       }
       const getMic = () => navigator.mediaDevices.getUserMedia({ audio: true, video: false });
       async function startCall() {
@@ -427,7 +433,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
         if (session.is_anonymous) who = 'Someone · anonymous';
         else { try { const { data } = await supabase.rpc('session_seeker_name', { sid: session.id }); const nm = data && String(data).trim(); if (nm) who = nm; } catch (e) {} }
         root.innerHTML = `<div class="lsn-chat">
-          <div class="lsn-chat-head"><div class="lsn-chat-orb">${PERSON_SVG}</div><div class="lsn-chat-who"><b>${who}</b><i>connected · private</i></div><span class="lsn-waiting" id="lsn-waiting" hidden></span>
+          <div class="lsn-chat-head"><div class="lsn-chat-orb">${PERSON_SVG}</div><div class="lsn-chat-who"><b>${who}</b><i>connected · private</i></div><span class="lsn-waiting" id="lsn-waiting" hidden></span><span class="lsn-budget" id="lsn-budget" hidden></span>
             <div class="lsn-hbtns"><button type="button" class="lsn-hbtn" id="lsn-call-btn" title="Voice call">${PHONE_SVG}<span class="lbl">Call</span></button><button type="button" class="lsn-hbtn" id="lsn-notes-btn">${NOTE_SVG}<span class="lbl">Notes</span></button><button type="button" class="lsn-hbtn" id="lsn-help-btn">${SHIELD_SVG}<span class="lbl">Safety</span></button></div>
             <button type="button" class="lsn-chat-end" id="lsn-end">End</button></div>
           <div class="lsn-call" id="lsn-call" hidden></div>
@@ -487,6 +493,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
           .on('broadcast', { event: 'typing' }, (p) => { if (p.payload?.from !== user.id) showTyping(); })
           .on('broadcast', { event: 'seen' }, (p) => { if (p.payload?.from !== user.id) markSeen(); })
           .on('broadcast', { event: 'ready' }, (p) => { if (p.payload?.from !== user.id) onPeerReady(); })
+          .on('broadcast', { event: 'budget' }, (p) => { if (p.payload?.from !== user.id) onBudget(p.payload); })
           .on('broadcast', { event: 'call' }, (p) => { if (p.payload?.from !== user.id) handleCallSignal(p.payload); })
           .subscribe((s) => { chatReady = (s === 'SUBSCRIBED'); if (chatReady) sendReady(); });
         if (msgPoll) clearInterval(msgPoll);
@@ -502,6 +509,23 @@ import AppLayout from '../../layouts/AppLayout.astro';
       function sendTyping() { const n = Date.now(); if (n - lastTypingSent < 1500) return; lastTypingSent = n; chatChannel?.send({ type: 'broadcast', event: 'typing', payload: { from: user.id } }); }
       function showTyping() { const feed = document.getElementById('lsn-feed'); if (!feed) return; let t = document.getElementById('lsn-typing'); if (!t) { t = document.createElement('div'); t.id = 'lsn-typing'; t.className = 'lsn-typing'; t.innerHTML = '<span></span><span></span><span></span>'; feed.appendChild(t); if (nearBottom(feed)) feed.scrollTop = feed.scrollHeight; } if (typingTimer) clearTimeout(typingTimer); typingTimer = setTimeout(() => document.getElementById('lsn-typing')?.remove(), 2400); }
       function markSeen() { if (lastOwnStatusEl) lastOwnStatusEl.textContent = 'Seen'; }
+      function lsnSysNote(text) { const feed = document.getElementById('lsn-feed'); if (!feed) return; const n = document.createElement('div'); n.className = 'lsn-sys'; n.textContent = text; feed.appendChild(n); if (nearBottom(feed)) feed.scrollTop = feed.scrollHeight; }
+      // Mirror the seeker's daily-budget countdown; warn the listener at 90%, backstop-end at 0.
+      function onBudget(p) {
+        if (!p || !p.endsAt) return;
+        budgetEndsAt = p.endsAt; budgetTotalSec = p.totalSec || 0;
+        if (budgetTimer) return;
+        const tick = () => {
+          if (!activeSessionId || !budgetEndsAt) return;
+          const remSec = Math.max(0, Math.round((budgetEndsAt - Date.now()) / 1000));
+          const el = document.getElementById('lsn-budget');
+          if (el) { el.hidden = false; el.textContent = '⏳ ' + fmtDur(remSec); }
+          const elapsed = budgetTotalSec ? (budgetTotalSec - remSec) / budgetTotalSec : 0;
+          if (!budgetWarn90 && elapsed >= 0.90 && remSec > 0) { budgetWarn90 = true; el?.classList.add('crit'); lsnSysNote('⏳ They’re almost out of Minit time for today — wrapping up soon.'); }
+          if (remSec <= 0) { clearInterval(budgetTimer); budgetTimer = 0; lsnSysNote('⏳ Their daily Minit time is up.'); setTimeout(() => { if (activeSessionId && !isEnding) endSession(); }, 3500); }
+        };
+        tick(); budgetTimer = setInterval(tick, 1000);
+      }
       // When the seeker consented (intake.share_history), surface prior conversations
       // with this same person so the listener has continuity. UI-gated consent.
       async function loadSharedHistory(session, feed) {
