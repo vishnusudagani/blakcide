@@ -693,7 +693,6 @@ import AppLayout from '../../layouts/AppLayout.astro';
     const addBtn = $('bx-add'), fileInput = $('bx-file'), attachPreview = $('bx-attach-preview');
     let pendingImage = null;   // { url, type } once uploaded to storage
 
-    const MAX_IMG = 5 * 1024 * 1024;
     async function processImage(file) {
       // Re-encode via canvas to STRIP EXIF (incl. GPS) and cap dimensions.
       try {
@@ -708,10 +707,11 @@ import AppLayout from '../../layouts/AppLayout.astro';
     }
     async function uploadChatImage(file) {
       if (!supabase || !file) return null;
-      if (file.size > MAX_IMG) { alert('That image is over 5MB — try a smaller one.'); return null; }
+      // No size cap — processImage re-encodes to a dimension-capped JPEG, so even a
+      // big phone photo uploads small. Let people share whatever they want.
       const blob = await processImage(file);
       const path = (userId || 'anon') + '/' + ((window.crypto && crypto.randomUUID) ? crypto.randomUUID() : (Date.now() + '-' + Math.round(Math.random() * 1e9))) + '.jpg';
-      const { error } = await supabase.storage.from('chat_images').upload(path, blob, { contentType: 'image/jpeg', upsert: false });
+      const { error } = await supabase.storage.from('chat_images').upload(path, blob, { contentType: blob.type || 'image/jpeg', upsert: false });
       if (error) { alert('Image upload failed — try again.'); return null; }
       return supabase.storage.from('chat_images').getPublicUrl(path).data.publicUrl;
     }
