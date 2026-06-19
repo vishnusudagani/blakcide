@@ -22,6 +22,11 @@ import AppLayout from '../../../layouts/AppLayout.astro';
       <span class="pf-hero-badge" id="pf-hero-badge" hidden></span>
     </div>
 
+    <div class="pf-ai">
+      <input id="pf-ai-input" class="pf-ai-input" placeholder="Describe them in a line — Blak drafts the rest" maxlength="160" autocomplete="off" />
+      <button type="button" class="pf-ai-go" id="pf-ai-go">✨ Generate</button>
+    </div>
+
     <section class="pf-sec">
       <h2 class="pf-h">Who are they?</h2>
       <div class="pf-id">
@@ -58,8 +63,8 @@ import AppLayout from '../../../layouts/AppLayout.astro';
       </div>
       <details class="pf-more">
         <summary>Add a backstory &amp; talking style <span class="pf-opt">(optional)</span></summary>
-        <textarea id="pf-backstory" class="pf-area" rows="3" placeholder="Who are they? Their story, what they love, how they got here…"></textarea>
-        <textarea id="pf-tone" class="pf-area" rows="2" placeholder="How they talk — e.g. short replies, dry humour, never preachy."></textarea>
+        <div class="pf-area-wrap"><textarea id="pf-backstory" class="pf-area" rows="3" placeholder="Who are they? Their story, what they love, how they got here…"></textarea><button type="button" class="pf-improve" data-f="backstory" title="Improve with AI">✨</button></div>
+        <div class="pf-area-wrap"><textarea id="pf-tone" class="pf-area" rows="2" placeholder="How they talk — e.g. short replies, dry humour, never preachy."></textarea><button type="button" class="pf-improve" data-f="voice_tone" title="Improve with AI">✨</button></div>
       </details>
     </section>
 
@@ -109,6 +114,18 @@ import AppLayout from '../../../layouts/AppLayout.astro';
   .pf-surprise { flex: none; border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: var(--r-pill); padding: .45rem .8rem; font-size: var(--fs-sm); font-weight: 600; cursor: pointer; transition: transform .15s var(--ease-spring, ease), border-color .15s; }
   .pf-surprise:hover { border-color: var(--coral); transform: translateY(-1px); }
   .pf-surprise:active { transform: scale(.96); }
+
+  /* AI helper */
+  .pf-ai { display: flex; gap: .5rem; margin-bottom: 1.4rem; }
+  .pf-ai-input { flex: 1; min-width: 0; border: 1px solid var(--line); border-radius: var(--r-pill); padding: .65rem .9rem; background: var(--surface); color: var(--ink); font: inherit; font-size: var(--fs-sm); }
+  .pf-ai-input:focus { outline: none; border-color: var(--coral); }
+  .pf-ai-go { flex: none; border: none; border-radius: var(--r-pill); padding: .65rem 1rem; font-weight: 700; font-size: var(--fs-sm); cursor: pointer; background: var(--accent-grad, linear-gradient(135deg,#FFD27A,#FF6B9D)); color: #3a1430; white-space: nowrap; transition: transform .15s var(--ease-spring, ease), opacity .15s; }
+  .pf-ai-go:active { transform: scale(.96); }
+  .pf-ai-go[disabled] { opacity: .6; cursor: default; }
+  .pf-area-wrap { position: relative; }
+  .pf-improve { position: absolute; right: .5rem; bottom: .6rem; width: 30px; height: 30px; border-radius: 50%; border: 1px solid var(--line); background: var(--surface); cursor: pointer; font-size: 13px; line-height: 1; display: grid; place-items: center; transition: transform .14s var(--ease-spring, ease); }
+  .pf-improve:hover { transform: scale(1.1); border-color: var(--coral); }
+  .pf-improve[disabled] { opacity: .5; }
 
   /* Live preview hero */
   .pf-hero { position: relative; display: flex; align-items: center; gap: 1rem; padding: 1.1rem; margin-bottom: 1.4rem; border-radius: 22px;

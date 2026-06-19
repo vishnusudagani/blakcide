@@ -177,6 +177,49 @@ $('pf-surprise').addEventListener('click', () => {
   renderPurpose(); renderTags(); renderCustomChips(); renderVoices(); counters(); renderPreview();
 });
 
+// ── AI helper: describe → draft the whole persona, and per-field improve ──────
+async function aiCall(body: any) {
+  const jwt = await getToken();
+  const r = await fetch('/api/blaksyd/symp/persona-generate', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + jwt }, body: JSON.stringify(body) });
+  const j = await r.json().catch(() => null);
+  if (!j || !j.ok || !j.data) throw new Error((j && j.error && j.error.message) || 'failed');
+  return j.data;
+}
+$('pf-ai-go').addEventListener('click', async () => {
+  const desc = $('pf-ai-input').value.trim();
+  if (!desc) { $('pf-ai-input').focus(); return; }
+  const btn = $('pf-ai-go'); btn.disabled = true; const label = btn.textContent; btn.textContent = '✨ Thinking…'; setMsg('');
+  try {
+    const d = await aiCall({ mode: 'generate', description: desc });
+    if (d.name) $('pf-name').value = d.name;
+    if (d.tagline) $('pf-tagline').value = d.tagline;
+    if (d.purpose) selectedPurpose = d.purpose;
+    if (d.voice) selectedVoice = d.voice;
+    if (d.avatar_style) avatar = { style: d.avatar_style, seed: 'blak-' + Math.floor(Math.random() * 1e9) };
+    if (Array.isArray(d.traits) && d.traits.length) traits = d.traits.slice(0, 16);
+    if (d.backstory) $('pf-backstory').value = d.backstory;
+    if (d.voice_tone) $('pf-tone').value = d.voice_tone;
+    if (Array.isArray(d.languages)) $('pf-langs').querySelectorAll('.pf-chip').forEach((b: any) => b.classList.toggle('sel', d.languages.includes(b.dataset.l)));
+    if (d.backstory || d.voice_tone) { const det: any = document.querySelector('.pf-more'); if (det) det.open = true; }
+    renderPurpose(); renderTags(); renderCustomChips(); renderVoices(); counters(); renderPreview();
+  } catch (e) { setMsg("Couldn't generate — try again, or fill it in yourself.", true); }
+  finally { btn.disabled = false; btn.textContent = label; }
+});
+$('pf-ai-input').addEventListener('keydown', (e: any) => { if (e.key === 'Enter') { e.preventDefault(); $('pf-ai-go').click(); } });
+
+document.querySelectorAll('.pf-improve').forEach((btn: any) => {
+  btn.addEventListener('click', async () => {
+    const f = btn.dataset.f;
+    const ta = f === 'backstory' ? $('pf-backstory') : $('pf-tone');
+    const val = ta.value.trim();
+    if (!val) { ta.focus(); setMsg("Jot a little down first and I'll polish it."); return; }
+    btn.disabled = true; const o = btn.textContent; btn.textContent = '…';
+    try { const d = await aiCall({ mode: 'improve', field: f, value: val, name: $('pf-name').value.trim() }); if (d.text) ta.value = d.text; }
+    catch (e) { setMsg("Couldn't improve that — try again.", true); }
+    finally { btn.disabled = false; btn.textContent = o; }
+  });
+});
+
 // ── Load (edit) / boot ───────────────────────────────────────────────────────
 async function loadExisting() {
   renderPurpose(); renderTags(); renderVoices();
