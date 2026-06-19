@@ -635,9 +635,9 @@ import AppLayout from '../../layouts/AppLayout.astro';
     }
 
     // Drive one assistant turn for the already-appended user message `srcText`.
-    async function runTurn(srcText) {
+    async function runTurn(srcText, preTyping) {
       setBusy(true);
-      const typing = addRow('them', '', { typing: true });
+      const typing = preTyping || addRow('them', '', { typing: true });
       try {
         let acc = '';
         try { acc = await attempt(typing); }
@@ -679,17 +679,33 @@ import AppLayout from '../../layouts/AppLayout.astro';
 
     async function send(text) {
       text = (text || '').trim();
-      const img = pendingImage; pendingImage = null; showPreview(null);
-      if ((!text && !img) || sending) return;
-      if (!activeChatId) { const c = await dbCreateChat((text || 'Shared an image').slice(0, 42)); if (c) activeChatId = c.id; }
-      const um = { role: 'user', content: text, ts: Date.now(), media_url: img ? img.url : null, media_type: img ? img.type : null, media_description: null };
-      history.push(um);
-      addRow('me', text, { media_url: um.media_url });
-      updateChips();
-      // For an image, describe it so Blak can respond to what's actually in it.
-      if (img) { const desc = await visionDescribe(img.url); um.media_description = desc || null; }
-      dbInsertMessage('user', text, img ? { url: img.url, type: img.type, description: um.media_description } : null).then((id) => { if (id) um.id = id; });
-      await runTurn(text);
+      const img = pendingImage;
+      if ((!text && !img) || sending) return;   // empty, or a turn is already in flight
+      pendingImage = null; showPreview(null);
+      setBusy(true);                             // synchronous in-flight guard — blocks a 2nd send during the awaits below
+      try {
+        if (!activeChatId) { const c = await dbCreateChat((text || 'Shared an image').slice(0, 42)); if (c) activeChatId = c.id; }
+        const um = { role: 'user', content: text, ts: Date.now(), media_url: img ? img.url : null, media_type: img ? img.type : null, media_description: null };
+        history.push(um);
+        addRow('me', text, { media_url: um.media_url });
+        updateChips();
+        // For an image: show the typing indicator immediately (describing can be
+        // slow — without this the app looks frozen), and cap the describe so a
+        // slow/failed vision call can never hang the turn.
+        let typing = null;
+        if (img) {
+          typing = addRow('them', '', { typing: true });
+          const desc = await Promise.race([
+            visionDescribe(img.url),
+            new Promise((r) => setTimeout(() => r(null), 12000)),
+          ]);
+          um.media_description = desc || null;
+        }
+        dbInsertMessage('user', text, img ? { url: img.url, type: img.type, description: um.media_description } : null).then((id) => { if (id) um.id = id; });
+        await runTurn(text, typing);
+      } catch (e) {
+        setBusy(false);
+      }
     }
 
     function regenerate() {
