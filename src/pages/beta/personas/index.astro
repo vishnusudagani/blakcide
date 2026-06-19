@@ -20,7 +20,7 @@ import AppLayout from '../../../layouts/AppLayout.astro';
   </div>
 </AppLayout>
 
-<style>
+<style is:global>
   .pg { padding-bottom: 5rem; }
   .pg-accent { background: var(--accent-grad, linear-gradient(90deg,#FFD27A,#FF6B9D)); -webkit-background-clip: text; background-clip: text; color: transparent; }
   .pg-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: .85rem; margin-top: 1.3rem; }
