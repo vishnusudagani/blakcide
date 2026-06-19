@@ -25,7 +25,7 @@ import AppLayout from '../../../layouts/AppLayout.astro';
           <label class="pf-lbl" for="pf-name">Name</label>
           <input id="pf-name" class="pf-input" placeholder="e.g. Aarav" maxlength="60" autocomplete="off" />
           <label class="pf-lbl" for="pf-tagline">Tagline <span class="pf-opt">— optional</span></label>
-          <input id="pf-tagline" class="pf-input" placeholder="Always here to listen." maxlength="90" autocomplete="off" />
+          <input id="pf-tagline" class="pf-input" placeholder="Always here to listen and chat." maxlength="90" autocomplete="off" />
         </div>
       </div>
       <div class="pf-av-editor" id="pf-av-editor" hidden>
@@ -103,7 +103,6 @@ import AppLayout from '../../../layouts/AppLayout.astro';
   .pf-av-style img { width: 100%; height: 100%; }
   .pf-av-style.sel { border-color: var(--coral); }
   .pf-av-shuffle { margin-top: .7rem; border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: var(--r-pill); padding: .4rem .8rem; font-size: var(--fs-sm); cursor: pointer; }
-  /* tags */
   .pf-tags { display: flex; flex-wrap: wrap; gap: .45rem; margin: .3rem 0 .2rem; }
   .pf-tag { border: 1px solid var(--line); background: var(--surface); border-radius: var(--r-pill); padding: .4rem .8rem; font-size: var(--fs-sm); cursor: pointer; color: var(--ink-soft); transition: background .12s, border-color .12s, color .12s; }
   .pf-tag.sel { background: #e7f7ec; border-color: #58c47a; color: #1c7a3e; }
@@ -112,18 +111,15 @@ import AppLayout from '../../../layouts/AppLayout.astro';
   .pf-trait button { background: none; border: none; color: inherit; cursor: pointer; font-size: 15px; line-height: 1; padding: 0; opacity: .7; }
   .pf-trait-add { border: 1px dashed var(--line-strong, var(--line)); border-radius: var(--r-pill); padding: .3rem .6rem; font: inherit; font-size: var(--fs-sm); background: transparent; color: var(--ink); min-width: 100px; }
   .pf-trait-add:focus { outline: none; border-color: var(--coral); }
-  /* voices */
   .pf-voices { display: flex; flex-wrap: wrap; gap: .5rem; margin: .3rem 0; }
   .pf-voice { display: inline-flex; align-items: center; gap: .45rem; border: 1px solid var(--line); background: var(--surface); border-radius: var(--r-pill); padding: .3rem .4rem .3rem .35rem; cursor: pointer; color: var(--ink-soft); }
   .pf-voice.sel { border-color: var(--coral); color: var(--ink); background: var(--surface-strong); }
   .pf-voice-play { width: 28px; height: 28px; border-radius: 50%; border: none; background: var(--coral); color: #fff; cursor: pointer; flex: none; font-size: 11px; display: grid; place-items: center; }
   .pf-voice-play.loading { opacity: .5; }
   .pf-voice-name { font-size: var(--fs-sm); padding-right: .4rem; }
-  /* langs */
   .pf-langs { display: flex; flex-wrap: wrap; gap: .45rem; }
   .pf-lang { border: 1px solid var(--line); background: var(--surface); border-radius: var(--r-pill); padding: .35rem .7rem; font-size: var(--fs-sm); cursor: pointer; color: var(--ink-soft); }
   .pf-lang.sel { background: var(--coral); border-color: var(--coral); color: #fff; }
-  /* toggles */
   .pf-toggle-row { display: flex; align-items: center; gap: 1rem; padding: .6rem 0; }
   .pf-toggle-row + .pf-toggle-row { border-top: 1px solid var(--line); }
   .pf-toggle-txt { flex: 1; }
@@ -142,167 +138,5 @@ import AppLayout from '../../../layouts/AppLayout.astro';
 </style>
 
 <script>
-  import { supabase } from '../../../lib/supabaseClient';
-
-  const $ = (id) => document.getElementById(id);
-  const PURPOSES = [['ai_friend','AI Friend'],['study_buddy','Study Buddy'],['hype','Hype-up'],['coach','Coach / Critic'],['roleplay','Roleplay / Story'],['custom','Custom']];
-  const VOICES = [['Aoede','Aoede'],['Kore','Kore'],['Leda','Leda'],['Zephyr','Zephyr'],['Puck','Puck'],['Charon','Charon'],['Fenrir','Fenrir'],['Orus','Orus']];
-  const LANGS = [['en','English'],['hi','Hindi'],['te','Telugu'],['ta','Tamil'],['kn','Kannada'],['ml','Malayalam'],['bn','Bengali'],['mr','Marathi'],['gu','Gujarati'],['pa','Punjabi']];
-  const AV_STYLES = ['avataaars','adventurer','big-smile','fun-emoji','lorelei','micah','notionists','thumbs'];
-  const PRESET_TAGS = ['Late-Night Friend','Safe Space','Best Friend Energy','Philosophical','Playful','Direct','Empathetic','Calm','Funny','Sarcastic','Hype','Motivating','Wise','Curious','Flirty','Chill','Deep Thinker','Good Listener','Honest','Gentle','Bold','Nerdy','Romantic','Mysterious','Optimistic','No-Nonsense','Creative','Supportive','Witty','Adventurous','Old Soul','Dramatic'];
-
-  const editId = new URLSearchParams(location.search).get('id');
-  let avatar = { style: 'avataaars', seed: 'blak-' + Math.floor(Math.random() * 1e6) };
-  let traits = [];               // selected tags (presets + custom)
-  let selectedVoice = 'Aoede';
-  let ttsUrl = null;             // bridge /tts, derived from the live-session endpoint
-  const sampleCache = {};
-
-  function avatarUrl(av) {
-    const qs = new URLSearchParams(Object.assign({ seed: av.seed || 'blak' }, av.options || {})).toString();
-    return 'https://api.dicebear.com/9.x/' + encodeURIComponent(av.style || 'avataaars') + '/svg?' + qs;
-  }
-  function paintAvatar() { $('pf-av').src = avatarUrl(avatar); }
-  async function getToken() { try { return (await supabase.auth.getSession()).data?.session?.access_token || null; } catch (e) { return null; } }
-  async function userId() { try { return (await supabase.auth.getSession()).data?.session?.user?.id || null; } catch (e) { return null; } }
-
-  // option lists
-  $('pf-purpose').innerHTML = PURPOSES.map(([v, l]) => '<option value="' + v + '">' + l + '</option>').join('');
-  $('pf-langs').innerHTML = LANGS.map(([v, l]) => '<button type="button" class="pf-lang" data-l="' + v + '">' + l + '</button>').join('');
-  $('pf-langs').addEventListener('click', (e) => { const b = e.target.closest('.pf-lang'); if (b) b.classList.toggle('sel'); });
-  $('pf-av-styles').innerHTML = AV_STYLES.map((s) => '<button type="button" class="pf-av-style" data-s="' + s + '"><img alt="' + s + '" src="https://api.dicebear.com/9.x/' + s + '/svg?seed=preview" /></button>').join('');
-
-  // ── Personality tags ──────────────────────────────────────────────────────
-  function renderTags() {
-    $('pf-tags').innerHTML = PRESET_TAGS.map((t) => '<button type="button" class="pf-tag' + (traits.includes(t) ? ' sel' : '') + '" data-t="' + t.replace(/"/g, '&quot;') + '">' + t + '</button>').join('');
-  }
-  $('pf-tags').addEventListener('click', (e) => {
-    const b = e.target.closest('.pf-tag'); if (!b) return;
-    const t = b.dataset.t;
-    if (traits.includes(t)) traits = traits.filter((x) => x !== t); else if (traits.length < 16) traits.push(t);
-    b.classList.toggle('sel', traits.includes(t));
-    renderCustomChips();
-  });
-  function renderCustomChips() {
-    const input = $('pf-trait-input');
-    $('pf-traits').querySelectorAll('.pf-trait').forEach((x) => x.remove());
-    traits.filter((t) => !PRESET_TAGS.includes(t)).forEach((t) => {
-      const el = document.createElement('span'); el.className = 'pf-trait';
-      el.append(document.createTextNode(t));
-      const x = document.createElement('button'); x.type = 'button'; x.setAttribute('aria-label', 'remove'); x.textContent = '×';
-      x.onclick = () => { traits = traits.filter((v) => v !== t); renderCustomChips(); };
-      el.appendChild(x);
-      $('pf-traits').insertBefore(el, input);
-    });
-  }
-  $('pf-trait-input').addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' || e.key === ',') {
-      e.preventDefault();
-      const v = e.target.value.trim().replace(/,$/, '');
-      if (v && !traits.includes(v) && traits.length < 16) { traits.push(v); renderCustomChips(); }
-      e.target.value = '';
-    } else if (e.key === 'Backspace' && !e.target.value) {
-      const custom = traits.filter((t) => !PRESET_TAGS.includes(t));
-      if (custom.length) { traits = traits.filter((v) => v !== custom[custom.length - 1]); renderCustomChips(); }
-    }
-  });
-
-  // ── Voice chips (with audio preview via the bridge /tts) ──────────────────
-  function renderVoices() {
-    $('pf-voices').innerHTML = VOICES.map(([v, l]) =>
-      '<span class="pf-voice' + (v === selectedVoice ? ' sel' : '') + '" data-v="' + v + '"><button type="button" class="pf-voice-play" aria-label="Hear ' + l + '">▶</button><span class="pf-voice-name">' + l + '</span></span>').join('');
-  }
-  $('pf-voices').addEventListener('click', async (e) => {
-    const chip = e.target.closest('.pf-voice'); if (!chip) return;
-    const v = chip.dataset.v;
-    if (e.target.closest('.pf-voice-play')) { await playVoice(v, e.target.closest('.pf-voice-play')); return; }
-    selectedVoice = v; renderVoices();
-  });
-  async function deriveTtsUrl() {
-    try {
-      const r = await fetch('/api/gemini-live-session', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
-      const j = await r.json().catch(() => null);
-      if (j && j.wsUrl) ttsUrl = j.wsUrl.replace(/^wss:/, 'https:').replace(/\/live$/, '/tts');
-    } catch (e) { /* preview just won't be available */ }
-  }
-  async function playVoice(voice, btn) {
-    if (sampleCache[voice]) { new Audio(sampleCache[voice]).play().catch(() => {}); return; }
-    if (!ttsUrl) { await deriveTtsUrl(); if (!ttsUrl) { setMsg('Voice preview will be ready shortly.', false); return; } }
-    btn.classList.add('loading');
-    try {
-      const jwt = await getToken();
-      const r = await fetch(ttsUrl, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + jwt }, body: JSON.stringify({ voice }) });
-      const j = await r.json().catch(() => null);
-      if (j && j.audio) { const src = 'data:audio/wav;base64,' + j.audio; sampleCache[voice] = src; new Audio(src).play().catch(() => {}); }
-      else setMsg('Could not load that voice preview.', false);
-    } catch (e) { setMsg('Could not load that voice preview.', false); }
-    finally { btn.classList.remove('loading'); }
-  }
-
-  // Avatar editor
-  $('pf-av-change').addEventListener('click', () => { const ed = $('pf-av-editor'); ed.hidden = !ed.hidden; markStyle(); });
-  function markStyle() { $('pf-av-styles').querySelectorAll('.pf-av-style').forEach((b) => b.classList.toggle('sel', b.dataset.s === avatar.style)); }
-  $('pf-av-styles').addEventListener('click', (e) => { const b = e.target.closest('.pf-av-style'); if (!b) return; avatar.style = b.dataset.s; markStyle(); paintAvatar(); });
-  $('pf-av-shuffle').addEventListener('click', () => { avatar.seed = 'blak-' + Math.floor(Math.random() * 1e9); paintAvatar(); });
-
-  // Toggles
-  function wireToggle(id) { const b = $(id); b.addEventListener('click', () => { const on = !b.classList.contains('on'); b.classList.toggle('on', on); b.setAttribute('aria-checked', String(on)); }); }
-  wireToggle('pf-build'); wireToggle('pf-use');
-  $('pf-build').classList.add('on'); $('pf-build').setAttribute('aria-checked', 'true');
-
-  function setMsg(t, err) { const m = $('pf-msg'); m.hidden = !t; m.textContent = t || ''; m.classList.toggle('err', !!err); }
-
-  async function loadExisting() {
-    renderTags(); renderVoices();
-    if (!editId) { paintAvatar(); deriveTtsUrl(); return; }
-    try {
-      const { data } = await supabase.from('fantasy_personas').select('*').eq('id', editId).single();
-      if (data) {
-        $('pf-title').textContent = 'Editing ' + (data.name || 'persona');
-        $('pf-name').value = data.name || '';
-        $('pf-tagline').value = data.tagline || '';
-        $('pf-purpose').value = data.purpose || 'ai_friend';
-        $('pf-backstory').value = data.backstory || '';
-        $('pf-tone').value = data.voice_tone || '';
-        selectedVoice = data.voice || 'Aoede';
-        avatar = data.avatar && data.avatar.style ? data.avatar : avatar;
-        traits = Array.isArray(data.traits) ? data.traits.slice() : [];
-        renderTags(); renderVoices(); renderCustomChips();
-        (data.languages || []).forEach((l) => { const b = $('pf-langs').querySelector('.pf-lang[data-l="' + l + '"]'); if (b) b.classList.add('sel'); });
-        $('pf-build').classList.toggle('on', data.build_profile_from !== false); $('pf-build').setAttribute('aria-checked', String(data.build_profile_from !== false));
-        $('pf-use').classList.toggle('on', !!data.can_use_profile); $('pf-use').setAttribute('aria-checked', String(!!data.can_use_profile));
-      }
-    } catch (e) { /* blank */ }
-    paintAvatar(); deriveTtsUrl();
-  }
-
-  $('pf-cancel').addEventListener('click', () => { window.location.href = '/beta/personas/'; });
-
-  $('pf-save').addEventListener('click', async () => {
-    const name = $('pf-name').value.trim();
-    if (!name) { setMsg('Give your persona a name first.', true); $('pf-name').focus(); return; }
-    const uid = await userId();
-    if (!uid) { setMsg('Sign in again and retry.', true); return; }
-    $('pf-save').disabled = true; setMsg('Saving…');
-    const row = {
-      user_id: uid, name,
-      tagline: $('pf-tagline').value.trim() || null,
-      purpose: $('pf-purpose').value,
-      avatar,
-      backstory: $('pf-backstory').value.trim() || null,
-      traits,
-      voice_tone: $('pf-tone').value.trim() || null,
-      voice: selectedVoice,
-      languages: [...$('pf-langs').querySelectorAll('.pf-lang.sel')].map((b) => b.dataset.l),
-      build_profile_from: $('pf-build').classList.contains('on'),
-      can_use_profile: $('pf-use').classList.contains('on'),
-    };
-    try {
-      if (editId) { row.updated_at = new Date().toISOString(); await supabase.from('fantasy_personas').update(row).eq('id', editId); }
-      else { await supabase.from('fantasy_personas').insert(row); }
-      window.location.href = '/beta/personas/';
-    } catch (e) { $('pf-save').disabled = false; setMsg('Could not save — try again.', true); }
-  });
-
-  loadExisting();
+  import './_edit-app.ts';
 </script>
