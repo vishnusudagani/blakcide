@@ -7,134 +7,216 @@ import AppLayout from '../../../layouts/AppLayout.astro';
       <a class="pf-back" href="/beta/personas/" aria-label="Back to personas">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
       </a>
-      <h1 class="pf-title" id="pf-title">New persona</h1>
-      <div class="pf-purpose-wrap">
-        <label class="pf-purpose-lbl" for="pf-purpose">Purpose</label>
-        <select id="pf-purpose" class="pf-purpose"></select>
-      </div>
+      <h1 class="pf-title" id="pf-title">Create a persona</h1>
+      <button type="button" class="pf-surprise" id="pf-surprise">✨ Surprise me</button>
     </div>
 
-    <section class="ap-card pf-card">
-      <h2 class="pf-h2"><span class="pf-num">01</span> Identity</h2>
-      <div class="pf-identity">
-        <div class="pf-av-wrap">
-          <img id="pf-av" class="pf-av" alt="persona avatar" />
-          <button type="button" class="pf-av-change" id="pf-av-change">Change look</button>
-        </div>
-        <div class="pf-identity-fields">
-          <label class="pf-lbl" for="pf-name">Name</label>
-          <input id="pf-name" class="pf-input" placeholder="e.g. Aarav" maxlength="60" autocomplete="off" />
-          <label class="pf-lbl" for="pf-tagline">Tagline <span class="pf-opt">— optional</span></label>
-          <input id="pf-tagline" class="pf-input" placeholder="Always here to listen and chat." maxlength="90" autocomplete="off" />
+    <!-- Live preview — updates as you build -->
+    <div class="pf-hero" id="pf-hero">
+      <div class="pf-hero-ring"><img id="pf-hero-av" alt="" /></div>
+      <div class="pf-hero-meta">
+        <div class="pf-hero-name" id="pf-hero-name">Your persona</div>
+        <div class="pf-hero-tag" id="pf-hero-tag">A friend you design.</div>
+        <div class="pf-hero-chips" id="pf-hero-chips"></div>
+      </div>
+      <span class="pf-hero-badge" id="pf-hero-badge" hidden></span>
+    </div>
+
+    <section class="pf-sec">
+      <h2 class="pf-h">Who are they?</h2>
+      <div class="pf-id">
+        <button type="button" class="pf-av-btn" id="pf-av-btn" aria-label="Change avatar">
+          <img id="pf-av" alt="persona avatar" />
+          <span class="pf-av-edit">edit</span>
+        </button>
+        <div class="pf-id-fields">
+          <div class="pf-field">
+            <input id="pf-name" class="pf-input" placeholder="Name them — e.g. Aarav" maxlength="40" autocomplete="off" />
+            <span class="pf-count" id="pf-name-count"></span>
+          </div>
+          <div class="pf-field">
+            <input id="pf-tagline" class="pf-input" placeholder="A one-line vibe (optional)" maxlength="70" autocomplete="off" />
+            <span class="pf-count" id="pf-tag-count"></span>
+          </div>
         </div>
       </div>
       <div class="pf-av-editor" id="pf-av-editor" hidden>
         <div class="pf-av-styles" id="pf-av-styles"></div>
-        <button type="button" class="pf-av-shuffle" id="pf-av-shuffle">↻ Shuffle look</button>
+        <button type="button" class="pf-pill-btn" id="pf-av-shuffle">↻ Shuffle look</button>
       </div>
+
+      <label class="pf-lbl">What are they for?</label>
+      <div class="pf-chiprow" id="pf-purpose"></div>
     </section>
 
-    <section class="ap-card pf-card">
-      <h2 class="pf-h2"><span class="pf-num">02</span> Personality</h2>
-      <label class="pf-lbl">Quick personality tags <span class="pf-opt">— tap to add</span></label>
+    <section class="pf-sec">
+      <h2 class="pf-h">Their vibe</h2>
+      <label class="pf-lbl">Personality <span class="pf-opt" id="pf-tags-hint">— tap a few</span></label>
       <div class="pf-tags" id="pf-tags"></div>
       <div class="pf-traits" id="pf-traits">
         <input id="pf-trait-input" class="pf-trait-add" placeholder="+ your own" maxlength="24" autocomplete="off" />
       </div>
-      <label class="pf-lbl" for="pf-backstory">Backstory &amp; bio <span class="pf-opt">— optional</span></label>
-      <textarea id="pf-backstory" class="pf-area" rows="3" placeholder="Who are they? What's their story and vibe?"></textarea>
-      <label class="pf-lbl" for="pf-tone">How they talk <span class="pf-opt">— optional</span></label>
-      <textarea id="pf-tone" class="pf-area" rows="2" placeholder="e.g. Short replies, a little dry humour, never preachy."></textarea>
+      <details class="pf-more">
+        <summary>Add a backstory &amp; talking style <span class="pf-opt">(optional)</span></summary>
+        <textarea id="pf-backstory" class="pf-area" rows="3" placeholder="Who are they? Their story, what they love, how they got here…"></textarea>
+        <textarea id="pf-tone" class="pf-area" rows="2" placeholder="How they talk — e.g. short replies, dry humour, never preachy."></textarea>
+      </details>
     </section>
 
-    <section class="ap-card pf-card">
-      <h2 class="pf-h2"><span class="pf-num">03</span> Voice &amp; language</h2>
-      <label class="pf-lbl">Voice <span class="pf-opt">— tap ▶ to hear it</span></label>
+    <section class="pf-sec">
+      <h2 class="pf-h">Their voice</h2>
+      <label class="pf-lbl">Pick a voice <span class="pf-opt">— tap ▶ to hear it</span></label>
       <div class="pf-voices" id="pf-voices"></div>
       <label class="pf-lbl">Languages it speaks <span class="pf-opt">— optional</span></label>
-      <div class="pf-langs" id="pf-langs"></div>
+      <div class="pf-chiprow" id="pf-langs"></div>
     </section>
 
-    <section class="ap-card pf-card">
-      <h2 class="pf-h2"><span class="pf-num">04</span> Your context</h2>
+    <section class="pf-sec">
+      <h2 class="pf-h">You &amp; them</h2>
       <div class="pf-toggle-row">
-        <div class="pf-toggle-txt"><div class="pf-toggle-t">Build my profile from this persona</div><div class="pf-toggle-s">What you tell it helps Blaksyd know you better.</div></div>
+        <div class="pf-toggle-txt"><div class="pf-toggle-t">Let them get to know me</div><div class="pf-toggle-s">What you share here helps Blaksyd understand you. Only you ever see it.</div></div>
         <button type="button" class="pf-toggle" id="pf-build" role="switch" aria-checked="true"></button>
       </div>
       <div class="pf-toggle-row">
-        <div class="pf-toggle-txt"><div class="pf-toggle-t">This persona can use my profile</div><div class="pf-toggle-s">It talks to you like someone who already knows you.</div></div>
+        <div class="pf-toggle-txt"><div class="pf-toggle-t">They already know me</div><div class="pf-toggle-s">They greet you like a friend who knows your world. Off by default.</div></div>
         <button type="button" class="pf-toggle" id="pf-use" role="switch" aria-checked="false"></button>
       </div>
     </section>
 
     <div class="pf-footer">
       <button type="button" class="pf-cancel" id="pf-cancel">Cancel</button>
-      <button type="button" class="pf-save" id="pf-save">Save persona</button>
+      <button type="button" class="pf-save" id="pf-save">Create persona</button>
     </div>
     <p class="pf-msg" id="pf-msg" hidden></p>
   </div>
+
+  <div class="pf-done" id="pf-done" hidden>
+    <div class="pf-done-card">
+      <img id="pf-done-av" alt="" />
+      <div class="pf-done-name" id="pf-done-name"></div>
+      <div class="pf-done-sub">is ready to meet you</div>
+    </div>
+  </div>
 </AppLayout>
 
-<style>
-  .pf { padding-bottom: 6rem; max-width: 680px; }
-  .pf-top { display: flex; align-items: center; gap: .6rem; margin-bottom: 1rem; }
+<style is:global>
+  .pf { max-width: 640px; padding-bottom: 6.5rem; }
+  .pf-top { display: flex; align-items: center; gap: .6rem; margin-bottom: .9rem; }
   .pf-back { display: grid; place-items: center; width: 38px; height: 38px; border-radius: 50%; color: var(--ink); flex: none; }
   .pf-back svg { width: 22px; height: 22px; }
   .pf-back:hover { background: var(--surface-strong); }
   .pf-title { font-size: var(--fs-lg); font-weight: 700; margin: 0; flex: 1; }
-  .pf-purpose-wrap { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
-  .pf-purpose-lbl { font-size: 10px; text-transform: uppercase; letter-spacing: .04em; color: var(--ink-faint); }
-  .pf-purpose { border: 1px solid var(--line); border-radius: var(--r-pill); padding: .35rem .6rem; background: var(--surface); color: var(--ink); font-size: var(--fs-sm); }
-  .pf-card { margin-bottom: 1rem; }
-  .pf-h2 { font-size: var(--fs-md); font-weight: 800; margin: 0 0 .9rem; text-transform: uppercase; letter-spacing: .01em; display: flex; align-items: baseline; gap: .5rem; }
-  .pf-num { font-size: var(--fs-sm); font-weight: 700; color: var(--ink-faint); font-family: var(--font-mono, monospace); }
-  .pf-opt { font-weight: 400; text-transform: none; letter-spacing: 0; color: var(--ink-faint); font-size: var(--fs-xs); }
-  .pf-identity { display: flex; gap: 1rem; align-items: flex-start; }
-  .pf-av-wrap { display: flex; flex-direction: column; align-items: center; gap: .4rem; flex: none; }
-  .pf-av { width: 84px; height: 84px; border-radius: 50%; background: var(--surface-strong); object-fit: cover; }
-  .pf-av-change { background: none; border: none; color: var(--coral); font-size: var(--fs-xs); font-weight: 600; cursor: pointer; }
-  .pf-identity-fields { flex: 1; display: flex; flex-direction: column; gap: .3rem; }
-  .pf-lbl { font-size: var(--fs-sm); color: var(--ink-soft); margin-top: .6rem; display: block; }
-  .pf-input, .pf-area { width: 100%; border: 1px solid var(--line); border-radius: 12px; padding: .6rem .7rem; background: var(--surface); color: var(--ink); font: inherit; font-size: var(--fs-sm); resize: vertical; }
+  .pf-surprise { flex: none; border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: var(--r-pill); padding: .45rem .8rem; font-size: var(--fs-sm); font-weight: 600; cursor: pointer; transition: transform .15s var(--ease-spring, ease), border-color .15s; }
+  .pf-surprise:hover { border-color: var(--coral); transform: translateY(-1px); }
+  .pf-surprise:active { transform: scale(.96); }
+
+  /* Live preview hero */
+  .pf-hero { position: relative; display: flex; align-items: center; gap: 1rem; padding: 1.1rem; margin-bottom: 1.4rem; border-radius: 22px;
+    background: radial-gradient(120% 140% at 0% 0%, color-mix(in srgb, var(--gold) 22%, transparent), transparent 60%), radial-gradient(120% 140% at 100% 100%, color-mix(in srgb, var(--lavender) 26%, transparent), transparent 60%), var(--surface);
+    border: 1px solid var(--line); overflow: hidden; }
+  .pf-hero-ring { flex: none; width: 86px; height: 86px; border-radius: 50%; padding: 3px; background: var(--accent-grad, linear-gradient(135deg, #FFD27A, #FF6B9D, #C9B8FF)); }
+  .pf-hero-ring img { width: 100%; height: 100%; border-radius: 50%; background: var(--surface-strong); object-fit: cover; display: block; }
+  .pf-hero-meta { flex: 1; min-width: 0; }
+  .pf-hero-name { font-size: var(--fs-lg); font-weight: 800; line-height: 1.1; color: var(--ink); transition: opacity .2s; }
+  .pf-hero-name.placeholder { color: var(--ink-faint); font-weight: 700; }
+  .pf-hero-tag { font-size: var(--fs-sm); color: var(--ink-soft); margin-top: 2px; }
+  .pf-hero-chips { display: flex; flex-wrap: wrap; gap: .3rem; margin-top: .5rem; }
+  .pf-hero-chips span { font-size: var(--fs-xs); padding: .15rem .5rem; border-radius: var(--r-pill); background: color-mix(in srgb, var(--coral) 14%, transparent); color: var(--coral); }
+  .pf-hero-badge { position: absolute; top: .8rem; right: .9rem; font-size: 10px; text-transform: uppercase; letter-spacing: .05em; font-family: var(--font-mono, monospace); color: var(--ink-soft); background: var(--surface-strong); border: 1px solid var(--line); border-radius: var(--r-pill); padding: .15rem .5rem; }
+
+  .pf-sec { margin-bottom: 1.5rem; }
+  .pf-h { font-size: var(--fs-md); font-weight: 700; margin: 0 0 .8rem; }
+  .pf-lbl { display: block; font-size: var(--fs-sm); color: var(--ink-soft); margin: .9rem 0 .45rem; }
+  .pf-opt { color: var(--ink-faint); font-size: var(--fs-xs); font-weight: 400; }
+
+  .pf-id { display: flex; gap: 1rem; align-items: center; }
+  .pf-av-btn { position: relative; flex: none; width: 76px; height: 76px; border-radius: 50%; padding: 0; border: none; background: var(--surface-strong); cursor: pointer; overflow: hidden; }
+  .pf-av-btn img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; display: block; }
+  .pf-av-edit { position: absolute; left: 0; right: 0; bottom: 0; font-size: 10px; text-align: center; padding: 2px 0; color: #fff; background: rgba(0,0,0,.45); }
+  .pf-id-fields { flex: 1; display: flex; flex-direction: column; gap: .5rem; }
+  .pf-field { position: relative; }
+  .pf-input, .pf-area { width: 100%; border: 1px solid var(--line); border-radius: 13px; padding: .65rem .75rem; background: var(--surface); color: var(--ink); font: inherit; font-size: var(--fs-sm); resize: vertical; transition: border-color .15s; }
   .pf-input:focus, .pf-area:focus { outline: none; border-color: var(--coral); }
-  .pf-av-editor { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--line); }
+  .pf-count { position: absolute; right: .6rem; top: 50%; transform: translateY(-50%); font-size: 10px; color: var(--ink-faint); pointer-events: none; }
+  .pf-area { display: block; margin-top: .55rem; }
+
+  .pf-av-editor { margin-top: .9rem; padding: .9rem; border-radius: 14px; background: var(--surface-strong); }
   .pf-av-styles { display: flex; flex-wrap: wrap; gap: .5rem; }
-  .pf-av-style { width: 48px; height: 48px; border-radius: 50%; border: 2px solid transparent; background: var(--surface-strong); cursor: pointer; padding: 0; overflow: hidden; }
+  .pf-av-style { width: 52px; height: 52px; border-radius: 50%; border: 2px solid transparent; background: var(--surface); cursor: pointer; padding: 0; overflow: hidden; transition: transform .15s var(--ease-spring, ease), border-color .15s; }
   .pf-av-style img { width: 100%; height: 100%; }
+  .pf-av-style:hover { transform: translateY(-2px); }
   .pf-av-style.sel { border-color: var(--coral); }
-  .pf-av-shuffle { margin-top: .7rem; border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: var(--r-pill); padding: .4rem .8rem; font-size: var(--fs-sm); cursor: pointer; }
-  .pf-tags { display: flex; flex-wrap: wrap; gap: .45rem; margin: .3rem 0 .2rem; }
-  .pf-tag { border: 1px solid var(--line); background: var(--surface); border-radius: var(--r-pill); padding: .4rem .8rem; font-size: var(--fs-sm); cursor: pointer; color: var(--ink-soft); transition: background .12s, border-color .12s, color .12s; }
-  .pf-tag.sel { background: #e7f7ec; border-color: #58c47a; color: #1c7a3e; }
-  .pf-traits { display: flex; flex-wrap: wrap; gap: .4rem; align-items: center; padding: .3rem 0; }
-  .pf-trait { display: inline-flex; align-items: center; gap: .3rem; background: #e7f7ec; border: 1px solid #58c47a; color: #1c7a3e; border-radius: var(--r-pill); padding: .3rem .6rem; font-size: var(--fs-sm); }
+  .pf-pill-btn { margin-top: .7rem; border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: var(--r-pill); padding: .4rem .85rem; font-size: var(--fs-sm); cursor: pointer; }
+
+  /* chip rows (purpose, languages) */
+  .pf-chiprow { display: flex; flex-wrap: wrap; gap: .45rem; }
+  .pf-chip { border: 1px solid var(--line); background: var(--surface); border-radius: var(--r-pill); padding: .4rem .8rem; font-size: var(--fs-sm); cursor: pointer; color: var(--ink-soft); transition: transform .14s var(--ease-spring, ease), background .14s, border-color .14s, color .14s; }
+  .pf-chip:active { transform: scale(.95); }
+  .pf-chip.sel { background: var(--accent-grad, linear-gradient(135deg, #FFD27A, #FF6B9D)); border-color: transparent; color: #3a1430; font-weight: 600; }
+
+  /* personality tags */
+  .pf-tags { display: flex; flex-wrap: wrap; gap: .42rem; }
+  .pf-tag { border: 1px solid var(--line); background: var(--surface); border-radius: var(--r-pill); padding: .4rem .8rem; font-size: var(--fs-sm); cursor: pointer; color: var(--ink-soft); transition: transform .14s var(--ease-spring, ease), background .14s, border-color .14s, color .14s; }
+  .pf-tag:active { transform: scale(.95); }
+  .pf-tag.sel { background: color-mix(in srgb, var(--coral) 16%, var(--surface)); border-color: var(--coral); color: var(--coral); font-weight: 600; }
+  .pf-traits { display: flex; flex-wrap: wrap; gap: .4rem; align-items: center; margin-top: .5rem; }
+  .pf-trait { display: inline-flex; align-items: center; gap: .3rem; background: color-mix(in srgb, var(--coral) 16%, var(--surface)); border: 1px solid var(--coral); color: var(--coral); border-radius: var(--r-pill); padding: .3rem .6rem; font-size: var(--fs-sm); font-weight: 600; }
   .pf-trait button { background: none; border: none; color: inherit; cursor: pointer; font-size: 15px; line-height: 1; padding: 0; opacity: .7; }
-  .pf-trait-add { border: 1px dashed var(--line-strong, var(--line)); border-radius: var(--r-pill); padding: .3rem .6rem; font: inherit; font-size: var(--fs-sm); background: transparent; color: var(--ink); min-width: 100px; }
+  .pf-trait-add { border: 1px dashed var(--line-strong, var(--line)); border-radius: var(--r-pill); padding: .35rem .65rem; font: inherit; font-size: var(--fs-sm); background: transparent; color: var(--ink); min-width: 100px; }
   .pf-trait-add:focus { outline: none; border-color: var(--coral); }
-  .pf-voices { display: flex; flex-wrap: wrap; gap: .5rem; margin: .3rem 0; }
-  .pf-voice { display: inline-flex; align-items: center; gap: .45rem; border: 1px solid var(--line); background: var(--surface); border-radius: var(--r-pill); padding: .3rem .4rem .3rem .35rem; cursor: pointer; color: var(--ink-soft); }
-  .pf-voice.sel { border-color: var(--coral); color: var(--ink); background: var(--surface-strong); }
-  .pf-voice-play { width: 28px; height: 28px; border-radius: 50%; border: none; background: var(--coral); color: #fff; cursor: pointer; flex: none; font-size: 11px; display: grid; place-items: center; }
-  .pf-voice-play.loading { opacity: .5; }
-  .pf-voice-name { font-size: var(--fs-sm); padding-right: .4rem; }
-  .pf-langs { display: flex; flex-wrap: wrap; gap: .45rem; }
-  .pf-lang { border: 1px solid var(--line); background: var(--surface); border-radius: var(--r-pill); padding: .35rem .7rem; font-size: var(--fs-sm); cursor: pointer; color: var(--ink-soft); }
-  .pf-lang.sel { background: var(--coral); border-color: var(--coral); color: #fff; }
-  .pf-toggle-row { display: flex; align-items: center; gap: 1rem; padding: .6rem 0; }
+  .pf-more { margin-top: .9rem; }
+  .pf-more summary { cursor: pointer; font-size: var(--fs-sm); color: var(--ink-soft); list-style: none; }
+  .pf-more summary::-webkit-details-marker { display: none; }
+  .pf-more summary::before { content: '+ '; color: var(--coral); font-weight: 700; }
+  .pf-more[open] summary::before { content: '– '; }
+
+  /* voices */
+  .pf-voices { display: flex; flex-direction: column; gap: .45rem; }
+  .pf-voice { display: flex; align-items: center; gap: .7rem; border: 1px solid var(--line); background: var(--surface); border-radius: 14px; padding: .5rem .6rem; cursor: pointer; transition: border-color .14s, background .14s; }
+  .pf-voice.sel { border-color: var(--coral); background: color-mix(in srgb, var(--coral) 7%, var(--surface)); }
+  .pf-voice-play { width: 34px; height: 34px; border-radius: 50%; border: none; background: var(--accent-grad, linear-gradient(135deg,#FFD27A,#FF6B9D)); color: #3a1430; cursor: pointer; flex: none; display: grid; place-items: center; }
+  .pf-voice-play svg { width: 15px; height: 15px; }
+  .pf-voice-play.playing { animation: pf-pulse 1s ease-in-out infinite; }
+  @keyframes pf-pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.12); } }
+  .pf-voice-name { font-weight: 600; font-size: var(--fs-sm); color: var(--ink); }
+  .pf-voice-desc { font-size: var(--fs-xs); color: var(--ink-faint); }
+  .pf-voice-meta { flex: 1; min-width: 0; }
+  .pf-voice-check { flex: none; width: 20px; height: 20px; color: var(--coral); opacity: 0; }
+  .pf-voice.sel .pf-voice-check { opacity: 1; }
+
+  /* toggles — on-brand */
+  .pf-toggle-row { display: flex; align-items: center; gap: 1rem; padding: .7rem 0; }
   .pf-toggle-row + .pf-toggle-row { border-top: 1px solid var(--line); }
   .pf-toggle-txt { flex: 1; }
   .pf-toggle-t { font-weight: 600; font-size: var(--fs-sm); }
-  .pf-toggle-s { font-size: var(--fs-xs); color: var(--ink-faint); }
+  .pf-toggle-s { font-size: var(--fs-xs); color: var(--ink-faint); margin-top: 1px; }
   .pf-toggle { flex: none; width: 46px; height: 27px; border-radius: 999px; border: none; background: var(--line-strong, #ccc); position: relative; cursor: pointer; transition: background .2s; }
-  .pf-toggle::after { content: ''; position: absolute; top: 3px; left: 3px; width: 21px; height: 21px; border-radius: 50%; background: #fff; transition: transform .2s; }
-  .pf-toggle.on { background: #34c759; }
+  .pf-toggle::after { content: ''; position: absolute; top: 3px; left: 3px; width: 21px; height: 21px; border-radius: 50%; background: #fff; transition: transform .2s var(--ease-spring, ease); }
+  .pf-toggle.on { background: var(--coral); }
   .pf-toggle.on::after { transform: translateX(19px); }
-  .pf-footer { position: sticky; bottom: 0; display: flex; justify-content: flex-end; gap: .7rem; padding: 1rem 0; background: linear-gradient(to top, var(--bg) 60%, transparent); }
+
+  .pf-footer { position: sticky; bottom: 0; display: flex; justify-content: flex-end; gap: .7rem; padding: 1rem 0 1.2rem; background: linear-gradient(to top, var(--bg) 55%, transparent); }
   .pf-cancel { background: none; border: none; color: var(--ink-soft); font-weight: 600; cursor: pointer; padding: .6rem 1rem; }
-  .pf-save { background: var(--coral); color: #fff; border: none; border-radius: var(--r-pill); padding: .65rem 1.4rem; font-weight: 700; cursor: pointer; }
-  .pf-save[disabled] { opacity: .5; cursor: default; }
-  .pf-msg { text-align: center; font-size: var(--fs-sm); }
+  .pf-save { background: var(--accent-grad, linear-gradient(135deg,#FFD27A,#FF6B9D)); color: #3a1430; border: none; border-radius: var(--r-pill); padding: .7rem 1.5rem; font-weight: 800; cursor: pointer; transition: transform .15s var(--ease-spring, ease), opacity .15s; }
+  .pf-save:hover { transform: translateY(-1px); }
+  .pf-save:active { transform: scale(.97); }
+  .pf-save[disabled] { opacity: .55; cursor: default; transform: none; }
+  .pf-msg { text-align: center; font-size: var(--fs-sm); color: var(--ink-soft); }
   .pf-msg.err { color: #ff6b6b; }
+
+  /* save success */
+  .pf-done { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; background: color-mix(in srgb, var(--bg) 80%, transparent); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+  .pf-done[hidden] { display: none; }
+  .pf-done-card { text-align: center; animation: pf-pop .45s var(--ease-spring, cubic-bezier(.2,.9,.3,1.4)); }
+  .pf-done-card img { width: 110px; height: 110px; border-radius: 50%; padding: 4px; background: var(--accent-grad, linear-gradient(135deg,#FFD27A,#FF6B9D,#C9B8FF)); }
+  .pf-done-name { font-size: var(--fs-xl, 1.6rem); font-weight: 800; margin-top: .8rem; }
+  .pf-done-sub { color: var(--ink-soft); }
+  @keyframes pf-pop { from { transform: scale(.7); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+  @media (max-width: 480px) {
+    .pf-hero { gap: .8rem; padding: .9rem; }
+    .pf-hero-ring { width: 70px; height: 70px; }
+  }
 </style>
 
 <script>
