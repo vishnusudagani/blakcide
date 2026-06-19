@@ -7,7 +7,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
       <button type="button" class="bx-icon" id="bx-burger" aria-label="Chats & menu" title="Chats & menu">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
       </button>
-      <button type="button" class="bx-icon bx-icon-soon" id="bx-persona" aria-label="Personas — coming soon" title="Personas — coming soon">
+      <button type="button" class="bx-icon" id="bx-persona" aria-label="Personas" title="Personas">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.1"/><path d="M3.6 19a5.4 5.4 0 0 1 10.8 0"/><path d="M16 6.6a3 3 0 0 1 0 5.4M18.6 19a5.2 5.2 0 0 0-3-4.8"/></svg>
       </button>
       <div class="bx-head-actions">
@@ -1178,7 +1178,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
 
     // ── Header wiring + Gemini-style greeting ────────────────────────────
     if (profileBtn) profileBtn.addEventListener('click', () => { window.location.href = '/beta/account/'; });
-    if (personaBtn) personaBtn.addEventListener('click', () => { window.location.href = '/beta/persona/'; });
+    if (personaBtn) personaBtn.addEventListener('click', () => { window.location.href = '/beta/personas/'; });
 
     // Burger drawer account footer (theme toggle + sign out).
     const cvTheme = $('bx-cv-theme'), cvSignout = $('bx-cv-signout');
