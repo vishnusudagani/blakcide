@@ -242,6 +242,17 @@ import AppLayout from '../../layouts/AppLayout.astro';
 
       // ---- voice calling (WebRTC over Supabase Realtime signalling) ----
       const RTC_CFG = { iceServers: [{ urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] }] };
+      // Fetch TURN/ICE from the server (Metered) so calls survive carrier-grade
+      // NAT; falls back to STUN-only. Authenticated, fetched once, cached.
+      let _rtcCfg = null;
+      async function getRtcConfig() {
+        if (_rtcCfg) return _rtcCfg;
+        try {
+          const r = await fetch('/api/ice-servers', { headers: { Authorization: 'Bearer ' + (accessToken || '') } });
+          if (r.ok) { const j = await r.json(); if (j && Array.isArray(j.iceServers) && j.iceServers.length) { _rtcCfg = { iceServers: j.iceServers }; return _rtcCfg; } }
+        } catch (e) {}
+        _rtcCfg = RTC_CFG; return _rtcCfg;
+      }
       let pc = null, localStream = null, callState = 'idle', callTimer = 0, callStart = 0, pendingCands = [], remoteOffer = null, callTimeout = 0, callMuted = false, chatReady = false, peerReady = false;
       // Time-cab: mirror the seeker's daily-budget countdown (sent via broadcast).
       let budgetTimer = 0, budgetEndsAt = 0, budgetTotalSec = 0, budgetWarn90 = false;
@@ -262,8 +273,8 @@ import AppLayout from '../../layouts/AppLayout.astro';
         document.getElementById('lsn-call-accept')?.addEventListener('click', acceptCall);
         document.getElementById('lsn-call-mute')?.addEventListener('click', (e) => { callMuted = !callMuted; const tr = localStream?.getAudioTracks()[0]; if (tr) tr.enabled = !callMuted; e.currentTarget.textContent = callMuted ? 'Unmute' : 'Mute'; e.currentTarget.classList.toggle('on', callMuted); });
       }
-      function createPC() {
-        pc = new RTCPeerConnection(RTC_CFG);
+      async function createPC() {
+        pc = new RTCPeerConnection(await getRtcConfig());
         pc.onicecandidate = (e) => { if (e.candidate) callSend('ice', e.candidate); };
         pc.ontrack = (e) => { const a = document.getElementById('lsn-rtc-audio'); if (a) a.srcObject = e.streams[0]; };
         pc.onconnectionstatechange = () => { if (!pc) return; const st = pc.connectionState; if (st === 'connected') onCallConnected(); else if (st === 'failed' || st === 'disconnected' || st === 'closed') endCall(false); };
@@ -281,7 +292,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
         for (let i = 0; i < 40 && (!chatReady || !peerReady); i++) await wait(150);
         try { localStream = await getMic(); } catch (e) { alert('Microphone access is needed for a voice call.'); return; }
         callState = 'calling'; renderCallBar('calling'); logEvent('call_started');
-        createPC(); localStream.getTracks().forEach((t) => pc.addTrack(t, localStream));
+        await createPC(); localStream.getTracks().forEach((t) => pc.addTrack(t, localStream));
         try { const offer = await pc.createOffer({ offerToReceiveAudio: true }); await pc.setLocalDescription(offer); callSend('offer', offer); } catch (e) { endCall(true); return; }
         if (callTimeout) clearTimeout(callTimeout);
         callTimeout = setTimeout(() => { if (callState === 'calling') endCall(true); }, 45000);
@@ -300,7 +311,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
       async function acceptCall() {
         if (callState !== 'incoming' || !remoteOffer) return;
         try { localStream = await getMic(); } catch (e) { declineCall(); return; }
-        createPC(); localStream.getTracks().forEach((t) => pc.addTrack(t, localStream));
+        await createPC(); localStream.getTracks().forEach((t) => pc.addTrack(t, localStream));
         try {
           await pc.setRemoteDescription(new RTCSessionDescription(remoteOffer));
           for (const c of pendingCands.splice(0)) { try { await pc.addIceCandidate(new RTCIceCandidate(c)); } catch (e) {} }

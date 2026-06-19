@@ -9,12 +9,23 @@
 exports.handler = async (event) => {
     const cors = {
         'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'Content-Type',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
         'Content-Type': 'application/json',
     };
 
     if (event.httpMethod === 'OPTIONS') return { statusCode: 200, headers: cors, body: '' };
     if (event.httpMethod !== 'GET') return { statusCode: 405, headers: cors, body: '{"error":"Method not allowed"}' };
+
+    // Require a valid Supabase JWT — TURN credentials are billable. (CJS file;
+    // the auth helper is ESM, so we dynamic-import it.)
+    try {
+        const { verifySupabaseJwt, extractBearer } = await import('../../symp-core/lib/auth.mjs');
+        const bearer = extractBearer(event.headers.authorization || event.headers.Authorization);
+        const v = bearer ? await verifySupabaseJwt(bearer) : { ok: false };
+        if (!v.ok) return { statusCode: 401, headers: cors, body: '{"error":"unauthorized"}' };
+    } catch (e) {
+        return { statusCode: 401, headers: cors, body: '{"error":"unauthorized"}' };
+    }
 
     const meteredKey = process.env.METERED_API_KEY;
     const meteredApp = process.env.METERED_APP_NAME; // e.g. "yourapp" from metered.ca dashboard
