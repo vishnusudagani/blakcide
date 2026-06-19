@@ -57,12 +57,15 @@ function verifyLocal(token) {
 
 async function verifyViaAuthApi(token) {
     if (!SUPABASE_URL) return { ok: false, reason: 'supabase_url_missing' };
+    // Fail closed: never fall back to the unverified caller token as the apikey
+    // (that would let a misconfig silently degrade JWT verification).
+    if (!SUPABASE_ANON_KEY) return { ok: false, reason: 'anon_key_missing' };
     try {
         const res = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
             method:  'GET',
             headers: {
                 'Authorization': `Bearer ${token}`,
-                'apikey':        SUPABASE_ANON_KEY || token,
+                'apikey':        SUPABASE_ANON_KEY,
             },
         });
         if (!res.ok) return { ok: false, reason: `auth_api_${res.status}` };

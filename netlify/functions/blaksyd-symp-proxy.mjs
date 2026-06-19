@@ -21,6 +21,20 @@ import SympContract from '../../symp-core/contract/endpoints.js';
 const { SYMP_API_BASE, BLAKSYD_PROXY_BASE, SYMP_API_KEY_HEADER, SYMP_REQUEST_ID_HEADER } = SympContract;
 
 const SYMP_API_KEY = process.env.SYMP_API_KEY || '';
+const SUPABASE_URL = process.env.SUPABASE_URL || '';
+const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || '';
+
+// Per-user rate limits (cost-DoS backstop), by endpoint → [bucket, perMin, perHour].
+// Cheap/read endpoints are unlimited. Enforced via the check_rate_limit RPC.
+const RATE_LIMITS = {
+    chat: ['ai_chat', 30, 300], voice: ['ai_chat', 30, 300], 'diagnostic/turn': ['ai_chat', 30, 300],
+    vision: ['ai_vision', 15, 120], transcribe: ['ai_transcribe', 20, 200],
+    tts: ['ai_misc', 40, 400], title: ['ai_misc', 40, 400], 'proactive-checkin': ['ai_misc', 40, 400],
+};
+const MAX_BODY_BYTES = 30 * 1024 * 1024;   // 30 MB — audio upload ceiling
+const MAX_JSON_BYTES = 700 * 1024;         // ~700 KB JSON ceiling (post-cap)
+const MAX_MESSAGES   = 60;                  // keep only the last N turns
+const MAX_MSG_CHARS  = 8000;               // per-message content cap
 
 // CORS — this endpoint IS browser-facing so we need real CORS handling.
 const CORS = {
@@ -47,6 +61,12 @@ export default async (req) => {
 
     if (!SYMP_API_KEY) {
         return jsonError('INTERNAL_ERROR', 'Proxy misconfigured: SYMP_API_KEY not set', 500);
+    }
+
+    // Guard against oversized uploads before buffering anything (OOM / cost).
+    const contentLength = parseInt(req.headers.get('content-length') || '0', 10);
+    if (contentLength > MAX_BODY_BYTES) {
+        return jsonError('BAD_REQUEST', 'Request body too large', 413);
     }
 
     // ── 1. Resolve the target Symp.ai endpoint from the splat path ───────
@@ -96,6 +116,26 @@ export default async (req) => {
     }
     const authUserId = verified.user_id;
 
+    // ── 2b. Per-user rate limit on billed AI endpoints ───────────────────
+    // Fail OPEN: a limiter hiccup (network/RPC error) must never take down chat.
+    const rl = RATE_LIMITS[splat];
+    if (rl && SUPABASE_URL) {
+        try {
+            const rlRes = await fetch(`${SUPABASE_URL}/rest/v1/rpc/check_rate_limit`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'apikey': SUPABASE_ANON_KEY,
+                    'Authorization': `Bearer ${bearer}`,
+                },
+                body: JSON.stringify({ p_bucket: rl[0], p_per_min: rl[1], p_per_hour: rl[2] }),
+            });
+            if (rlRes.ok && (await rlRes.json()) === false) {
+                return jsonError('RATE_LIMITED', 'You’re going a bit fast — give it a moment and try again.', 429);
+            }
+        } catch (_) { /* fail open */ }
+    }
+
     // ── 3. Build forwarded request ───────────────────────────────────────
     // For GET requests, always stamp user_id from the verified JWT. This
     // both overrides any client-supplied value (so a compromised client
@@ -122,11 +162,19 @@ export default async (req) => {
         forwardHeaders['Content-Type'] = contentType;
 
         if (contentType.includes('application/json')) {
-            // Parse, override user_id, re-stringify.
+            // Parse, override user_id, cap inputs, re-stringify.
             let body = {};
             try { body = await req.json(); } catch (_) { body = {}; }
             body.user_id = authUserId;  // authoritative override
+            // Input caps — bound prompt size (cost amplification + injection surface).
+            if (Array.isArray(body.messages)) {
+                if (body.messages.length > MAX_MESSAGES) body.messages = body.messages.slice(-MAX_MESSAGES);
+                for (const m of body.messages) {
+                    if (m && typeof m.content === 'string' && m.content.length > MAX_MSG_CHARS) m.content = m.content.slice(0, MAX_MSG_CHARS);
+                }
+            }
             forwardBody  = JSON.stringify(body);
+            if (forwardBody.length > MAX_JSON_BYTES) return jsonError('BAD_REQUEST', 'Payload too large', 413, requestId);
         } else {
             // Pass through raw (e.g. multipart). Note: we cannot override
             // user_id in non-JSON bodies, so non-JSON endpoints MUST derive
