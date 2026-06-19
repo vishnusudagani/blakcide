@@ -74,10 +74,59 @@ function send(res, status, obj) {
   res.end(JSON.stringify(obj));
 }
 
+// Wrap raw PCM16 mono in a minimal WAV container so a browser <audio> can play it.
+function wavWrap(pcm, sampleRate) {
+  const numCh = 1, bits = 16, byteRate = (sampleRate * numCh * bits) / 8, blockAlign = (numCh * bits) / 8;
+  const h = Buffer.alloc(44);
+  h.write('RIFF', 0); h.writeUInt32LE(36 + pcm.length, 4); h.write('WAVE', 8);
+  h.write('fmt ', 12); h.writeUInt32LE(16, 16); h.writeUInt16LE(1, 20); h.writeUInt16LE(numCh, 22);
+  h.writeUInt32LE(sampleRate, 24); h.writeUInt32LE(byteRate, 28); h.writeUInt16LE(blockAlign, 32); h.writeUInt16LE(bits, 34);
+  h.write('data', 36); h.writeUInt32LE(pcm.length, 40);
+  return Buffer.concat([h, pcm]);
+}
+
+const TTS_CORS = {
+  'access-control-allow-origin':  '*',
+  'access-control-allow-headers': 'authorization, content-type',
+  'access-control-allow-methods': 'POST, OPTIONS',
+};
+
 const server = http.createServer(async (req, res) => {
   // Health check (Cloud Run / uptime probes).
   if (req.method === 'GET' && (req.url === '/' || req.url === '/healthz')) {
     return send(res, 200, { ok: true, service: 'blak-vertex-proxy', project: Boolean(PROJECT), region: REGION });
+  }
+
+  // CORS preflight for the browser-called /tts endpoint.
+  if (req.method === 'OPTIONS') { res.writeHead(204, TTS_CORS); return res.end(); }
+
+  // ── Voice sample: POST /tts { voice, text? } → WAV. Previews a Gemini voice for
+  // the persona builder. Gated by the caller's Supabase token (Authorization header).
+  if (req.method === 'POST' && req.url.startsWith('/tts')) {
+    const hdr = req.headers['authorization'] || '';
+    const jwt = hdr.startsWith('Bearer ') ? hdr.slice(7) : '';
+    if (!(await validateSupabaseToken(jwt))) { res.writeHead(401, TTS_CORS); return res.end('{"error":"unauthorized"}'); }
+    if (!GEMINI_LIVE_API_KEY) { res.writeHead(500, TTS_CORS); return res.end('{"error":"tts key not set"}'); }
+    let tbody = '';
+    try { for await (const c of req) tbody += c; } catch { res.writeHead(400, TTS_CORS); return res.end('{"error":"read"}'); }
+    let tb; try { tb = JSON.parse(tbody || '{}'); } catch { tb = {}; }
+    const voice = (typeof tb.voice === 'string' && tb.voice) || 'Aoede';
+    const text  = (typeof tb.text === 'string' && tb.text.trim()) || 'Hey — this is how I sound. Good to meet you.';
+    try {
+      const tr = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=' + encodeURIComponent(GEMINI_LIVE_API_KEY), {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ contents: [{ parts: [{ text: text.slice(0, 240) }] }], generationConfig: { responseModalities: ['AUDIO'], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: voice } } } } }),
+      });
+      if (!tr.ok) { res.writeHead(502, TTS_CORS); return res.end(JSON.stringify({ error: 'tts failed', status: tr.status })); }
+      const tj = await tr.json();
+      const inline = (tj.candidates?.[0]?.content?.parts || []).map((p) => p.inlineData).find(Boolean);
+      if (!inline?.data) { res.writeHead(502, TTS_CORS); return res.end('{"error":"no audio"}'); }
+      const pcm = Buffer.from(inline.data, 'base64');
+      const rate = parseInt((inline.mimeType || '').match(/rate=(\d+)/)?.[1] || '24000', 10);
+      const wav = wavWrap(pcm, rate);
+      res.writeHead(200, Object.assign({ 'content-type': 'application/json' }, TTS_CORS));
+      return res.end(JSON.stringify({ audio: wav.toString('base64'), mime: 'audio/wav' }));
+    } catch (e) { res.writeHead(502, TTS_CORS); return res.end(JSON.stringify({ error: String(e?.message || e).slice(0, 120) })); }
   }
 
   if (req.method !== 'POST' || !req.url.startsWith('/v1/chat/completions')) {
