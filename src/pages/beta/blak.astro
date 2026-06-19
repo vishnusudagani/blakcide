@@ -1145,17 +1145,22 @@ import AppLayout from '../../layouts/AppLayout.astro';
       } catch (e) {}
     }
 
-    // ── Boot: restore this user's chats from the server (or start one) ────
+    // ── Boot: land on Blak's home — never auto-open a past thread ─────────
+    // The home hero (greeting + insight + mood) is the resting state. We do NOT
+    // restore the last conversation on open — doing so buried the home and felt
+    // like the app was "stuck" inside an old chat. activeChatId stays null; the
+    // first message lazily creates a fresh, auto-titled thread (see send()).
+    // Past conversations live in the History drawer; ?c=<id> still deep-links to
+    // a specific thread, and ?q=<text> prefills the composer.
     (async () => {
       try { const u = (await supabase?.auth.getUser())?.data?.user; if (u?.id) userId = u.id; } catch (e) {}
       if (!userId) return;   // not signed in — AppLayout's auth gate redirects to login
-      let chats = await dbListChats();
-      if (!chats.length) { const c = await dbCreateChat('New chat'); if (c) chats = [c]; }
-      // Deep links: ?c=<id> opens that chat; ?q=<text> prefills the composer.
       let params; try { params = new URLSearchParams(location.search); } catch (e) { params = null; }
       const want = params && params.get('c');
-      const startId = (want && chats.some((c) => c.id === want)) ? want : (chats[0] && chats[0].id);
-      if (startId) await openChat(startId);
+      if (want) {
+        const chats = await dbListChats();
+        if (chats.some((c) => c.id === want)) await openChat(want);
+      }
       try {
         const q = params && params.get('q');
         if (q) { input.value = q; autogrow(); input.focus(); }   // they tap send (no auto-fire)
