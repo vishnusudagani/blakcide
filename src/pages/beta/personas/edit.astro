@@ -1,0 +1,246 @@
+---
+import AppLayout from '../../../layouts/AppLayout.astro';
+---
+<AppLayout active="persona" title="Persona">
+  <div class="ap-page pf">
+    <div class="pf-top">
+      <a class="pf-back" href="/beta/personas/" aria-label="Back to personas">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+      </a>
+      <h1 class="pf-title" id="pf-title">New persona</h1>
+      <div class="pf-purpose-wrap">
+        <label class="pf-purpose-lbl" for="pf-purpose">Purpose</label>
+        <select id="pf-purpose" class="pf-purpose"></select>
+      </div>
+    </div>
+
+    <section class="ap-card pf-card">
+      <h2 class="pf-h2">Visual Identity</h2>
+      <div class="pf-identity">
+        <div class="pf-av-wrap">
+          <img id="pf-av" class="pf-av" alt="persona avatar" />
+          <button type="button" class="pf-av-change" id="pf-av-change">Change avatar</button>
+        </div>
+        <div class="pf-identity-fields">
+          <label class="pf-lbl" for="pf-name">Name</label>
+          <input id="pf-name" class="pf-input" placeholder="e.g. Aarav" maxlength="60" autocomplete="off" />
+          <label class="pf-lbl" for="pf-tagline">Tagline (optional)</label>
+          <input id="pf-tagline" class="pf-input" placeholder="Always here to listen and chat." maxlength="90" autocomplete="off" />
+        </div>
+      </div>
+      <div class="pf-av-editor" id="pf-av-editor" hidden>
+        <div class="pf-av-styles" id="pf-av-styles"></div>
+        <button type="button" class="pf-av-shuffle" id="pf-av-shuffle">↻ Shuffle look</button>
+      </div>
+    </section>
+
+    <section class="ap-card pf-card">
+      <h2 class="pf-h2">Personality &amp; Traits</h2>
+      <label class="pf-lbl" for="pf-backstory">Backstory &amp; Bio</label>
+      <textarea id="pf-backstory" class="pf-area" rows="4" placeholder="Who are they? What's their story, their vibe, what do they love talking about?"></textarea>
+      <p class="pf-hint">Sets who the persona is and how it responds.</p>
+      <label class="pf-lbl">Core Traits</label>
+      <div class="pf-traits" id="pf-traits">
+        <input id="pf-trait-input" class="pf-trait-add" placeholder="+ add trait" maxlength="24" autocomplete="off" />
+      </div>
+      <label class="pf-lbl" for="pf-tone">Voice &amp; Tone Instructions</label>
+      <textarea id="pf-tone" class="pf-area" rows="3" placeholder="e.g. Speak calmly, keep it short, a little dry humour, never preachy."></textarea>
+    </section>
+
+    <section class="ap-card pf-card">
+      <h2 class="pf-h2">Voice &amp; language</h2>
+      <label class="pf-lbl" for="pf-voice">Voice (used on calls)</label>
+      <select id="pf-voice" class="pf-input"></select>
+      <label class="pf-lbl">Languages it can speak</label>
+      <div class="pf-langs" id="pf-langs"></div>
+    </section>
+
+    <section class="ap-card pf-card">
+      <h2 class="pf-h2">Your context</h2>
+      <div class="pf-toggle-row">
+        <div class="pf-toggle-txt"><div class="pf-toggle-t">Build my profile from this persona</div><div class="pf-toggle-s">What you tell it helps Blaksyd know you better.</div></div>
+        <button type="button" class="pf-toggle" id="pf-build" role="switch" aria-checked="true"></button>
+      </div>
+      <div class="pf-toggle-row">
+        <div class="pf-toggle-txt"><div class="pf-toggle-t">This persona can use my profile</div><div class="pf-toggle-s">It talks to you like someone who already knows you.</div></div>
+        <button type="button" class="pf-toggle" id="pf-use" role="switch" aria-checked="false"></button>
+      </div>
+    </section>
+
+    <div class="pf-footer">
+      <button type="button" class="pf-cancel" id="pf-cancel">Cancel</button>
+      <button type="button" class="pf-save" id="pf-save">Save persona</button>
+    </div>
+    <p class="pf-msg" id="pf-msg" hidden></p>
+  </div>
+</AppLayout>
+
+<style>
+  .pf { padding-bottom: 6rem; max-width: 680px; }
+  .pf-top { display: flex; align-items: center; gap: .6rem; margin-bottom: 1rem; }
+  .pf-back { display: grid; place-items: center; width: 38px; height: 38px; border-radius: 50%; color: var(--ink); flex: none; }
+  .pf-back svg { width: 22px; height: 22px; }
+  .pf-back:hover { background: var(--surface-strong); }
+  .pf-title { font-size: var(--fs-lg); font-weight: 700; margin: 0; flex: 1; }
+  .pf-purpose-wrap { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+  .pf-purpose-lbl { font-size: 10px; text-transform: uppercase; letter-spacing: .04em; color: var(--ink-faint); }
+  .pf-purpose { border: 1px solid var(--line); border-radius: var(--r-pill); padding: .35rem .6rem; background: var(--surface); color: var(--ink); font-size: var(--fs-sm); }
+  .pf-card { margin-bottom: 1rem; }
+  .pf-h2 { font-size: var(--fs-md); font-weight: 700; margin: 0 0 .8rem; }
+  .pf-identity { display: flex; gap: 1rem; align-items: flex-start; }
+  .pf-av-wrap { display: flex; flex-direction: column; align-items: center; gap: .4rem; flex: none; }
+  .pf-av { width: 84px; height: 84px; border-radius: 50%; background: var(--surface-strong); object-fit: cover; }
+  .pf-av-change { background: none; border: none; color: var(--coral); font-size: var(--fs-xs); font-weight: 600; cursor: pointer; }
+  .pf-identity-fields { flex: 1; display: flex; flex-direction: column; gap: .3rem; }
+  .pf-lbl { font-size: var(--fs-sm); color: var(--ink-soft); margin-top: .5rem; }
+  .pf-input, .pf-area {
+    width: 100%; border: 1px solid var(--line); border-radius: 12px; padding: .6rem .7rem;
+    background: var(--surface); color: var(--ink); font: inherit; font-size: var(--fs-sm); resize: vertical;
+  }
+  .pf-input:focus, .pf-area:focus { outline: none; border-color: var(--coral); }
+  .pf-hint { font-size: var(--fs-xs); color: var(--ink-faint); margin: .3rem 0 0; }
+  .pf-av-editor { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--line); }
+  .pf-av-styles { display: flex; flex-wrap: wrap; gap: .5rem; }
+  .pf-av-style { width: 48px; height: 48px; border-radius: 50%; border: 2px solid transparent; background: var(--surface-strong); cursor: pointer; padding: 0; overflow: hidden; }
+  .pf-av-style img { width: 100%; height: 100%; }
+  .pf-av-style.sel { border-color: var(--coral); }
+  .pf-av-shuffle { margin-top: .7rem; border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: var(--r-pill); padding: .4rem .8rem; font-size: var(--fs-sm); cursor: pointer; }
+  .pf-traits { display: flex; flex-wrap: wrap; gap: .4rem; align-items: center; padding: .3rem 0; }
+  .pf-trait { display: inline-flex; align-items: center; gap: .3rem; background: var(--surface-strong); border: 1px solid var(--line); border-radius: var(--r-pill); padding: .3rem .6rem; font-size: var(--fs-sm); }
+  .pf-trait button { background: none; border: none; color: var(--ink-faint); cursor: pointer; font-size: 15px; line-height: 1; padding: 0; }
+  .pf-trait-add { border: 1px dashed var(--line-strong, var(--line)); border-radius: var(--r-pill); padding: .3rem .6rem; font: inherit; font-size: var(--fs-sm); background: transparent; color: var(--ink); min-width: 110px; }
+  .pf-trait-add:focus { outline: none; border-color: var(--coral); }
+  .pf-langs { display: flex; flex-wrap: wrap; gap: .45rem; }
+  .pf-lang { border: 1px solid var(--line); background: var(--surface); border-radius: var(--r-pill); padding: .35rem .7rem; font-size: var(--fs-sm); cursor: pointer; color: var(--ink-soft); }
+  .pf-lang.sel { background: var(--coral); border-color: var(--coral); color: #fff; }
+  .pf-toggle-row { display: flex; align-items: center; gap: 1rem; padding: .6rem 0; }
+  .pf-toggle-row + .pf-toggle-row { border-top: 1px solid var(--line); }
+  .pf-toggle-txt { flex: 1; }
+  .pf-toggle-t { font-weight: 600; font-size: var(--fs-sm); }
+  .pf-toggle-s { font-size: var(--fs-xs); color: var(--ink-faint); }
+  .pf-toggle { flex: none; width: 46px; height: 27px; border-radius: 999px; border: none; background: var(--line-strong, #ccc); position: relative; cursor: pointer; transition: background .2s; }
+  .pf-toggle::after { content: ''; position: absolute; top: 3px; left: 3px; width: 21px; height: 21px; border-radius: 50%; background: #fff; transition: transform .2s; }
+  .pf-toggle.on { background: #34c759; }
+  .pf-toggle.on::after { transform: translateX(19px); }
+  .pf-footer { position: sticky; bottom: 0; display: flex; justify-content: flex-end; gap: .7rem; padding: 1rem 0; background: linear-gradient(to top, var(--bg) 60%, transparent); }
+  .pf-cancel { background: none; border: none; color: var(--ink-soft); font-weight: 600; cursor: pointer; padding: .6rem 1rem; }
+  .pf-save { background: var(--coral); color: #fff; border: none; border-radius: var(--r-pill); padding: .65rem 1.4rem; font-weight: 700; cursor: pointer; }
+  .pf-save[disabled] { opacity: .5; cursor: default; }
+  .pf-msg { text-align: center; font-size: var(--fs-sm); }
+  .pf-msg.err { color: #ff6b6b; }
+</style>
+
+<script>
+  import { supabase } from '../../../lib/supabaseClient';
+
+  const $ = (id) => document.getElementById(id);
+  const PURPOSES = [['ai_friend','AI Friend'],['study_buddy','Study Buddy'],['hype','Hype-up'],['coach','Coach / Critic'],['roleplay','Roleplay / Story'],['custom','Custom']];
+  const VOICES = [['Aoede','Aoede · warm, breezy (F)'],['Kore','Kore · clear, firm (F)'],['Leda','Leda · youthful (F)'],['Zephyr','Zephyr · bright (F)'],['Puck','Puck · upbeat (M)'],['Charon','Charon · deep, calm (M)'],['Fenrir','Fenrir · lively (M)'],['Orus','Orus · steady (M)']];
+  const LANGS = [['en','English'],['hi','Hindi'],['te','Telugu'],['ta','Tamil'],['kn','Kannada'],['ml','Malayalam'],['bn','Bengali'],['mr','Marathi'],['gu','Gujarati'],['pa','Punjabi']];
+  const AV_STYLES = ['avataaars','adventurer','big-smile','fun-emoji','lorelei','micah','notionists','thumbs'];
+
+  const editId = new URLSearchParams(location.search).get('id');
+  let avatar = { style: 'avataaars', seed: 'blak-' + Math.floor(Math.random() * 1e6) };
+  let traits = [];
+
+  function avatarUrl(av) {
+    const qs = new URLSearchParams(Object.assign({ seed: av.seed || 'blak' }, av.options || {})).toString();
+    return 'https://api.dicebear.com/9.x/' + encodeURIComponent(av.style || 'avataaars') + '/svg?' + qs;
+  }
+  function paintAvatar() { $('pf-av').src = avatarUrl(avatar); }
+
+  // Purpose + voice + language + style option lists
+  $('pf-purpose').innerHTML = PURPOSES.map(([v, l]) => '<option value="' + v + '">' + l + '</option>').join('');
+  $('pf-voice').innerHTML = VOICES.map(([v, l]) => '<option value="' + v + '">' + l + '</option>').join('');
+  $('pf-langs').innerHTML = LANGS.map(([v, l]) => '<button type="button" class="pf-lang" data-l="' + v + '">' + l + '</button>').join('');
+  $('pf-langs').addEventListener('click', (e) => { const b = e.target.closest('.pf-lang'); if (b) b.classList.toggle('sel'); });
+  $('pf-av-styles').innerHTML = AV_STYLES.map((s) =>
+    '<button type="button" class="pf-av-style" data-s="' + s + '"><img alt="' + s + '" src="https://api.dicebear.com/9.x/' + s + '/svg?seed=preview" /></button>').join('');
+
+  // Avatar editor
+  $('pf-av-change').addEventListener('click', () => { const ed = $('pf-av-editor'); ed.hidden = !ed.hidden; markStyle(); });
+  function markStyle() { $('pf-av-styles').querySelectorAll('.pf-av-style').forEach((b) => b.classList.toggle('sel', b.dataset.s === avatar.style)); }
+  $('pf-av-styles').addEventListener('click', (e) => { const b = e.target.closest('.pf-av-style'); if (!b) return; avatar.style = b.dataset.s; markStyle(); paintAvatar(); });
+  $('pf-av-shuffle').addEventListener('click', () => { avatar.seed = 'blak-' + Math.floor(Math.random() * 1e9); paintAvatar(); });
+
+  // Traits chips
+  function renderTraits() {
+    const input = $('pf-trait-input');
+    $('pf-traits').querySelectorAll('.pf-trait').forEach((x) => x.remove());
+    traits.forEach((t, i) => {
+      const el = document.createElement('span'); el.className = 'pf-trait';
+      el.innerHTML = document.createTextNode(t).textContent + ' <button type="button" aria-label="remove">×</button>';
+      el.querySelector('button').onclick = () => { traits.splice(i, 1); renderTraits(); };
+      $('pf-traits').insertBefore(el, input);
+    });
+  }
+  $('pf-trait-input').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ',') {
+      e.preventDefault();
+      const v = e.target.value.trim().replace(/,$/, '');
+      if (v && !traits.includes(v) && traits.length < 12) { traits.push(v); renderTraits(); }
+      e.target.value = '';
+    } else if (e.key === 'Backspace' && !e.target.value && traits.length) { traits.pop(); renderTraits(); }
+  });
+
+  // Toggles
+  function wireToggle(id) { const b = $(id); b.addEventListener('click', () => { const on = !b.classList.contains('on'); b.classList.toggle('on', on); b.setAttribute('aria-checked', String(on)); }); }
+  wireToggle('pf-build'); wireToggle('pf-use');
+  $('pf-build').classList.add('on'); $('pf-build').setAttribute('aria-checked', 'true');   // default ON
+
+  function setMsg(t, err) { const m = $('pf-msg'); m.hidden = !t; m.textContent = t || ''; m.classList.toggle('err', !!err); }
+
+  async function userId() { try { return (await supabase.auth.getSession()).data?.session?.user?.id || null; } catch (e) { return null; } }
+
+  async function loadExisting() {
+    if (!editId) { paintAvatar(); return; }
+    try {
+      const { data } = await supabase.from('fantasy_personas').select('*').eq('id', editId).single();
+      if (!data) { paintAvatar(); return; }
+      $('pf-title').textContent = 'Editing ' + (data.name || 'persona');
+      $('pf-name').value = data.name || '';
+      $('pf-tagline').value = data.tagline || '';
+      $('pf-purpose').value = data.purpose || 'ai_friend';
+      $('pf-backstory').value = data.backstory || '';
+      $('pf-tone').value = data.voice_tone || '';
+      $('pf-voice').value = data.voice || 'Aoede';
+      avatar = data.avatar && data.avatar.style ? data.avatar : avatar;
+      traits = Array.isArray(data.traits) ? data.traits.slice() : [];
+      renderTraits();
+      (data.languages || []).forEach((l) => { const b = $('pf-langs').querySelector('.pf-lang[data-l="' + l + '"]'); if (b) b.classList.add('sel'); });
+      $('pf-build').classList.toggle('on', data.build_profile_from !== false); $('pf-build').setAttribute('aria-checked', String(data.build_profile_from !== false));
+      $('pf-use').classList.toggle('on', !!data.can_use_profile); $('pf-use').setAttribute('aria-checked', String(!!data.can_use_profile));
+    } catch (e) { /* fall through to blank */ }
+    paintAvatar();
+  }
+
+  $('pf-cancel').addEventListener('click', () => { window.location.href = '/beta/personas/'; });
+
+  $('pf-save').addEventListener('click', async () => {
+    const name = $('pf-name').value.trim();
+    if (!name) { setMsg('Give your persona a name first.', true); $('pf-name').focus(); return; }
+    const uid = await userId();
+    if (!uid) { setMsg('Sign in again and retry.', true); return; }
+    $('pf-save').disabled = true; setMsg('Saving…');
+    const row = {
+      user_id: uid, name,
+      tagline: $('pf-tagline').value.trim() || null,
+      purpose: $('pf-purpose').value,
+      avatar,
+      backstory: $('pf-backstory').value.trim() || null,
+      traits,
+      voice_tone: $('pf-tone').value.trim() || null,
+      voice: $('pf-voice').value,
+      languages: [...$('pf-langs').querySelectorAll('.pf-lang.sel')].map((b) => b.dataset.l),
+      build_profile_from: $('pf-build').classList.contains('on'),
+      can_use_profile: $('pf-use').classList.contains('on'),
+    };
+    try {
+      if (editId) { row.updated_at = new Date().toISOString(); await supabase.from('fantasy_personas').update(row).eq('id', editId); }
+      else { await supabase.from('fantasy_personas').insert(row); }
+      window.location.href = '/beta/personas/';
+    } catch (e) { $('pf-save').disabled = false; setMsg('Could not save — try again.', true); }
+  });
+
+  loadExisting();
+</script>

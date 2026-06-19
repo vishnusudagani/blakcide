@@ -1,0 +1,124 @@
+---
+import AppLayout from '../../../layouts/AppLayout.astro';
+---
+<AppLayout active="persona" title="Personas">
+  <div class="ap-page pg">
+    <p class="ap-kicker">Personas · your characters</p>
+    <h1 class="ap-h1">Your <span class="pg-accent">personas.</span></h1>
+    <p class="ap-sub">Dream up any character — a study buddy, a hype friend, a calm listener. Give it a name, a backstory and a voice, then talk to it whenever.</p>
+
+    <div class="pg-grid" id="pg-grid">
+      <a class="pg-create" id="pg-create" href="/beta/personas/edit">
+        <span class="pg-create-plus" aria-hidden="true">+</span>
+        <span>Create a persona</span>
+      </a>
+    </div>
+
+    <p class="pg-empty" id="pg-empty" hidden>No personas yet — tap <b>Create a persona</b> to make your first.</p>
+
+    <a class="pg-realref" href="/beta/persona/">Want one that sounds like <b>you</b>? Build your Real Persona (voice clone) →</a>
+  </div>
+</AppLayout>
+
+<style>
+  .pg { padding-bottom: 5rem; }
+  .pg-accent { background: var(--accent-grad, linear-gradient(90deg,#FFD27A,#FF6B9D)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .pg-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: .85rem; margin-top: 1.3rem; }
+  .pg-create {
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .4rem;
+    min-height: 168px; border-radius: var(--r-lg, 18px); text-decoration: none;
+    border: 1.5px dashed var(--line-strong, rgba(0,0,0,.18)); color: var(--ink-soft);
+    font-size: var(--fs-sm); font-weight: 600; transition: border-color .2s, color .2s, transform .15s var(--ease-spring, ease);
+  }
+  .pg-create:hover { border-color: var(--coral); color: var(--coral); transform: translateY(-2px); }
+  .pg-create-plus { font-size: 30px; line-height: 1; font-weight: 300; }
+  .pg-card {
+    position: relative; display: flex; flex-direction: column; align-items: center; text-align: center; gap: .5rem;
+    min-height: 168px; padding: 1rem .7rem; border-radius: var(--r-lg, 18px);
+    background: var(--surface, #fff); border: 1px solid var(--line); cursor: pointer;
+    transition: transform .15s var(--ease-spring, ease), box-shadow .2s;
+  }
+  .pg-card:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,.08); }
+  .pg-card .pg-av { width: 72px; height: 72px; border-radius: 50%; background: var(--surface-strong); object-fit: cover; }
+  .pg-card .pg-name { font-weight: 700; font-size: var(--fs-md); color: var(--ink); line-height: 1.15; }
+  .pg-card .pg-tag { font-size: var(--fs-xs); color: var(--ink-faint); line-height: 1.25; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .pg-card .pg-purpose { font-size: 10px; text-transform: uppercase; letter-spacing: .04em; color: var(--gold-ink, var(--gold)); font-family: var(--font-mono, monospace); }
+  .pg-del {
+    position: absolute; top: 6px; right: 6px; width: 28px; height: 28px; border-radius: 50%;
+    display: grid; place-items: center; border: none; background: transparent; color: var(--ink-faint); cursor: pointer; opacity: 0; transition: opacity .15s, color .15s;
+  }
+  .pg-card:hover .pg-del { opacity: 1; }
+  .pg-del:hover { color: #ff6b6b; }
+  .pg-del svg { width: 16px; height: 16px; }
+  .pg-empty { margin: 1.5rem .2rem; color: var(--ink-faint); font-size: var(--fs-sm); }
+  .pg-realref { display: inline-block; margin-top: 2rem; color: var(--ink-soft); font-size: var(--fs-sm); text-decoration: none; }
+  .pg-realref:hover { color: var(--coral); }
+</style>
+
+<script>
+  import { supabase } from '../../../lib/supabaseClient';
+
+  const grid = document.getElementById('pg-grid');
+  const createCard = document.getElementById('pg-create');
+  const emptyEl = document.getElementById('pg-empty');
+
+  const TRASH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>';
+
+  function avatarUrl(av) {
+    av = av || {};
+    const style = av.style || 'avataaars';
+    const seed = av.seed || 'blak';
+    const qs = new URLSearchParams(Object.assign({ seed }, av.options || {})).toString();
+    return 'https://api.dicebear.com/9.x/' + encodeURIComponent(style) + '/svg?' + qs;
+  }
+  const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const PURPOSE_LABEL = { ai_friend: 'AI Friend', study_buddy: 'Study Buddy', hype: 'Hype', coach: 'Coach', roleplay: 'Roleplay', custom: '' };
+
+  async function userId() {
+    try { return (await supabase.auth.getSession()).data?.session?.user?.id || null; } catch (e) { return null; }
+  }
+
+  function cardEl(p) {
+    const a = document.createElement('div');
+    a.className = 'pg-card';
+    a.innerHTML =
+      '<button type="button" class="pg-del" aria-label="Delete persona">' + TRASH + '</button>' +
+      '<img class="pg-av" alt="" loading="lazy" src="' + esc(avatarUrl(p.avatar)) + '" />' +
+      '<div class="pg-name">' + esc(p.name || 'Untitled') + '</div>' +
+      (p.purpose && PURPOSE_LABEL[p.purpose] ? '<div class="pg-purpose">' + esc(PURPOSE_LABEL[p.purpose]) + '</div>' : '') +
+      (p.tagline ? '<div class="pg-tag">' + esc(p.tagline) + '</div>' : '');
+    a.addEventListener('click', (e) => {
+      if (e.target.closest('.pg-del')) return;
+      window.location.href = '/beta/personas/edit?id=' + encodeURIComponent(p.id);
+    });
+    a.querySelector('.pg-del').addEventListener('click', async (e) => {
+      e.stopPropagation();
+      if (!confirm('Delete "' + (p.name || 'this persona') + '"? This removes its chats too.')) return;
+      a.style.opacity = '.4';
+      try { await supabase.from('fantasy_personas').delete().eq('id', p.id); a.remove(); refreshEmpty(); }
+      catch (err) { a.style.opacity = '1'; alert('Could not delete — try again.'); }
+    });
+    return a;
+  }
+
+  function refreshEmpty() {
+    const has = grid.querySelectorAll('.pg-card').length > 0;
+    if (emptyEl) emptyEl.hidden = has;
+  }
+
+  async function load() {
+    const uid = await userId();
+    if (!uid) return;
+    let rows = [];
+    try {
+      const { data } = await supabase.from('fantasy_personas')
+        .select('id,name,tagline,purpose,avatar')
+        .eq('user_id', uid).order('created_at', { ascending: false }).limit(100);
+      rows = data || [];
+    } catch (e) { rows = []; }
+    for (const p of rows) grid.insertBefore(cardEl(p), createCard);
+    refreshEmpty();
+  }
+
+  load();
+</script>
