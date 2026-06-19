@@ -337,16 +337,23 @@ const nav = [
     function initNotifications(uid) {
       const el = document.getElementById('ap-notif');
       if (!el || !supabase) return;
-      const shown = new Set();
-      let hideTimer = 0;
-      const markRead = (id) => { try { supabase.from('notifications').update({ read_at: new Date().toISOString() }).eq('id', id); } catch (e) {} };
-      const hide = () => { el.classList.remove('show'); setTimeout(() => { el.hidden = true; }, 440); if (hideTimer) { clearTimeout(hideTimer); hideTimer = 0; } };
+      // `shown` PERSISTS across page loads: the beta navigates via full page loads,
+      // so an in-memory set let the same unread toast re-pop on every navigation
+      // ("listener's free" forever). Once a toast appears it's remembered + marked
+      // read when it auto-hides, so it surfaces exactly once.
+      const SKEY = 'bx_notif_shown_' + uid;
+      let shown;
+      try { shown = new Set(JSON.parse(localStorage.getItem(SKEY) || '[]')); } catch (e) { shown = new Set(); }
+      const remember = (id) => { shown.add(id); try { localStorage.setItem(SKEY, JSON.stringify([...shown].slice(-300))); } catch (e) {} };
+      let hideTimer = 0, currentId = null;
+      const markRead = (id) => { if (!id) return; try { supabase.from('notifications').update({ read_at: new Date().toISOString() }).eq('id', id); } catch (e) {} };
+      const hide = () => { el.classList.remove('show'); setTimeout(() => { el.hidden = true; }, 440); if (currentId) { markRead(currentId); currentId = null; } if (hideTimer) { clearTimeout(hideTimer); hideTimer = 0; } };
       const render = (n) => {
-        if (!n || shown.has(n.id)) return; shown.add(n.id);
+        if (!n || shown.has(n.id)) return; remember(n.id); currentId = n.id;
         el.innerHTML = '<span class="ap-notif-dot"></span><span class="ap-notif-tx"><b>' + escapeHtml(n.title) + '</b><span>' + escapeHtml(n.body || '') + '</span></span><button type="button" class="ap-notif-x" aria-label="Dismiss">✕</button>';
         el.hidden = false; requestAnimationFrame(() => el.classList.add('show'));
-        el.onclick = () => { markRead(n.id); if (n.url) location.href = n.url; };
-        el.querySelector('.ap-notif-x').onclick = (e) => { e.stopPropagation(); markRead(n.id); hide(); };
+        el.onclick = () => { markRead(n.id); currentId = null; if (n.url) location.href = n.url; };
+        el.querySelector('.ap-notif-x').onclick = (e) => { e.stopPropagation(); markRead(n.id); currentId = null; hide(); };
         if (hideTimer) clearTimeout(hideTimer);
         hideTimer = setTimeout(hide, 12000);
       };

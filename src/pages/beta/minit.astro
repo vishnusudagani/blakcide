@@ -595,6 +595,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
         } else if (outcome === 'preferred_unavailable') { logEvent('preferred_unavailable'); showPreferredUnavailable(isAnonymous, preferredId); }
         else if (outcome === 'banned') { logEvent('banned'); showRestricted(); }
         else if (outcome === 'busy_full') { logEvent('busy_full'); showBusyAll(isAnonymous); }
+        else if (outcome === 'capped') { logEvent('capped'); showCapped(); }
         else { logEvent('no_listener'); showSchedule(isAnonymous); }
       }
       async function fetchListenerName(sid) {
