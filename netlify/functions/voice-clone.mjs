@@ -1,19 +1,19 @@
 // Persona voice cloning — Netlify Function (the PRODUCTION path on blaksyd.com).
 //
 //   POST   /api/voice-clone/enroll  — liveness-gated reference clip for ONE language
-//   GET    /api/voice-clone/status  — list the user's ready voice clones
-//   DELETE /api/voice-clone         — one-tap delete (all languages)
+//   GET    /api/voice-clone/status  — languages ready + per-language clip counts
+//   GET    /api/voice-clone/ref     — BEST reference clip (base64) for browser-side cloning
+//   DELETE /api/voice-clone         — one-tap delete (all languages: library + clones)
 //   POST   /api/voice-clone/speak   — say `text` in the user's cloned voice, gracefully
 //                                     falling back to a preset voice if the engine is off
 //
-// Mirrors symp-backend/src/routes/voice-clone + the /api/tts clone branch, but as a
-// serverless function (the site runs on Netlify Functions, not the Express server).
-// Self-voice-only: enrollment requires reading a prompt phrase aloud (Whisper liveness).
-// Zero-shot: a successful enrollment is immediately 'ready' (the stored clip IS the clone).
-// $0: reuses the site's Supabase (Storage + PostgREST) + OpenAI (Whisper + fallback TTS).
-// The GPU engine is OPTIONAL — without VOICE_INFER_URL, speak() still talks via a preset
-// voice, so the feature never breaks in front of a user; the real cloned voice switches
-// on automatically the moment VOICE_INFER_URL is reachable.
+// Multi-clip LIBRARY: every enrolled recording is APPENDED to symp_voice_clips
+// (never retired), so the more the user speaks the better the reference we can
+// pick — and we accumulate a corpus to fine-tune on later. symp_voice_clones
+// (one active clip/lang) is kept as a fallback during the transition.
+// Self-voice-only: enrollment requires reading a prompt phrase aloud (Whisper
+// liveness). $0 core: Supabase (Storage + PostgREST) + Groq (STT) + OpenAI
+// (fallback TTS). The GPU clone engine (VOICE_INFER_URL) is OPTIONAL.
 
 import { randomUUID } from 'node:crypto';
 import { verifySupabaseJwt, extractBearer } from '../../symp-core/lib/auth.mjs';
@@ -59,6 +59,12 @@ function extFor(mime) {
   if (mime.includes('mpeg')) return 'mp3';
   if (mime.includes('webm')) return 'webm';
   return 'wav';
+}
+// The browser sends a 24 kHz mono 16-bit WAV (see toWav24kMono on the page), so we
+// can derive clip duration locally — no engine call — to help pick the longest ref.
+function wavDurationMs(buffer, ext) {
+  if (ext !== 'wav' || buffer.byteLength <= 44) return null;
+  return Math.max(0, Math.round((buffer.byteLength - 44) / 48)); // (bytes-44)/(24000*2) * 1000
 }
 
 async function sbRest(path, { method = 'GET', body, prefer } = {}) {
@@ -115,6 +121,57 @@ async function presetTts(text, language) {
   return Buffer.from(await r.arrayBuffer()).toString('base64');
 }
 
+// Classify a clip's emotion via the engine's wav2vec2 SER. Bounded so it can run as
+// a background (waitUntil) task without hanging. Returns null on any failure.
+async function classifyEmotion(audioBase64) {
+  if (!VOICE_INFER_URL) return null;
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 25000);
+  try {
+    const r = await fetch(`${VOICE_INFER_URL}/classify-emotion`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...(VOICE_INFER_SECRET ? { 'X-Infer-Secret': VOICE_INFER_SECRET } : {}) },
+      body: JSON.stringify({ audio_base64: audioBase64 }),
+      signal: ctrl.signal,
+    });
+    if (!r.ok) return null;
+    const j = await r.json();
+    if (!j || !j.emotion) return null;
+    return { emotion: j.emotion, confidence: typeof j.confidence === 'number' ? j.confidence : null };
+  } catch { return null; }
+  finally { clearTimeout(timer); }
+}
+
+// Background: classify a freshly-enrolled clip and write its emotion back. No-op if
+// classification fails or returns 'neutral' (the clip's stored default).
+async function tagClipEmotion(clipId, audioBase64) {
+  const res = await classifyEmotion(audioBase64);
+  if (!res || !res.emotion || res.emotion === 'neutral') return;
+  await sbRest(`symp_voice_clips?id=eq.${clipId}`, {
+    method: 'PATCH',
+    body: { emotion: res.emotion, emotion_confidence: res.confidence },
+  }).catch(() => null);
+}
+
+// Pick the BEST reference clip from the user's growing library (symp_voice_clips).
+// Preference: requested language + emotion → requested language → any language
+// (OmniVoice clones cross-lingually). Within each, cleanest (SNR) → longest →
+// newest wins. Returns null if the user has no library clips yet.
+async function pickClip(userId, language, emotion) {
+  const SEL = 'select=language,clip_path,transcript,emotion';
+  const ORD = 'order=quality_snr_db.desc.nullslast,duration_ms.desc.nullslast,created_at.desc&limit=1';
+  const filters = [];
+  if (language && emotion) filters.push(`&language=eq.${language}&emotion=eq.${emotion}`);
+  if (language) filters.push(`&language=eq.${language}`);
+  filters.push(''); // any language
+  for (const f of filters) {
+    const r = await sbRest(`symp_voice_clips?user_id=eq.${userId}&status=eq.ready&deleted_at=is.null${f}&${SEL}&${ORD}`);
+    const row = Array.isArray(r.data) && r.data[0];
+    if (row && row.clip_path) return { path: row.clip_path, transcript: row.transcript || '', language: row.language };
+  }
+  return null;
+}
+
 async function userFromReq(req) {
   const token = extractBearer(req.headers.get('authorization'));
   if (!token) return null;
@@ -123,7 +180,7 @@ async function userFromReq(req) {
 }
 
 // ── router ───────────────────────────────────────────────────────────────
-export default async (req) => {
+export default async (req, context) => {
   if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
   if (!SUPABASE_URL || !SERVICE_KEY) return fail(500, 'config_error', 'Supabase not configured');
 
@@ -132,7 +189,7 @@ export default async (req) => {
   if (!userId) return fail(401, 'unauthorized', 'Sign in to use your Persona voice.');
 
   try {
-    if (req.method === 'POST' && path.endsWith('/enroll')) return await enroll(req, userId);
+    if (req.method === 'POST' && path.endsWith('/enroll')) return await enroll(req, userId, context);
     if (req.method === 'GET' && path.endsWith('/status')) return await status(userId);
     if (req.method === 'GET' && path.endsWith('/ref')) return await getRef(req, userId);
     if (req.method === 'POST' && path.endsWith('/speak')) return await speak(req, userId);
@@ -148,7 +205,7 @@ export const config = {
 };
 
 // ── handlers ─────────────────────────────────────────────────────────────
-async function enroll(req, userId) {
+async function enroll(req, userId, context) {
   if (!GROQ_KEY) return fail(500, 'config_error', 'liveness unavailable (no Groq key)');
   let b;
   try { b = await req.json(); } catch { return fail(400, 'bad_request', 'invalid JSON'); }
@@ -180,6 +237,7 @@ async function enroll(req, userId) {
   const consentId = Array.isArray(consentRes.data) && consentRes.data[0] ? consentRes.data[0].id : null;
 
   // Retire any prior active clone for this language so the unique index allows re-enroll.
+  // (symp_voice_clones stays single — it's the legacy fallback; the LIBRARY accumulates.)
   await sbRest(`symp_voice_clones?user_id=eq.${userId}&language=eq.${language}&status=eq.ready&deleted_at=is.null`, {
     method: 'PATCH', body: { status: 'deleted', deleted_at: new Date().toISOString() },
   });
@@ -190,45 +248,93 @@ async function enroll(req, userId) {
   });
   if (!cloneRes.ok || !Array.isArray(cloneRes.data) || !cloneRes.data[0]) return fail(500, 'internal_error', 'could not save the clone');
   const clone = cloneRes.data[0];
-  return ok({ clone: { id: clone.id, language: clone.language, status: clone.status }, liveness_score: Number(score.toFixed(2)) });
+
+  // Append to the growing voice LIBRARY (multi-clip). duration_ms lets synth pick
+  // the longest/most-content reference. emotion starts 'neutral' and is auto-tagged
+  // in the BACKGROUND (waitUntil) so enrollment returns instantly and never blocks
+  // on a cold GPU. Best-effort throughout: a hiccup never fails a good enrollment.
+  const clipRes = await sbRest('symp_voice_clips', {
+    method: 'POST', prefer: 'return=representation',
+    body: {
+      user_id: userId, language, clip_path: objectPath, transcript: transcript || spoken,
+      duration_ms: wavDurationMs(buffer, ext), emotion: 'neutral',
+      source: 'enroll', prompt_phrase, liveness_passed: true, consent_id: consentId, status: 'ready',
+    },
+  }).catch(() => null);
+  const clipId = Array.isArray(clipRes?.data) && clipRes.data[0] ? clipRes.data[0].id : null;
+
+  // Auto-tag emotion off the critical path: warm engine → lands in ~1–2s; cold →
+  // the background task gives up and the clip stays 'neutral' (re-tagged later).
+  // Uses the platform waitUntil; skipped if unavailable (e.g. local dev).
+  if (clipId && VOICE_INFER_URL && context && typeof context.waitUntil === 'function') {
+    context.waitUntil(tagClipEmotion(clipId, audio_base64));
+  }
+
+  return ok({ clone: { id: clone.id, language: clone.language, status: clone.status }, clip_id: clipId, liveness_score: Number(score.toFixed(2)) });
 }
 
 async function status(userId) {
-  const r = await sbRest(`symp_voice_clones?user_id=eq.${userId}&deleted_at=is.null&status=neq.deleted&select=id,language,status,created_at&order=created_at.desc`);
-  return ok({ clones: Array.isArray(r.data) ? r.data : [] });
+  // Reflect the LIBRARY: per-language clip counts, plus a clones-shaped list for
+  // backward-compat with the page (it marks a language 'ready' from `clones`).
+  const r = await sbRest(`symp_voice_clips?user_id=eq.${userId}&deleted_at=is.null&status=eq.ready&select=language`);
+  const rows = Array.isArray(r.data) ? r.data : [];
+  const counts = {};
+  for (const row of rows) counts[row.language] = (counts[row.language] || 0) + 1;
+  const languages = Object.keys(counts);
+  if (languages.length === 0) {
+    // Pre-backfill / no library yet → fall back to the legacy single clones.
+    const lr = await sbRest(`symp_voice_clones?user_id=eq.${userId}&deleted_at=is.null&status=neq.deleted&select=id,language,status,created_at&order=created_at.desc`);
+    return ok({ clones: Array.isArray(lr.data) ? lr.data : [], clips: {} });
+  }
+  return ok({ clones: languages.map((language) => ({ language, status: 'ready' })), clips: counts });
 }
 
-// Short-lived signed URL + transcript for the user's saved reference clip, so the
+// Short-lived signed URL + transcript for the user's BEST reference clip, so the
 // browser can pass it to the voice engine as the cloning reference (reference_audio).
 async function getRef(req, userId) {
-  const language = new URL(req.url).searchParams.get('language');
-  const SEL = 'select=language,ref_clip_path,ref_transcript&order=created_at.desc&limit=1';
-  // Prefer the requested language; fall back to ANY ready clone (Svara clones cross-lingually).
-  let clone = null;
-  if (language) {
-    const r1 = await sbRest(`symp_voice_clones?user_id=eq.${userId}&language=eq.${language}&status=eq.ready&deleted_at=is.null&${SEL}`);
-    clone = Array.isArray(r1.data) && r1.data[0];
+  const url = new URL(req.url);
+  const language = url.searchParams.get('language');
+  const emotion = url.searchParams.get('emotion'); // optional, forward-looking (emotion-matched ref)
+
+  // Prefer the growing library; fall back to the legacy single clone.
+  let chosen = await pickClip(userId, language, emotion);
+  if (!chosen) {
+    const SEL = 'select=language,ref_clip_path,ref_transcript&order=created_at.desc&limit=1';
+    let clone = null;
+    if (language) {
+      const r1 = await sbRest(`symp_voice_clones?user_id=eq.${userId}&language=eq.${language}&status=eq.ready&deleted_at=is.null&${SEL}`);
+      clone = Array.isArray(r1.data) && r1.data[0];
+    }
+    if (!clone) {
+      const r2 = await sbRest(`symp_voice_clones?user_id=eq.${userId}&status=eq.ready&deleted_at=is.null&${SEL}`);
+      clone = Array.isArray(r2.data) && r2.data[0];
+    }
+    if (clone && clone.ref_clip_path) chosen = { path: clone.ref_clip_path, transcript: clone.ref_transcript || '', language: clone.language };
   }
-  if (!clone) {
-    const r2 = await sbRest(`symp_voice_clones?user_id=eq.${userId}&status=eq.ready&deleted_at=is.null&${SEL}`);
-    clone = Array.isArray(r2.data) && r2.data[0];
-  }
-  if (!clone || !clone.ref_clip_path) return fail(404, 'no_clone', 'No saved voice yet');
+  if (!chosen) return fail(404, 'no_clone', 'No saved voice yet');
+
   // Download the clip server-side and hand the browser raw base64 — avoids any
   // browser→Supabase cross-origin fetch (which was silently failing → preset voice).
-  const signed = await storageSignedUrl(clone.ref_clip_path, 120);
+  const signed = await storageSignedUrl(chosen.path, 120);
   if (!signed) return fail(500, 'sign_error', 'Could not sign the reference clip');
   let buf;
   try { const c = await fetch(signed); if (!c.ok) return fail(502, 'clip_fetch', 'clip ' + c.status); buf = Buffer.from(await c.arrayBuffer()); }
   catch (e) { return fail(502, 'clip_fetch', 'could not read the saved clip'); }
-  return ok({ audio_base64: buf.toString('base64'), transcript: clone.ref_transcript || '', language: clone.language });
+  return ok({ audio_base64: buf.toString('base64'), transcript: chosen.transcript || '', language: chosen.language });
 }
 
 async function deleteAll(userId) {
-  const r = await sbRest(`symp_voice_clones?user_id=eq.${userId}&deleted_at=is.null&select=id`, {
-    method: 'PATCH', prefer: 'return=representation', body: { status: 'deleted', deleted_at: new Date().toISOString() },
+  // Soft-delete BOTH the library clips and the legacy clones (one-tap "delete my
+  // voice"). A purge job clears the underlying Storage objects.
+  const stamp = new Date().toISOString();
+  const clips = await sbRest(`symp_voice_clips?user_id=eq.${userId}&deleted_at=is.null&select=id`, {
+    method: 'PATCH', prefer: 'return=representation', body: { status: 'deleted', deleted_at: stamp },
   });
-  return ok({ deleted: Array.isArray(r.data) ? r.data.length : 0 });
+  const clones = await sbRest(`symp_voice_clones?user_id=eq.${userId}&deleted_at=is.null&select=id`, {
+    method: 'PATCH', prefer: 'return=representation', body: { status: 'deleted', deleted_at: stamp },
+  });
+  const n = (Array.isArray(clips.data) ? clips.data.length : 0) + (Array.isArray(clones.data) ? clones.data.length : 0);
+  return ok({ deleted: n });
 }
 
 async function speak(req, userId) {
@@ -236,20 +342,28 @@ async function speak(req, userId) {
   try { b = await req.json(); } catch { return fail(400, 'bad_request', 'invalid JSON'); }
   const text = ((b && b.text) || '').trim();
   const language = (b && b.language) || 'en';
+  const emotion = (b && b.emotion) || null;
   if (!text) return fail(400, 'bad_request', 'text required');
 
-  // Cloned voice — only if there's a ready clone for this language AND an engine is wired.
+  // Cloned voice — only if there's a ready clip for this user AND an engine is wired.
   if (VOICE_INFER_URL) {
-    const r = await sbRest(`symp_voice_clones?user_id=eq.${userId}&language=eq.${language}&status=eq.ready&deleted_at=is.null&select=ref_clip_path,ref_transcript&limit=1`);
-    const clone = Array.isArray(r.data) && r.data[0];
-    if (clone) {
-      const signed = await storageSignedUrl(clone.ref_clip_path, 120);
+    // Prefer the best clip from the library; fall back to the legacy single clone.
+    let refPath = null, refTranscript = '';
+    const chosen = await pickClip(userId, language, emotion);
+    if (chosen) { refPath = chosen.path; refTranscript = chosen.transcript; }
+    if (!refPath) {
+      const r = await sbRest(`symp_voice_clones?user_id=eq.${userId}&language=eq.${language}&status=eq.ready&deleted_at=is.null&select=ref_clip_path,ref_transcript&limit=1`);
+      const clone = Array.isArray(r.data) && r.data[0];
+      if (clone) { refPath = clone.ref_clip_path; refTranscript = clone.ref_transcript || ''; }
+    }
+    if (refPath) {
+      const signed = await storageSignedUrl(refPath, 120);
       if (signed) {
         try {
           const infer = await fetch(`${VOICE_INFER_URL}/synthesize`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', ...(VOICE_INFER_SECRET ? { 'X-Infer-Secret': VOICE_INFER_SECRET } : {}) },
-            body: JSON.stringify({ language, text, mode: 'clone', reference_url: signed, reference_transcript: clone.ref_transcript || undefined, format: 'mp3' }),
+            body: JSON.stringify({ language, text, mode: 'clone', reference_url: signed, reference_transcript: refTranscript || undefined, emotion: emotion || undefined, format: 'mp3' }),
           });
           if (infer.ok) {
             const buf = Buffer.from(await infer.arrayBuffer());
