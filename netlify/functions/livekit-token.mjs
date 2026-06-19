@@ -5,6 +5,7 @@
 //
 // POST { user_id? } → { url, token, room, identity }
 import { AccessToken } from 'livekit-server-sdk';
+import { verifySupabaseJwt, extractBearer } from '../../symp-core/lib/auth.mjs';
 
 const CORS = {
     'Access-Control-Allow-Origin':  '*',
@@ -19,9 +20,12 @@ export default async (req) => {
     if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
     if (req.method !== 'POST')    return new Response('Method Not Allowed', { status: 405, headers: CORS });
 
-    let body = {};
-    try { body = await req.json(); } catch (_) { /* empty body ok */ }
-    const userId = String(body.user_id || 'guest').replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 64) || 'guest';
+    // Authenticate: identity comes from the verified JWT, never the body — a
+    // billable room token must not be mintable for an arbitrary identity.
+    const bearer = extractBearer(req.headers.get('authorization'));
+    const verified = bearer ? await verifySupabaseJwt(bearer) : { ok: false };
+    if (!verified.ok) return json({ error: 'unauthorized' }, 401);
+    const userId = String(verified.user_id).replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 64) || 'guest';
 
     const apiKey    = process.env.LIVEKIT_API_KEY;
     const apiSecret = process.env.LIVEKIT_API_SECRET;

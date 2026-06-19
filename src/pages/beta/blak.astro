@@ -1019,7 +1019,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
     }
     async function geminiLiveTry() {
       let cfg;
-      try { const r = await fetch('/api/gemini-live-session', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }); if (!r.ok) return false; cfg = await r.json(); }
+      try { const jwt = await getToken(); const r = await fetch('/api/gemini-live-session', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + (jwt || '') }, body: '{}' }); if (!r.ok) return false; cfg = await r.json(); }
       catch (e) { return false; }
       if (!cfg || !cfg.wsUrl) return false;
       // Preview override: point THIS browser at a tagged Cloud Run revision
