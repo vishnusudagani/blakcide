@@ -7,6 +7,7 @@ import {
     readJson, logAccess,
 } from '../../symp-core/lib/middleware.mjs';
 import SympContract from '../../symp-core/contract/endpoints.js';
+import { transcribe as groqTranscribe } from '../../symp-core/lib/voice.mjs';
 
 const { ENDPOINTS, ERROR_CODES } = SympContract;
 
@@ -33,12 +34,7 @@ export default async (req) => {
         return jsonError(ERROR_CODES.BAD_REQUEST, 'audioBase64 is required', 400, requestId);
     }
 
-    const openaiKey = process.env.BLAKCIDE_OPENAI_KEY || process.env.OPENAI_API_KEY;
-    if (!openaiKey) {
-        return jsonError(ERROR_CODES.INTERNAL_ERROR, 'OpenAI key not configured', 500, requestId);
-    }
-
-    // Pick filename extension so Whisper treats the upload correctly.
+    // Pick a filename extension so the STT model treats the upload correctly.
     const ext = !mimeType                  ? 'webm'
               : mimeType.includes('mp4')   ? 'm4a'
               : mimeType.includes('mpeg')  ? 'mp3'
@@ -47,35 +43,20 @@ export default async (req) => {
               :                              'webm';
 
     try {
+        // Groq Whisper (free, multilingual — verified for Telugu/Hindi). Replaces
+        // the old OpenAI Whisper path, whose key (BLAKCIDE_OPENAI_KEY) was dead, so
+        // voice notes came back empty.
         const bin = Buffer.from(audioBase64, 'base64');
-        const blob = new Blob([bin], { type: mimeType || 'audio/webm' });
-
-        const form = new FormData();
-        form.append('file',  blob, `audio.${ext}`);
-        form.append('model', 'whisper-1');
-        if (language_hint) form.append('language', language_hint);
-
-        const res = await fetch('https://api.openai.com/v1/audio/transcriptions', {
-            method:  'POST',
-            headers: { 'Authorization': `Bearer ${openaiKey}` },
-            body:    form,
+        const text = await groqTranscribe(bin, {
+            mimetype: mimeType || 'audio/webm',
+            filename: `audio.${ext}`,
+            language: language_hint || undefined,
         });
-
-        if (!res.ok) {
-            const txt = await res.text();
-            logAccess({ requestId, endpoint: ENDPOINTS.TRANSCRIBE, statusCode: 502, latencyMs: Date.now() - t0, userId: user_id || null, errorCode: 'UPSTREAM_FAILED' });
-            return jsonError(ERROR_CODES.UPSTREAM_FAILED, `Whisper failed: ${res.status} ${txt}`, 502, requestId);
-        }
-
-        const data = await res.json();
         logAccess({ requestId, endpoint: ENDPOINTS.TRANSCRIBE, statusCode: 200, latencyMs: Date.now() - t0, userId: user_id || null });
-        return jsonSuccess({
-            text:     data.text || '',
-            language: data.language || language_hint || null,
-        }, requestId);
+        return jsonSuccess({ text: text || '', language: language_hint || null }, requestId);
     } catch (e) {
-        logAccess({ requestId, endpoint: ENDPOINTS.TRANSCRIBE, statusCode: 500, latencyMs: Date.now() - t0, userId: user_id || null, errorCode: 'INTERNAL_ERROR' });
-        return jsonError(ERROR_CODES.INTERNAL_ERROR, `Transcription error: ${e.message || e}`, 500, requestId);
+        logAccess({ requestId, endpoint: ENDPOINTS.TRANSCRIBE, statusCode: 502, latencyMs: Date.now() - t0, userId: user_id || null, errorCode: 'UPSTREAM_FAILED' });
+        return jsonError(ERROR_CODES.UPSTREAM_FAILED, `Transcription failed: ${e.message || e}`, 502, requestId);
     }
 };
 
