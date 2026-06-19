@@ -411,6 +411,12 @@ import AppLayout from '../../layouts/AppLayout.astro';
          bottom reserve so the composer isn't double-offset / hidden behind the bar */
       .ap-main:has(.nx-room:not([hidden])) { padding-bottom: 0; }
     }
+
+    /* Blak — the synthetic community member, shown as a named coral peer */
+    .nx-blak { color: var(--coral); font-weight: 650; letter-spacing: -.01em; }
+    html[data-theme="light"] .nx-blak { color: var(--coral-ink); }
+    .nx-av-blak { background: linear-gradient(135deg, var(--coral), #ffb38a); box-shadow: 0 0 0 1px rgba(255,107,157,.35); }
+    .nx-disc-blak, .nx-cmt-blak { border-color: rgba(255,107,157,.28); }
   </style>
 
   <script>

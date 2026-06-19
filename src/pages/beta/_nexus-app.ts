@@ -60,6 +60,10 @@
     const ADJ = ['quiet','warm','steady','night','soft','open','kind','calm','bright','still','easy','true','gentle','lucid','amber','golden','hidden','distant','velvet','lunar','drifting','slow','mellow','wandering'];
     const NOUN = ['harbor','signal','ember','meadow','tide','comet','willow','lantern','river','pine','spark','haven','cedar','orchard','thicket','current','beacon','hollow','summit','delta','cove','aurora','marsh','dune'];
     const anonHandle = (seed) => ADJ[hashIdx(seed) % ADJ.length] + '-' + NOUN[hashIdx(seed + 'n') % NOUN.length] + '-' + (hashIdx(seed + 'x') % 90 + 10);
+    // Blak — the one synthetic community member, rendered as a named coral peer
+    // (not an anonymous handle). Mirrors nexus_posts/comments.is_ai_author.
+    const BLAK_UID = 'b1ab1ab1-aaaa-4aaa-8aaa-b1ab1ab1b1ab';
+    const isBlak = (x) => !!(x && (x.is_ai_author || x.author_user_id === BLAK_UID));
     const ME = (() => {
       let id, handle, color;
       try { id = localStorage.getItem('nx_id'); handle = localStorage.getItem('nx_handle'); color = localStorage.getItem('nx_color'); } catch (e) {}
@@ -141,7 +145,7 @@
       }
       function tilePostRow(p, commId) {
         const txt = (p.image_url && !(p.body || '').trim()) ? '📷 shared an image' : esc((p.body || '').slice(0, 100));
-        return '<button type="button" class="nx-tile-post" data-open-tribe="' + esc(commId) + '"><span class="nx-tile-av" style="background:' + g(hashIdx(p.author_user_id || p.id)) + '"></span><span class="nx-tile-ptxt">' + txt + '</span><span class="nx-tile-when">' + rel(p.created_at) + '</span></button>';
+        return '<button type="button" class="nx-tile-post" data-open-tribe="' + esc(commId) + '">' + (isBlak(p) ? '<span class="nx-tile-av nx-av-blak"></span>' : '<span class="nx-tile-av" style="background:' + g(hashIdx(p.author_user_id || p.id)) + '"></span>') + '<span class="nx-tile-ptxt">' + txt + '</span><span class="nx-tile-when">' + rel(p.created_at) + '</span></button>';
       }
       function tileFor(c) {
         const recent = MY_RECENT[c.id] || [];
@@ -199,7 +203,7 @@
         const { data: comms } = await supabase.from('nexus_communities').select('id,slug,name,description,visibility').in('id', ids);
         MY_TRIBES = comms || [];
         MY_RECENT = {};
-        const { data: posts } = await supabase.from('nexus_posts').select('id,body,image_url,created_at,author_user_id,community_id').in('community_id', ids).eq('is_soft_hidden', false).order('created_at', { ascending: false }).limit(60);
+        const { data: posts } = await supabase.from('nexus_posts').select('id,body,image_url,created_at,author_user_id,community_id,is_ai_author').in('community_id', ids).eq('is_soft_hidden', false).order('created_at', { ascending: false }).limit(60);
         (posts || []).forEach((p) => { MY_RECENT[p.community_id] = MY_RECENT[p.community_id] || []; if (MY_RECENT[p.community_id].length < 3) MY_RECENT[p.community_id].push(p); });
         renderTribes('');
       }
@@ -379,12 +383,18 @@
       const tribeName = (id) => { const t = TRIBES.find((x) => x.id === id); return t ? t.name : 'a tribe'; };
       function discCard(p, resonated) {
         const uid = p.author_user_id || '';
+        const blak = isBlak(p);
         const mine = SESSION && uid === SESSION.user.id;
-        const who = mine
-          ? '@' + esc(discHandle(uid)) + ' (you)'
-          : '<span class="nx-dm-link" data-dm-user="' + esc(uid) + '">@' + esc(discHandle(uid)) + '</span>';
-        return '<div class="nx-disc" data-post="' + esc(p.id) + '">'
-          + '<div class="nx-disc-top"><span class="nx-disc-av" style="background:' + g(hashIdx(uid || p.id)) + '"></span>' + who + ' · ' + rel(p.created_at) + '</div>'
+        const who = blak
+          ? '<span class="nx-blak">✦ Blak</span>'
+          : (mine
+            ? '@' + esc(discHandle(uid)) + ' (you)'
+            : '<span class="nx-dm-link" data-dm-user="' + esc(uid) + '">@' + esc(discHandle(uid)) + '</span>');
+        const av = blak
+          ? '<span class="nx-disc-av nx-av-blak"></span>'
+          : '<span class="nx-disc-av" style="background:' + g(hashIdx(uid || p.id)) + '"></span>';
+        return '<div class="nx-disc' + (blak ? ' nx-disc-blak' : '') + '" data-post="' + esc(p.id) + '">'
+          + '<div class="nx-disc-top">' + av + who + ' · ' + rel(p.created_at) + '</div>'
           + (p.title ? '<div class="nx-disc-text" style="font-weight:650">' + esc(p.title) + '</div>' : '')
           + (p.body ? '<div class="nx-disc-text">' + esc(p.body) + '</div>' : '')
           + (p.image_url ? '<img class="nx-img" loading="lazy" src="' + esc(p.image_url) + '" alt="shared image" />' : '')
@@ -406,11 +416,11 @@
       }
       async function openComments(postId, box) {
         box.innerHTML = '<p class="nx-pulse-explain" style="margin:.2rem 0">Loading replies…</p>';
-        const { data: cs } = await supabase.from('nexus_comments').select('id,body,created_at,author_user_id').eq('post_id', postId).eq('is_soft_hidden', false).order('created_at', { ascending: true });
+        const { data: cs } = await supabase.from('nexus_comments').select('id,body,created_at,author_user_id,is_ai_author').eq('post_id', postId).eq('is_soft_hidden', false).order('created_at', { ascending: true });
         box.innerHTML = '<div class="nx-cmt-list"></div><form class="nx-cmt-form" data-cform><input placeholder="Write a reply…" autocomplete="off" maxlength="600" /><button type="submit">Reply</button></form>';
         const listEl = box.querySelector('.nx-cmt-list');
         if (!cs || !cs.length) listEl.innerHTML = '<p class="nx-pulse-explain" style="margin:.2rem 0">No replies yet — be the first.</p>';
-        else cs.forEach((c) => { const d = document.createElement('div'); d.className = 'nx-cmt'; d.innerHTML = '<span class="nx-cmt-av" style="background:' + g(hashIdx(c.author_user_id || c.id)) + '"></span><div><span class="nx-cmt-h">@' + esc(discHandle(c.author_user_id)) + ' · ' + rel(c.created_at) + '</span><p></p></div>'; d.querySelector('p').textContent = c.body; listEl.appendChild(d); });
+        else cs.forEach((c) => { const blak = isBlak(c); const d = document.createElement('div'); d.className = 'nx-cmt' + (blak ? ' nx-cmt-blak' : ''); const av = blak ? '<span class="nx-cmt-av nx-av-blak"></span>' : '<span class="nx-cmt-av" style="background:' + g(hashIdx(c.author_user_id || c.id)) + '"></span>'; const h = blak ? '<span class="nx-blak">✦ Blak</span> · ' + rel(c.created_at) : '@' + esc(discHandle(c.author_user_id)) + ' · ' + rel(c.created_at); d.innerHTML = av + '<div><span class="nx-cmt-h">' + h + '</span><p></p></div>'; d.querySelector('p').textContent = c.body; listEl.appendChild(d); });
         box.querySelector('[data-cform]').addEventListener('submit', async (ev) => {
           ev.preventDefault();
           const inp = ev.currentTarget.querySelector('input'); const v = inp.value.trim(); if (!v) return;
