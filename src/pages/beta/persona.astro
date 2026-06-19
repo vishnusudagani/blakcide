@@ -390,7 +390,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
     let turnSeq = 0;
     let synthQ = [], synthRunning = false;
     let audioQ = [], audioPlaying = false;
-    let speakingBubble = null, tapBtnShown = false;
+    let speakingBubble = null, tapBtnShown = false, firstChunkEmitted = false;
 
     // Split a running buffer into [completeSentences, remainder]. Handles . ? ! plus
     // the Devanagari/Telugu danda (।) and newlines.
@@ -399,10 +399,21 @@ import AppLayout from '../../layouts/AppLayout.astro';
       while ((m = re.exec(buf)) !== null) { out.push(m[0]); last = re.lastIndex; }
       return [out, buf.slice(last)];
     }
+    // Fast first audio: break the FIRST chunk early — at a sentence end, else a
+    // clause (comma/dash) past ~25 chars, else a word boundary past ~60 — so the
+    // voice starts within a beat instead of waiting for a whole sentence.
+    function takeFirstChunk(buf) {
+      const m = buf.match(/^[^.!?।\n]*[.!?।\n]+/);
+      if (m) return [m[0], buf.slice(m[0].length)];
+      const c = buf.search(/[,;—–]/);
+      if (c >= 25) return [buf.slice(0, c + 1), buf.slice(c + 1)];
+      if (buf.length >= 60) { let cut = buf.lastIndexOf(' ', 60); if (cut < 30) cut = 60; return [buf.slice(0, cut), buf.slice(cut)]; }
+      return [null, buf];
+    }
 
     function resetPipeline() {
       if (speakingBubble) speakingBubble.classList.remove('is-speaking');
-      turnSeq++; synthQ = []; audioQ = []; synthRunning = false; audioPlaying = false; tapBtnShown = false;
+      turnSeq++; synthQ = []; audioQ = []; synthRunning = false; audioPlaying = false; tapBtnShown = false; firstChunkEmitted = false;
       const a = $('px-talk-audio'); try { a.pause(); a.removeAttribute('src'); a.load(); } catch (e) {}
       return turnSeq;
     }
@@ -498,8 +509,14 @@ import AppLayout from '../../layouts/AppLayout.astro';
             if (obj.delta) {
               reply += obj.delta; sentBuf += obj.delta;
               thinking.textContent = reply; $('px-thread').scrollTop = $('px-thread').scrollHeight;
-              const [sents, rest] = extractSentences(sentBuf); sentBuf = rest;
-              for (const s of sents) enqueueSentence(myTurn, lang, s);   // synth as we stream
+              if (!firstChunkEmitted) {                                  // fire first audio ASAP
+                const [fc, rest0] = takeFirstChunk(sentBuf);
+                if (fc) { sentBuf = rest0; firstChunkEmitted = true; enqueueSentence(myTurn, lang, fc); }
+              }
+              if (firstChunkEmitted) {                                   // then full sentences
+                const [sents, rest] = extractSentences(sentBuf); sentBuf = rest;
+                for (const s of sents) enqueueSentence(myTurn, lang, s);
+              }
             }
             if (obj.error) throw new Error(String(obj.error));
           }
