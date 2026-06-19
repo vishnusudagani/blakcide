@@ -5,7 +5,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
   <div class="ap-page px">
     <p class="ap-kicker">Persona · your digital self</p>
     <h1 class="ap-h1">A you that speaks <span class="px-accent">in your own voice.</span></h1>
-    <p class="ap-sub">Record your voice once per language. Then talk — and your persona answers back, in your voice, in whichever language you speak.</p>
+    <p class="ap-sub">Record your voice a few times per language — the more you give it (different moods, different sentences), the closer it gets to sounding exactly like you. Then talk, and your persona answers back in your voice.</p>
 
     <div id="px-app" hidden>
       <!-- ── 1. YOUR VOICE — enrollment ─────────────────────────── -->
@@ -153,6 +153,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
     .px-mic-sm svg, .px-send svg { width: 18px; height: 18px; }
 
     .px-note { margin: 1.2rem .2rem 0; font-size: var(--fs-xs); color: var(--ink-faint); text-align: center; line-height: 1.6; }
+    .px-clip-count { color: var(--ink-faint); font-weight: 400; font-size: .9em; }
   </style>
 
   <script>
@@ -174,6 +175,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
     const $ = (id) => document.getElementById(id);
     let session = null;          // { token, userId }
     let enrolled = new Set();    // languages with a ready clone
+    let clipCounts = {};         // per-language clip count (the growing library)
     let enrollLang = 'en';
     let recBlob = null;          // last recorded WAV blob
     const history = [];          // chat history for /api/chat
@@ -304,7 +306,8 @@ import AppLayout from '../../layouts/AppLayout.astro';
         });
         const j = await r.json();
         if (j.ok) {
-          setMsg($('px-enroll-msg'), 'ok', 'Saved! Your ' + l.label + ' voice is ready.');
+          const n = (clipCounts[l.code] || 0) + 1;
+          setMsg($('px-enroll-msg'), 'ok', 'Saved — ' + n + ' ' + l.label + ' clip' + (n > 1 ? 's' : '') + '. The more you record (different moods, sentences), the more it sounds like you — record another?');
           resetReview();
           await loadStatus();
         } else {
@@ -326,15 +329,22 @@ import AppLayout from '../../layouts/AppLayout.astro';
         const r = await fetch(API + '/api/voice-clone/status', { headers: { Authorization: 'Bearer ' + session.token } });
         const j = await r.json();
         enrolled = new Set(((j.data && j.data.clones) || []).filter((c) => c.status === 'ready').map((c) => c.language));
+        clipCounts = (j.data && j.data.clips) || {};
       } catch { /* leave enrolled as-is */ }
       // reflect everywhere
       const ready = enrolled.size > 0;
-      $('px-voice-tag').textContent = ready ? (enrolled.size + ' language' + (enrolled.size > 1 ? 's' : '') + ' ready') : 'not recorded yet';
+      const totalClips = Object.values(clipCounts).reduce((a, b) => a + b, 0) || enrolled.size;
+      $('px-voice-tag').textContent = ready
+        ? totalClips + ' recording' + (totalClips > 1 ? 's' : '') + ' · ' + enrolled.size + ' language' + (enrolled.size > 1 ? 's' : '')
+        : 'not recorded yet';
       $('px-voice-tag').classList.toggle('is-ready', ready);
       renderEnrollLangs();
       const list = $('px-enrolled-list'); list.innerHTML = '';
       LANGS.filter((l) => enrolled.has(l.code)).forEach((l) => {
-        const li = document.createElement('li'); li.innerHTML = '<span class="px-check"></span>' + l.label; list.appendChild(li);
+        const n = clipCounts[l.code] || 1;
+        const li = document.createElement('li');
+        li.innerHTML = '<span class="px-check"></span>' + l.label + ' <span class="px-clip-count">· ' + n + ' clip' + (n > 1 ? 's' : '') + '</span>';
+        list.appendChild(li);
       });
       $('px-enrolled').hidden = !ready;
       renderTalkOptions();
@@ -371,22 +381,108 @@ import AppLayout from '../../layouts/AppLayout.astro';
       return d;
     }
 
+    // ── Streaming voice pipeline ────────────────────────────────────────────
+    // To feel real-time (~1–2s) on a NON-streaming clone engine, we don't wait for
+    // the whole reply: as the LLM streams, we cut it into sentences, synthesize each
+    // the moment it completes, and play them back-to-back. First audio lands after
+    // sentence 1 — not the whole answer. A turn id lets a new turn cancel the old
+    // pipeline (basic barge-in).
+    let turnSeq = 0;
+    let synthQ = [], synthRunning = false;
+    let audioQ = [], audioPlaying = false;
+    let speakingBubble = null, tapBtnShown = false;
+
+    // Split a running buffer into [completeSentences, remainder]. Handles . ? ! plus
+    // the Devanagari/Telugu danda (।) and newlines.
+    function extractSentences(buf) {
+      const out = []; const re = /[^.!?।\n]*[.!?।\n]+/g; let m, last = 0;
+      while ((m = re.exec(buf)) !== null) { out.push(m[0]); last = re.lastIndex; }
+      return [out, buf.slice(last)];
+    }
+
+    function resetPipeline() {
+      if (speakingBubble) speakingBubble.classList.remove('is-speaking');
+      turnSeq++; synthQ = []; audioQ = []; synthRunning = false; audioPlaying = false; tapBtnShown = false;
+      const a = $('px-talk-audio'); try { a.pause(); a.removeAttribute('src'); a.load(); } catch (e) {}
+      return turnSeq;
+    }
+
+    function enqueueSentence(turn, lang, s) {
+      s = (s || '').trim(); if (!s) return;
+      synthQ.push({ turn, lang, s });
+      if (!synthRunning) runSynthWorker();
+    }
+
+    // One sentence at a time: preserves voice order and doesn't dogpile the single GPU.
+    async function runSynthWorker() {
+      synthRunning = true;
+      const warm = await ensureWarm();              // gate synth on a warm engine (cached after first)
+      while (synthQ.length) {
+        const job = synthQ.shift();
+        if (!warm || job.turn !== turnSeq) continue;  // engine down / stale turn → drop
+        const blob = await synthSentence(job.s, job.lang).catch(() => null);
+        if (blob && job.turn === turnSeq) enqueueAudio(job.turn, blob);
+      }
+      synthRunning = false;
+    }
+
+    function enqueueAudio(turn, blob) {
+      audioQ.push({ turn, blob });
+      if (!audioPlaying) playNextAudio();
+    }
+    function playNextAudio() {
+      const a = $('px-talk-audio');
+      const job = audioQ.shift();
+      if (!job) { audioPlaying = false; if (speakingBubble) speakingBubble.classList.remove('is-speaking'); return; }
+      if (job.turn !== turnSeq) return playNextAudio();
+      audioPlaying = true;
+      const url = URL.createObjectURL(job.blob);
+      a.src = url;
+      a.onended = () => { URL.revokeObjectURL(url); playNextAudio(); };
+      a.play().catch(() => {           // autoplay blocked → requeue + offer a tap
+        URL.revokeObjectURL(url); audioQ.unshift(job); audioPlaying = false; offerTapToHear();
+      });
+    }
+    function offerTapToHear() {
+      if (tapBtnShown || !speakingBubble) return;
+      tapBtnShown = true;
+      const btn = document.createElement('button');
+      btn.type = 'button'; btn.textContent = '🔊 Tap to hear';
+      btn.style.cssText = 'display:block;margin-top:.45rem;font:inherit;font-size:.85em;cursor:pointer;border:1px solid currentColor;border-radius:999px;padding:.25rem .7rem;background:transparent;color:inherit;';
+      btn.onclick = () => { tapBtnShown = false; btn.remove(); if (!audioPlaying) playNextAudio(); };
+      speakingBubble.appendChild(btn);
+    }
+
     async function sendTurn(text) {
       const lang = $('px-talk-select').value;
+      const myTurn = resetPipeline();              // cancel any prior turn's audio (barge-in)
       addBubble('me', text);
       history.push({ role: 'user', content: text });
       const thinking = addBubble('ai', '…'); thinking.classList.add('is-thinking');
+      speakingBubble = thinking;
+
+      // Warm the engine + prefetch the voice reference NOW, in parallel with the chat
+      // stream, so synthesis can start the instant the first sentence is ready.
+      const warmStatus = document.createElement('div');
+      warmStatus.style.cssText = 'font-size:.82em;opacity:.75;margin-top:.45rem;';
+      thinking.appendChild(warmStatus);
+      ensureWarm(warmStatus).then((okWarm) => {
+        warmStatus.textContent = okWarm ? '' : '(voice unavailable right now — your reply is above)';
+      });
+      getUserRef(lang).catch(() => null);
+
       try {
         const cr = await fetch(API + '/api/chat', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ user_id: session.userId, messages: history.slice(-12) }),
         });
         if (!cr.ok || !cr.body) throw new Error('http_' + cr.status);
-        // /api/chat streams Server-Sent Events: data: {"delta":"…"} … data: {"done":true}
+        // /api/chat streams SSE: data: {"delta":"…"} … data: {"done":true}
         const reader = cr.body.getReader();
         const decoder = new TextDecoder();
-        let reply = '', buf = '';
+        let reply = '', buf = '', sentBuf = '';
         thinking.classList.remove('is-thinking'); thinking.textContent = '';
+        thinking.classList.add('is-speaking');
         for (;;) {
           const { value, done } = await reader.read();
           if (done) break;
@@ -399,19 +495,21 @@ import AppLayout from '../../layouts/AppLayout.astro';
             const p = t.slice(5).trim();
             if (!p || p === '[DONE]') continue;
             let obj; try { obj = JSON.parse(p); } catch { continue; }
-            if (obj.delta) { reply += obj.delta; thinking.textContent = reply; $('px-thread').scrollTop = $('px-thread').scrollHeight; }
+            if (obj.delta) {
+              reply += obj.delta; sentBuf += obj.delta;
+              thinking.textContent = reply; $('px-thread').scrollTop = $('px-thread').scrollHeight;
+              const [sents, rest] = extractSentences(sentBuf); sentBuf = rest;
+              for (const s of sents) enqueueSentence(myTurn, lang, s);   // synth as we stream
+            }
             if (obj.error) throw new Error(String(obj.error));
           }
         }
+        if (sentBuf.trim()) enqueueSentence(myTurn, lang, sentBuf);       // flush the tail sentence
         reply = (reply.trim()) || 'Sorry, I could not reply just now.';
         thinking.textContent = reply;
         history.push({ role: 'assistant', content: reply });
-        // speak it back in the cloned voice
-        thinking.classList.add('is-speaking');
-        await speak(reply, lang, thinking);
-        thinking.classList.remove('is-speaking');
       } catch (e) {
-        thinking.classList.remove('is-thinking'); thinking.textContent = 'Network error — is the backend reachable?';
+        if (myTurn === turnSeq) { thinking.classList.remove('is-thinking', 'is-speaking'); thinking.textContent = 'Network error — is the backend reachable?'; }
       }
     }
 
@@ -422,9 +520,6 @@ import AppLayout from '../../layouts/AppLayout.astro';
     // Your own voice-infer engine (OmniVoice — cross-lingual clone incl. Telugu).
     const SVARA_URL = 'https://ceo-91462--voice-infer-fastapi-app.modal.run';
     let svaraWarm = false;
-    function svaraVoice(language) {
-      return ({ en: 'en_female', hi: 'hi_female', te: 'te_female' })[language] || 'en_female';
-    }
     // Unlock the <audio> element during a real user gesture (the Send tap) by playing
     // 0.1s of silence — so the browser lets us auto-play the spoken reply later, even
     // after the synth delay (otherwise autoplay is blocked and only a manual tap works).
@@ -479,42 +574,22 @@ import AppLayout from '../../layouts/AppLayout.astro';
       refCache[language] = ref;
       return ref;
     }
-    async function speak(text, language, bubble) {
-      const audioEl = $('px-talk-audio');
-      const voice = svaraVoice(language);
-      const status = document.createElement('div');
-      status.style.cssText = 'font-size:.82em;opacity:.75;margin-top:.45rem;';
-      if (bubble) bubble.appendChild(status);
-      try {
-        if (!(await ensureWarm(status))) { status.textContent = '(voice is taking too long to start — try again in a minute)'; return; }
-        const ref = await getUserRef(language).catch(() => null);
-        // Call YOUR OmniVoice engine — clone mode uses the user's saved clip.
-        const body = { language, text, mode: (ref && ref.b64) ? 'clone' : 'preset', format: 'mp3' };
-        if (ref && ref.b64) { body.reference_base64 = ref.b64; body.reference_transcript = ref.transcript; }
-        const synth = (b) => fetch(SVARA_URL + '/synthesize', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(b),
-        });
-        let res = await synth(body);
-        if (!res.ok && body.mode === 'clone') {
-          // Clone failed — fall back to a preset voice so it still speaks.
-          res = await synth({ language, text, mode: 'preset', format: 'mp3' }).catch(() => res);
-        }
-        if (!res.ok) { status.textContent = '(voice unavailable — code ' + res.status + ')'; return; }
-        audioEl.src = URL.createObjectURL(await res.blob());
-        try { await audioEl.play(); status.remove(); }
-        catch (e) {
-          // Autoplay blocked (after a wait / no fresh gesture) — offer a tap.
-          status.textContent = '';
-          const btn = document.createElement('button');
-          btn.type = 'button';
-          btn.textContent = '🔊 Tap to hear';
-          btn.style.cssText = 'font:inherit;font-size:.85em;cursor:pointer;border:1px solid currentColor;border-radius:999px;padding:.25rem .7rem;background:transparent;color:inherit;';
-          btn.onclick = () => { audioEl.play().catch(() => {}); btn.remove(); };
-          status.appendChild(btn);
-        }
-      } catch (e) { status.textContent = '(voice could not be reached — try again)'; }
+    // Synthesize ONE sentence in the user's cloned voice → audio Blob (or null).
+    // Clone mode uses the saved reference clip; falls back to a preset voice if the
+    // clone call fails, so the persona still speaks. Playback is the queue's job.
+    async function synthSentence(text, language) {
+      const ref = await getUserRef(language).catch(() => null);
+      const body = { language, text, mode: (ref && ref.b64) ? 'clone' : 'preset', format: 'mp3' };
+      if (ref && ref.b64) { body.reference_base64 = ref.b64; body.reference_transcript = ref.transcript; }
+      const synth = (b) => fetch(SVARA_URL + '/synthesize', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(b),
+      });
+      let res = await synth(body).catch(() => null);
+      if ((!res || !res.ok) && body.mode === 'clone') {
+        res = await synth({ language, text, mode: 'preset', format: 'mp3' }).catch(() => null);
+      }
+      if (!res || !res.ok) return null;
+      return await res.blob();
     }
 
     // browser speech-to-text for hands-free input (optional, no backend cost)
