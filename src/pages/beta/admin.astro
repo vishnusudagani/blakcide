@@ -28,7 +28,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
     .adm-sec .adm-count { font-size: var(--fs-xs); font-family: var(--font-mono); color: var(--ink-faint); }
     .adm-row { display: flex; align-items: center; gap: .8rem; padding: .8rem 1rem; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); margin-bottom: .5rem; }
     .adm-row.flag { border-left: 3px solid var(--coral); }
-    .adm-row-main { flex: 1; min-width: 0; }
+    .adm-row-main { flex: 1; min-width: 0; word-break: break-word; overflow-wrap: anywhere; }
     .adm-row-main b { font-size: var(--fs-md); color: var(--ink); font-weight: 600; }
     .adm-row-main .mono { font-family: var(--font-mono); font-size: var(--fs-2xs); color: var(--ink-faint); }
     .adm-row-main i { display: block; font-style: normal; font-size: var(--fs-xs); color: var(--ink-soft); margin-top: .15rem; }
@@ -36,12 +36,12 @@ import AppLayout from '../../layouts/AppLayout.astro';
     .adm-tag.on { color: var(--mint-deep); background: rgba(106,211,184,.12); }
     .adm-tag.off { color: var(--ink-faint); background: var(--surface-strong); }
     .adm-tag.banned { color: var(--coral); background: rgba(255,107,157,.12); }
-    .adm-btn { flex: none; min-height: 36px; padding: .4rem .9rem; border-radius: var(--r-pill); font: inherit; font-size: var(--fs-sm); font-weight: 600; cursor: pointer; border: 1px solid var(--line-strong); background: var(--surface); color: var(--ink); }
+    .adm-btn { flex: none; min-height: 44px; padding: .4rem .9rem; border-radius: var(--r-pill); font: inherit; font-size: var(--fs-sm); font-weight: 600; cursor: pointer; border: 1px solid var(--line-strong); background: var(--surface); color: var(--ink); }
     .adm-btn:hover { border-color: rgba(106,211,184,.5); }
     .adm-btn.danger { color: var(--coral); border-color: rgba(255,107,157,.35); background: rgba(255,107,157,.08); }
     .adm-empty { color: var(--ink-faint); font-size: var(--fs-sm); padding: .6rem 0; }
     .adm-form { display: grid; grid-template-columns: 1fr 1fr; gap: .6rem; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); padding: 1rem; }
-    .adm-form input { width: 100%; box-sizing: border-box; background: var(--bg-warm); border: 1px solid var(--line-strong); border-radius: var(--r-sm); padding: .55rem .7rem; color: var(--ink); font: inherit; font-size: var(--fs-sm); outline: none; }
+    .adm-form input { width: 100%; box-sizing: border-box; background: var(--bg-warm); border: 1px solid var(--line-strong); border-radius: var(--r-sm); padding: .55rem .7rem; color: var(--ink); font: inherit; font-size: 16px; outline: none; }
     .adm-form input:focus { border-color: rgba(106,211,184,.5); }
     .adm-form .full { grid-column: 1 / -1; }
     .adm-form button { grid-column: 1 / -1; min-height: 42px; border: 0; border-radius: var(--r-pill); color: #06231C; font: inherit; font-weight: 650; cursor: pointer; background: linear-gradient(135deg, var(--mint), var(--mint-deep)); }

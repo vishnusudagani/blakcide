@@ -48,7 +48,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
     .mnx-live.off .mnx-live-dot { background: var(--ink-faint); box-shadow: none; animation: none; }
     .mnx-cta-arrow { font-weight: 400; transition: transform var(--t-fast) var(--ease-out); }
     .mnx-go:hover .mnx-cta-arrow { transform: translateX(3px); }
-    .mnx-anon-min { display: inline-flex; align-items: center; gap: .45rem; margin: .9rem auto 0; padding: .4rem .2rem; background: none; border: 0; font: inherit; font-size: var(--fs-sm); color: var(--ink-faint); cursor: pointer; }
+    .mnx-anon-min { display: inline-flex; align-items: center; gap: .45rem; margin: .9rem auto 0; min-height: 44px; padding: .4rem .2rem; background: none; border: 0; font: inherit; font-size: var(--fs-sm); color: var(--ink-faint); cursor: pointer; }
     .mnx-anon-min i { font-style: normal; color: var(--ink-faint); font-weight: 600; }
     .mnx-anon-min.on i { color: var(--mint-deep); }
     html[data-theme="light"] .mnx-anon-min.on i { color: var(--mint-ink); }
@@ -136,10 +136,11 @@ import AppLayout from '../../layouts/AppLayout.astro';
     .mnx-chat-head { display: flex; align-items: center; gap: .7rem; padding: .8rem 1rem; border-bottom: 1px solid var(--line); flex: none; }
     .mnx-chat-pic { width: 36px; height: 36px; border-radius: 50%; flex: none; background: linear-gradient(135deg, var(--mint), var(--aqua)); display: grid; place-items: center; color: #06231C; }
     .mnx-chat-pic svg { width: 18px; height: 18px; }
-    .mnx-chat-who b { font-size: var(--fs-md); color: var(--ink); font-weight: 600; display: block; }
+    .mnx-chat-who { min-width: 0; }
+    .mnx-chat-who b { font-size: var(--fs-md); color: var(--ink); font-weight: 600; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .mnx-chat-who i { font-style: normal; font-size: var(--fs-2xs); color: var(--mint-deep); display: inline-flex; align-items: center; gap: .3rem; }
     html[data-theme="light"] .mnx-chat-who i { color: var(--mint-ink); }
-    .mnx-chat-end { margin-left: auto; padding: .4rem .9rem; border-radius: var(--r-pill); background: rgba(255,107,157,.1); border: 1px solid rgba(255,107,157,.25); color: var(--coral); font: inherit; font-size: var(--fs-sm); font-weight: 600; cursor: pointer; white-space: nowrap; }
+    .mnx-chat-end { margin-left: auto; min-height: 44px; padding: .4rem .9rem; border-radius: var(--r-pill); background: rgba(255,107,157,.1); border: 1px solid rgba(255,107,157,.25); color: var(--coral); font: inherit; font-size: var(--fs-sm); font-weight: 600; cursor: pointer; white-space: nowrap; }
     html[data-theme="light"] .mnx-chat-end { color: var(--coral-ink); }
     .mnx-chat-end.confirm { background: var(--coral); color: #fff; border-color: transparent; }
     .mnx-budget { flex: none; margin-left: .55rem; padding: .2rem .55rem; border-radius: var(--r-pill); background: rgba(106,211,184,.12); border: 1px solid rgba(106,211,184,.3); color: var(--mint-deep); font-size: var(--fs-2xs); font-family: var(--font-mono); white-space: nowrap; }
@@ -172,12 +173,12 @@ import AppLayout from '../../layouts/AppLayout.astro';
     .mnx-input { display: flex; align-items: center; gap: .6rem; padding: .7rem .8rem; border-top: 1px solid var(--line); flex: none; }
     .mnx-input input { flex: 1; background: var(--surface); border: 1px solid var(--line-strong); border-radius: var(--r-pill); padding: .65rem 1rem; color: var(--ink); font: inherit; font-size: 16px; outline: none; }
     .mnx-input input:focus { border-color: rgba(106,211,184,.5); }
-    .mnx-send { width: 42px; height: 42px; flex: none; border-radius: 50%; border: 0; cursor: pointer; color: #06231C; background: linear-gradient(135deg, var(--mint), var(--mint-deep)); display: grid; place-items: center; transition: transform var(--t-fast) var(--ease-out), filter var(--t-fast) var(--ease-out), opacity var(--t-fast) var(--ease-out); }
+    .mnx-send { width: 44px; height: 44px; flex: none; border-radius: 50%; border: 0; cursor: pointer; color: #06231C; background: linear-gradient(135deg, var(--mint), var(--mint-deep)); display: grid; place-items: center; transition: transform var(--t-fast) var(--ease-out), filter var(--t-fast) var(--ease-out), opacity var(--t-fast) var(--ease-out); }
     .mnx-send:hover { transform: translateY(-1px); filter: brightness(1.06); }
     .mnx-send:active { transform: scale(.92); }
     .mnx-send[disabled] { opacity: .5; cursor: default; transform: none; filter: none; }
     .mnx-send svg { width: 18px; height: 18px; }
-    .mnx-icon-btn { width: 38px; height: 38px; flex: none; display: grid; place-items: center; border-radius: 50%; background: var(--surface); border: 1px solid var(--line-strong); color: var(--ink-soft); cursor: pointer; transition: color var(--t-fast) var(--ease-out), border-color var(--t-fast) var(--ease-out); }
+    .mnx-icon-btn { width: 44px; height: 44px; flex: none; display: grid; place-items: center; border-radius: 50%; background: var(--surface); border: 1px solid var(--line-strong); color: var(--ink-soft); cursor: pointer; transition: color var(--t-fast) var(--ease-out), border-color var(--t-fast) var(--ease-out); }
     .mnx-icon-btn:hover { color: var(--mint-deep); border-color: rgba(106,211,184,.5); }
     .mnx-icon-btn svg { width: 17px; height: 17px; }
     .mnx-call { display: flex; align-items: center; justify-content: space-between; gap: .6rem; flex: none; padding: .6rem .9rem; border-bottom: 1px solid var(--line); background: rgba(106,211,184,.08); }
@@ -187,7 +188,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
     .mnx-call-dot { width: 8px; height: 8px; border-radius: 50%; flex: none; background: var(--gold); }
     .mnx-call-dot.live { background: var(--mint-deep); box-shadow: 0 0 8px var(--mint-deep); animation: mnx-dot-pulse 2s var(--ease-soft) infinite; }
     .mnx-call-actions { display: flex; gap: .5rem; }
-    .mnx-call-accept, .mnx-call-decline, .mnx-call-end, .mnx-call-mute { min-height: 36px; padding: .35rem .9rem; border-radius: var(--r-pill); font: inherit; font-size: var(--fs-sm); font-weight: 600; cursor: pointer; border: 1px solid var(--line-strong); background: var(--surface); color: var(--ink); }
+    .mnx-call-accept, .mnx-call-decline, .mnx-call-end, .mnx-call-mute { min-height: 44px; padding: .35rem .9rem; border-radius: var(--r-pill); font: inherit; font-size: var(--fs-sm); font-weight: 600; cursor: pointer; border: 1px solid var(--line-strong); background: var(--surface); color: var(--ink); }
     .mnx-call-accept { background: linear-gradient(135deg, var(--mint), var(--mint-deep)); color: #06231C; border-color: transparent; }
     .mnx-call-end, .mnx-call-decline { background: rgba(255,107,157,.12); border-color: rgba(255,107,157,.3); color: var(--coral); }
     html[data-theme="light"] .mnx-call-end, html[data-theme="light"] .mnx-call-decline { color: var(--coral-ink); }
@@ -258,14 +259,14 @@ import AppLayout from '../../layouts/AppLayout.astro';
     html[data-theme="light"] .mnx-drawer-panel { background: var(--bg-warm); }
     .mnx-drawer-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; }
     .mnx-drawer-head b { font-size: var(--fs-lg); color: var(--ink); }
-    .mnx-drawer-close { background: none; border: 0; color: var(--ink-faint); font-size: 1.1rem; cursor: pointer; width: 32px; height: 32px; border-radius: 50%; }
+    .mnx-drawer-close { background: none; border: 0; color: var(--ink-faint); font-size: 1.1rem; cursor: pointer; width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; }
     .mnx-drawer-close:hover { color: var(--ink); background: var(--surface); }
 
     .mnx-msg { padding: 2rem 1.4rem; text-align: center; color: var(--ink-soft); font-size: var(--fs-md); }
     .mnx-retry { margin-top: 1rem; }
 
-    .mnx-modal { position: fixed; inset: 0; z-index: 9000; display: flex; align-items: center; justify-content: center; padding: 1.2rem; background: var(--glass-strong); backdrop-filter: blur(6px); }
-    .mnx-modal-card { width: 100%; max-width: 360px; background: var(--bg-warm); border: 1px solid var(--line-strong); border-radius: var(--r-lg); box-shadow: var(--shadow-soft); padding: 1.6rem 1.4rem; text-align: center; }
+    .mnx-modal { position: fixed; inset: 0; z-index: 9000; display: flex; align-items: flex-start; justify-content: center; padding: 1.2rem; background: var(--glass-strong); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
+    .mnx-modal-card { width: 100%; max-width: 360px; max-height: calc(100dvh - 2.4rem); overflow-y: auto; background: var(--bg-warm); border: 1px solid var(--line-strong); border-radius: var(--r-lg); box-shadow: var(--shadow-soft); padding: 1.6rem 1.4rem; text-align: center; }
     .mnx-modal-card h3 { font-size: var(--fs-xl); color: var(--ink); font-weight: 600; }
     .mnx-modal-card p { font-size: var(--fs-sm); color: var(--ink-soft); margin-top: .3rem; }
     .mnx-feel { display: flex; justify-content: center; gap: .5rem; margin: 1rem 0; }
@@ -781,7 +782,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
           if (!chatOpen || !budgetEndsAt) return;
           const remSec = Math.max(0, Math.round((budgetEndsAt - Date.now()) / 1000));
           const el = document.getElementById('mnx-budget');
-          if (el) el.textContent = '⏳ ' + fmtDur(remSec) + ' left today';
+          if (el) el.textContent = '⏳ ' + fmtDur(remSec);
           const elapsed = budgetTotalSec ? (budgetTotalSec - remSec) / budgetTotalSec : 0;
           if (!budgetWarn75 && elapsed >= 0.75 && remSec > 0) { budgetWarn75 = true; el?.classList.add('warn'); sysNote('⏳ About ' + Math.max(1, Math.ceil(remSec / 60)) + ' min of your daily Minit time left.'); }
           if (!budgetWarn90 && elapsed >= 0.90 && remSec > 0) { budgetWarn90 = true; el?.classList.remove('warn'); el?.classList.add('crit'); sysNote('⏳ Almost out of time for today — wrapping up soon.'); }

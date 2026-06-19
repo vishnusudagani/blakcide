@@ -37,7 +37,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
 
       <div class="bx-mood" id="bx-mood">
         <span class="bx-mood-q">How are you feeling today?</span>
-        <div class="bx-mood-row">
+        <div class="bx-mood-row" data-noswipe>
           <button type="button" class="bx-mood-b" data-mood="great" aria-label="Great">😄</button>
           <button type="button" class="bx-mood-b" data-mood="okay" aria-label="Okay">🙂</button>
           <button type="button" class="bx-mood-b" data-mood="low" aria-label="Low">😔</button>
@@ -46,7 +46,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
         </div>
       </div>
 
-      <div class="bx-chips" id="bx-chips">
+      <div class="bx-chips" id="bx-chips" data-noswipe>
         <button type="button" class="bx-chip" data-msg="I'm overwhelmed">I'm overwhelmed</button>
         <button type="button" class="bx-chip" data-msg="Help me focus">Help me focus</button>
         <button type="button" class="bx-chip" data-msg="Plan my day">Plan my day</button>
@@ -58,7 +58,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
     </button>
 
     <div class="bx-dock">
-      <div class="bx-attach-preview" id="bx-attach-preview" hidden></div>
+      <div class="bx-attach-preview" id="bx-attach-preview" hidden data-noswipe></div>
       <form class="bx-composer" id="bx-form">
         <div class="bx-field">
           <button type="button" class="bx-add" id="bx-add" aria-label="Add an image" title="Add an image">
@@ -116,7 +116,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
 
   <style is:global>
     .bx { display: flex; flex-direction: column; height: calc(100svh - 0px); max-width: 760px; margin-inline: auto; padding: 0 clamp(.9rem, 3vw, 1.5rem); position: relative; }
-    @media (max-width: 820px) { .bx { height: calc(100svh - 138px - env(safe-area-inset-bottom, 0px)); } }
+    @media (max-width: 820px) { .bx { height: calc(100svh - 138px - env(safe-area-inset-bottom, 0px)); } html.bx-kb .bx { height: var(--vvh, calc(100svh - 138px)); } }
 
     /* ── Header (minimal) ── */
     .bx-head { display: flex; align-items: center; gap: .6rem; padding: 1rem .2rem .8rem; }
@@ -146,7 +146,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
     .bx-av { position: relative; width: 26px; height: 26px; border-radius: 50%; flex: none; background: var(--cta-grad); box-shadow: 0 0 10px rgba(255,107,157,.4); }
     .bx-col { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
     .bx-row.me .bx-col { align-items: flex-end; }
-    .bx-bub { padding: .72rem .98rem; border-radius: var(--r-md); font-size: var(--fs-base); line-height: 1.55; white-space: pre-wrap; word-wrap: break-word; }
+    .bx-bub { padding: .72rem .98rem; border-radius: var(--r-md); font-size: var(--fs-base); line-height: 1.55; white-space: pre-wrap; word-wrap: break-word; overflow-wrap: anywhere; }
     .bx-row.them .bx-bub { background: var(--surface-strong); border: 1px solid var(--line); border-bottom-left-radius: 6px; color: var(--ink); }
     .bx-row.me .bx-bub { background: rgba(91,192,255,.14); border: 1px solid rgba(91,192,255,.26); border-bottom-right-radius: 6px; color: var(--ink); }
     html[data-theme="light"] .bx-row.me .bx-bub { background: rgba(24,114,176,.1); border-color: rgba(24,114,176,.22); }
@@ -162,7 +162,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
     .bx-typing { display: inline-flex; gap: 4px; padding: .1rem 0; } .bx-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--coral); animation: bx-blink 1.2s infinite; } .bx-dot:nth-child(2){animation-delay:.18s} .bx-dot:nth-child(3){animation-delay:.36s}
     @keyframes bx-blink { 0%,100%{opacity:.3; transform: translateY(0)} 50%{opacity:1; transform: translateY(-2px)} }
 
-    .bx-jump { position: absolute; right: clamp(1rem, 4vw, 2rem); bottom: 180px; width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; border: 1px solid var(--line-strong); background: var(--surface-strong); backdrop-filter: blur(10px); color: var(--ink); cursor: pointer; box-shadow: var(--shadow-soft); z-index: 4; animation: bx-in .2s var(--ease-out) both; }
+    .bx-jump { position: absolute; right: clamp(1rem, 4vw, 2rem); bottom: 180px; width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; border: 1px solid var(--line-strong); background: var(--surface-strong); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); color: var(--ink); cursor: pointer; box-shadow: var(--shadow-soft); z-index: 4; animation: bx-in .2s var(--ease-out) both; }
     .bx-jump svg { width: 18px; height: 18px; }
     .bx-jump[hidden] { display: none; }
 
@@ -170,11 +170,11 @@ import AppLayout from '../../layouts/AppLayout.astro';
     .bx-home { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: clamp(1.1rem, 3.5vh, 1.8rem); text-align: center; padding: clamp(1rem, 4vh, 2rem) .2rem 1.4rem; animation: bx-in .4s var(--ease-out) both; }
     .bx-home[hidden] { display: none; }
 
-    .bx-tag { display: inline-flex; align-items: center; gap: .4rem; font-size: var(--fs-xs); font-weight: 550; letter-spacing: .01em; padding: .38rem .9rem; border-radius: var(--r-pill); color: var(--ink-soft); background: var(--glass); border: 1px solid var(--line-strong); backdrop-filter: blur(8px); }
+    .bx-tag { display: inline-flex; align-items: center; gap: .4rem; font-size: var(--fs-xs); font-weight: 550; letter-spacing: .01em; padding: .38rem .9rem; border-radius: var(--r-pill); color: var(--ink-soft); background: var(--glass); border: 1px solid var(--line-strong); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
     .bx-tag-spark { background: var(--accent-grad); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: transparent; font-size: .9em; }
 
     /* insights card — glassy, glowing gradient border + outer glow */
-    .bx-insights { width: 100%; max-width: 420px; border: 1px solid transparent; border-radius: var(--r-lg); background: linear-gradient(var(--glass-strong), var(--glass-strong)) padding-box, var(--line-grad) border-box; box-shadow: 0 0 38px -8px rgba(255,182,138,.32), var(--shadow-soft); backdrop-filter: blur(16px); overflow: hidden; }
+    .bx-insights { width: 100%; max-width: 420px; border: 1px solid transparent; border-radius: var(--r-lg); background: linear-gradient(var(--glass-strong), var(--glass-strong)) padding-box, var(--line-grad) border-box; box-shadow: 0 0 38px -8px rgba(255,182,138,.32), var(--shadow-soft); -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); overflow: hidden; }
     .bx-insight { display: flex; align-items: center; gap: .85rem; text-align: left; padding: 1rem 1.1rem; }
     .bx-insight + .bx-insight { border-top: 1px solid var(--line); }
     .bx-insight-ic { flex: none; width: 38px; height: 38px; border-radius: var(--r-sm); display: grid; place-items: center; }
@@ -205,7 +205,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
     /* quick-prompt pills */
     .bx-chips { display: flex; flex-wrap: wrap; justify-content: center; gap: .5rem; transition: opacity .25s var(--ease-out); }
     .bx-chips[hidden] { display: none; }
-    .bx-chip { font-family: inherit; font-size: var(--fs-sm); color: var(--ink-soft); background: var(--glass); border: 1px solid var(--line-strong); border-radius: var(--r-pill); padding: .5rem .95rem; cursor: pointer; backdrop-filter: blur(8px); transition: .18s var(--ease-out); }
+    .bx-chip { font-family: inherit; font-size: var(--fs-sm); color: var(--ink-soft); background: var(--glass); border: 1px solid var(--line-strong); border-radius: var(--r-pill); padding: .5rem .95rem; cursor: pointer; -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); transition: .18s var(--ease-out); }
     .bx-chip:hover { color: var(--ink); border-color: var(--coral); transform: translateY(-1px); }
     .bx-chip:active { transform: translateY(0); }
 
@@ -233,7 +233,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
     /* glowing rounded field wrapping the textarea + trailing send/stop */
     /* Clean glass interior + a thin brand-gradient edge. The colour is NOT inside
        the bar — it radiates outward from it via the aura on .bx-dock below. */
-    .bx-field { position: relative; flex: 1; min-width: 0; min-height: 50px; display: flex; align-items: center; gap: .25rem; padding: .2rem .35rem .2rem .25rem; border: 1px solid transparent; border-radius: var(--r-pill); background: linear-gradient(var(--glass-strong), var(--glass-strong)) padding-box, var(--line-grad) border-box; backdrop-filter: blur(14px); transition: box-shadow .85s var(--ease-out), border-color .85s var(--ease-out); }
+    .bx-field { position: relative; flex: 1; min-width: 0; min-height: 50px; display: flex; align-items: center; gap: .25rem; padding: .2rem .35rem .2rem .25rem; border: 1px solid transparent; border-radius: var(--r-pill); background: linear-gradient(var(--glass-strong), var(--glass-strong)) padding-box, var(--line-grad) border-box; -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); transition: box-shadow .85s var(--ease-out), border-color .85s var(--ease-out); }
     .bx-field textarea { flex: 1; min-width: 0; resize: none; max-height: 140px; padding: .5rem .4rem .5rem .9rem; background: transparent; border: 0; color: var(--ink); font: inherit; font-size: var(--fs-lg); line-height: 1.4; }
     .bx-field textarea:focus { outline: none; }
     .bx-field button { flex: none; width: 40px; height: 40px; border-radius: 50%; border: 0; cursor: pointer; color: var(--cta-ink); background: var(--cta); box-shadow: var(--shadow-cta); display: grid; place-items: center; transition: transform .16s var(--ease-out), opacity .16s; }
@@ -243,7 +243,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
     #bx-stop { background: var(--surface-strong); color: var(--ink); border: 1px solid var(--line-strong); box-shadow: none; }
 
     /* composer tools (attach image + voice note) — quiet, leading the field */
-    .bx-field .bx-tool { flex: none; width: 34px; height: 34px; border-radius: 50%; border: 0; cursor: pointer; color: var(--ink-faint); background: transparent; box-shadow: none; display: grid; place-items: center; align-self: flex-end; transition: color .16s var(--ease-out), background .16s; }
+    .bx-field .bx-tool { flex: none; width: 40px; height: 40px; border-radius: 50%; border: 0; cursor: pointer; color: var(--ink-faint); background: transparent; box-shadow: none; display: grid; place-items: center; align-self: flex-end; transition: color .16s var(--ease-out), background .16s; }
     .bx-field .bx-tool:hover { color: var(--coral); background: var(--surface); transform: none; }
     .bx-field .bx-tool svg { width: 18px; height: 18px; }
     .bx-field .bx-tool.rec { color: #fff; background: #ff6b6b; box-shadow: none; animation: bx-callpulse 1.2s ease-in-out infinite; }
@@ -258,7 +258,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
 
     /* composer: + (add) on the left + a transparent button that is a mic when
        empty and morphs into Send once text is typed (WhatsApp/Gemini pattern) */
-    .bx-field .bx-add { background: transparent !important; box-shadow: none !important; width: 34px; height: 34px; color: var(--ink-faint); align-self: center; }
+    .bx-field .bx-add { background: transparent !important; box-shadow: none !important; width: 40px; height: 40px; color: var(--ink-faint); align-self: center; }
     .bx-field .bx-add:hover { color: var(--coral); background: var(--surface) !important; transform: none; }
     .bx-field .bx-add svg { width: 21px; height: 21px; }
     .bx-field .bx-act { background: transparent !important; box-shadow: none !important; color: var(--coral); align-self: center; }
@@ -284,7 +284,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
     .bx-note { margin: 0 .2rem; padding-bottom: .7rem; font-size: var(--fs-xs); color: var(--ink-faint); text-align: center; }
 
     /* ── Voice call overlay ── (the trigger button .bx-call lives in the composer above) */
-    .bx-call-ov { position: fixed; inset: 0; z-index: 50; display: flex; flex-direction: column; align-items: center; background: radial-gradient(120% 80% at 50% 0%, rgba(255,107,157,.12), var(--bg) 60%); backdrop-filter: blur(8px); animation: bx-in .25s var(--ease-out) both; }
+    .bx-call-ov { position: fixed; inset: 0; z-index: 50; display: flex; flex-direction: column; align-items: center; background: radial-gradient(120% 80% at 50% 0%, rgba(255,107,157,.12), var(--bg) 60%); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); animation: bx-in .25s var(--ease-out) both; }
     .bx-call-ov[hidden] { display: none; }
     .bx-call-bar { width: 100%; max-width: 820px; display: flex; align-items: center; justify-content: space-between; padding: 1rem clamp(.8rem,3vw,1.5rem); }
     .bx-call-lang { font: inherit; font-size: var(--fs-sm); color: var(--ink); background: var(--surface); border: 1px solid var(--line-strong); border-radius: var(--r-pill); padding: .4rem .8rem; }
@@ -307,8 +307,8 @@ import AppLayout from '../../layouts/AppLayout.astro';
     /* ── Chat history drawer ── (the trigger button .bx-hist lives in the header above) */
     .bx-cv-drawer { position: fixed; inset: 0; z-index: 60; }
     .bx-cv-drawer[hidden] { display: none; }
-    .bx-cv-scrim { position: absolute; inset: 0; background: rgba(0,0,0,.4); backdrop-filter: blur(2px); animation: bx-in .2s var(--ease-out) both; }
-    .bx-cv-panel { position: absolute; top: 0; left: 0; bottom: 0; width: min(300px, 82vw); background: var(--glass-strong); backdrop-filter: blur(18px); border-right: 1px solid var(--line-strong); box-shadow: var(--shadow-soft); display: flex; flex-direction: column; padding: 1rem .8rem; animation: bx-slidein .22s var(--ease-out) both; }
+    .bx-cv-scrim { position: absolute; inset: 0; background: rgba(0,0,0,.4); -webkit-backdrop-filter: blur(2px); backdrop-filter: blur(2px); animation: bx-in .2s var(--ease-out) both; }
+    .bx-cv-panel { position: absolute; top: 0; left: 0; bottom: 0; width: min(300px, 82vw); background: var(--glass-strong); -webkit-backdrop-filter: blur(18px); backdrop-filter: blur(18px); border-right: 1px solid var(--line-strong); box-shadow: var(--shadow-soft); display: flex; flex-direction: column; padding: 1rem .8rem; animation: bx-slidein .22s var(--ease-out) both; }
     @keyframes bx-slidein { from { transform: translateX(-100%); } to { transform: none; } }
     .bx-cv-head { display: flex; align-items: center; justify-content: space-between; padding: .3rem .3rem 1rem; }
     .bx-cv-head b { font-size: var(--fs-lg); }
@@ -318,7 +318,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
     .bx-cv-item:hover { background: var(--surface); }
     .bx-cv-item.on { background: var(--surface-strong); }
     .bx-cv-open { flex: 1; min-width: 0; text-align: left; font: inherit; font-size: var(--fs-sm); color: var(--ink); background: none; border: 0; padding: .6rem; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .bx-cv-del { flex: none; font-size: var(--fs-xs); color: var(--ink-faint); background: none; border: 0; padding: .4rem .6rem; cursor: pointer; opacity: 0; transition: opacity .15s, color .15s; }
+    .bx-cv-del { flex: none; font-size: var(--fs-xs); color: var(--ink-faint); background: none; border: 0; padding: .55rem .7rem; cursor: pointer; opacity: 0; transition: opacity .15s, color .15s; }
     .bx-cv-item:hover .bx-cv-del { opacity: 1; }
     .bx-cv-del:hover { color: var(--coral); }
     .bx-cv-empty { color: var(--ink-faint); font-size: var(--fs-sm); padding: 1rem .6rem; }
@@ -344,12 +344,12 @@ import AppLayout from '../../layouts/AppLayout.astro';
     }
 
     /* ── Header: burger · persona · profile ── */
-    .bx-icon { width: 38px; height: 38px; flex: none; border-radius: 50%; display: grid; place-items: center; color: var(--ink-soft); background: var(--surface); border: 1px solid var(--line); cursor: pointer; position: relative; transition: .18s var(--ease-out); }
+    .bx-icon { width: 44px; height: 44px; flex: none; border-radius: 50%; display: grid; place-items: center; color: var(--ink-soft); background: var(--surface); border: 1px solid var(--line); cursor: pointer; position: relative; transition: .18s var(--ease-out); }
     .bx-icon:hover { color: var(--ink); background: var(--surface-strong); border-color: var(--line-strong); }
     .bx-icon svg { width: 19px; height: 19px; }
     .bx-icon-soon::after { content: 'soon'; position: absolute; top: -5px; right: -6px; font-family: var(--font-mono); font-size: 7px; letter-spacing: .04em; text-transform: uppercase; color: var(--gold); background: var(--bg); border: 1px solid rgba(255,210,122,.4); border-radius: 999px; padding: 0 3px; line-height: 1.5; }
     html[data-theme="light"] .bx-icon-soon::after { color: var(--gold-ink); }
-    .bx-avatar { width: 38px; height: 38px; flex: none; border-radius: 50%; border: 0; cursor: pointer; background: var(--cta-grad); color: #1b1030; font-weight: 700; font-size: var(--fs-md); box-shadow: 0 0 16px rgba(255,107,157,.4); }
+    .bx-avatar { width: 44px; height: 44px; flex: none; border-radius: 50%; border: 0; cursor: pointer; background: var(--cta-grad); color: #1b1030; font-weight: 700; font-size: var(--fs-md); box-shadow: 0 0 16px rgba(255,107,157,.4); }
 
     /* ── Gemini-style home hero ── */
     .bx-hero { display: flex; flex-direction: column; align-items: center; gap: .45rem; }
@@ -357,7 +357,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
     .bx-hero-spark { font-size: 20px; line-height: 1; color: #fff; opacity: .95; }
     .bx-greet { font-family: var(--font-display); font-weight: 600; font-size: clamp(1.7rem, 1.2rem + 3.2vw, 2.6rem); letter-spacing: -.02em; margin: 0; line-height: 1.1; background: var(--accent-grad); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: transparent; }
     .bx-greet-sub { color: var(--ink-soft); font-size: var(--fs-lg); margin: 0; max-width: 30ch; }
-    .bx-insight-card { display: inline-flex; align-items: center; gap: .7rem; padding: .7rem .95rem; border-radius: var(--r-md); background: var(--glass-strong); border: 1px solid var(--line-strong); box-shadow: var(--shadow-soft); backdrop-filter: blur(12px); transition: .18s var(--ease-out); }
+    .bx-insight-card { display: inline-flex; align-items: center; gap: .7rem; padding: .7rem .95rem; border-radius: var(--r-md); background: var(--glass-strong); border: 1px solid var(--line-strong); box-shadow: var(--shadow-soft); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); transition: .18s var(--ease-out); }
     .bx-insight-card:hover { border-color: var(--coral); transform: translateY(-1px); }
     .bx-insight-card .bx-insight-ic { flex: none; width: 34px; height: 34px; border-radius: var(--r-sm); display: grid; place-items: center; color: var(--mint-deep); background: rgba(106,211,184,.14); border: 1px solid rgba(106,211,184,.26); }
     .bx-insight-card .bx-insight-ic svg { width: 18px; height: 18px; }
@@ -1078,7 +1078,15 @@ import AppLayout from '../../layouts/AppLayout.astro';
     });
 
     // Mobile: while typing, pin the input above the keyboard and tuck the rest.
+    // The on-screen keyboard shrinks visualViewport (svh does NOT track it), so we
+    // mirror its live height into --vvh and the chat height follows it while the
+    // keyboard is open (see `html.bx-kb .bx`), keeping the composer in view.
     const isMobile = () => !!(window.matchMedia && window.matchMedia('(max-width: 820px)').matches);
+    const vv = window.visualViewport;
+    if (vv) {
+      const syncVV = () => { document.documentElement.style.setProperty('--vvh', Math.round(vv.height) + 'px'); };
+      vv.addEventListener('resize', syncVV); syncVV();
+    }
     input.addEventListener('focus', () => { if (isMobile()) document.documentElement.classList.add('bx-kb'); });
     input.addEventListener('blur',  () => { document.documentElement.classList.remove('bx-kb'); });
 
