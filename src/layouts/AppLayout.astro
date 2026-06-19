@@ -99,7 +99,7 @@ const nav = [
     .ap-notif-tx span { display: block; font-size: var(--fs-xs); color: var(--ink-soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .ap-notif-x { flex: none; width: 28px; height: 28px; border-radius: 50%; border: 0; background: var(--surface); color: var(--ink-faint); cursor: pointer; font-size: .95rem; line-height: 1; }
     .ap-notif-x:hover { color: var(--ink); }
-    @media (max-width: 560px) { .ap-notif { top: auto; bottom: 86px; transform: translateX(-50%) translateY(180%); } .ap-notif.show { transform: translateX(-50%) translateY(0); } }
+    @media (max-width: 560px) { .ap-notif { top: auto; bottom: calc(96px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%) translateY(180%); } .ap-notif.show { transform: translateX(-50%) translateY(0); } }
     @media (prefers-reduced-motion: reduce) { .ap-notif { transition: opacity .3s ease; } }
     html, body { margin: 0; height: 100%; }
     body {
@@ -214,9 +214,11 @@ const nav = [
       html[data-theme="light"] .ap-link.is-on { background: rgba(20, 16, 10, .08); }
       .ap-link.is-on svg { opacity: 1; }
       .ap-me { margin-top: 0; padding-top: 0; border-top: 0; }
+      .ap-avatar { width: 44px; height: 44px; font-size: var(--fs-lg); }
+      .ap-theme { width: 44px; height: 44px; }
       .ap-signout { display: none; }
       .ap-link-soon { display: none; }
-      .ap-main { padding-bottom: 96px; }
+      .ap-main { padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px)); }
       .ap--chat .ap-main { padding-bottom: 0; }
 
       /* ── Instagram-style bar: Blak · Minit · Nexus — three level icons, active highlighted ── */
@@ -242,7 +244,7 @@ const nav = [
     .ap-kicker { font-family: var(--font-mono); font-size: var(--fs-2xs); letter-spacing: .16em; text-transform: uppercase; color: var(--ink-faint); margin: 0 0 .4rem; }
     .ap-card {
       background: var(--glass-strong); border: 1px solid var(--line-strong); border-radius: var(--r-lg);
-      box-shadow: var(--shadow-soft), inset 0 1px 0 rgba(255, 255, 255, .06); backdrop-filter: blur(16px);
+      box-shadow: var(--shadow-soft), inset 0 1px 0 rgba(255, 255, 255, .06); -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px);
     }
   </style>
 
@@ -365,7 +367,7 @@ const nav = [
       let x0 = 0, y0 = 0, t0 = 0, ok = false;
       document.addEventListener('touchstart', (e) => {
         const t = e.touches[0]; if (!t) { ok = false; return; }
-        if (e.target.closest('input,textarea,[contenteditable],[data-noswipe],.bx-cv-drawer,.bx-call-ov,.mnx-modal,.mnx-drawer') || hScrollable(e.target)) { ok = false; return; }
+        if (e.target.closest('input,textarea,select,[contenteditable],[data-noswipe],.bx-cv-drawer,.bx-call-ov,.mnx-modal,.mnx-drawer,.nx-modal,.nx-room,.lsn-modal,.lsn-panel') || hScrollable(e.target)) { ok = false; return; }
         x0 = t.clientX; y0 = t.clientY; t0 = Date.now(); ok = true;
       }, { passive: true });
       document.addEventListener('touchend', (e) => {

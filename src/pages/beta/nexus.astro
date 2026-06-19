@@ -19,7 +19,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
     <div class="nx-sec-head">
       <h2 class="nx-sec-title"><span class="nx-livedot"></span>Live Rooms <span class="nx-sec-sub" id="nx-rooms-sub">real-time</span></h2>
     </div>
-    <div class="nx-rooms-strip" id="nx-rooms">
+    <div class="nx-rooms-strip" id="nx-rooms" data-noswipe>
       <div class="nx-start-card compact" style="cursor:default;opacity:.6">Loading…</div>
     </div>
 
@@ -29,7 +29,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
       <button type="button" class="nx-start ghost" id="nx-newtribe">+ New tribe</button>
     </div>
     <input type="text" id="nx-tribe-search" class="nx-search" placeholder="Search all tribes…" autocomplete="off" />
-    <div class="nx-tiles" id="nx-tribes-grid">
+    <div class="nx-tiles" id="nx-tribes-grid" data-noswipe>
       <div class="nx-tile" style="opacity:.6"><p class="nx-tile-k">Loading your tribes…</p></div>
     </div>
     <div class="nx-carousel-ctrl" id="nx-tribes-ctrl" hidden>
@@ -184,7 +184,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
     .nx-rooms-strip { display: flex; gap: .7rem; overflow-x: auto; padding-bottom: .5rem; scroll-snap-type: x proximity; -webkit-overflow-scrolling: touch; }
     .nx-rooms-strip::-webkit-scrollbar { height: 6px; } .nx-rooms-strip::-webkit-scrollbar-thumb { background: var(--line-strong); border-radius: 999px; }
     .nx-rooms-strip .nx-room-card { flex: 0 0 auto; width: clamp(150px, 44vw, 188px); scroll-snap-align: start; padding: .9rem 1rem; }
-    .nx-room-card.compact .nx-rc-title { font-size: var(--fs-lg); margin: .55rem 0 .15rem; }
+    .nx-room-card.compact .nx-rc-title { font-size: var(--fs-lg); margin: .55rem 0 .15rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .nx-room-card.compact .nx-rc-bottom { margin-top: .6rem; }
     .nx-start-card.compact { min-height: 0; flex: 0 0 auto; width: clamp(108px, 30vw, 130px); padding: 1rem .8rem; scroll-snap-align: start; gap: .2rem; }
     .nx-start-card.compact b { font-size: 1.6rem; } .nx-start-card.compact span { font-size: var(--fs-sm); }
@@ -196,7 +196,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
     .nx-tribes-track .nx-tribe-card { flex: 0 0 auto; width: clamp(230px, 80vw, 340px); scroll-snap-align: start; }
     .nx-carousel-ctrl { display: flex; align-items: center; justify-content: center; gap: 1rem; margin-top: .9rem; }
     .nx-carousel-ctrl[hidden] { display: none; }
-    .nx-car-arrow { width: 38px; height: 38px; border-radius: 50%; background: var(--surface); border: 1px solid var(--line-strong); color: var(--ink-soft); cursor: pointer; font-size: 1.3rem; line-height: 1; display: grid; place-items: center; }
+    .nx-car-arrow { width: 44px; height: 44px; border-radius: 50%; background: var(--surface); border: 1px solid var(--line-strong); color: var(--ink-soft); cursor: pointer; font-size: 1.3rem; line-height: 1; display: grid; place-items: center; }
     .nx-car-arrow:hover { color: var(--ink); border-color: var(--aqua); }
     .nx-dots { display: flex; gap: .4rem; align-items: center; }
     .nx-dots span { width: 7px; height: 7px; border-radius: 999px; background: var(--line-strong); transition: width .2s, background .2s; }
@@ -216,7 +216,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
     .nx-tile-compose input[type="text"] { flex: 1; min-width: 0; padding: .7rem 1rem; border-radius: var(--r-pill); background: var(--surface); border: 1px solid var(--line-strong); color: var(--ink); font: inherit; font-size: var(--fs-md); }
     .nx-tile-compose input[type="text"]:focus { outline: none; border-color: var(--aqua); }
     .nx-tile-compose button { flex: none; padding: 0 1.1rem; border-radius: var(--r-pill); border: 0; cursor: pointer; color: #06231C; font: inherit; font-weight: 650; background: linear-gradient(135deg, var(--mint), var(--aqua)); }
-    .nx-tile-prev { position: relative; width: max-content; margin: 0 0 .6rem; } .nx-tile-prev img { max-height: 90px; max-width: 160px; border-radius: var(--r-md); border: 1px solid var(--line-strong); display: block; } .nx-tile-prev button { position: absolute; top: -8px; right: -8px; width: 22px; height: 22px; border-radius: 50%; border: 0; background: var(--coral); color: #fff; cursor: pointer; font-size: .72rem; }
+    .nx-tile-prev { position: relative; width: max-content; margin: 0 0 .6rem; } .nx-tile-prev img { max-height: 90px; max-width: 160px; border-radius: var(--r-md); border: 1px solid var(--line-strong); display: block; } .nx-tile-prev button { position: absolute; top: -10px; right: -10px; width: 30px; height: 30px; border-radius: 50%; border: 0; background: var(--coral); color: #fff; cursor: pointer; font-size: .8rem; display: grid; place-items: center; }
     .nx-tile-k { font-family: var(--font-mono); font-size: var(--fs-2xs); letter-spacing: .12em; text-transform: uppercase; color: var(--ink-faint); margin: .8rem 0 .5rem; }
     .nx-tile-updates { display: flex; flex-direction: column; gap: .4rem; }
     .nx-tile-post { display: flex; align-items: center; gap: .6rem; width: 100%; text-align: left; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); padding: .55rem .8rem; cursor: pointer; font: inherit; }
@@ -245,7 +245,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
     .nx-faces { display: inline-flex; } .nx-faces span { width: 26px; height: 26px; border-radius: 50%; margin-left: -8px; border: 2px solid var(--bg); display: inline-block; }
     .nx-faces span:first-child { margin-left: 0; }
     .nx-here-n { font-size: var(--fs-sm); color: var(--ink-soft); }
-    .nx-join-btn { margin-left: auto; font: inherit; font-size: var(--fs-sm); font-weight: 600; color: var(--aqua-ink); background: rgba(91,192,255,.14); border: 1px solid rgba(91,192,255,.3); border-radius: var(--r-pill); padding: .4rem .9rem; cursor: pointer; }
+    .nx-join-btn { margin-left: auto; font: inherit; font-size: var(--fs-sm); font-weight: 600; color: var(--aqua-ink); background: rgba(91,192,255,.14); border: 1px solid rgba(91,192,255,.3); border-radius: var(--r-pill); padding: .4rem .9rem; min-height: 44px; cursor: pointer; }
     html[data-theme="dark"] .nx-join-btn { color: #BFE9FF; }
     .nx-start-card { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .4rem; min-height: 150px; border: 1.5px dashed var(--line-strong); border-radius: var(--r-lg); color: var(--ink-faint); cursor: pointer; transition: .2s; }
     .nx-start-card:hover { border-color: var(--aqua); color: var(--aqua); }
@@ -309,7 +309,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
 
     /* ── mobile in-room: feed fills the screen; Pulse is a slim vibe bar ── */
     @media (max-width: 900px) {
-      .nx-room { height: calc(100svh - 124px); }
+      .nx-room { height: calc(100svh - 124px - env(safe-area-inset-bottom, 0px)); }
       #nx-room-here, .nx-room-pulse { display: none; }   /* carried by the vibe bar */
       .nx-room-body { display: flex; flex-direction: column; gap: .7rem; padding-top: .7rem; }
       .nx-room-main { flex: 1; min-height: 0; order: 1; }
@@ -356,25 +356,25 @@ import AppLayout from '../../layouts/AppLayout.astro';
     .nx-dm-link { color: var(--aqua); cursor: pointer; }
     html[data-theme="light"] .nx-dm-link { color: var(--aqua-ink); }
     .nx-dm-link:hover { text-decoration: underline; }
-    .nx-msg-btn { flex: none; margin-left: .5rem; font-size: 1.05rem; line-height: 1; color: var(--ink-soft); background: var(--surface); border: 1px solid var(--line-strong); border-radius: var(--r-pill); padding: .45rem .75rem; cursor: pointer; }
+    .nx-msg-btn { flex: none; margin-left: .5rem; font-size: 1.05rem; line-height: 1; color: var(--ink-soft); background: var(--surface); border: 1px solid var(--line-strong); border-radius: var(--r-pill); padding: .45rem .75rem; min-height: 44px; min-width: 44px; cursor: pointer; }
     .nx-msg-btn:hover { color: var(--ink); border-color: var(--aqua); }
     .nx-img { max-width: min(340px, 100%); max-height: 340px; border-radius: var(--r-md); margin-top: .5rem; display: block; border: 1px solid var(--line); object-fit: cover; }
     .nx-img-btn { flex: none; display: grid; place-items: center; width: 46px; border-radius: var(--r-pill); background: var(--surface); border: 1px solid var(--line-strong); color: var(--ink-soft); cursor: pointer; }
     .nx-img-btn:hover { color: var(--aqua); border-color: var(--aqua); } .nx-img-btn svg { width: 18px; height: 18px; }
     .nx-img-preview { position: relative; margin-top: .5rem; width: max-content; max-width: 100%; }
     .nx-img-preview img { max-height: 120px; max-width: 220px; border-radius: var(--r-md); display: block; border: 1px solid var(--line-strong); }
-    .nx-img-preview button { position: absolute; top: -8px; right: -8px; width: 22px; height: 22px; border-radius: 50%; border: 0; background: var(--coral); color: #fff; cursor: pointer; font-size: .72rem; line-height: 1; }
+    .nx-img-preview button { position: absolute; top: -10px; right: -10px; width: 30px; height: 30px; border-radius: 50%; border: 0; background: var(--coral); color: #fff; cursor: pointer; font-size: .8rem; line-height: 1; display: grid; place-items: center; }
     .nx-inbox-row { display: flex; align-items: center; gap: .7rem; width: 100%; text-align: left; padding: .7rem .9rem; background: var(--glass-strong); border: 1px solid var(--line); border-radius: var(--r-md); margin-bottom: .5rem; cursor: pointer; font: inherit; }
     .nx-inbox-row:hover { border-color: rgba(91,192,255,.4); } .nx-inbox-row .nx-disc-av { width: 34px; height: 34px; flex: none; }
-    .nx-inbox-meta { flex: 1; min-width: 0; } .nx-inbox-meta b { display: block; font-size: var(--fs-md); } .nx-inbox-meta span { font-size: var(--fs-sm); color: var(--ink-faint); display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .nx-inbox-meta { flex: 1; min-width: 0; } .nx-inbox-meta b { display: block; font-size: var(--fs-md); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .nx-inbox-meta span { font-size: var(--fs-sm); color: var(--ink-faint); display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .nx-inbox-when { font-size: var(--fs-xs); color: var(--ink-faint); flex: none; }
     .nx-dm-search { width: 100%; box-sizing: border-box; padding: .7rem 1rem; margin: 0 0 .8rem; border-radius: var(--r-pill); background: var(--surface); border: 1px solid var(--line-strong); color: var(--ink); font: inherit; font-size: var(--fs-md); }
     .nx-dm-search:focus { outline: none; border-color: var(--aqua); }
 
     /* create-room modal */
-    .nx-modal { position: fixed; inset: 0; z-index: 60; display: grid; place-items: center; padding: 1.2rem; background: rgba(6,7,18,.62); backdrop-filter: blur(6px); animation: nx-fade .2s ease both; }
+    .nx-modal { position: fixed; inset: 0; z-index: 60; display: grid; place-items: center; padding: 1.2rem; overflow-y: auto; background: rgba(6,7,18,.62); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); animation: nx-fade .2s ease both; }
     .nx-modal[hidden] { display: none !important; }
-    .nx-modal-card { width: min(460px, 100%); padding: 1.4rem; }
+    .nx-modal-card { width: min(460px, 100%); padding: 1.4rem; max-height: calc(100dvh - 2.4rem); overflow-y: auto; }
     .nx-modal-title { font-family: var(--font-display); font-weight: 600; font-size: var(--fs-xl); margin: .2rem 0 1rem; }
     #nx-create-form, #nx-tribe-form { display: flex; flex-direction: column; gap: .6rem; }
     #nx-create-form input, #nx-tribe-form input { padding: .8rem 1rem; border-radius: var(--r-md); background: var(--surface); border: 1px solid var(--line-strong); color: var(--ink); font: inherit; font-size: var(--fs-md); }
@@ -385,7 +385,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
     .nx-modal-note { font-size: var(--fs-xs); color: var(--ink-faint); margin: .6rem 0 0; line-height: 1.5; }
 
     /* toast */
-    .nx-toast { position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%) translateY(20px); z-index: 70; background: var(--surface-strong); color: var(--ink); border: 1px solid var(--line-strong); border-radius: var(--r-pill); padding: .6rem 1.1rem; font-size: var(--fs-sm); box-shadow: var(--shadow-soft); opacity: 0; pointer-events: none; transition: opacity .25s, transform .25s; }
+    .nx-toast { position: fixed; left: 50%; bottom: calc(96px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%) translateY(20px); z-index: 70; background: var(--surface-strong); color: var(--ink); border: 1px solid var(--line-strong); border-radius: var(--r-pill); padding: .6rem 1.1rem; font-size: var(--fs-sm); box-shadow: var(--shadow-soft); opacity: 0; pointer-events: none; transition: opacity .25s, transform .25s; }
     .nx-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
     /* ── LIGHT theme: deepen warm/vivid accent TEXT so it reads on cream ── */
@@ -401,6 +401,16 @@ import AppLayout from '../../layouts/AppLayout.astro';
     html[data-theme="light"] .nx-pulse-num,
     html[data-theme="light"] .nx-reso.on { color: #C2410C; text-shadow: none; }
     html[data-theme="light"] .nx-pulse-orb { background: radial-gradient(circle at 50% 45%, rgba(255,150,90,.34), rgba(255,120,80,.14) 60%, transparent 72%); box-shadow: 0 0 40px rgba(255,150,90,.26); }
+
+    /* ── mobile bug-fixes ──────────────────────────────────────────────── */
+    @media (max-width: 820px) {
+      /* iOS auto-zooms text inputs under 16px on focus — force 16px across Nexus */
+      .nx-view input, .nx-view textarea, .nx-view select,
+      #nx-create-form input, #nx-tribe-form input { font-size: 16px; }
+      /* a full-height room / DM takeover owns its own height — drop the shell's
+         bottom reserve so the composer isn't double-offset / hidden behind the bar */
+      .ap-main:has(.nx-room:not([hidden])) { padding-bottom: 0; }
+    }
   </style>
 
   <script>
