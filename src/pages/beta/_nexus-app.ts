@@ -271,9 +271,11 @@
       }
       function appendMsg(m, me) {
         const feed = el('nx-room-feed');
-        const d = document.createElement('div'); d.className = 'nx-rmsg' + (me ? ' me' : '');
-        d.innerHTML = '<span class="nx-rav" style="background:' + g(me ? ME.color : (m.color || 0)) + '"></span><div><span class="nx-rh"></span><p></p></div>';
-        d.querySelector('.nx-rh').textContent = me ? 'you' : (m.handle || 'someone');
+        const blak = !me && !!(m && (m.is_ai || m.handle === 'Blak'));
+        const d = document.createElement('div'); d.className = 'nx-rmsg' + (me ? ' me' : '') + (blak ? ' nx-rmsg-blak' : '');
+        d.innerHTML = '<span class="nx-rav' + (blak ? ' nx-av-blak' : '') + '"' + (blak ? '' : ' style="background:' + g(me ? ME.color : (m.color || 0)) + '"') + '></span><div><span class="nx-rh"></span><p></p></div>';
+        const rh = d.querySelector('.nx-rh');
+        if (blak) rh.innerHTML = '<span class="nx-blak">✦ Blak</span>'; else rh.textContent = me ? 'you' : (m.handle || 'someone');
         d.querySelector('p').textContent = m.text;
         feed.appendChild(d); feed.scrollTop = feed.scrollHeight;
       }
@@ -284,8 +286,8 @@
         setPulse(r.pulse); el('nx-stat-here').textContent = 1; el('nx-stat-time').textContent = '0m';
         el('nx-heat-fill').style.width = '20%';
         el('nx-pulse-orb').classList.remove('resting');
-        el('nx-room-feed').innerHTML = '<div class="nx-rmsg"><span class="nx-rav" style="background:' + g(3) + '"></span><div><span class="nx-rh">blak · quiet moderator</span><p></p></div></div>';
-        el('nx-room-feed').querySelector('p').textContent = 'You’re in — say hello 👋';
+        el('nx-room-feed').innerHTML = '<div class="nx-rmsg nx-rmsg-blak"><span class="nx-rav nx-av-blak"></span><div><span class="nx-rh"><span class="nx-blak">✦ Blak</span></span><p></p></div></div>';
+        el('nx-room-feed').querySelector('p').textContent = 'hey — welcome in 👋 i’ll be around. what’s on your mind?';
         show('room');
         sessionStart = Date.now(); clearInterval(timer); clearInterval(keepAlive);
         timer = setInterval(() => { el('nx-stat-time').textContent = Math.floor((Date.now() - sessionStart) / 60000) + 'm'; }, 5000);
