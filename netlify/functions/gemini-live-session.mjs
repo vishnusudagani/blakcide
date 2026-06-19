@@ -10,6 +10,8 @@
 // If CLOUD_RUN_LIVE_WS_URL is unset, this returns non-200 and the browser falls
 // back to the existing OpenAI Realtime call — so calls never break.
 
+import { verifySupabaseJwt, extractBearer } from '../../symp-core/lib/auth.mjs';
+
 const WS_URL = process.env.CLOUD_RUN_LIVE_WS_URL || '';
 const MODEL  = process.env.GEMINI_VOICE_MODEL_LABEL || 'gemini-live-2.5-flash';
 const VOICE  = 'Aoede';
@@ -37,8 +39,15 @@ export default async (req) => {
         return new Response(JSON.stringify({ error: 'CLOUD_RUN_LIVE_WS_URL not configured' }), { status: 501, headers: CORS });
     }
 
-    let userId = null;
-    try { const b = await req.json(); userId = b?.user_id || null; } catch (_) { /* body optional */ }
+    // Authenticate: derive the user from the verified Supabase JWT, NEVER the
+    // request body — otherwise a caller could fetch another user's personalized
+    // instruction stack by passing their user_id.
+    const bearer = extractBearer(req.headers.get('authorization'));
+    const verified = bearer ? await verifySupabaseJwt(bearer) : { ok: false, reason: 'no_bearer' };
+    if (!verified.ok) {
+        return new Response(JSON.stringify({ error: 'unauthorized' }), { status: 401, headers: CORS });
+    }
+    const userId = verified.user_id;
 
     let instructions = FALLBACK_INSTRUCTIONS;
     try {

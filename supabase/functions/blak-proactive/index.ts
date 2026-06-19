@@ -27,7 +27,9 @@ const MAX_PER_RUN = 50; // safety cap; ramp slowly to protect quality rating
 Deno.serve(async (req) => {
   // Only the scheduler may invoke this.
   const secret = Deno.env.get("CRON_SECRET");
-  if (secret && req.headers.get("x-cron-secret") !== secret) {
+  // Fail CLOSED: if the secret isn't configured, refuse rather than run open
+  // (this function spends LLM tokens and can send real WhatsApp messages).
+  if (!secret || req.headers.get("x-cron-secret") !== secret) {
     return new Response("Forbidden", { status: 403 });
   }
   if (await aiKilled()) {
