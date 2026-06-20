@@ -27,6 +27,11 @@ const GROQ_KEY = process.env.GROQ_API_KEY || '';
 const GROQ_WHISPER_MODEL = process.env.GROQ_WHISPER_MODEL || 'whisper-large-v3';
 const VOICE_INFER_URL = (process.env.VOICE_INFER_URL || '').replace(/\/+$/, '');
 const VOICE_INFER_SECRET = process.env.VOICE_INFER_SECRET || '';
+// Phase 2 — per-user FINE-TUNED voice (Svara LoRA on Modal). Control plane (train +
+// status) and the GPU synthesize endpoint. Both OPTIONAL: when unset, speak() falls
+// back to the existing zero-shot clone path, so nothing breaks if they're not wired.
+const VOICE_FT_API_URL = (process.env.VOICE_FT_API_URL || '').replace(/\/+$/, '');
+const VOICE_FT_SERVE_URL = (process.env.VOICE_FT_SERVE_URL || '').replace(/\/+$/, '');
 
 const SUPPORTED = ['en', 'hi', 'te', 'ta', 'kn', 'ml', 'mr', 'bn', 'gu', 'pa', 'or', 'as'];
 const CONSENT_VERSION = 'voice-clone-v1-2026-06';
@@ -201,6 +206,8 @@ export default async (req, context) => {
     if (req.method === 'GET' && path.endsWith('/status')) return await status(userId);
     if (req.method === 'GET' && path.endsWith('/ref')) return await getRef(req, userId);
     if (req.method === 'POST' && path.endsWith('/speak')) return await speak(req, userId);
+    if (req.method === 'POST' && path.endsWith('/finetune')) return await finetune(userId);
+    if (req.method === 'GET' && path.endsWith('/train-status')) return await trainStatus(userId);
     if (req.method === 'DELETE') return await deleteAll(userId);
     return fail(404, 'not_found', 'Unknown voice-clone route');
   } catch (e) {
@@ -209,7 +216,7 @@ export default async (req, context) => {
 };
 
 export const config = {
-  path: ['/api/voice-clone', '/api/voice-clone/enroll', '/api/voice-clone/status', '/api/voice-clone/ref', '/api/voice-clone/speak'],
+  path: ['/api/voice-clone', '/api/voice-clone/enroll', '/api/voice-clone/status', '/api/voice-clone/ref', '/api/voice-clone/speak', '/api/voice-clone/finetune', '/api/voice-clone/train-status'],
 };
 
 // ── handlers ─────────────────────────────────────────────────────────────
@@ -351,7 +358,23 @@ async function speak(req, userId) {
   const emotion = (b && b.emotion) || null;
   if (!text) return fail(400, 'bad_request', 'text required');
 
-  // Cloned voice — only if there's a ready clip for this user AND an engine is wired.
+  // BEST path: the user's FINE-TUNED voice (Svara LoRA) — native te/hi/en in their own
+  // voice, no reference clip. 404 (not trained yet) falls through to zero-shot below.
+  if (VOICE_FT_SERVE_URL) {
+    try {
+      const r = await fetch(`${VOICE_FT_SERVE_URL}/synthesize`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(VOICE_INFER_SECRET ? { 'X-Infer-Secret': VOICE_INFER_SECRET } : {}) },
+        body: JSON.stringify({ user_id: userId, text, language, format: 'wav' }),
+      });
+      if (r.ok) {
+        const buf = Buffer.from(await r.arrayBuffer());
+        return ok({ audio_base64: buf.toString('base64'), mime_type: r.headers.get('content-type') || 'audio/wav', voice: 'clone:trained', language });
+      }
+    } catch { /* fall through to zero-shot */ }
+  }
+
+  // Zero-shot cloned voice — only if there's a ready clip for this user AND an engine is wired.
   if (VOICE_INFER_URL) {
     // Prefer the best clip from the library; fall back to the legacy single clone.
     let refPath = null, refTranscript = '';
@@ -384,4 +407,49 @@ async function speak(req, userId) {
   if (!OPENAI_KEY) return fail(502, 'voice_unavailable', 'voice service unavailable');
   const audio = await presetTts(text, language);
   return ok({ audio_base64: audio, mime_type: 'audio/mpeg', voice: 'preset', language });
+}
+
+// ── Phase 2: per-user FINE-TUNED voice (Svara LoRA on Modal) ──────────────────
+// Gather the user's whole library as short-lived signed URLs + transcripts, so the
+// Modal trainer can pull the audio without ever holding Supabase credentials.
+async function gatherItems(userId) {
+  const r = await sbRest(`symp_voice_clips?user_id=eq.${userId}&status=eq.ready&deleted_at=is.null&select=clip_path,transcript,language&order=created_at.asc`);
+  const rows = Array.isArray(r.data) ? r.data : [];
+  const items = [];
+  for (const row of rows) {
+    if (!row.clip_path || !row.transcript) continue;
+    const url = await storageSignedUrl(row.clip_path, 3600); // 1h — long enough for training to download
+    if (url) items.push({ url, transcript: row.transcript, language: row.language || 'en' });
+  }
+  return items;
+}
+
+// POST /finetune — start a fine-tune on the user's whole corpus (async on Modal).
+async function finetune(userId) {
+  if (!VOICE_FT_API_URL) return fail(503, 'training_unavailable', 'Voice training isn’t switched on yet.');
+  const items = await gatherItems(userId);
+  if (items.length < 3) return fail(400, 'not_enough_clips', `Record a few more answers first — you have ${items.length}, need at least 3.`);
+  try {
+    const r = await fetch(`${VOICE_FT_API_URL}/train`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...(VOICE_INFER_SECRET ? { 'X-Infer-Secret': VOICE_INFER_SECRET } : {}) },
+      body: JSON.stringify({ user_id: userId, items }),
+    });
+    if (!r.ok) { const t = await r.text().catch(() => ''); return fail(502, 'train_failed', 'Could not start training. ' + t.slice(0, 120)); }
+    const j = await r.json().catch(() => ({}));
+    return ok({ queued: true, call_id: j.call_id || null, clips: items.length });
+  } catch (e) { return fail(502, 'train_failed', (e && e.message) || 'training request failed'); }
+}
+
+// GET /train-status — is the user's fine-tuned voice ready to use?
+async function trainStatus(userId) {
+  if (!VOICE_FT_API_URL) return ok({ ready: false, configured: false });
+  try {
+    const r = await fetch(`${VOICE_FT_API_URL}/status?user_id=${encodeURIComponent(userId)}`, {
+      headers: { ...(VOICE_INFER_SECRET ? { 'X-Infer-Secret': VOICE_INFER_SECRET } : {}) },
+    });
+    if (!r.ok) return ok({ ready: false, configured: true });
+    const j = await r.json().catch(() => ({}));
+    return ok({ ready: !!j.ready, configured: true });
+  } catch { return ok({ ready: false, configured: true }); }
 }
