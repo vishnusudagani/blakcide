@@ -20,13 +20,14 @@ import { chatCompleteFailover } from '../../symp-core/lib/llm-providers.mjs';
 import { transcribe, synthesize, detectLane } from '../../symp-core/lib/voice.mjs';
 import { recordEventAsync } from '../../symp-core/lib/vibe-tracker.mjs';
 import { updateRollingMemoryAsync } from '../../symp-core/lib/memory-updater.mjs';
+import { extractKnowledgeAsync } from '../../symp-core/lib/knowledge-extractor.mjs';
 import SympContract from '../../symp-core/contract/endpoints.js';
 
 const { ERROR_CODES, SYMP_REQUEST_ID_HEADER } = SympContract;
 
 const CALL_FRAMING = {
     role: 'system',
-    content: 'You are on a live VOICE call with the user. Reply in 1–2 short, natural spoken sentences — warm, like a close friend on the phone. NO markdown, NO bullet lists, NO emoji, no stage directions. Always in the user\'s current language.',
+    content: 'You are on a live VOICE call with the user. Reply in 1–2 short, natural spoken sentences — warm, like a close friend on the phone. NO markdown, NO bullet lists, NO emoji, no stage directions. Always in the user\'s current language. As the call flows, stay genuinely curious about their life — their name, where they are, what they do, who matters to them, what they like; when a thread opens, ask ONE warm follow-up, then listen. Never interrogate.',
 };
 
 export default async (req) => {
@@ -88,9 +89,12 @@ export default async (req) => {
     let audioChunks = [];
     try { audioChunks = await synthesize(reply, lane); } catch (_) { /* audio optional → client shows text */ }
 
-    // ── 4. Feed the shared brain (vibe + rolling memory) — same as /chat ──
+    // ── 4. Feed the shared brain (vibe + rolling memory + profile) — same as /chat ──
+    // Knowledge extraction was previously chat-only, so spoken turns never built the
+    // profile. Calls now learn durable facts too (true cross-context, one profile).
     recordEventAsync(user_id, { source: 'ai_call', evidence: `User: ${transcript}\n\nAssistant: ${reply}` });
     updateRollingMemoryAsync(user_id, { userText: transcript, assistantText: reply });
+    extractKnowledgeAsync(user_id, { userText: transcript, assistantText: reply });
 
     logAccess({ requestId, endpoint: 'voice', statusCode: 200, latencyMs: Date.now() - t0, userId: user_id });
     return new Response(

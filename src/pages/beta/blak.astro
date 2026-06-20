@@ -971,7 +971,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
     // Preferred when the Vertex bridge is configured; falls back to the
     // turn-based cascade below if it isn't reachable (unset env / billing /
     // error). Mic 16kHz PCM in, 24kHz PCM out, full-duplex with barge-in.
-    let gws = null, gproc = null, gsrcNode = null, gNextPlay = 0, gAiSpeaking = false, liveMode = false, gCap = '', gDuckTimer = null;
+    let gws = null, gproc = null, gsrcNode = null, gNextPlay = 0, gAiSpeaking = false, liveMode = false, gCap = '', gYou = '', gDuckTimer = null;
     function gPlay(b64) {
       if (!actx || callState === 'idle') return;
       const bin = atob(b64), bytes = new Uint8Array(bin.length);
@@ -998,6 +998,21 @@ import AppLayout from '../../layouts/AppLayout.astro';
         if (callState !== 'idle' && !muted) setCall('listening', 'listening… just talk');
       }, Math.max(0, (gNextPlay - now) * 1000) + 300);
     }
+    // Learn from one spoken exchange — realtime calls bypass every Netlify fn, so
+    // without this the profile never grew on calls. Fire-and-forget via the proxy
+    // (injects the API key + authoritative user_id); same learner as text chat.
+    async function flushCallLearn(u, a) {
+      u = (u || '').trim(); a = (a || '').trim();
+      if (!u) return;   // nothing the user actually said → nothing to learn
+      try {
+        const jwt = await getToken(); if (!jwt) return;
+        fetch('/api/blaksyd/symp/call-learn', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + jwt },
+          body: JSON.stringify({ userText: u, assistantText: a }),
+        }).catch(() => {});
+      } catch (e) { /* learning is best-effort */ }
+    }
     function gHandle(o) {
       if (!o) return;
       const sc = o.serverContent; if (!sc) return;
@@ -1005,16 +1020,21 @@ import AppLayout from '../../layouts/AppLayout.astro';
         if (gsrcNode) { try { gsrcNode.stop(); } catch (e) {} }
         gNextPlay = actx ? actx.currentTime : 0;
         if (gDuckTimer) { clearTimeout(gDuckTimer); gDuckTimer = null; }
+        flushCallLearn(gYou, gCap); gYou = ''; gCap = '';   // barge-in ends the exchange
         gAiSpeaking = false; setCall('listening', 'listening…'); return;
       }
       if (sc.modelTurn && sc.modelTurn.parts) sc.modelTurn.parts.forEach((p) => {
         if (p.inlineData && p.inlineData.data && String(p.inlineData.mimeType || '').indexOf('audio') === 0) gPlay(p.inlineData.data);
       });
       if (sc.outputTranscription && sc.outputTranscription.text) gCap += sc.outputTranscription.text;
-      if (sc.inputTranscription && sc.inputTranscription.text) callCap.innerHTML = '<p class="cc-you">' + escHtml(sc.inputTranscription.text) + '</p>' + (gCap ? '<p class="cc-blak">' + escHtml(gCap) + '</p>' : '');
+      if (sc.inputTranscription && sc.inputTranscription.text) {
+        gYou += sc.inputTranscription.text;   // accumulate the full utterance (for display + learning)
+        callCap.innerHTML = '<p class="cc-you">' + escHtml(gYou) + '</p>' + (gCap ? '<p class="cc-blak">' + escHtml(gCap) + '</p>' : '');
+      }
       if (sc.turnComplete) {
         if (gCap.trim()) { const you = callCap.querySelector('.cc-you'); callCap.innerHTML = (you ? you.outerHTML : '') + '<p class="cc-blak">' + escHtml(gCap.trim()) + '</p>'; }
-        gCap = '';
+        flushCallLearn(gYou, gCap);   // learn from this spoken exchange (profile + memory)
+        gYou = ''; gCap = '';
         // Do NOT un-duck here — audio is still scheduled ahead. The duck timer
         // in gPlay flips back to "listening" once playback actually drains.
       }
@@ -1045,7 +1065,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
       const jwt = await getToken(); if (!jwt) return false;
       return await new Promise((resolve) => {
         let ws; try { ws = new WebSocket(cfg.wsUrl, ['blak.v1', 'blak.jwt.' + jwt]); } catch (e) { return resolve(false); }
-        gws = ws; gNextPlay = 0; gAiSpeaking = false; gCap = ''; let settled = false;
+        gws = ws; gNextPlay = 0; gAiSpeaking = false; gCap = ''; gYou = ''; let settled = false;
         const done = (v) => { if (settled) return; settled = true; resolve(v); };
         const to = setTimeout(() => { if (!settled) { try { ws.close(); } catch (e) {} done(false); } }, 9000);
         const langSel = (callLang && callLang.value && callLang.value !== 'auto') ? ('\nThe user picked ' + callLang.value + ' for this call — speak that language.') : '';

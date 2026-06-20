@@ -46,8 +46,27 @@ import AppLayout from '../../../layouts/AppLayout.astro';
         </div>
       </div>
       <div class="pf-av-editor" id="pf-av-editor" hidden>
-        <div class="pf-av-styles" id="pf-av-styles"></div>
-        <button type="button" class="pf-pill-btn" id="pf-av-shuffle">↻ Shuffle look</button>
+        <div class="pf-av-modes" id="pf-av-modes">
+          <button type="button" class="pf-av-mode sel" data-m="cartoon">Cartoon</button>
+          <button type="button" class="pf-av-mode" data-m="photo">Photo</button>
+        </div>
+
+        <div class="pf-av-pane" id="pf-av-cartoon">
+          <div class="pf-av-sub">Style</div>
+          <div class="pf-av-styles" id="pf-av-styles"></div>
+          <div class="pf-av-sub">Background</div>
+          <div class="pf-av-bgs" id="pf-av-bgs"></div>
+          <button type="button" class="pf-pill-btn" id="pf-av-shuffle">↻ Shuffle face</button>
+        </div>
+
+        <div class="pf-av-pane" id="pf-av-photo" hidden>
+          <label class="pf-av-upload" id="pf-av-upload">
+            <input type="file" id="pf-av-file" accept="image/*" hidden />
+            <span class="pf-av-upload-ico" aria-hidden="true">＋</span>
+            <span class="pf-av-upload-txt" id="pf-av-upload-txt">Upload a photo</span>
+          </label>
+          <button type="button" class="pf-pill-btn" id="pf-av-photo-clear" hidden>Use a cartoon instead</button>
+        </div>
       </div>
 
       <label class="pf-lbl">What are they for?</label>
@@ -158,12 +177,28 @@ import AppLayout from '../../../layouts/AppLayout.astro';
   .pf-area { display: block; margin-top: .55rem; }
 
   .pf-av-editor { margin-top: .9rem; padding: .9rem; border-radius: 14px; background: var(--surface-strong); }
+  .pf-av-modes { display: inline-flex; padding: 3px; gap: 2px; border-radius: var(--r-pill); background: var(--surface); border: 1px solid var(--line); margin-bottom: .9rem; }
+  .pf-av-mode { border: none; background: transparent; color: var(--ink-soft); border-radius: var(--r-pill); padding: .35rem .9rem; font-size: var(--fs-sm); font-weight: 600; cursor: pointer; transition: color .15s, background .15s; }
+  .pf-av-mode.sel { background: var(--accent-grad, linear-gradient(135deg,#FFD27A,#FF6B9D)); color: #3a1430; }
+  .pf-av-sub { font-size: var(--fs-xs); color: var(--ink-faint); margin: 0 0 .5rem; }
+  .pf-av-sub + .pf-av-bgs, .pf-av-styles + .pf-av-sub { margin-top: .9rem; }
   .pf-av-styles { display: flex; flex-wrap: wrap; gap: .5rem; }
   .pf-av-style { width: 52px; height: 52px; border-radius: 50%; border: 2px solid transparent; background: var(--surface); cursor: pointer; padding: 0; overflow: hidden; transition: transform .15s var(--ease-spring, ease), border-color .15s; }
   .pf-av-style img { width: 100%; height: 100%; }
   .pf-av-style:hover { transform: translateY(-2px); }
   .pf-av-style.sel { border-color: var(--coral); }
+  .pf-av-bgs { display: flex; flex-wrap: wrap; gap: .5rem; }
+  .pf-av-bg { width: 30px; height: 30px; border-radius: 50%; border: 2px solid var(--line); cursor: pointer; padding: 0; position: relative; transition: transform .14s var(--ease-spring, ease); }
+  .pf-av-bg:hover { transform: scale(1.12); }
+  .pf-av-bg.sel { border-color: var(--coral); box-shadow: 0 0 0 2px color-mix(in srgb, var(--coral) 35%, transparent); }
+  .pf-av-bg.none { background: var(--surface); }
+  .pf-av-bg.none::after { content: ''; position: absolute; inset: 0; margin: auto; width: 2px; height: 22px; background: #ff6b6b; transform: rotate(45deg); border-radius: 2px; }
   .pf-pill-btn { margin-top: .7rem; border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: var(--r-pill); padding: .4rem .85rem; font-size: var(--fs-sm); cursor: pointer; }
+  .pf-av-upload { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .4rem; min-height: 130px; border-radius: 14px; border: 1.5px dashed var(--line-strong, var(--line)); color: var(--ink-soft); font-size: var(--fs-sm); font-weight: 600; cursor: pointer; background-size: cover; background-position: center; transition: border-color .15s, color .15s; text-align: center; }
+  .pf-av-upload:hover { border-color: var(--coral); color: var(--coral); }
+  .pf-av-upload.has { color: #fff; text-shadow: 0 1px 4px rgba(0,0,0,.6); border-style: solid; border-color: transparent; }
+  .pf-av-upload.has .pf-av-upload-ico { display: none; }
+  .pf-av-upload-ico { font-size: 26px; line-height: 1; font-weight: 300; }
 
   /* chip rows (purpose, languages) */
   .pf-chiprow { display: flex; flex-wrap: wrap; gap: .45rem; }
