@@ -869,13 +869,22 @@ import AppLayout from '../../layouts/AppLayout.astro';
           <div class="mnx-feel" id="mnx-feel"><button data-f="lighter" title="Lighter">🙂</button><button data-f="same" title="About the same">😐</button><button data-f="heavy" title="Still heavy">😔</button></div>
           <p style="margin-top:.8rem">And your listener?</p>
           <div class="mnx-stars" id="mnx-stars">${[1,2,3,4,5].map((n) => `<span data-n="${n}">★</span>`).join('')}</div>
+          <input id="mnx-reflect-note" type="text" maxlength="200" placeholder="A word on what this was about? (optional — just for you)" style="width:100%;box-sizing:border-box;margin-top:1rem;background:var(--surface);border:1px solid var(--line-strong);border-radius:var(--r-pill);padding:.65rem 1rem;color:var(--ink);font:inherit;font-size:16px;outline:none" />
           <div class="mnx-modal-actions"><button type="button" class="mnx-btn-ghost" id="mnx-skip">Skip</button><button type="button" class="mnx-btn-go" id="mnx-submit">Done</button></div></div>`;
         document.body.appendChild(modal);
         modal.querySelectorAll('#mnx-feel button').forEach((bn) => bn.addEventListener('click', () => { feel = bn.getAttribute('data-f'); modal.querySelectorAll('#mnx-feel button').forEach((x) => x.classList.toggle('on', x === bn)); }));
         modal.querySelectorAll('#mnx-stars span').forEach((s) => s.addEventListener('click', () => { stars = Number(s.getAttribute('data-n')); modal.querySelectorAll('#mnx-stars span').forEach((x) => x.classList.toggle('on', Number(x.getAttribute('data-n')) <= stars)); }));
         const finish = () => { modal.remove(); resetToEntry(); };
         modal.querySelector('#mnx-skip').addEventListener('click', finish);
-        modal.querySelector('#mnx-submit').addEventListener('click', async () => { if (stars) { try { await supabase.from('listener_reviews').insert([{ session_id: sessionId, listener_id: listenerId, user_id: user.id, rating: stars, review_text: feel ? ('felt: ' + feel) : null }]); } catch (e) {} } try { logEvent('reviewed', { stars, feel }); } catch (e) {} finish(); });
+        modal.querySelector('#mnx-submit').addEventListener('click', async () => {
+          if (stars) { try { await supabase.from('listener_reviews').insert([{ session_id: sessionId, listener_id: listenerId, user_id: user.id, rating: stars, review_text: feel ? ('felt: ' + feel) : null }]); } catch (e) {} }
+          // Optional reflection (the seeker's own words) → minit_reflections, the
+          // private learning signal. Feeds the nightly Minit synthesis (P3).
+          const note = (modal.querySelector('#mnx-reflect-note')?.value || '').trim();
+          const feelMood = feel === 'lighter' ? 'great' : feel === 'same' ? 'okay' : feel === 'heavy' ? 'low' : null;
+          if (feelMood || note) { try { await supabase.from('minit_reflections').insert([{ session_id: sessionId, user_id: user.id, mood: feelMood, note: note || null }]); } catch (e) {} }
+          try { logEvent('reviewed', { stars, feel, reflected: !!(feelMood || note) }); } catch (e) {} finish();
+        });
         modal.addEventListener('click', (e) => { if (e.target === modal) finish(); });
       }
 
