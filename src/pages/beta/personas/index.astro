@@ -50,6 +50,15 @@ import AppLayout from '../../../layouts/AppLayout.astro';
   .pg-card:hover .pg-del { opacity: 1; }
   .pg-del:hover { color: #ff6b6b; }
   .pg-del svg { width: 16px; height: 16px; }
+  .pg-edit {
+    position: absolute; top: 6px; left: 6px; width: 28px; height: 28px; border-radius: 50%;
+    display: grid; place-items: center; border: none; background: transparent; color: var(--ink-faint); cursor: pointer; opacity: 0; transition: opacity .15s, color .15s;
+  }
+  .pg-card:hover .pg-edit { opacity: 1; }
+  .pg-edit:hover { color: var(--coral); }
+  .pg-edit svg { width: 15px; height: 15px; }
+  /* Touch devices have no hover — keep the actions reachable. */
+  @media (hover: none) { .pg-edit, .pg-del { opacity: .5; } }
   .pg-empty { margin: 1.5rem .2rem; color: var(--ink-faint); font-size: var(--fs-sm); }
   .pg-realref { display: inline-block; margin-top: 2rem; color: var(--ink-soft); font-size: var(--fs-sm); text-decoration: none; }
   .pg-realref:hover { color: var(--coral); }

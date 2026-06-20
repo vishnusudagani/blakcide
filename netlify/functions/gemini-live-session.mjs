@@ -49,18 +49,30 @@ export default async (req) => {
     }
     const userId = verified.user_id;
 
+    // Optional fantasy-persona call: the client sends { persona_id }. Load it
+    // (scoped to this user) so the call becomes the persona — its instruction
+    // stack and its chosen voice instead of Blak's.
+    let personaId = null;
+    try { const body = await req.json().catch(() => null); personaId = (body && body.persona_id) || null; } catch (_) { /* no/invalid body */ }
+    let persona = null;
+    if (personaId) {
+        try { const sb = await import('../../symp-core/lib/supabase.mjs'); persona = await sb.fetchFantasyPersona(userId, personaId); } catch (_) { /* fall back to Blak */ }
+    }
+
     let instructions = FALLBACK_INSTRUCTIONS;
     try {
         const sys = await import('../../symp-core/lib/system-prompt.mjs');
-        instructions = await sys.buildInstructionsText(userId);
+        instructions = await sys.buildInstructionsText(userId, { persona });
     } catch (e) {
         console.warn('[gemini-live-session] system-prompt import failed, using fallback:', e.message);
     }
 
+    const voice = (persona && persona.voice) || VOICE;
+
     // model is a label only — the Cloud Run bridge rewrites setup.model to the
     // full Vertex resource path using its own VERTEX_LIVE_MODEL env.
     return new Response(
-        JSON.stringify({ wsUrl: WS_URL, model: MODEL, voice: VOICE, instructions }),
+        JSON.stringify({ wsUrl: WS_URL, model: MODEL, voice, instructions }),
         { status: 200, headers: CORS },
     );
 };

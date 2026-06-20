@@ -148,6 +148,45 @@ async function resolveActivePersona(userId) {
     } catch (_) { return 'friend'; }
 }
 
+// ── Fantasy personas (user-created characters) ──────────────────────────────
+// A fantasy persona is its OWN character, so its card REPLACES Blak's core
+// identity (rather than layering on top like the built-in persona cards). The
+// universal layers — care/safety, language mirroring, real-time — still wrap it.
+const FANTASY_PURPOSE_GUIDE = {
+    ai_friend:   'Your role: be their AI friend — warm, present, real.',
+    study_buddy: 'Your role: help them study, focus and actually learn — explain, quiz, keep them going.',
+    hype:        'Your role: hype them up — celebrate the wins, pump them up, believe in them out loud.',
+    coach:       'Your role: coach them toward their goals — honest and motivating, a little demanding when it helps.',
+    roleplay:    'Your role: you are a roleplay character — stay fully in the scene and never break it.',
+    custom:      '',
+};
+
+export function buildFantasyPersonaCard(p, { forVoice = false } = {}) {
+    const name = String((p && p.name) || 'this character').trim();
+    const N = name.toUpperCase();
+    const lines = [
+        `=== WHO YOU ARE: ${N} ===`,
+        `For this entire conversation you ARE ${name} — a character this person created and chose to talk to. Fully embody ${name}: their voice, their mood, the way they see things. You are NOT a generic assistant and you are NOT "Blak" — you are ${name}, start to finish.`,
+    ];
+    if (p.tagline)   lines.push(`In a line: ${p.tagline}`);
+    if (p.backstory) lines.push(`Your story: ${p.backstory}`);
+    if (Array.isArray(p.traits) && p.traits.length) lines.push(`Your personality: ${p.traits.join(', ')}.`);
+    if (p.voice_tone) lines.push(`How you talk: ${p.voice_tone}`);
+    const guide = FANTASY_PURPOSE_GUIDE[p.purpose];
+    if (guide) lines.push(guide);
+    lines.push(
+        forVoice
+            ? 'On this call: speak naturally, short conversational turns, react like a real person — never a monologue or a lecture.'
+            : 'Text like a real person: lead with a genuine reaction, keep it short (1–4 sentences), lowercase and casual is fine, an emoji only when it fits. NO markdown, NO bullet points, NO headings, no assistant-style sign-offs.'
+    );
+    lines.push(`NEVER announce or admit you are an AI, a bot, a model or a program, and never claim to be human either. If asked "are you real / a bot?", brush it off playfully and stay in character as ${name}.`);
+    if (p.build_profile_from !== false) {
+        lines.push('Be genuinely curious about them — as it flows, get to know who they are; when a thread opens, ask ONE warm question, never an interrogation.');
+    }
+    lines.push(`=== END ${N} ===`);
+    return lines.join('\n');
+}
+
 /**
  * Build the FULL system message stack for /chat. Order is the load-bearing
  * detail — each layer narrows the model's behaviour.
@@ -164,6 +203,27 @@ async function resolveActivePersona(userId) {
  * can spread them into the OpenAI request.
  */
 export async function buildChatSystemStack(userId, opts = {}) {
+    // ── Fantasy persona chat: the persona's own identity replaces Blak's core,
+    // but care/safety + language mirroring + real-time still wrap it. The user's
+    // profile (vibe/vault/knowledge) is injected ONLY if they let this persona
+    // use it (can_use_profile). Extraction is gated separately, in the handler.
+    if (opts.persona) {
+        const p = opts.persona;
+        const pstack = [
+            { role: 'system', content: buildFantasyPersonaCard(p) },
+            { role: 'system', content: CARE_AND_SAFETY_TEXT },
+            { role: 'system', content: CRITICAL_OVERRIDE_TEXT },
+            { role: 'system', content: REAL_TIME_DATA_TEXT },
+        ];
+        if (userId && p.can_use_profile === true) {
+            try { const vibe = await getVibe(userId); const snap = renderVibeSnapshot(vibe); if (snap) pstack.push({ role: 'system', content: snap }); } catch (_) { /* ignore */ }
+            try { const vaultMsg = await buildVaultContextMessage(userId); if (vaultMsg && vaultMsg.content) pstack.push(vaultMsg); } catch (_) { /* ignore */ }
+            try { const knowledge = await buildKnowledgeBlock(userId, { latestUserText: opts.latestUserText }); if (knowledge) pstack.push({ role: 'system', content: knowledge }); } catch (_) { /* ignore */ }
+        }
+        try { const correction = buildCorrectionHint(userId); if (correction) pstack.push({ role: 'system', content: correction }); } catch (_) { /* ignore */ }
+        return pstack;
+    }
+
     const stack = [
         { role: 'system', content: CORE_IDENTITY_TEXT },
         { role: 'system', content: CARE_AND_SAFETY_TEXT },
@@ -222,7 +282,25 @@ export async function buildChatSystemStack(userId, opts = {}) {
  * @param {string|null} userId
  * @returns {Promise<string>}
  */
-export async function buildInstructionsText(userId) {
+export async function buildInstructionsText(userId, opts = {}) {
+    // Fantasy persona call: the persona's identity replaces Blak's core; the
+    // user's profile is injected only if they let this persona use it.
+    if (opts.persona) {
+        const p = opts.persona;
+        const parts = [
+            buildFantasyPersonaCard(p, { forVoice: true }),
+            CARE_AND_SAFETY_TEXT, CRITICAL_OVERRIDE_TEXT, REAL_TIME_DATA_TEXT,
+        ];
+        if (userId && p.can_use_profile === true) {
+            try { const vibe = await getVibe(userId); const snap = renderVibeSnapshot(vibe); if (snap) parts.push(snap); } catch (_) { /* ignore */ }
+            try { const vaultMsg = await buildVaultContextMessage(userId); if (vaultMsg && vaultMsg.content) parts.push(vaultMsg.content); } catch (_) { /* ignore */ }
+            try { const knowledge = await buildKnowledgeBlock(userId, {}); if (knowledge) parts.push(knowledge); } catch (_) { /* ignore */ }
+        }
+        parts.push(CALL_FRAMING_TEXT);
+        try { const correction = buildCorrectionHint(userId); if (correction) parts.push(correction); } catch (_) { /* ignore */ }
+        return parts.join('\n\n');
+    }
+
     const parts = [CORE_IDENTITY_TEXT, CARE_AND_SAFETY_TEXT, CRITICAL_OVERRIDE_TEXT, REAL_TIME_DATA_TEXT];
 
     const personaId = await resolveActivePersona(userId);

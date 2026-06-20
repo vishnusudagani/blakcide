@@ -349,6 +349,21 @@ export async function upsertPersonaState({ userId, activePersona, locked, swapHi
     return { ok: ins.ok, action: 'created' };
 }
 
+// ── Fantasy personas (user-created characters) ────────────────────────────
+// Read with the service role for the chat/call prompt builders. Always scope by
+// BOTH id AND user_id so a caller can only ever load the user's own persona,
+// even though the service key bypasses RLS (defence-in-depth — the handler has
+// already verified user_id from the JWT).
+export async function fetchFantasyPersona(userId, personaId) {
+    if (!userId || !personaId) return null;
+    const u = encodeURIComponent(userId);
+    const p = encodeURIComponent(personaId);
+    const { ok, data } = await sbFetch(
+        `fantasy_personas?id=eq.${p}&user_id=eq.${u}&select=*`
+    );
+    return (ok && Array.isArray(data) && data[0]) ? data[0] : null;
+}
+
 // ── Persona-scoped facts (DOB for astrologer, religion for spiritual, …) ──
 
 /**

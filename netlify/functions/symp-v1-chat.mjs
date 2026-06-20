@@ -26,6 +26,7 @@ import {
     logAccess, CORS_HEADERS,
 } from '../../symp-core/lib/middleware.mjs';
 import { buildChatSystemStack } from '../../symp-core/lib/system-prompt.mjs';
+import { fetchFantasyPersona } from '../../symp-core/lib/supabase.mjs';
 import { TOOL_DEFS, executeTool } from '../../symp-core/lib/tools.mjs';
 import { runStreamingChatWithTools } from '../../symp-core/lib/chat-runner.mjs';
 import { chatProviders } from '../../symp-core/lib/llm-providers.mjs';
@@ -77,7 +78,7 @@ export default async (req) => {
         return jsonError(ERROR_CODES.BAD_REQUEST, 'Invalid JSON body', 400, requestId);
     }
 
-    const { user_id, messages, stream = true, source_session_id = null } = parsed.data || {};
+    const { user_id, messages, stream = true, source_session_id = null, persona_id = null } = parsed.data || {};
 
     if (!user_id) {
         logAccess({ requestId, endpoint: ENDPOINTS.CHAT, statusCode: 400, latencyMs: Date.now() - t0, errorCode: 'MISSING_USER_ID' });
@@ -108,9 +109,14 @@ export default async (req) => {
 
     // ── Build the layered system stack ───────────────────────────────────
     const latestUserText = [...messages].reverse().find(m => m.role === 'user')?.content || '';
+    // Fantasy persona chat? Load it (service role, scoped to this user) so the
+    // prompt becomes the persona — and learning respects its consent toggle.
+    let persona = null;
+    if (persona_id) { try { persona = await fetchFantasyPersona(user_id, persona_id); } catch (_) { /* fall back to Blak */ } }
+    const mayLearn = !persona || persona.build_profile_from !== false;
     let systemStack = [];
     try {
-        systemStack = await buildChatSystemStack(user_id, { latestUserText });
+        systemStack = await buildChatSystemStack(user_id, { latestUserText, persona });
     } catch (e) {
         console.warn(`[symp-v1-chat] system-stack build failed for ${user_id}: ${e.message}`);
         // Soft fall-through: the chat still goes out, just less personalised.
@@ -159,13 +165,17 @@ export default async (req) => {
 
         // Vibe write — fire and forget.
         const lastUser = [...messages].reverse().find(m => m.role === 'user')?.content || '';
-        recordEventAsync(user_id, {
-            source: 'ai_chat',
-            sourceSessionId: source_session_id,
-            evidence: `User: ${lastUser}\n\nAssistant: ${assembled}`,
-        });
-        // Hand learning off to the background function (reliable, off the request path).
-        await fireLearn(req, user_id, lastUser, assembled);
+        // Honour the persona's consent toggle: a persona with build_profile_from
+        // off must not feed the vibe tracker or the knowledge profile.
+        if (mayLearn) {
+            recordEventAsync(user_id, {
+                source: 'ai_chat',
+                sourceSessionId: source_session_id,
+                evidence: `User: ${lastUser}\n\nAssistant: ${assembled}`,
+            });
+            // Hand learning off to the background function (reliable, off the request path).
+            await fireLearn(req, user_id, lastUser, assembled);
+        }
 
         // Self-correction analysis — synchronous but cheap (regex-only).
         try {
@@ -222,12 +232,15 @@ export default async (req) => {
             // keeps the serverless function alive until this finishes. Work queued
             // AFTER close gets dropped when the runtime freezes on response complete.
             const lastUser = [...messages].reverse().find(m => m.role === 'user')?.content || '';
-            recordEventAsync(user_id, {
-                source: 'ai_chat',
-                sourceSessionId: source_session_id,
-                evidence: `User: ${lastUser}\n\nAssistant: ${assembledForVibe}`,
-            });
-            await fireLearn(req, user_id, lastUser, assembledForVibe);
+            // Honour the persona's consent toggle (see non-stream path above).
+            if (mayLearn) {
+                recordEventAsync(user_id, {
+                    source: 'ai_chat',
+                    sourceSessionId: source_session_id,
+                    evidence: `User: ${lastUser}\n\nAssistant: ${assembledForVibe}`,
+                });
+                await fireLearn(req, user_id, lastUser, assembledForVibe);
+            }
 
             // Self-correction analysis — pins next-turn corrective hint.
             try {

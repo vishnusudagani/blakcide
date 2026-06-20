@@ -7,6 +7,7 @@ const createCard = document.getElementById('pg-create') as HTMLElement;
 const emptyEl = document.getElementById('pg-empty') as HTMLElement;
 
 const TRASH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>';
+const PENCIL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>';
 
 function avatarUrl(av: any) {
   av = av || {};
@@ -25,13 +26,19 @@ function cardEl(p: any) {
   const a = document.createElement('div');
   a.className = 'pg-card';
   a.innerHTML =
+    '<button type="button" class="pg-edit" aria-label="Edit persona">' + PENCIL + '</button>' +
     '<button type="button" class="pg-del" aria-label="Delete persona">' + TRASH + '</button>' +
     '<img class="pg-av" alt="" loading="lazy" src="' + esc(avatarUrl(p.avatar)) + '" />' +
     '<div class="pg-name">' + esc(p.name || 'Untitled') + '</div>' +
     (p.purpose && PURPOSE_LABEL[p.purpose] ? '<div class="pg-purpose">' + esc(PURPOSE_LABEL[p.purpose]) + '</div>' : '') +
     (p.tagline ? '<div class="pg-tag">' + esc(p.tagline) + '</div>' : '');
+  // Tap the card → talk to it. The pencil edits; the trash deletes.
   a.addEventListener('click', (e: any) => {
-    if (e.target.closest('.pg-del')) return;
+    if (e.target.closest('.pg-del') || e.target.closest('.pg-edit')) return;
+    window.location.href = '/beta/personas/chat/?id=' + encodeURIComponent(p.id);
+  });
+  a.querySelector('.pg-edit')!.addEventListener('click', (e) => {
+    e.stopPropagation();
     window.location.href = '/beta/personas/edit/?id=' + encodeURIComponent(p.id);
   });
   a.querySelector('.pg-del')!.addEventListener('click', async (e) => {
