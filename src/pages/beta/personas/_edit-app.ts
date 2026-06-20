@@ -8,7 +8,9 @@ const PURPOSES: [string, string][] = [['ai_friend', 'AI Friend'], ['study_buddy'
 const PURPOSE_LABEL: Record<string, string> = Object.fromEntries(PURPOSES);
 const VOICES: [string, string][] = [['Aoede', 'warm · breezy'], ['Kore', 'clear · firm'], ['Leda', 'soft · youthful'], ['Zephyr', 'bright · light'], ['Puck', 'playful · upbeat'], ['Charon', 'deep · calm'], ['Fenrir', 'bold · lively'], ['Orus', 'steady · grounded']];
 const LANGS: [string, string][] = [['en', 'English'], ['hi', 'Hindi'], ['te', 'Telugu'], ['ta', 'Tamil'], ['kn', 'Kannada'], ['ml', 'Malayalam'], ['bn', 'Bengali'], ['mr', 'Marathi'], ['gu', 'Gujarati'], ['pa', 'Punjabi']];
-const AV_STYLES = ['adventurer', 'fun-emoji', 'big-smile', 'open-peeps', 'notionists', 'lorelei', 'micah', 'thumbs', 'bottts', 'pixel-art'];
+const AV_STYLES = ['big-smile', 'fun-emoji', 'adventurer', 'open-peeps', 'micah', 'lorelei', 'notionists', 'thumbs', 'bottts', 'pixel-art'];
+// Background swatches — on-brand pastels; '' = none (transparent). DiceBear takes hex w/o '#'.
+const BG_COLORS: [string, string][] = [['', 'None'], ['ffd5dc', 'Blush'], ['ffe7b3', 'Gold'], ['e3d9ff', 'Lavender'], ['c7f0e0', 'Mint'], ['b6e3f4', 'Sky'], ['ffd9c2', 'Peach'], ['eceff3', 'Cloud']];
 const PRESET_TAGS = ['Late-Night Friend', 'Safe Space', 'Best Friend Energy', 'Philosophical', 'Playful', 'Direct', 'Empathetic', 'Calm', 'Funny', 'Sarcastic', 'Hype', 'Motivating', 'Wise', 'Curious', 'Flirty', 'Chill', 'Deep Thinker', 'Good Listener', 'Honest', 'Gentle', 'Bold', 'Nerdy', 'Romantic', 'Mysterious', 'Optimistic', 'No-Nonsense', 'Creative', 'Supportive', 'Witty', 'Adventurous', 'Old Soul', 'Dramatic'];
 const SURPRISE_NAMES = ['Aarav', 'Mira', 'Kai', 'Zara', 'Leo', 'Anya', 'Rumi', 'Nova', 'Dev', 'Sage', 'Ira', 'Remy', 'Tara', 'Juno', 'Esha'];
 const SURPRISE_TAGS_POOL = ['Playful', 'Empathetic', 'Funny', 'Calm', 'Hype', 'Wise', 'Curious', 'Bold', 'Chill', 'Witty', 'Good Listener', 'Optimistic'];
@@ -24,6 +26,9 @@ const rand = (a: any[]) => a[Math.floor(Math.random() * a.length)];
 
 const editId = new URLSearchParams(location.search).get('id');
 let avatar: any = { style: 'adventurer', seed: 'blak-' + Math.floor(Math.random() * 1e6) };
+let cartoonStash: any = { style: avatar.style, seed: avatar.seed, options: {} }; // last cartoon look
+let photoUrl: string | null = null;  // uploaded photo, if any
+let avMode: 'cartoon' | 'photo' = 'cartoon';
 let traits: string[] = [];
 let selectedVoice = 'Aoede';
 let selectedPurpose = 'ai_friend';
@@ -32,6 +37,8 @@ const sampleCache: Record<string, string> = {};
 let curAudio: HTMLAudioElement | null = null;
 
 function avatarUrl(av: any) {
+  av = av || {};
+  if (av.type === 'image' && av.url) return av.url;
   const qs = new URLSearchParams(Object.assign({ seed: av.seed || 'blak' }, av.options || {})).toString();
   return 'https://api.dicebear.com/9.x/' + encodeURIComponent(av.style || 'adventurer') + '/svg?' + qs;
 }
@@ -63,8 +70,6 @@ $('pf-purpose').addEventListener('click', (e: any) => { const b = e.target.close
 
 $('pf-langs').innerHTML = LANGS.map(([v, l]) => '<button type="button" class="pf-chip" data-l="' + v + '">' + l + '</button>').join('');
 $('pf-langs').addEventListener('click', (e: any) => { const b = e.target.closest('.pf-chip'); if (b) b.classList.toggle('sel'); });
-
-$('pf-av-styles').innerHTML = AV_STYLES.map((s) => '<button type="button" class="pf-av-style" data-s="' + s + '"><img alt="' + s + '" src="https://api.dicebear.com/9.x/' + s + '/svg?seed=Sunny" /></button>').join('');
 
 function renderTags() {
   $('pf-tags').innerHTML = PRESET_TAGS.map((t) => '<button type="button" class="pf-tag' + (traits.includes(t) ? ' sel' : '') + '" data-t="' + esc(t) + '">' + t + '</button>').join('');
@@ -147,11 +152,97 @@ async function playVoice(voice: string, btn: any) {
   } catch (e) { btn.classList.remove('playing'); btn.innerHTML = ICON.play; setMsg('Could not load that voice.'); }
 }
 
-// ── Avatar ───────────────────────────────────────────────────────────────────
-$('pf-av-btn').addEventListener('click', () => { const ed = $('pf-av-editor'); ed.hidden = !ed.hidden; markStyle(); });
-function markStyle() { $('pf-av-styles').querySelectorAll('.pf-av-style').forEach((b: any) => b.classList.toggle('sel', b.dataset.s === avatar.style)); }
-$('pf-av-styles').addEventListener('click', (e: any) => { const b = e.target.closest('.pf-av-style'); if (!b) return; avatar.style = b.dataset.s; markStyle(); renderPreview(); });
-$('pf-av-shuffle').addEventListener('click', () => { avatar.seed = 'blak-' + Math.floor(Math.random() * 1e9); renderPreview(); });
+// ── Avatar: cartoon (style + background + shuffle) or a real photo ────────────
+function initAvatarState() {
+  if (avatar && avatar.type === 'image' && avatar.url) {
+    photoUrl = avatar.url;
+    if (!cartoonStash || !cartoonStash.style) cartoonStash = { style: 'adventurer', seed: 'blak-' + Math.floor(Math.random() * 1e6), options: {} };
+  } else {
+    cartoonStash = { style: (avatar && avatar.style) || 'adventurer', seed: (avatar && avatar.seed) || ('blak-' + Math.floor(Math.random() * 1e6)), options: (avatar && avatar.options) ? { ...avatar.options } : {} };
+  }
+}
+function applyCartoon() {
+  avatar = { style: cartoonStash.style, seed: cartoonStash.seed, options: { ...(cartoonStash.options || {}) } };
+  renderPreview();
+}
+function markStyle() { $('pf-av-styles').querySelectorAll('.pf-av-style').forEach((b: any) => b.classList.toggle('sel', b.dataset.s === cartoonStash.style)); }
+function renderStyles() {
+  $('pf-av-styles').innerHTML = AV_STYLES.map((s) =>
+    '<button type="button" class="pf-av-style" data-s="' + s + '"><img alt="' + s + '" loading="lazy" src="' +
+    esc(avatarUrl({ style: s, seed: cartoonStash.seed, options: cartoonStash.options })) + '" /></button>').join('');
+  markStyle();
+}
+function renderBgs() {
+  const cur = (cartoonStash.options && cartoonStash.options.backgroundColor) || '';
+  $('pf-av-bgs').innerHTML = BG_COLORS.map(([hex, name]) =>
+    '<button type="button" class="pf-av-bg' + (hex === cur ? ' sel' : '') + (hex ? '' : ' none') + '" data-bg="' + hex + '" title="' + esc(name) + '"' +
+    (hex ? ' style="background:#' + hex + '"' : '') + '></button>').join('');
+}
+function renderPhoto() {
+  const has = !!photoUrl;
+  $('pf-av-upload-txt').textContent = has ? 'Change photo' : 'Upload a photo';
+  $('pf-av-photo-clear').hidden = !has;
+  const up = $('pf-av-upload'); up.classList.toggle('has', has);
+  up.style.backgroundImage = has ? 'url("' + photoUrl + '")' : '';
+}
+function setAvMode(m: 'cartoon' | 'photo') {
+  avMode = m;
+  $('pf-av-cartoon').hidden = m !== 'cartoon';
+  $('pf-av-photo').hidden = m !== 'photo';
+  $('pf-av-modes').querySelectorAll('.pf-av-mode').forEach((b: any) => b.classList.toggle('sel', b.dataset.m === m));
+  if (m === 'cartoon') { applyCartoon(); renderStyles(); renderBgs(); }
+  else { if (photoUrl) { avatar = { type: 'image', url: photoUrl }; renderPreview(); } renderPhoto(); }
+}
+// After surprise / AI set a cartoon avatar, resync the stash (and the open editor).
+function adoptCartoon() {
+  if (!avatar || avatar.type === 'image') return;
+  cartoonStash = { style: avatar.style, seed: avatar.seed, options: avatar.options ? { ...avatar.options } : {} };
+  if (!$('pf-av-editor').hidden) setAvMode('cartoon');
+}
+
+$('pf-av-btn').addEventListener('click', () => {
+  const ed = $('pf-av-editor'); const show = ed.hidden; ed.hidden = !show;
+  if (show) setAvMode(avatar && avatar.type === 'image' ? 'photo' : 'cartoon');
+});
+$('pf-av-modes').addEventListener('click', (e: any) => { const b = e.target.closest('.pf-av-mode'); if (b) setAvMode(b.dataset.m); });
+$('pf-av-styles').addEventListener('click', (e: any) => { const b = e.target.closest('.pf-av-style'); if (!b) return; cartoonStash.style = b.dataset.s; applyCartoon(); markStyle(); });
+$('pf-av-bgs').addEventListener('click', (e: any) => {
+  const b = e.target.closest('.pf-av-bg'); if (!b) return;
+  const hex = b.dataset.bg; cartoonStash.options = cartoonStash.options || {};
+  if (hex) { cartoonStash.options.backgroundColor = hex; cartoonStash.options.backgroundType = 'solid'; }
+  else { delete cartoonStash.options.backgroundColor; delete cartoonStash.options.backgroundType; }
+  applyCartoon(); renderStyles(); renderBgs();
+});
+$('pf-av-shuffle').addEventListener('click', () => { cartoonStash.seed = 'blak-' + Math.floor(Math.random() * 1e9); applyCartoon(); renderStyles(); });
+
+// Photo upload — center-crop to a square + re-encode (strips EXIF), no size cap; reuses the chat_images bucket.
+async function processAvatar(file: File): Promise<Blob> {
+  try {
+    const bmp = await createImageBitmap(file);
+    const size = Math.min(bmp.width, bmp.height);
+    const sx = (bmp.width - size) / 2, sy = (bmp.height - size) / 2;
+    const out = 512; const c = document.createElement('canvas'); c.width = out; c.height = out;
+    c.getContext('2d')!.drawImage(bmp, sx, sy, size, size, 0, 0, out, out);
+    const blob = await new Promise<Blob | null>((res) => c.toBlob(res, 'image/jpeg', 0.88));
+    return blob || file;
+  } catch (e) { return file; }
+}
+async function uploadAvatar(file: File): Promise<string | null> {
+  const uid = await userId(); if (!uid || !file || !supabase) return null;
+  const blob = await processAvatar(file);
+  const path = uid + '/persona-av/' + ((window.crypto && crypto.randomUUID) ? crypto.randomUUID() : (Date.now() + '-' + Math.round(Math.random() * 1e9))) + '.jpg';
+  const { error } = await supabase.storage.from('chat_images').upload(path, blob, { contentType: 'image/jpeg', upsert: false });
+  if (error) { setMsg('Photo upload failed — try again.', true); return null; }
+  return supabase.storage.from('chat_images').getPublicUrl(path).data.publicUrl;
+}
+$('pf-av-file').addEventListener('change', async (e: any) => {
+  const file = e.target.files && e.target.files[0]; if (!file) return;
+  $('pf-av-upload-txt').textContent = 'Uploading…'; setMsg('');
+  const url = await uploadAvatar(file); e.target.value = '';
+  if (!url) { renderPhoto(); return; }
+  photoUrl = url; avatar = { type: 'image', url }; renderPhoto(); renderPreview();
+});
+$('pf-av-photo-clear').addEventListener('click', () => setAvMode('cartoon'));
 
 // ── Inputs, counters, toggles ────────────────────────────────────────────────
 function counters() {
@@ -169,7 +260,9 @@ $('pf-build').classList.add('on'); $('pf-build').setAttribute('aria-checked', 't
 $('pf-surprise').addEventListener('click', () => {
   $('pf-name').value = rand(SURPRISE_NAMES);
   $('pf-tagline').value = rand(SURPRISE_TAGLINES);
-  avatar = { style: rand(AV_STYLES), seed: 'blak-' + Math.floor(Math.random() * 1e9) };
+  const sbg = rand(BG_COLORS);
+  avatar = { style: rand(AV_STYLES), seed: 'blak-' + Math.floor(Math.random() * 1e9), options: sbg[0] ? { backgroundColor: sbg[0], backgroundType: 'solid' } : {} };
+  adoptCartoon();
   selectedPurpose = rand(PURPOSES)[0];
   const pool = SURPRISE_TAGS_POOL.slice().sort(() => Math.random() - 0.5);
   traits = pool.slice(0, 3 + Math.floor(Math.random() * 2));
@@ -195,7 +288,7 @@ $('pf-ai-go').addEventListener('click', async () => {
     if (d.tagline) $('pf-tagline').value = d.tagline;
     if (d.purpose) selectedPurpose = d.purpose;
     if (d.voice) selectedVoice = d.voice;
-    if (d.avatar_style) avatar = { style: d.avatar_style, seed: 'blak-' + Math.floor(Math.random() * 1e9) };
+    if (d.avatar_style) { avatar = { style: d.avatar_style, seed: 'blak-' + Math.floor(Math.random() * 1e9) }; adoptCartoon(); }
     if (Array.isArray(d.traits) && d.traits.length) traits = d.traits.slice(0, 16);
     if (d.backstory) $('pf-backstory').value = d.backstory;
     if (d.voice_tone) $('pf-tone').value = d.voice_tone;
@@ -235,7 +328,8 @@ async function loadExisting() {
       $('pf-backstory').value = data.backstory || '';
       $('pf-tone').value = data.voice_tone || '';
       selectedVoice = data.voice || 'Aoede';
-      avatar = data.avatar && data.avatar.style ? data.avatar : avatar;
+      avatar = data.avatar && (data.avatar.style || data.avatar.type === 'image') ? data.avatar : avatar;
+      initAvatarState();
       traits = Array.isArray(data.traits) ? data.traits.slice() : [];
       renderPurpose(); renderTags(); renderVoices(); renderCustomChips();
       (data.languages || []).forEach((l: string) => { const b = $('pf-langs').querySelector('.pf-chip[data-l="' + l + '"]'); if (b) b.classList.add('sel'); });

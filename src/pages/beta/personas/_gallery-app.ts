@@ -10,6 +10,7 @@ const TRASH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke
 
 function avatarUrl(av: any) {
   av = av || {};
+  if (av.type === 'image' && av.url) return av.url;
   const style = av.style || 'adventurer';
   const seed = av.seed || 'blak';
   const qs = new URLSearchParams(Object.assign({ seed }, av.options || {})).toString();
