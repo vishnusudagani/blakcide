@@ -8,9 +8,18 @@
   <head>
     <meta charset="utf-8" />
     <meta name="robots" content="noindex" />
-    <meta http-equiv="refresh" content="0; url=/beta/blak/" />
     <title>Blaksyd</title>
-    <script>location.replace('/beta/blak/');</script>
+    <!--
+      OAuth / magic-link returns the token in the URL hash (#access_token=…, implicit
+      flow) or query (?code=…). This page only bounces to /beta/blak/, where AppLayout's
+      Supabase client consumes the token — so the hash/query MUST be carried through.
+      A bare location.replace('/beta/blak/') drops it: the session never forms and the
+      gate sends the user back to the landing page (the reported mobile login bug, only
+      visible on a fresh device with no cached session). Script runs before the
+      meta-refresh fallback so the token survives whenever JS is on.
+    -->
+    <script>location.replace('/beta/blak/' + location.search + location.hash);</script>
+    <meta http-equiv="refresh" content="0; url=/beta/blak/" />
   </head>
   <body></body>
 </html>
