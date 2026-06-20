@@ -311,6 +311,25 @@ const nav = [
       for (let i = 0; !session && authInUrl && i < 40; i++) { await new Promise((r) => setTimeout(r, 250)); session = await getSession(); }
 
       if (!session) {
+        if (authInUrl) {
+          // OAuth returned but the session never formed after ~10s of polling — this is
+          // exactly the "login bounces back to the landing page" bug. Instead of the
+          // silent redirect (which hides the cause), surface a one-time diagnostic the
+          // affected user can screenshot. TEMPORARY — remove once the mobile/Samsung
+          // login failure is identified.
+          try {
+            var _u = (location.hash || '') + (location.search || '');
+            var _er = _u.match(/error[^=]*=([^&]+)/);
+            var _ls = false; try { localStorage.setItem('_blk_t', '1'); _ls = localStorage.getItem('_blk_t') === '1'; localStorage.removeItem('_blk_t'); } catch (e) {}
+            var _key = ''; try { for (var _i = 0; _i < localStorage.length; _i++) { var _k = localStorage.key(_i); if (/sb-.*-auth-token/.test(_k)) _key = _k; } } catch (e) {}
+            var _msg = 'origin: ' + location.origin + '\n' + 'token in URL: ' + (/access_token=/.test(_u)) + '\n' + 'error: ' + (_er ? decodeURIComponent(_er[1]) : 'none') + '\n' + 'localStorage OK: ' + _ls + '\n' + 'session key: ' + (_key || 'NONE');
+            var _box = document.createElement('div');
+            _box.style.cssText = 'position:fixed;left:8px;right:8px;bottom:8px;z-index:2147483647;background:#1b1030;color:#fff;border:1px solid #c9b8ff;border-radius:12px;padding:14px;font:12px/1.5 ui-monospace,monospace;white-space:pre-wrap;box-shadow:0 8px 30px rgba(0,0,0,.5)';
+            _box.textContent = 'Sign-in didn’t complete — screenshot this & send it:\n\n' + _msg;
+            document.body.appendChild(_box);
+          } catch (e) {}
+          return;
+        }
         try { sessionStorage.setItem('blk_redirect', here()); } catch (e) {}
         location.replace('/?auth=1');
         return;

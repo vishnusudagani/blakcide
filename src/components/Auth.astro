@@ -389,10 +389,13 @@
     var openTimer, closeTimer;
     var pendingPhone = '';
     var busy = false;
-    // Send OAuth / magic-link straight to the app. /beta/ loads the Supabase client
-    // (see AppLayout) which consumes the token and establishes the session right
-    // there — no homepage round-trip / redirect-timing to get wrong.
-    var redirectTo = window.location.origin + '/beta/';
+    // Send OAuth / magic-link straight to the app. /beta/ bounces to /beta/blak/
+    // (carrying the token hash/query), where AppLayout's Supabase client consumes it
+    // and establishes the session — no homepage round-trip / redirect-timing to get wrong.
+    // Always land on the canonical non-www origin. If login starts on www.blaksyd.com,
+    // the token hash would post back to that separate origin/storage and the session
+    // would not persist on apex blaksyd.com — so strip the www. host prefix here.
+    var redirectTo = window.location.origin.replace('://www.', '://') + '/beta/';
 
 
     function clearNote() { note.hidden = true; note.textContent = ''; note.classList.remove('is-error', 'is-ok'); }
