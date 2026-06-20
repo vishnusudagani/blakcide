@@ -9,8 +9,8 @@ import AppLayout from '../../layouts/AppLayout.astro';
   <div class="ap-page">
     <header class="pf-head">
       <p class="ap-kicker">Your profile</p>
-      <h1 class="ap-h1">What Blak knows about you</h1>
-      <p class="ap-sub">Blak fills this in as you talk — quietly, never prying. It's all yours: edit anything, delete anything. The more complete it is, the better Blak knows you.</p>
+      <h1 class="ap-h1">What Blaksyd understands about you</h1>
+      <p class="ap-sub">Blaksyd quietly learns from your chats with Blak, your activity on Nexus, and how you reflect after Minit — never prying. It's all yours: edit anything, delete anything, or tell it “this isn't me.”</p>
 
       <div class="pf-meter" role="img" aria-label="Profile completeness">
         <div class="pf-meter-bar"><span class="pf-meter-fill" id="pf-fill" style="width:0%"></span></div>
@@ -52,6 +52,13 @@ import AppLayout from '../../layouts/AppLayout.astro';
     .pf-chip { font-family: var(--font-mono); font-size: 9px; letter-spacing: .04em; text-transform: uppercase; padding: 2px 7px; border-radius: 999px; color: var(--ink-soft); background: var(--surface); border: 1px solid var(--line); }
     .pf-chip.you { color: var(--mint); border-color: rgba(120,220,180,.3); }
     .pf-chip.hunch { color: var(--gold); border-color: rgba(255,210,122,.3); }
+    .pf-chip.nexus { color: var(--aqua); border-color: rgba(91,192,255,.3); }
+    .pf-chip.minit { color: var(--mint); border-color: rgba(106,211,184,.3); }
+    .pf-chip.multi { color: var(--coral); border-color: rgba(255,107,157,.3); }
+    .pf-forget { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; margin: 1.3rem 0 .3rem; }
+    .pf-forget > span { font-size: var(--fs-sm); color: var(--ink-faint); }
+    .pf-forget button { font: inherit; font-size: var(--fs-xs); color: var(--ink-soft); background: var(--surface); border: 1px solid var(--line-strong); border-radius: 999px; padding: .4rem .85rem; min-height: 36px; cursor: pointer; }
+    .pf-forget button:hover { border-color: rgba(255,107,157,.4); color: var(--coral); }
 
     .pf-actions { display: flex; gap: .5rem; flex: none; }
     .pf-btn { background: none; border: 1px solid var(--line); color: var(--ink-faint); border-radius: var(--r-sm); cursor: pointer; font-family: inherit; font-size: var(--fs-xs); padding: .25rem .55rem; min-height: 44px; transition: color var(--t-fast) var(--ease-out), border-color var(--t-fast) var(--ease-out); }
@@ -99,9 +106,13 @@ import AppLayout from '../../layouts/AppLayout.astro';
 
     function chipsFor(f) {
       const chips = [];
-      if (f.source === 'user') chips.push('<span class="pf-chip you">you said</span>');
-      else if ((f.confidence ?? 1) < 0.6) chips.push("<span class=\"pf-chip hunch\">Blak's hunch</span>");
-      else chips.push('<span class="pf-chip">Blak noticed</span>');
+      const s = f.source;
+      if (s === 'user') chips.push('<span class="pf-chip you">you said</span>');
+      else if (s === 'nexus') chips.push('<span class="pf-chip nexus">from Nexus</span>');
+      else if (s === 'minit') chips.push('<span class="pf-chip minit">from Minit</span>');
+      else if (s === 'multi') chips.push('<span class="pf-chip multi">across Blaksyd</span>');
+      else if ((f.confidence ?? 1) < 0.5) chips.push('<span class="pf-chip hunch">a hunch</span>');
+      else chips.push('<span class="pf-chip">from Blak</span>');
       chips.push('<span class="pf-chip">' + esc(relTime(f.updated_at || f.last_seen_at)) + '</span>');
       return '<div class="pf-chips">' + chips.join('') + '</div>';
     }
@@ -118,6 +129,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
           '</div>' +
           '<div class="pf-actions">' +
             '<button class="pf-btn" data-act="edit" data-area="' + esc(f.area) + '" data-key="' + esc(f.key) + '">Edit</button>' +
+            (f.source && f.source !== 'user' ? '<button class="pf-btn" data-act="notme" data-id="' + esc(f.id) + '">Not me</button>' : '') +
             '<button class="pf-btn danger" data-act="delete" data-id="' + esc(f.id) + '">Delete</button>' +
           '</div>' +
         '</div>'
@@ -172,19 +184,25 @@ import AppLayout from '../../layouts/AppLayout.astro';
       );
     }
 
+    const STRUCT_IDS = new Set(KNOWLEDGE_AREAS.map((a) => a.id));
+    const niceLabel = (f) => f.label || String(f.key).replace(/^(nexus|minit):/, '').replace(/[_-]/g, ' ');
     function renderArea(area) {
       let rows, count;
       if (area.id === OPEN_AREA_ID) {
-        const mine = facts.filter((f) => f.area === OPEN_AREA_ID);
+        // Catch-all: facts explicitly in 'other', plus any learned fact whose area isn't a structured group.
+        const mine = facts.filter((f) => f.area === OPEN_AREA_ID || !STRUCT_IDS.has(f.area));
         count = mine.length;
-        rows = mine.map((f) => rowFilled(f, f.label || f.key.replace(/_/g, ' '))).join('') + openAddRow();
+        rows = mine.map((f) => rowFilled(f, niceLabel(f))).join('') + openAddRow();
       } else {
+        const fieldKeys = new Set(area.fields.map((fl) => fl.key));
+        // Learned facts (Nexus/Minit) have free-form keys — render them under their area too.
+        const extra = facts.filter((f) => f.area === area.id && !fieldKeys.has(f.key));
         const filled = area.fields.filter((fl) => factFor(area.id, fl.key)).length;
-        count = filled + '/' + area.fields.length;
+        count = (filled + extra.length) + '/' + (area.fields.length + extra.length);
         rows = area.fields.map((fl) => {
           const f = factFor(area.id, fl.key);
           return f ? rowFilled(f, fl.label) : rowEmpty(area.id, fl.key, fl.label);
-        }).join('');
+        }).join('') + extra.map((f) => rowFilled(f, niceLabel(f))).join('');
       }
       return (
         '<section class="ap-card pf-area">' +
@@ -201,9 +219,17 @@ import AppLayout from '../../layouts/AppLayout.astro';
     function render() {
       const pct = computeCompleteness(facts);
       if (fillEl) fillEl.style.width = pct + '%';
-      if (pctEl) pctEl.textContent = 'Blak knows about ' + pct + '% of you';
+      if (pctEl) pctEl.textContent = 'Blaksyd understands about ' + pct + '% of you';
       const areas = KNOWLEDGE_AREAS.concat([OPEN_AREA]);
-      root.innerHTML = areas.map(renderArea).join('');
+      const bySrc = (s) => facts.some((f) => f.source === s);
+      const footer = (bySrc('nexus') || bySrc('minit') || bySrc('blak') || bySrc('multi'))
+        ? '<div class="pf-forget"><span>Forget what Blaksyd learned from:</span>'
+          + (bySrc('nexus') ? '<button data-act="forget" data-source="nexus">Nexus</button>' : '')
+          + (bySrc('minit') ? '<button data-act="forget" data-source="minit">Minit</button>' : '')
+          + (bySrc('blak') ? '<button data-act="forget" data-source="blak">Blak chats</button>' : '')
+          + '</div>'
+        : '';
+      root.innerHTML = areas.map(renderArea).join('') + footer;
       const input = document.getElementById('pf-edit-input') || document.getElementById('pf-open-label');
       if (input) input.focus();
     }
@@ -214,7 +240,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
         .select('id,area,key,label,value,source,confidence,status,updated_at,last_seen_at')
         .eq('user_id', user.id)
         .order('updated_at', { ascending: false });
-      facts = error ? [] : (data || []);
+      facts = error ? [] : (data || []).filter((f) => f.status !== 'suppressed');
       render();
     }
 
@@ -240,6 +266,21 @@ import AppLayout from '../../layouts/AppLayout.astro';
       await reload();
     }
 
+    async function notMe(id) {
+      // Suppress: hide it AND stop it being re-learned (the upsert skips 'suppressed').
+      const { error } = await supabase.from('symp_knowledge_facts').update({ status: 'suppressed' }).eq('id', id);
+      if (error) { alert('Could not update: ' + error.message); return; }
+      await reload();
+    }
+
+    async function forgetSource(src) {
+      const names = { nexus: 'Nexus', minit: 'Minit', blak: 'your Blak chats' };
+      if (!confirm('Forget everything Blaksyd learned from ' + (names[src] || src) + '? Things you typed yourself stay.')) return;
+      const { error } = await supabase.from('symp_knowledge_facts').delete().eq('user_id', user.id).eq('source', src);
+      if (error) { alert('Could not clear: ' + error.message); return; }
+      await reload();
+    }
+
     root.addEventListener('click', (e) => {
       const btn = e.target.closest('button[data-act]');
       if (!btn) return;
@@ -247,6 +288,8 @@ import AppLayout from '../../layouts/AppLayout.astro';
       if (act === 'edit') { editing = btn.dataset.area + ':' + btn.dataset.key; render(); }
       else if (act === 'cancel') { editing = null; render(); }
       else if (act === 'delete') { deleteFact(btn.dataset.id); }
+      else if (act === 'notme') { notMe(btn.dataset.id); }
+      else if (act === 'forget') { forgetSource(btn.dataset.source); }
       else if (act === 'open-new') { editing = 'open:__new__'; render(); }
       else if (act === 'save') {
         const input = document.getElementById('pf-edit-input');
