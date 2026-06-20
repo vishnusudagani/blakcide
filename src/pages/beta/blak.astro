@@ -58,6 +58,10 @@ import AppLayout from '../../layouts/AppLayout.astro';
     </button>
 
     <div class="bx-dock">
+      <div class="bx-add-menu" id="bx-add-menu" hidden data-noswipe>
+        <button type="button" id="bx-add-photo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg> Photo</button>
+        <button type="button" id="bx-add-group"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg> New group with Blak</button>
+      </div>
       <div class="bx-attach-preview" id="bx-attach-preview" hidden data-noswipe></div>
       <div class="bx-vn" id="bx-vn" hidden data-noswipe></div>
       <form class="bx-composer" id="bx-form">
@@ -216,6 +220,11 @@ import AppLayout from '../../layouts/AppLayout.astro';
 
     /* ── Composer dock ── */
     .bx-dock { position: relative; padding-bottom: .5rem; }
+    .bx-add-menu { position: absolute; left: 6px; bottom: 58px; z-index: 6; display: flex; flex-direction: column; gap: 2px; padding: 5px; border-radius: 14px; background: var(--surface); border: 1px solid var(--line); box-shadow: var(--shadow-soft, 0 8px 30px rgba(0,0,0,.18)); animation: bx-in .15s var(--ease-out) both; }
+    .bx-add-menu[hidden] { display: none; }
+    .bx-add-menu button { display: flex; align-items: center; gap: .55rem; background: none; border: none; color: var(--ink); font: inherit; font-size: var(--fs-sm); font-weight: 600; padding: .55rem .7rem; border-radius: 10px; cursor: pointer; white-space: nowrap; text-align: left; }
+    .bx-add-menu button:hover { background: var(--surface-strong); }
+    .bx-add-menu svg { width: 18px; height: 18px; color: var(--coral); flex: none; }
     /* Outward brand aura: the colour pools behind the bar and rises ~42% up the
        empty space above it (soft, breathing; brighter on focus/send). It lives
        BEHIND the bar — the bar interior stays clean glass. */
@@ -797,7 +806,14 @@ import AppLayout from '../../layouts/AppLayout.astro';
         return (j && j.data && (j.data.description || j.data.text)) || '';
       } catch (e) { return ''; }
     }
-    if (addBtn) addBtn.addEventListener('click', () => { if (fileInput) fileInput.click(); });
+    // The "+" opens a small menu: Photo (existing attach) or New group with Blak.
+    const addMenu = $('bx-add-menu');
+    const closeAddMenu = () => { if (addMenu) addMenu.hidden = true; };
+    if (addBtn) addBtn.addEventListener('click', (e) => { e.stopPropagation(); if (addMenu) addMenu.hidden = !addMenu.hidden; });
+    const addPhoto = $('bx-add-photo'), addGroup = $('bx-add-group');
+    if (addPhoto) addPhoto.addEventListener('click', () => { closeAddMenu(); if (fileInput) fileInput.click(); });
+    if (addGroup) addGroup.addEventListener('click', () => { closeAddMenu(); window.location.href = '/beta/group/'; });
+    document.addEventListener('click', (e) => { if (addMenu && !addMenu.hidden && !addMenu.contains(e.target) && !addBtn.contains(e.target)) closeAddMenu(); });
     if (fileInput) fileInput.addEventListener('change', async () => {
       const file = fileInput.files && fileInput.files[0]; fileInput.value = '';
       if (!file) return;

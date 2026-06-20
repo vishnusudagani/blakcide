@@ -1,0 +1,135 @@
+---
+import AppLayout from '../../../layouts/AppLayout.astro';
+---
+<AppLayout active="blak" chat={true} title="Group">
+  <div class="gr">
+    <!-- Lobby (no ?id=) -->
+    <div class="gr-lobby" id="gr-lobby" hidden>
+      <a class="gr-back" href="/beta/blak/" aria-label="Back">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+      </a>
+      <h1 class="gr-lobby-h">Group with Blak</h1>
+      <p class="gr-lobby-sub">A shared room — you, your people, and Blak keeping it warm. Spin one up and share the code.</p>
+      <div class="gr-lobby-card">
+        <div class="gr-lobby-t">Start a group</div>
+        <input id="gr-new-name" class="gr-input" placeholder="Name it (optional) — e.g. Sunday plans" maxlength="60" />
+        <button type="button" class="gr-btn gr-btn-primary" id="gr-create">Create group</button>
+      </div>
+      <div class="gr-lobby-card">
+        <div class="gr-lobby-t">Join with a code</div>
+        <input id="gr-join-code" class="gr-input gr-code-input" placeholder="6-letter code" maxlength="6" autocapitalize="characters" />
+        <button type="button" class="gr-btn" id="gr-join">Join</button>
+      </div>
+      <p class="gr-msg" id="gr-lobby-msg" hidden></p>
+    </div>
+
+    <!-- Room (?id=) -->
+    <div class="gr-room" id="gr-room" hidden>
+      <header class="gr-head">
+        <a class="gr-back" href="/beta/blak/" aria-label="Back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></a>
+        <div class="gr-head-meta">
+          <div class="gr-title" id="gr-title">Group</div>
+          <button type="button" class="gr-sub" id="gr-sub" title="Members">…</button>
+        </div>
+        <button type="button" class="gr-share" id="gr-share" title="Share invite code"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg></button>
+        <button type="button" class="gr-menu-btn" id="gr-menu-btn" aria-label="Room menu"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg></button>
+      </header>
+
+      <div class="gr-ended" id="gr-ended" hidden>This group has ended.</div>
+      <div class="gr-stream" id="gr-stream"></div>
+
+      <form class="gr-form" id="gr-form" autocomplete="off">
+        <textarea id="gr-input" class="gr-ta" rows="1" placeholder="Message the group…" maxlength="2000"></textarea>
+        <button type="submit" class="gr-send" id="gr-send" aria-label="Send"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg></button>
+      </form>
+    </div>
+
+    <!-- Members / room menu sheet -->
+    <div class="gr-sheet" id="gr-sheet" hidden>
+      <div class="gr-sheet-scrim" id="gr-sheet-scrim"></div>
+      <div class="gr-sheet-card">
+        <div class="gr-sheet-h">In this group</div>
+        <div class="gr-sheet-code" id="gr-sheet-code"></div>
+        <div class="gr-members" id="gr-members"></div>
+        <button type="button" class="gr-btn gr-leave" id="gr-leave">Leave group</button>
+        <button type="button" class="gr-btn gr-end" id="gr-end" hidden>End group for everyone</button>
+      </div>
+    </div>
+    <p class="gr-toast" id="gr-toast" hidden></p>
+  </div>
+</AppLayout>
+
+<style is:global>
+  .gr { display: flex; flex-direction: column; height: 100svh; max-width: 760px; margin-inline: auto; }
+  @media (max-width: 820px) { .gr { height: calc(100svh - 138px - env(safe-area-inset-bottom, 0px)); } }
+  .gr-room { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+  .gr-back { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%; color: var(--ink); flex: none; }
+  .gr-back svg { width: 21px; height: 21px; }
+  .gr-back:hover { background: var(--surface-strong); }
+
+  /* Lobby */
+  .gr-lobby { padding: .5rem .2rem 2rem; overflow-y: auto; }
+  .gr-lobby-h { font-size: var(--fs-xl, 1.6rem); font-weight: 800; margin: .6rem 0 .3rem; }
+  .gr-lobby-sub { color: var(--ink-soft); font-size: var(--fs-sm); margin: 0 0 1.4rem; }
+  .gr-lobby-card { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 1rem; margin-bottom: 1rem; }
+  .gr-lobby-t { font-weight: 700; margin-bottom: .6rem; }
+  .gr-input { width: 100%; border: 1px solid var(--line); border-radius: 12px; padding: .7rem .85rem; background: var(--bg); color: var(--ink); font: inherit; font-size: 16px; margin-bottom: .7rem; }
+  .gr-input:focus { outline: none; border-color: var(--coral); }
+  .gr-code-input { letter-spacing: .35em; text-transform: uppercase; font-weight: 700; }
+  .gr-btn { width: 100%; border: 1px solid var(--line); background: var(--surface-strong); color: var(--ink); border-radius: var(--r-pill); padding: .7rem 1rem; font: inherit; font-weight: 700; cursor: pointer; transition: transform .14s var(--ease-spring, ease); }
+  .gr-btn:active { transform: scale(.98); }
+  .gr-btn-primary { background: var(--cta, var(--accent-grad, linear-gradient(135deg,#FFD27A,#FF6B9D))); color: var(--cta-ink, #3a1430); border: none; }
+  .gr-msg { text-align: center; font-size: var(--fs-sm); color: var(--ink-soft); }
+  .gr-msg.err { color: #ff6b6b; }
+
+  /* Room */
+  .gr-head { display: flex; align-items: center; gap: .5rem; padding: .55rem .2rem; border-bottom: 1px solid var(--line); flex: none; }
+  .gr-head-meta { flex: 1; min-width: 0; }
+  .gr-title { font-weight: 700; font-size: var(--fs-md); line-height: 1.1; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .gr-sub { background: none; border: none; padding: 0; font-size: var(--fs-xs); color: var(--ink-faint); cursor: pointer; }
+  .gr-share, .gr-menu-btn { flex: none; width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; border: 1px solid var(--line); background: var(--surface); color: var(--ink-soft); cursor: pointer; }
+  .gr-share svg, .gr-menu-btn svg { width: 18px; height: 18px; }
+  .gr-share:hover, .gr-menu-btn:hover { color: var(--coral); border-color: var(--coral); }
+  .gr-ended { text-align: center; font-size: var(--fs-sm); color: var(--ink-soft); background: var(--surface-strong); padding: .5rem; }
+
+  .gr-stream { flex: 1; min-height: 0; overflow-y: auto; padding: 1rem .2rem 1.2rem; display: flex; flex-direction: column; gap: .5rem; }
+  .gr-row { display: flex; flex-direction: column; max-width: 82%; }
+  .gr-row.me { align-self: flex-end; align-items: flex-end; }
+  .gr-row.them { align-self: flex-start; }
+  .gr-name { font-size: var(--fs-xs); color: var(--ink-faint); margin: 0 .5rem 2px; }
+  .gr-name.blak { color: var(--coral); font-weight: 700; }
+  .gr-bub { padding: .55rem .8rem; border-radius: 16px; font-size: var(--fs-sm); line-height: 1.42; white-space: pre-wrap; word-wrap: break-word; }
+  .gr-row.them .gr-bub { background: var(--surface-strong); color: var(--ink); border-bottom-left-radius: 5px; }
+  .gr-row.me .gr-bub { background: var(--accent-grad, linear-gradient(135deg,#FF8A6B,#FF6B9D)); color: #3a1430; border-bottom-right-radius: 5px; }
+  .gr-row.blak .gr-bub { background: color-mix(in srgb, var(--coral) 12%, var(--surface)); border: 1px solid color-mix(in srgb, var(--coral) 30%, transparent); color: var(--ink); border-bottom-left-radius: 5px; }
+  .gr-sys { align-self: center; font-size: var(--fs-xs); color: var(--ink-faint); padding: .2rem .6rem; }
+  .gr-time { font-size: 10px; color: var(--ink-faint); margin: 2px .3rem 0; }
+
+  .gr-form { flex: none; display: flex; align-items: flex-end; gap: .5rem; padding: .6rem .2rem calc(.6rem + env(safe-area-inset-bottom, 0px)); border-top: 1px solid var(--line); background: var(--bg); }
+  .gr-ta { flex: 1; resize: none; border: 1px solid var(--line); border-radius: 20px; padding: .65rem .95rem; background: var(--surface); color: var(--ink); font: inherit; font-size: 16px; max-height: 120px; line-height: 1.35; }
+  .gr-ta:focus { outline: none; border-color: var(--coral); }
+  .gr-send { flex: none; width: 42px; height: 42px; border-radius: 50%; display: grid; place-items: center; border: none; cursor: pointer; background: var(--accent-grad, linear-gradient(135deg,#FFD27A,#FF6B9D)); color: #3a1430; }
+  .gr-send svg { width: 19px; height: 19px; }
+
+  /* Sheet */
+  .gr-sheet { position: fixed; inset: 0; z-index: 200; }
+  .gr-sheet[hidden] { display: none; }
+  .gr-sheet-scrim { position: absolute; inset: 0; background: color-mix(in srgb, var(--bg) 70%, transparent); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); }
+  .gr-sheet-card { position: absolute; left: 50%; bottom: 0; transform: translateX(-50%); width: min(560px, 100%); background: var(--surface); border: 1px solid var(--line); border-radius: 20px 20px 0 0; padding: 1.1rem 1rem calc(1.4rem + env(safe-area-inset-bottom, 0px)); }
+  .gr-sheet-h { font-weight: 700; }
+  .gr-sheet-code { font-size: var(--fs-sm); color: var(--ink-soft); margin: .2rem 0 .8rem; }
+  .gr-members { display: flex; flex-direction: column; gap: .35rem; margin-bottom: 1rem; max-height: 40vh; overflow-y: auto; }
+  .gr-member { display: flex; align-items: center; gap: .6rem; padding: .35rem 0; }
+  .gr-member-av { width: 30px; height: 30px; border-radius: 50%; background: var(--accent-grad, linear-gradient(135deg,#FFD27A,#FF6B9D)); color: #3a1430; display: grid; place-items: center; font-weight: 700; font-size: 13px; flex: none; }
+  .gr-member-name { flex: 1; font-size: var(--fs-sm); }
+  .gr-member-tag { font-size: var(--fs-xs); color: var(--ink-faint); }
+  .gr-member-x { background: none; border: none; color: #ff6b6b; font-size: var(--fs-xs); cursor: pointer; }
+  .gr-leave { color: var(--ink); margin-bottom: .5rem; }
+  .gr-end { color: #fff; background: #ff4d4f; border: none; }
+  .gr-toast { position: fixed; left: 50%; bottom: calc(96px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: .5rem .9rem; border-radius: var(--r-pill); font-size: var(--fs-sm); z-index: 70; }
+  .gr-toast[hidden] { display: none; }
+</style>
+
+<script>
+  import './_group-app.ts';
+</script>
