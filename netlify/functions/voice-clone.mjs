@@ -94,19 +94,27 @@ async function storageSignedUrl(objectPath, ttl = 120) {
   const j = await res.json().catch(() => null);
   return j && j.signedURL ? `${SUPABASE_URL}/storage/v1${j.signedURL}` : null;
 }
+// Whisper STT via Groq (free, OpenAI-compatible). `verbose_json` so we also get the
+// DETECTED language — no hint passed for interview answers → free auto-detect in any
+// language. Returns { text, lang } where lang is a 2-letter code (or null).
+const WHISPER_LANG_CODE = {
+  english: 'en', hindi: 'hi', telugu: 'te', tamil: 'ta', kannada: 'kn', malayalam: 'ml',
+  marathi: 'mr', bengali: 'bn', gujarati: 'gu', punjabi: 'pa', odia: 'or', oriya: 'or', assamese: 'as',
+};
 async function whisperTranscribe(buffer, contentType, ext, langHint) {
   const form = new FormData();
   form.append('file', new Blob([buffer], { type: contentType }), `audio.${ext}`);
   form.append('model', GROQ_WHISPER_MODEL);
-  if (langHint && langHint !== 'en') form.append('language', langHint);
-  form.append('response_format', 'json');
-  // Open-source STT via Groq's OpenAI-compatible Whisper endpoint (free, no OpenAI).
+  if (langHint && SUPPORTED.includes(langHint)) form.append('language', langHint);
+  form.append('response_format', 'verbose_json');
   const r = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
     method: 'POST', headers: { Authorization: `Bearer ${GROQ_KEY}` }, body: form,
   });
   if (!r.ok) throw new Error('whisper_' + r.status);
   const j = await r.json();
-  return j.text || '';
+  const raw = (j.language || '').toString().toLowerCase();
+  const lang = WHISPER_LANG_CODE[raw] || (SUPPORTED.includes(raw) ? raw : null);
+  return { text: j.text || '', lang };
 }
 // OpenAI preset fallback — same language/voice matrix as netlify/functions/tts.js.
 async function presetTts(text, language) {
@@ -206,71 +214,69 @@ export const config = {
 
 // ── handlers ─────────────────────────────────────────────────────────────
 async function enroll(req, userId, context) {
-  if (!GROQ_KEY) return fail(500, 'config_error', 'liveness unavailable (no Groq key)');
+  if (!GROQ_KEY) return fail(500, 'config_error', 'transcription unavailable (no Groq key)');
   let b;
   try { b = await req.json(); } catch { return fail(400, 'bad_request', 'invalid JSON'); }
-  const { language, audio_base64, mime_type, prompt_phrase, transcript } = b || {};
-  if (!SUPPORTED.includes(language)) return fail(400, 'bad_request', 'unsupported language');
-  if (!audio_base64 || !prompt_phrase) return fail(400, 'bad_request', 'audio_base64 and prompt_phrase required');
+  // v2 interview: the user answers a question in ANY language — no fixed phrase to match,
+  // no language picker. `prompt_phrase` (the question) is optional context; `language` is
+  // an optional hint, we auto-detect. Back-compat: the old read-a-phrase client still works.
+  const { language: langHint, audio_base64, mime_type, prompt_phrase, transcript } = b || {};
+  if (!audio_base64) return fail(400, 'bad_request', 'audio_base64 required');
 
   const contentType = mime_type || 'audio/wav';
   const ext = extFor(mime_type);
   const buffer = Buffer.from(audio_base64, 'base64');
-  if (buffer.byteLength < MIN_CLIP_BYTES) return fail(400, 'clip_too_short', 'recording too short — please read the whole phrase');
+  if (buffer.byteLength < MIN_CLIP_BYTES) return fail(400, 'clip_too_short', 'recording too short — speak a little longer');
 
-  // Liveness: re-transcribe and match the prompted phrase.
-  let spoken;
-  try { spoken = await whisperTranscribe(buffer, contentType, ext, language); }
-  catch { return fail(502, 'liveness_unavailable', 'could not verify the recording, please try again'); }
-  const score = livenessScore(prompt_phrase, spoken);
-  if (score < LIVENESS_THRESHOLD) return fail(400, 'liveness_failed', 'that did not match the phrase — please read it aloud exactly');
+  // Transcribe + auto-detect the answer's language (free speech — no phrase to match).
+  let spoken = transcript || '', detected = null;
+  try {
+    const tr = await whisperTranscribe(buffer, contentType, ext, langHint);
+    if (!spoken) spoken = tr.text || '';
+    detected = tr.lang;
+  } catch { /* transcription is best-effort — still store the clip */ }
+  const language = (langHint && SUPPORTED.includes(langHint)) ? langHint : (detected || 'en');
+  // Require some real speech so we never store empty/noise clips.
+  if (!spoken || spoken.trim().length < 2) return fail(400, 'no_speech', 'didn’t catch any speech — try again, a little louder');
 
-  // Store the reference clip in the PRIVATE bucket (path scoped to the user id).
+  // Store the clip in the PRIVATE bucket (path scoped to the user id).
   const objectPath = `${userId}/${randomUUID()}.${language}.${ext}`;
   if (!(await storageUpload(objectPath, buffer, contentType))) return fail(500, 'storage_error', 'could not save the recording');
 
-  // Consent (append-only).
+  // Consent (append-only); the question (if any) is logged as the prompt.
   const consentRes = await sbRest('symp_voice_consents', {
     method: 'POST', prefer: 'return=representation',
-    body: { user_id: userId, language, consent_version: CONSENT_VERSION, liveness_passed: true, prompt_phrase, user_agent: req.headers.get('user-agent') || null },
+    body: { user_id: userId, language, consent_version: CONSENT_VERSION, liveness_passed: false, prompt_phrase: prompt_phrase || 'interview', user_agent: req.headers.get('user-agent') || null },
   });
   const consentId = Array.isArray(consentRes.data) && consentRes.data[0] ? consentRes.data[0].id : null;
 
-  // Retire any prior active clone for this language so the unique index allows re-enroll.
-  // (symp_voice_clones stays single — it's the legacy fallback; the LIBRARY accumulates.)
+  // Keep the legacy single-clone pointer fresh (one ready row per language) for the
+  // /ref + /speak fallback; the LIBRARY (symp_voice_clips) is the real growing corpus.
   await sbRest(`symp_voice_clones?user_id=eq.${userId}&language=eq.${language}&status=eq.ready&deleted_at=is.null`, {
     method: 'PATCH', body: { status: 'deleted', deleted_at: new Date().toISOString() },
   });
+  await sbRest('symp_voice_clones', {
+    method: 'POST',
+    body: { user_id: userId, language, engine: 'omnivoice', ref_clip_path: objectPath, ref_transcript: spoken, status: 'ready', consent_id: consentId },
+  }).catch(() => null);
 
-  const cloneRes = await sbRest('symp_voice_clones', {
-    method: 'POST', prefer: 'return=representation',
-    body: { user_id: userId, language, engine: 'omnivoice', ref_clip_path: objectPath, ref_transcript: transcript || spoken, status: 'ready', consent_id: consentId },
-  });
-  if (!cloneRes.ok || !Array.isArray(cloneRes.data) || !cloneRes.data[0]) return fail(500, 'internal_error', 'could not save the clone');
-  const clone = cloneRes.data[0];
-
-  // Append to the growing voice LIBRARY (multi-clip). duration_ms lets synth pick
-  // the longest/most-content reference. emotion starts 'neutral' and is auto-tagged
-  // in the BACKGROUND (waitUntil) so enrollment returns instantly and never blocks
-  // on a cold GPU. Best-effort throughout: a hiccup never fails a good enrollment.
+  // Append to the growing voice LIBRARY — every answer is kept. duration_ms helps synth
+  // pick the longest/cleanest reference; emotion auto-tagged in the background (waitUntil).
   const clipRes = await sbRest('symp_voice_clips', {
     method: 'POST', prefer: 'return=representation',
     body: {
-      user_id: userId, language, clip_path: objectPath, transcript: transcript || spoken,
+      user_id: userId, language, clip_path: objectPath, transcript: spoken,
       duration_ms: wavDurationMs(buffer, ext), emotion: 'neutral',
-      source: 'enroll', prompt_phrase, liveness_passed: true, consent_id: consentId, status: 'ready',
+      source: 'enroll', prompt_phrase: prompt_phrase || null, liveness_passed: false, consent_id: consentId, status: 'ready',
     },
   }).catch(() => null);
   const clipId = Array.isArray(clipRes?.data) && clipRes.data[0] ? clipRes.data[0].id : null;
 
-  // Auto-tag emotion off the critical path: warm engine → lands in ~1–2s; cold →
-  // the background task gives up and the clip stays 'neutral' (re-tagged later).
-  // Uses the platform waitUntil; skipped if unavailable (e.g. local dev).
   if (clipId && VOICE_INFER_URL && context && typeof context.waitUntil === 'function') {
     context.waitUntil(tagClipEmotion(clipId, audio_base64));
   }
 
-  return ok({ clone: { id: clone.id, language: clone.language, status: clone.status }, clip_id: clipId, liveness_score: Number(score.toFixed(2)) });
+  return ok({ clip_id: clipId, language, transcript: spoken });
 }
 
 async function status(userId) {
