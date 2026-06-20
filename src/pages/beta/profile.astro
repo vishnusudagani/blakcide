@@ -14,7 +14,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
 
       <div class="pf-meter" role="img" aria-label="Profile completeness">
         <div class="pf-meter-bar"><span class="pf-meter-fill" id="pf-fill" style="width:0%"></span></div>
-        <span class="pf-meter-label" id="pf-pct">Blak knows about 0% of you</span>
+        <span class="pf-meter-label" id="pf-pct">Blaksyd understands about 0% of you</span>
       </div>
       <a class="pf-talk" href="/beta/blak/">Talk to Blak →</a>
     </header>
@@ -57,7 +57,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
     .pf-chip.multi { color: var(--coral); border-color: rgba(255,107,157,.3); }
     .pf-forget { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; margin: 1.3rem 0 .3rem; }
     .pf-forget > span { font-size: var(--fs-sm); color: var(--ink-faint); }
-    .pf-forget button { font: inherit; font-size: var(--fs-xs); color: var(--ink-soft); background: var(--surface); border: 1px solid var(--line-strong); border-radius: 999px; padding: .4rem .85rem; min-height: 36px; cursor: pointer; }
+    .pf-forget button { font: inherit; font-size: var(--fs-xs); color: var(--ink-soft); background: var(--surface); border: 1px solid var(--line-strong); border-radius: 999px; padding: .4rem .85rem; min-height: 44px; cursor: pointer; }
     .pf-forget button:hover { border-color: rgba(255,107,157,.4); color: var(--coral); }
 
     .pf-actions { display: flex; gap: .5rem; flex: none; }
@@ -185,7 +185,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
     }
 
     const STRUCT_IDS = new Set(KNOWLEDGE_AREAS.map((a) => a.id));
-    const niceLabel = (f) => f.label || String(f.key).replace(/^(nexus|minit):/, '').replace(/[_-]/g, ' ');
+    const niceLabel = (f) => f.label || String(f.key).replace(/^[a-z]+:/, '').replace(/[_-]/g, ' ');
     function renderArea(area) {
       let rows, count;
       if (area.id === OPEN_AREA_ID) {
@@ -198,7 +198,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
         // Learned facts (Nexus/Minit) have free-form keys — render them under their area too.
         const extra = facts.filter((f) => f.area === area.id && !fieldKeys.has(f.key));
         const filled = area.fields.filter((fl) => factFor(area.id, fl.key)).length;
-        count = (filled + extra.length) + '/' + (area.fields.length + extra.length);
+        count = filled + '/' + area.fields.length + (extra.length ? ' · +' + extra.length + ' learned' : '');
         rows = area.fields.map((fl) => {
           const f = factFor(area.id, fl.key);
           return f ? rowFilled(f, fl.label) : rowEmpty(area.id, fl.key, fl.label);
@@ -222,7 +222,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
       if (pctEl) pctEl.textContent = 'Blaksyd understands about ' + pct + '% of you';
       const areas = KNOWLEDGE_AREAS.concat([OPEN_AREA]);
       const bySrc = (s) => facts.some((f) => f.source === s);
-      const footer = (bySrc('nexus') || bySrc('minit') || bySrc('blak') || bySrc('multi'))
+      const footer = (bySrc('nexus') || bySrc('minit') || bySrc('blak'))
         ? '<div class="pf-forget"><span>Forget what Blaksyd learned from:</span>'
           + (bySrc('nexus') ? '<button data-act="forget" data-source="nexus">Nexus</button>' : '')
           + (bySrc('minit') ? '<button data-act="forget" data-source="minit">Minit</button>' : '')
