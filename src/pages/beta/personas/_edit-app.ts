@@ -123,7 +123,11 @@ $('pf-voices').addEventListener('click', (e: any) => {
 });
 async function deriveTtsUrl() {
   try {
-    const r = await fetch('/api/gemini-live-session', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+    // The session endpoint is JWT-gated (same as the call path). Without this
+    // Authorization header it 401s, ttsUrl stays null, and every voice preview
+    // silently falls back to "ready shortly" — that was the bug.
+    const jwt = await getToken();
+    const r = await fetch('/api/gemini-live-session', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + (jwt || '') }, body: '{}' });
     const j = await r.json().catch(() => null);
     if (j && j.wsUrl) ttsUrl = j.wsUrl.replace(/^wss:/, 'https:').replace(/\/live$/, '/tts');
   } catch (e) { /* preview unavailable */ }
