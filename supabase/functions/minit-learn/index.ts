@@ -64,7 +64,7 @@ async function llmJson(userText: string): Promise<any | null> {
       if (!res.ok) continue;
       const j = await res.json();
       const txt = (j?.choices?.[0]?.message?.content ?? "").trim().replace(/^```json\s*|\s*```$/g, "");
-      try { return JSON.parse(txt); } catch { /* next provider */ }
+      try { const o = JSON.parse(txt); if (o && Array.isArray(o.facts)) return o; } catch { /* next provider */ }
     } catch { clearTimeout(timer); }
   }
   return null;
@@ -101,9 +101,9 @@ async function run() {
 
       const out = await llmJson("Recent reflections after talking with a listener:\n" + text);
       const facts = Array.isArray(out?.facts) ? out.facts : [];
-      for (const f of facts.slice(0, 3)) {
-        if (!f || typeof f.value !== "string" || !f.value.trim()) continue;
-        const key = String(f.key || f.value).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 60);
+      const valid = facts.filter((f: any) => f && typeof f.value === "string" && f.value.trim() && f.key);
+      for (const f of valid.slice(0, 3)) {
+        const key = String(f.key).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 60);
         if (!key) continue;
         const area = ["inner", "people", "goals"].includes(String(f.area)) ? String(f.area) : "inner";
         await db.rpc("knowledge_upsert", {
