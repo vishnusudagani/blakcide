@@ -34,6 +34,9 @@ const RATE_LIMITS = {
     // Per-turn call learning — own bucket so it never starves chat; generous for
     // long calls, cheap (free-tier extractor), and fail-open if the limiter trips.
     'call-learn': ['ai_learn', 60, 600],
+    // Group mediator — fires once per posted message; own bucket so an active
+    // group never eats a user's 1:1 chat allowance.
+    'group-mediate': ['ai_group', 40, 400],
 };
 const MAX_BODY_BYTES = 30 * 1024 * 1024;   // 30 MB — audio upload ceiling
 const MAX_JSON_BYTES = 700 * 1024;         // ~700 KB JSON ceiling (post-cap)
@@ -84,7 +87,7 @@ export default async (req) => {
     // Allowlist — only expose endpoints Blaksyd is meant to hit. Admin routes
     // (vault/:user_id) and raw whisper WS are deliberately excluded.
     const ALLOWED = new Set([
-        'health', 'chat', 'voice', 'title', 'transcribe', 'vision', 'tts', 'persona-generate', 'call-learn',
+        'health', 'chat', 'voice', 'title', 'transcribe', 'vision', 'tts', 'persona-generate', 'call-learn', 'group-mediate',
         'session/ingest', 'analyse/run', 'copilot/hint',
         'proactive-checkin',
         // Unified Soul:
