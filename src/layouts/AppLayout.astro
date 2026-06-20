@@ -310,6 +310,21 @@ const nav = [
       const authInUrl = /[#?&](access_token|code|token_hash)=/.test(location.hash + location.search);
       for (let i = 0; !session && authInUrl && i < 40; i++) { await new Promise((r) => setTimeout(r, 250)); session = await getSession(); }
 
+      // Persistent login (ChatGPT-style): a merely-expired access token must NEVER
+      // force a re-login. On a normal revisit with no live session, recover from the
+      // refresh token on disk before bouncing to sign-in — so you stay signed in
+      // until you explicitly log out.
+      if (!session && !authInUrl) {
+        try {
+          let rt = null;
+          for (let i = 0; i < localStorage.length; i++) {
+            const k = localStorage.key(i);
+            if (k && /sb-.*-auth-token/.test(k)) { try { rt = (JSON.parse(localStorage.getItem(k)) || {}).refresh_token || null; } catch (e) {} }
+          }
+          if (rt) { const { data } = await supabase.auth.refreshSession({ refresh_token: rt }); session = (data && data.session) || null; }
+        } catch (e) { /* fall through to sign-in */ }
+      }
+
       if (!session) {
         if (authInUrl) {
           // OAuth returned but the session never formed after ~10s of polling — this is
