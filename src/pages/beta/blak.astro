@@ -148,6 +148,10 @@ import AppLayout from '../../layouts/AppLayout.astro';
     .bx-col { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
     .bx-row.me .bx-col { align-items: flex-end; }
     .bx-bub { padding: .72rem .98rem; border-radius: var(--r-md); font-size: var(--fs-base); line-height: 1.55; white-space: pre-wrap; word-wrap: break-word; overflow-wrap: anywhere; }
+    .bx-calloffer { margin-top: .45rem; display: inline-flex; align-items: center; gap: .45rem; border: none; border-radius: var(--r-pill); padding: .5rem 1rem; font: inherit; font-size: var(--fs-sm); font-weight: 700; cursor: pointer; background: var(--cta); color: var(--cta-ink); box-shadow: var(--shadow-cta); transition: transform .15s var(--ease-out); }
+    .bx-calloffer svg { width: 16px; height: 16px; }
+    .bx-calloffer:active { transform: scale(.96); }
+    .bx-calloffer:disabled { opacity: .6; cursor: default; }
     .bx-row.them .bx-bub { background: var(--surface-strong); border: 1px solid var(--line); border-bottom-left-radius: 6px; color: var(--ink); }
     .bx-row.me .bx-bub { background: rgba(91,192,255,.14); border: 1px solid rgba(91,192,255,.26); border-bottom-right-radius: 6px; color: var(--ink); }
     html[data-theme="light"] .bx-row.me .bx-bub { background: rgba(24,114,176,.1); border-color: rgba(24,114,176,.22); }
@@ -677,6 +681,21 @@ import AppLayout from '../../layouts/AppLayout.astro';
       }
     }
 
+    // Call-on-request — if the user asks Blak to call (typed or in a voice note),
+    // confirm first with a tap-to-call offer instead of a text reply.
+    const CALL_INTENT = /\b(call me|call now|gimme a call|give me a call|can you call me|can we (call|talk)|could you call|wanna call|want to call|let'?s (call|hop on)|voice call|hop on a call|jump on a call|ring me|call you now)\b/i;
+    function offerCall() {
+      const h = addRow('them', '');
+      h.bub.textContent = 'want me to call you now?';
+      const btn = document.createElement('button');
+      btn.type = 'button'; btn.className = 'bx-calloffer';
+      btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.9.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg> Call now';
+      btn.onclick = () => { btn.disabled = true; openCall(); };
+      h.col.appendChild(btn);
+      stamp(h);
+      requestAnimationFrame(() => scrollToBottom(true));   // after layout, keep the offer + button above the composer
+    }
+
     async function send(text) {
       text = (text || '').trim();
       const img = pendingImage;
@@ -702,6 +721,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
           um.media_description = desc || null;
         }
         dbInsertMessage('user', text, img ? { url: img.url, type: img.type, description: um.media_description } : null).then((id) => { if (id) um.id = id; });
+        if (text && !img && CALL_INTENT.test(text)) { setBusy(false); offerCall(); return; }   // they asked to call → offer it
         await runTurn(text, typing);
       } catch (e) {
         setBusy(false);
@@ -893,6 +913,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
       if (url) um.media_url = url;                                       // persist the storage URL
       um.media_description = txt || null;
       dbInsertMessage('user', '', { url: url || null, type: 'audio', description: txt || null }).then((id) => { if (id) um.id = id; });
+      if (txt && CALL_INTENT.test(txt)) { offerCall(); return; }   // voice note asked to call → offer it
       await runTurn(txt || '');
     }
 
@@ -1084,11 +1105,21 @@ import AppLayout from '../../layouts/AppLayout.astro';
       });
     }
 
+    // Keep the screen awake during a call so the device doesn't auto-lock (the main
+    // cause of "the call dies"). The lock is auto-released whenever the tab hides,
+    // so we re-acquire it on return.
+    let wakeLock = null;
+    async function acquireWakeLock() {
+      try { if ('wakeLock' in navigator && !wakeLock) { wakeLock = await navigator.wakeLock.request('screen'); wakeLock.addEventListener('release', () => { wakeLock = null; }); } } catch (e) { /* unsupported / denied */ }
+    }
+    function releaseWakeLock() { try { if (wakeLock) { wakeLock.release(); wakeLock = null; } } catch (e) {} }
+
     async function openCall() {
       callOv.hidden = false; callCap.innerHTML = ''; muted = false; callMic.classList.remove('muted'); liveMode = false;
       try { micStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } }); }
       catch (e) { setCall('', 'mic blocked — allow microphone access'); return; }
       try { actx = actx || new (window.AudioContext || window.webkitAudioContext)(); if (actx.state === 'suspended') await actx.resume(); } catch (e) {}
+      acquireWakeLock();
       callState = 'listening'; setCall('', 'connecting…');
       if (await geminiLiveTry()) return;   // realtime Gemini Live running
       // Fallback — turn-based cascade (Whisper STT → LLM → Sarvam TTS).
@@ -1105,6 +1136,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
       if (mrec && mrec.state !== 'inactive') { try { mrec.stop(); } catch (e) {} }
       if (callSrc) { try { callSrc.stop(); } catch (e) {} callSrc = null; }
       if (micStream) { micStream.getTracks().forEach(t => t.stop()); micStream = null; }
+      releaseWakeLock();
       callOv.hidden = true; setCall('', '');
     }
     function startListening() { callState = 'listening'; speechFrames = 0; silenceFrames = 0; callMic.classList.remove('rec'); setCall('', muted ? 'muted — tap mic to resume' : 'listening… just talk'); }
@@ -1171,6 +1203,21 @@ import AppLayout from '../../layouts/AppLayout.astro';
     }
     if (callBtn) callBtn.addEventListener('click', openCall);
     if (callEnd) callEnd.addEventListener('click', endCall);
+    // Auto-lock / backgrounding recovery: when we come back to the foreground mid-call,
+    // re-grab the wake lock, resume audio, and reconnect the live socket if it dropped
+    // while the screen was off (best-effort — wake lock prevents most of these).
+    document.addEventListener('visibilitychange', async () => {
+      if (document.visibilityState !== 'visible' || callState === 'idle') return;
+      acquireWakeLock();
+      try { if (actx && actx.state === 'suspended') await actx.resume(); } catch (e) {}
+      if (liveMode && (!gws || gws.readyState > 1)) {       // socket died while backgrounded
+        setCall('', 'reconnecting…'); liveMode = false;
+        if (gws) { try { gws.close(); } catch (e) {} gws = null; }
+        if (gproc) { try { gproc.disconnect(); } catch (e) {} gproc = null; }
+        const ok = await geminiLiveTry();
+        if (!ok && callState !== 'idle') setCall('', 'call dropped — tap call to reconnect');
+      }
+    });
     if (callMic) callMic.addEventListener('click', () => {   // mute / unmute
       muted = !muted; callMic.classList.toggle('muted', muted);
       if (liveMode) { setCall(muted ? '' : 'listening', muted ? 'muted — tap mic to resume' : 'listening… just talk'); return; }

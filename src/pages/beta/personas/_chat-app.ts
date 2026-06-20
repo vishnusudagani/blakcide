@@ -180,6 +180,10 @@ let gws: WebSocket | null = null, gproc: any = null, actx: any = null, micStream
 let gNextPlay = 0, gAiSpeaking = false, liveMode = false, gCap = '', gYou = '', gDuckTimer: any = null, muted = false, callOpen = false;
 const setStatus = (s: string) => { if (callStatus) callStatus.textContent = s; };
 const mayLearn = () => !persona || persona.build_profile_from !== false;
+// Keep the screen awake during a call so the device doesn't auto-lock (and drop it).
+let wakeLock: any = null;
+async function acquireWakeLock() { try { if ('wakeLock' in navigator && !wakeLock) { wakeLock = await (navigator as any).wakeLock.request('screen'); wakeLock.addEventListener('release', () => { wakeLock = null; }); } } catch (e) {} }
+function releaseWakeLock() { try { if (wakeLock) { wakeLock.release(); wakeLock = null; } } catch (e) {} }
 
 function gPlay(b64: string) {
   if (!actx || !callOpen) return;
@@ -232,6 +236,7 @@ async function openCall() {
   try { micStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } }); }
   catch { setStatus('mic blocked — allow microphone access'); return; }
   try { actx = actx || new (window.AudioContext || (window as any).webkitAudioContext)(); if (actx.state === 'suspended') await actx.resume(); } catch {}
+  acquireWakeLock();
   let cfg: any;
   try {
     const jwt = await getToken();
@@ -262,8 +267,14 @@ function endCall() {
   if (gproc) { try { gproc.disconnect(); } catch {} gproc = null; }
   if (micStream) { micStream.getTracks().forEach(t => t.stop()); micStream = null; }
   if (gDuckTimer) { clearTimeout(gDuckTimer); gDuckTimer = null; }
+  releaseWakeLock();
   callOv.hidden = true;
 }
+document.addEventListener('visibilitychange', async () => {
+  if (document.visibilityState !== 'visible' || !callOpen) return;
+  acquireWakeLock();
+  try { if (actx && actx.state === 'suspended') await actx.resume(); } catch (e) {}
+});
 $('pc-call').addEventListener('click', openCall);
 $('pc-call-end').addEventListener('click', endCall);
 callMic.addEventListener('click', () => { muted = !muted; callMic.classList.toggle('muted', muted); setStatus(muted ? 'muted — tap to resume' : 'listening…'); });
