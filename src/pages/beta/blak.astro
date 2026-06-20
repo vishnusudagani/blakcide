@@ -429,7 +429,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
       if (!supabase || !userId) return [];
       try {
         const { data } = await supabase.from('chats').select('id,title,created_at')
-          .eq('user_id', userId).order('created_at', { ascending: false }).limit(100);
+          .eq('user_id', userId).is('persona_id', null).order('created_at', { ascending: false }).limit(100);
         return data || [];
       } catch (e) { return []; }
     }

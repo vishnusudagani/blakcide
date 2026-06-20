@@ -1,0 +1,128 @@
+---
+import AppLayout from '../../../layouts/AppLayout.astro';
+---
+<AppLayout active="persona" chat={true} title="Chat">
+  <div class="pc">
+    <!-- Header -->
+    <header class="pc-head">
+      <a class="pc-back" href="/beta/personas/" aria-label="Back to personas">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+      </a>
+      <img class="pc-head-av" id="pc-av" alt="" />
+      <div class="pc-head-meta">
+        <div class="pc-name" id="pc-name">…</div>
+        <div class="pc-sub" id="pc-sub"></div>
+      </div>
+      <button type="button" class="pc-call-btn" id="pc-call" aria-label="Call">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.9.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+      </button>
+    </header>
+
+    <!-- Conversation -->
+    <div class="pc-stream" id="pc-stream"></div>
+
+    <!-- Composer -->
+    <form class="pc-form" id="pc-form" autocomplete="off">
+      <textarea id="pc-input" class="pc-input" rows="1" placeholder="Message…" maxlength="4000"></textarea>
+      <button type="submit" class="pc-send" id="pc-send" aria-label="Send">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+      </button>
+      <button type="button" class="pc-stop" id="pc-stop" aria-label="Stop" hidden>
+        <svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
+      </button>
+    </form>
+  </div>
+
+  <!-- Call overlay -->
+  <div class="pc-call-ov" id="pc-call-overlay" hidden>
+    <div class="pc-call-card">
+      <img class="pc-call-av" id="pc-call-av" alt="" />
+      <div class="pc-call-name" id="pc-call-name"></div>
+      <div class="pc-call-status" id="pc-call-status">connecting…</div>
+      <div class="pc-call-caption" id="pc-call-caption"></div>
+      <div class="pc-call-controls">
+        <button type="button" class="pc-call-mic" id="pc-call-mic" aria-label="Mute">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v4"/></svg>
+        </button>
+        <button type="button" class="pc-call-end" id="pc-call-end" aria-label="End call">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M21 15.46l-5.27-.61-2.52 2.52a15.05 15.05 0 0 1-6.59-6.59l2.53-2.53L8.54 3H3.03C2.45 13.18 10.82 21.55 21 20.97v-5.51z"/></svg>
+        </button>
+      </div>
+    </div>
+  </div>
+</AppLayout>
+
+<style is:global>
+  .pc { display: flex; flex-direction: column; height: 100svh; max-width: 760px; margin-inline: auto; }
+  @media (max-width: 820px) { .pc { height: calc(100svh - 138px - env(safe-area-inset-bottom, 0px)); } }
+
+  /* Header */
+  .pc-head { display: flex; align-items: center; gap: .6rem; padding: .55rem .2rem; border-bottom: 1px solid var(--line); flex: none; }
+  .pc-back { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%; color: var(--ink); flex: none; }
+  .pc-back svg { width: 21px; height: 21px; }
+  .pc-back:hover { background: var(--surface-strong); }
+  .pc-head-av { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; background: var(--surface-strong); flex: none; }
+  .pc-head-meta { flex: 1; min-width: 0; }
+  .pc-name { font-weight: 700; font-size: var(--fs-md); line-height: 1.1; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pc-sub { font-size: var(--fs-xs); color: var(--ink-faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pc-call-btn { flex: none; width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; border: 1px solid var(--line); background: var(--surface); color: var(--coral); cursor: pointer; transition: transform .15s var(--ease-spring, ease), border-color .15s; }
+  .pc-call-btn svg { width: 19px; height: 19px; }
+  .pc-call-btn:hover { transform: translateY(-1px); border-color: var(--coral); }
+  .pc-call-btn:active { transform: scale(.95); }
+
+  /* Stream */
+  .pc-stream { flex: 1; overflow-y: auto; padding: 1rem .2rem 1.2rem; display: flex; flex-direction: column; gap: .55rem; }
+  .pc-empty { margin: auto; text-align: center; color: var(--ink-faint); padding: 2rem 1rem; }
+  .pc-empty img { width: 84px; height: 84px; border-radius: 50%; padding: 3px; background: var(--accent-grad, linear-gradient(135deg,#FFD27A,#FF6B9D,#C9B8FF)); margin-bottom: .8rem; }
+  .pc-empty .pc-empty-name { font-weight: 700; color: var(--ink); font-size: var(--fs-md); }
+
+  .pc-row { display: flex; gap: .5rem; align-items: flex-end; max-width: 100%; }
+  .pc-row.me { flex-direction: row-reverse; }
+  .pc-av-sm { flex: none; width: 26px; height: 26px; border-radius: 50%; background-size: cover; background-position: center; background-color: var(--surface-strong); margin-bottom: 18px; }
+  .pc-col { display: flex; flex-direction: column; max-width: 78%; }
+  .pc-row.me .pc-col { align-items: flex-end; }
+  .pc-bub { padding: .55rem .8rem; border-radius: 16px; font-size: var(--fs-sm); line-height: 1.42; white-space: pre-wrap; word-wrap: break-word; }
+  .pc-row.them .pc-bub { background: var(--surface-strong); color: var(--ink); border-bottom-left-radius: 5px; }
+  .pc-row.me .pc-bub { background: var(--accent-grad, linear-gradient(135deg,#FF8A6B,#FF6B9D)); color: #3a1430; border-bottom-right-radius: 5px; }
+  .pc-time { font-size: 10px; color: var(--ink-faint); margin: 2px .3rem 0; }
+  .pc-typing { display: inline-flex; gap: 4px; padding: 2px 0; }
+  .pc-typing i { width: 6px; height: 6px; border-radius: 50%; background: var(--ink-faint); animation: pc-blink 1.2s infinite both; }
+  .pc-typing i:nth-child(2){ animation-delay: .2s; } .pc-typing i:nth-child(3){ animation-delay: .4s; }
+  @keyframes pc-blink { 0%,80%,100%{ opacity: .3; transform: translateY(0);} 40%{ opacity: 1; transform: translateY(-2px);} }
+  .pc-retry, .pc-row.err .pc-bub { color: #ff6b6b; }
+  .pc-retry { margin-top: .3rem; background: none; border: 1px solid var(--line); border-radius: var(--r-pill); padding: .25rem .7rem; font-size: var(--fs-xs); color: var(--ink-soft); cursor: pointer; }
+
+  /* Composer */
+  .pc-form { flex: none; display: flex; align-items: flex-end; gap: .5rem; padding: .6rem .2rem calc(.6rem + env(safe-area-inset-bottom, 0px)); border-top: 1px solid var(--line); background: var(--bg); }
+  .pc-input { flex: 1; resize: none; border: 1px solid var(--line); border-radius: 20px; padding: .65rem .95rem; background: var(--surface); color: var(--ink); font: inherit; font-size: 16px; max-height: 140px; line-height: 1.35; }
+  .pc-input:focus { outline: none; border-color: var(--coral); }
+  .pc-send, .pc-stop { flex: none; width: 42px; height: 42px; border-radius: 50%; display: grid; place-items: center; border: none; cursor: pointer; background: var(--accent-grad, linear-gradient(135deg,#FFD27A,#FF6B9D)); color: #3a1430; transition: transform .15s var(--ease-spring, ease); }
+  .pc-send:active, .pc-stop:active { transform: scale(.92); }
+  .pc-send svg, .pc-stop svg { width: 19px; height: 19px; }
+  .pc-stop { background: var(--surface-strong); color: var(--ink); }
+  /* [hidden] must beat display:grid (same gotcha as overlays) */
+  .pc-send[hidden], .pc-stop[hidden] { display: none; }
+
+  /* Call overlay */
+  .pc-call-ov { position: fixed; inset: 0; z-index: 60; display: grid; place-items: center; background: color-mix(in srgb, var(--bg) 86%, transparent); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+  .pc-call-ov[hidden] { display: none; }
+  .pc-call-card { text-align: center; display: flex; flex-direction: column; align-items: center; gap: .5rem; padding: 1.5rem; }
+  .pc-call-av { width: 130px; height: 130px; border-radius: 50%; object-fit: cover; padding: 4px; background: var(--accent-grad, linear-gradient(135deg,#FFD27A,#FF6B9D,#C9B8FF)); animation: pc-breathe 3s ease-in-out infinite; }
+  @keyframes pc-breathe { 0%,100%{ transform: scale(1);} 50%{ transform: scale(1.04);} }
+  .pc-call-name { font-size: var(--fs-xl, 1.5rem); font-weight: 800; color: var(--ink); margin-top: .6rem; }
+  .pc-call-status { color: var(--ink-soft); font-size: var(--fs-sm); }
+  .pc-call-caption { min-height: 2.4em; max-width: 420px; color: var(--ink-soft); font-size: var(--fs-sm); margin: .4rem 0; }
+  .pc-call-caption .cc-you { color: var(--ink-faint); }
+  .pc-call-caption .cc-them { color: var(--ink); }
+  .pc-call-controls { display: flex; gap: 1.4rem; margin-top: 1rem; }
+  .pc-call-mic, .pc-call-end { width: 60px; height: 60px; border-radius: 50%; display: grid; place-items: center; border: none; cursor: pointer; transition: transform .15s var(--ease-spring, ease); }
+  .pc-call-mic { background: var(--surface-strong); color: var(--ink); }
+  .pc-call-mic.muted { background: var(--coral); color: #fff; }
+  .pc-call-end { background: #ff4d4f; color: #fff; }
+  .pc-call-mic:active, .pc-call-end:active { transform: scale(.92); }
+  .pc-call-mic svg, .pc-call-end svg { width: 24px; height: 24px; }
+</style>
+
+<script>
+  import './_chat-app.ts';
+</script>

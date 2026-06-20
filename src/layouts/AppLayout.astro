@@ -6,8 +6,8 @@
 import '../styles/fonts.css';
 import '../styles/tokens.css';
 
-interface Props { active?: 'home' | 'blak' | 'persona' | 'minit' | 'nexus' | 'profile'; title?: string; soon?: boolean; }
-const { active = 'home', title = 'Home', soon = false } = Astro.props;
+interface Props { active?: 'home' | 'blak' | 'persona' | 'minit' | 'nexus' | 'profile'; title?: string; soon?: boolean; chat?: boolean; }
+const { active = 'home', title = 'Home', soon = false, chat = false } = Astro.props;
 
 // soon: feature is a preview, not yet live (Blak / Persona / Minit). Nexus is live.
 // Each pillar carries a distinct glyph + its brand colour (tokens.css):
@@ -46,7 +46,7 @@ const nav = [
 <body>
   <div class="ap-atmos" aria-hidden="true"></div>
 
-  <div class={`ap ${active === 'blak' ? 'ap--chat' : ''}`}>
+  <div class={`ap ${active === 'blak' || chat ? 'ap--chat' : ''}`}>
     <!-- ── side / brand rail ── -->
     <aside class="ap-rail">
       <a href="/beta/" class="ap-brand" aria-label="Blaksyd beta">
