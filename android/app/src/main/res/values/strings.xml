@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Blaksyd</string>
+    <string name="title_activity_main">Blaksyd</string>
+    <string name="package_name">com.blaksyd.app</string>
+    <string name="custom_url_scheme">com.blaksyd.app</string>
+</resources>

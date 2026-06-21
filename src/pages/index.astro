@@ -135,6 +135,18 @@ const pageSchema = [
 ---
 
 <Base title={title} description={description} schema={pageSchema}>
+  {/* Native app (Capacitor): the marketing homepage is web-only; the packaged
+      iOS/Android app boots straight into the product at /beta/. No-op on the web,
+      where window.Capacitor is undefined. */}
+  <script is:inline>
+    (function () {
+      try {
+        if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) {
+          window.location.replace('/beta/');
+        }
+      } catch (e) {}
+    })();
+  </script>
   <Nav />
   <Spine />
   <main id="main" tabindex="-1">
