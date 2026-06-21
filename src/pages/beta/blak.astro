@@ -65,6 +65,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
       <div class="bx-add-menu" id="bx-add-menu" hidden data-noswipe>
         <button type="button" id="bx-add-photo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg> Photo</button>
         <button type="button" id="bx-add-group"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg> New group with Blak</button>
+        <button type="button" id="bx-add-incognito"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.9 4.2A9 9 0 0 1 12 4c5 0 9 4.5 9 8a12 12 0 0 1-2 3M6.6 6.6A12.4 12.4 0 0 0 3 12c0 3.5 4 8 9 8a9 9 0 0 0 4-1M1 1l22 22"/></svg> Incognito chat</button>
         <button type="button" id="bx-add-summary"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg> Summarize this chat</button>
         <button type="button" id="bx-add-doc"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h6"/></svg> Document / PDF</button>
         <button type="button" id="bx-add-export"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M8 11l4 4 4-4M5 21h14"/></svg> Export this chat</button>
@@ -73,6 +74,11 @@ import AppLayout from '../../layouts/AppLayout.astro';
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
         <span>Editing your message — Blak will reply again</span>
         <button type="button" id="bx-edit-cancel" aria-label="Cancel edit">✕</button>
+      </div>
+      <div class="bx-incog-pill" id="bx-incog-pill" hidden data-noswipe>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.9 4.2A9 9 0 0 1 12 4c5 0 9 4.5 9 8a12 12 0 0 1-2 3M6.6 6.6A12.4 12.4 0 0 0 3 12c0 3.5 4 8 9 8a9 9 0 0 0 4-1M1 1l22 22"/></svg>
+        <span>Incognito — this chat isn't saved or learned from</span>
+        <button type="button" id="bx-incog-exit" aria-label="Exit incognito">Exit</button>
       </div>
       <div class="bx-attach-preview" id="bx-attach-preview" hidden data-noswipe></div>
       <div class="bx-vn" id="bx-vn" hidden data-noswipe></div>
@@ -213,6 +219,12 @@ import AppLayout from '../../layouts/AppLayout.astro';
     .bx-edit-pill span { flex: 1; min-width: 0; }
     .bx-edit-pill button { background: none; border: 0; color: var(--ink-faint); cursor: pointer; font-size: .95rem; padding: 0 .2rem; min-width: 28px; }
     .bx-edit-pill button:hover { color: var(--coral); }
+    .bx-incog-pill { display: flex; align-items: center; gap: .5rem; margin: 0 6px 6px; padding: .45rem .7rem; border-radius: 12px; background: var(--surface-strong); border: 1px solid var(--line-strong); color: var(--ink-soft); font-size: var(--fs-xs); }
+    .bx-incog-pill[hidden] { display: none; }
+    .bx-incog-pill svg { width: 14px; height: 14px; flex: none; }
+    .bx-incog-pill span { flex: 1; min-width: 0; }
+    .bx-incog-pill button { background: none; border: 1px solid var(--line-strong); color: var(--ink-soft); border-radius: var(--r-pill); cursor: pointer; font: inherit; font-size: var(--fs-2xs); padding: .2rem .65rem; }
+    .bx-incog-pill button:hover { color: var(--ink); border-color: var(--ink-faint); }
     .bx-speak { color: var(--ink-faint); background: none; border: 0; cursor: pointer; display: inline-flex; align-items: center; padding: 0; transition: color .18s; -webkit-tap-highlight-color: transparent; }
     .bx-speak:hover { color: var(--coral); }
     .bx-speak.playing { color: var(--coral); }
@@ -918,7 +930,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
       const res = await fetch('/api/blaksyd/symp/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + jwt },
-        body: JSON.stringify({ messages: payload(), stream: true }),
+        body: JSON.stringify({ messages: payload(), stream: true, no_learn: incognito }),
         signal: controller.signal,
       });
       if (!res.ok || !res.body) throw new Error('http_' + res.status);
@@ -1143,7 +1155,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
             render();
           }
         }
-        if (!activeChatId) { const c = await dbCreateChat((text || 'Shared an image').slice(0, 42)); if (c) activeChatId = c.id; }
+        if (!incognito && !activeChatId) { const c = await dbCreateChat((text || 'Shared an image').slice(0, 42)); if (c) activeChatId = c.id; }
         const um = { role: 'user', content: text, ts: Date.now(), media_url: img ? img.url : null, media_type: img ? img.type : null, media_description: null };
         history.push(um);
         addRow('me', text, { media_url: um.media_url, msg: um });
@@ -1250,6 +1262,19 @@ import AppLayout from '../../layouts/AppLayout.astro';
     const addPhoto = $('bx-add-photo'), addGroup = $('bx-add-group');
     if (addPhoto) addPhoto.addEventListener('click', () => { closeAddMenu(); if (fileInput) fileInput.click(); });
     if (addGroup) addGroup.addEventListener('click', () => { closeAddMenu(); window.location.href = '/beta/group/'; });
+    // ── Incognito: a private chat that isn't saved or learned from ────────────
+    let incognito = false;
+    const incogPill = $('bx-incog-pill');
+    function setIncognito(on) { incognito = on; if (incogPill) incogPill.hidden = !on; }
+    function enterIncognito() {
+      if (sending && controller) { try { controller.abort(); } catch (e) {} }
+      activeChatId = null; history = []; cancelEdit();
+      setIncognito(true);
+      render(); updateChips(); closeDrawer(); input.focus();
+    }
+    const addIncog = $('bx-add-incognito');
+    if (addIncog) addIncog.addEventListener('click', () => { closeAddMenu(); enterIncognito(); });
+    { const ix = $('bx-incog-exit'); if (ix) ix.addEventListener('click', () => { newConvo(); }); }
     const addSummary = $('bx-add-summary');
     if (addSummary) addSummary.addEventListener('click', () => { closeAddMenu(); summarizeThread(activeChatId, null); });
     const addExport = $('bx-add-export');
@@ -1373,7 +1398,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
         const docText = await extractDocText(file);
         addBtn.classList.remove('busy');
         if (!docText) { const h = addRow('them', ''); h.bub.textContent = "i couldn't read that one — try a PDF or a text file?"; stamp(h); setBusy(false); return; }
-        if (!activeChatId) { const c = await dbCreateChat(name); if (c) activeChatId = c.id; }
+        if (!incognito && !activeChatId) { const c = await dbCreateChat(name); if (c) activeChatId = c.id; }
         const um = { role: 'user', content: name, ts: Date.now(), media_type: 'doc', media_description: docText };
         history.push(um); addRow('me', name, { media_type: 'doc', msg: um }); updateChips();
         dbInsertMessage('user', name, { type: 'doc', description: docText }).then((id) => { if (id) um.id = id; });
@@ -1490,7 +1515,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
 
     async function sendVoiceNote(blob, durMs) {
       if (!blob || sending) return;
-      if (!activeChatId) { const c = await dbCreateChat('Voice note'); if (c) activeChatId = c.id; }
+      if (!incognito && !activeChatId) { const c = await dbCreateChat('Voice note'); if (c) activeChatId = c.id; }
       const localUrl = URL.createObjectURL(blob);
       const um = { role: 'user', content: '', ts: Date.now(), media_url: localUrl, media_type: 'audio', media_description: null };
       history.push(um);
@@ -1520,14 +1545,14 @@ import AppLayout from '../../layouts/AppLayout.astro';
 
     // ── Conversation switching + history drawer (server-backed) ───────────
     async function openChat(id) {
-      cancelEdit();
+      cancelEdit(); setIncognito(false);
       activeChatId = id;
       history = await dbLoadMessages(id);
       render(); updateChips();
     }
     async function newConvo() {
       if (sending && controller) controller.abort();
-      cancelEdit();
+      cancelEdit(); setIncognito(false);
       const c = await dbCreateChat('New chat');
       activeChatId = c ? c.id : null;
       history = [];

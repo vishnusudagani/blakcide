@@ -78,7 +78,7 @@ export default async (req) => {
         return jsonError(ERROR_CODES.BAD_REQUEST, 'Invalid JSON body', 400, requestId);
     }
 
-    const { user_id, messages, stream = true, source_session_id = null, persona_id = null } = parsed.data || {};
+    const { user_id, messages, stream = true, source_session_id = null, persona_id = null, no_learn = false } = parsed.data || {};
 
     if (!user_id) {
         logAccess({ requestId, endpoint: ENDPOINTS.CHAT, statusCode: 400, latencyMs: Date.now() - t0, errorCode: 'MISSING_USER_ID' });
@@ -113,7 +113,8 @@ export default async (req) => {
     // prompt becomes the persona — and learning respects its consent toggle.
     let persona = null;
     if (persona_id) { try { persona = await fetchFantasyPersona(user_id, persona_id); } catch (_) { /* fall back to Blak */ } }
-    const mayLearn = !persona || persona.build_profile_from !== false;
+    // Incognito chats (no_learn) skip ALL learning + memory, like a private window.
+    const mayLearn = (!persona || persona.build_profile_from !== false) && no_learn !== true;
     let systemStack = [];
     try {
         systemStack = await buildChatSystemStack(user_id, { latestUserText, persona });

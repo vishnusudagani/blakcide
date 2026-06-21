@@ -50,6 +50,12 @@ import AppLayout from '../../layouts/AppLayout.astro';
     </section>
 
     <section class="ac-card">
+      <h2 class="ac-h">Your data</h2>
+      <p class="ac-sub">It's all yours. Download everything Blaksyd has saved about you — your profile, chats, journals, moods and reminders — any time.</p>
+      <div class="ac-save-row"><button type="button" class="ac-save" id="ac-export">Download my data</button><span class="ac-saved" id="ac-exported"></span></div>
+    </section>
+
+    <section class="ac-card">
       <div class="ac-row"><span>Appearance</span><button type="button" class="ac-pref" id="ac-theme">Theme</button></div>
     </section>
 
@@ -148,6 +154,26 @@ import AppLayout from '../../layouts/AppLayout.astro';
             try { await supabase.from('blak_prefs').upsert({ user_id: u.id, proactivity: lv, updated_at: new Date().toISOString() }, { onConflict: 'user_id' }); } catch (e) {}
           }));
         }
+
+        const exportBtn = $('ac-export'), exported = $('ac-exported');
+        if (exportBtn) exportBtn.addEventListener('click', async () => {
+          exportBtn.setAttribute('disabled', ''); exported.textContent = 'Gathering…';
+          const grab = async (table, builder) => { try { const { data } = await builder(supabase.from(table).select('*')); return data || []; } catch (e) { return []; } };
+          const out = { exported_at: new Date().toISOString(), account: { id: u.id, email: u.email, metadata: u.user_metadata } };
+          out.profile_facts = await grab('symp_knowledge_facts', (q) => q.eq('user_id', u.id));
+          out.chats = await grab('chats', (q) => q.eq('user_id', u.id));
+          const chatIds = out.chats.map((c) => c.id);
+          out.messages = chatIds.length ? await grab('messages', (q) => q.in('chat_id', chatIds).order('created_at', { ascending: true })) : [];
+          out.journals = await grab('journal_entries', (q) => q.eq('user_id', u.id));
+          out.moods = await grab('mood_logs', (q) => q.eq('user_id', u.id));
+          out.reminders = await grab('blak_reminders', (q) => q.eq('user_id', u.id));
+          out.nudges = await grab('blak_nudges', (q) => q.eq('user_id', u.id));
+          const blob = new Blob([JSON.stringify(out, null, 2)], { type: 'application/json' });
+          const url = URL.createObjectURL(blob); const a = document.createElement('a');
+          a.href = url; a.download = 'blaksyd-my-data-' + new Date().toISOString().slice(0, 10) + '.json';
+          document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 2000);
+          exportBtn.removeAttribute('disabled'); exported.textContent = 'Downloaded ✓'; setTimeout(() => { exported.textContent = ''; }, 3000);
+        });
 
         const theme = $('ac-theme');
         const paintTheme = () => { theme.textContent = (document.documentElement.getAttribute('data-theme') === 'light') ? 'Light' : 'Dark'; };
