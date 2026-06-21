@@ -25,6 +25,8 @@ import AppLayout from '../../layouts/AppLayout.astro';
         <p class="bx-greet-sub" id="bx-greet-sub">what's on your mind?</p>
       </div>
 
+      <div class="bx-nudges" id="bx-nudges" hidden data-noswipe></div>
+
       <a class="bx-insight-card" id="bx-insight" href="/beta/profile/">
         <span class="bx-insight-ic">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 12a4 4 0 100-8 4 4 0 000 8zM5 20a7 7 0 0114 0"/></svg>
@@ -467,6 +469,16 @@ import AppLayout from '../../layouts/AppLayout.astro';
     .bx-rem-done { flex: none; background: none; border: 1px solid var(--line-strong); color: var(--ink-soft); border-radius: var(--r-pill); font: inherit; font-size: var(--fs-xs); padding: .3rem .7rem; cursor: pointer; }
     .bx-rem-done:hover { color: var(--ink); border-color: var(--gold); }
     html[data-theme="light"] .bx-rem { background: rgba(138,100,16,.07); }
+    .bx-nudges { width: 100%; max-width: 420px; display: flex; flex-direction: column; gap: .5rem; }
+    .bx-nudges[hidden] { display: none; }
+    .bx-nudge { display: flex; align-items: flex-start; gap: .7rem; padding: .8rem .95rem; border-radius: var(--r-md); background: rgba(255,107,157,.1); border: 1px solid rgba(255,107,157,.28); text-align: left; animation: bx-in .25s var(--ease-out) both; }
+    .bx-nudge-mark { flex: none; width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; background: var(--cta-grad); color: #fff; font-size: 13px; }
+    .bx-nudge-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: .55rem; }
+    .bx-nudge-tx { font-size: var(--fs-sm); color: var(--ink); line-height: 1.5; }
+    .bx-nudge-acts { display: flex; gap: .5rem; }
+    .bx-nudge-acts button { background: none; border: 1px solid var(--line-strong); color: var(--ink-soft); border-radius: var(--r-pill); font: inherit; font-size: var(--fs-xs); padding: .32rem .85rem; cursor: pointer; }
+    .bx-nudge-acts button:hover { color: var(--ink); }
+    .bx-nudge-reply { color: var(--cta-ink) !important; background: var(--cta) !important; border-color: transparent !important; }
     .bx-insight-card { display: inline-flex; align-items: center; gap: .7rem; padding: .7rem .95rem; border-radius: var(--r-md); background: var(--glass-strong); border: 1px solid var(--line-strong); box-shadow: var(--shadow-soft); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); transition: .18s var(--ease-out); }
     .bx-insight-card:hover { border-color: var(--coral); transform: translateY(-1px); }
     .bx-insight-card .bx-insight-ic { flex: none; width: 34px; height: 34px; border-radius: var(--r-sm); display: grid; place-items: center; color: var(--mint-deep); background: rgba(106,211,184,.14); border: 1px solid rgba(106,211,184,.26); }
@@ -1020,6 +1032,43 @@ import AppLayout from '../../layouts/AppLayout.astro';
           wrap.appendChild(el);
         }
       } catch (e) {}
+    }
+
+    // ── Proactive nudges: Blak reaching out (surfaced on the home screen) ──────
+    async function loadNudges() {
+      const wrap = $('bx-nudges'); if (!wrap || !supabase || !userId) return;
+      try {
+        const now = new Date();
+        const floor = new Date(now.getTime() - 3 * 86400000).toISOString();   // hide nudges that went stale (>3d)
+        const { data } = await supabase.from('blak_nudges')
+          .select('id,text,kind,due_at').eq('user_id', userId).eq('status', 'pending')
+          .lte('due_at', now.toISOString()).gte('due_at', floor)
+          .order('due_at', { ascending: false }).limit(3);
+        const due = data || [];
+        if (!due.length) { wrap.hidden = true; wrap.innerHTML = ''; return; }
+        wrap.hidden = false; wrap.innerHTML = '';
+        for (const n of due) {
+          const el = document.createElement('div'); el.className = 'bx-nudge';
+          el.innerHTML = '<span class="bx-nudge-mark">✦</span><div class="bx-nudge-body"><div class="bx-nudge-tx"></div><div class="bx-nudge-acts"><button type="button" class="bx-nudge-reply">Reply</button><button type="button" class="bx-nudge-x">Dismiss</button></div></div>';
+          el.querySelector('.bx-nudge-tx').textContent = n.text;
+          el.querySelector('.bx-nudge-reply').onclick = () => startNudgeChat(n);
+          el.querySelector('.bx-nudge-x').onclick = async () => {
+            el.remove(); if (!wrap.querySelector('.bx-nudge')) wrap.hidden = true;
+            try { await supabase.from('blak_nudges').update({ status: 'dismissed' }).eq('id', n.id); } catch (e) {}
+          };
+          wrap.appendChild(el);
+        }
+      } catch (e) {}
+    }
+    async function startNudgeChat(n) {
+      try { await supabase.from('blak_nudges').update({ status: 'acted' }).eq('id', n.id); } catch (e) {}
+      const c = await dbCreateChat((n.text || 'Blak').slice(0, 42));
+      activeChatId = c ? c.id : null;
+      const am = { role: 'assistant', content: n.text, ts: Date.now() };
+      history = [am];
+      render(); updateChips();
+      if (activeChatId) dbInsertMessage('assistant', n.text).then((id) => { if (id) am.id = id; });
+      input.focus();
     }
 
     async function send(text) {
@@ -1899,6 +1948,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
       } catch (e) {}
       loadGreetingAndInsight();
       loadReminders();
+      loadNudges();
       setupMood();
     })();
   </script>

@@ -28,5 +28,12 @@ exports.handler = async (event) => {
         await updateRollingMemory(user_id, { userText, assistantText });
     } catch (e) { console.warn('[learn-bg] memory failed:', e && e.message); }
 
+    // Proactive follow-through: if Blak promised to check in (or the user has a
+    // clear upcoming thing), silently schedule a future nudge. Auto-detected.
+    try {
+        const { scheduleFollowThrough } = await import('../../symp-core/lib/proactive.mjs');
+        await scheduleFollowThrough(user_id, userText, assistantText);
+    } catch (e) { console.warn('[learn-bg] followthrough failed:', e && e.message); }
+
     return { statusCode: 200, body: 'done' };
 };

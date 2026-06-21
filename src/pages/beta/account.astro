@@ -39,6 +39,17 @@ import AppLayout from '../../layouts/AppLayout.astro';
     </div>
 
     <section class="ac-card">
+      <h2 class="ac-h">How often Blak reaches out</h2>
+      <p class="ac-sub">Blak can check in like a friend — follow up on things you mentioned, celebrate wins, or just see how you're doing. You're fully in control.</p>
+      <div class="ac-seg" id="ac-proactivity" role="group" aria-label="How often Blak reaches out">
+        <button type="button" data-lv="none">None</button>
+        <button type="button" data-lv="low">Low</button>
+        <button type="button" data-lv="default">Default</button>
+        <button type="button" data-lv="high">High</button>
+      </div>
+    </section>
+
+    <section class="ac-card">
       <div class="ac-row"><span>Appearance</span><button type="button" class="ac-pref" id="ac-theme">Theme</button></div>
     </section>
 
@@ -53,6 +64,9 @@ import AppLayout from '../../layouts/AppLayout.astro';
     .ac-hello { font-size: clamp(1.4rem, 1.1rem + 1.8vw, 1.9rem); font-weight: 600; letter-spacing: -.02em; color: var(--ink); }
     .ac-email { font-size: var(--fs-sm); color: var(--ink-faint); margin-top: .15rem; }
     .ac-card { background: var(--glass-strong); border: 1px solid var(--line); border-radius: var(--r-lg); padding: 1.1rem 1.2rem; margin-bottom: .8rem; }
+    .ac-seg { display: flex; gap: .3rem; padding: .25rem; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-pill); margin-top: .7rem; }
+    .ac-seg button { flex: 1; background: none; border: 0; border-radius: var(--r-pill); color: var(--ink-soft); font: inherit; font-size: var(--fs-sm); font-weight: 600; padding: .5rem .3rem; min-height: 42px; cursor: pointer; transition: background .15s, color .15s; }
+    .ac-seg button.on { background: var(--cta); color: var(--cta-ink); }
     .ac-head { display: flex; align-items: center; gap: .6rem; }
     .ac-h { font-size: var(--fs-md); font-weight: 600; color: var(--ink); }
     .ac-sub { font-size: var(--fs-sm); color: var(--ink-soft); margin-top: .5rem; line-height: 1.5; }
@@ -122,6 +136,18 @@ import AppLayout from '../../layouts/AppLayout.astro';
           saved.textContent = error ? 'Couldn’t save — try again' : 'Saved ✓';
           if (!error) { $('ac-ava').textContent = (full_name || u.email || 'Y')[0].toUpperCase(); $('ac-hello').textContent = full_name ? `Hi ${full_name.split(' ')[0]}` : 'Your account'; setTimeout(() => { saved.textContent = ''; }, 2500); }
         });
+
+        const seg = $('ac-proactivity');
+        if (seg) {
+          let lv = 'default';
+          try { const { data: pf } = await supabase.from('blak_prefs').select('proactivity').eq('user_id', u.id).maybeSingle(); if (pf && pf.proactivity) lv = pf.proactivity; } catch (e) {}
+          const paint = () => seg.querySelectorAll('button').forEach((b) => b.classList.toggle('on', b.dataset.lv === lv));
+          paint();
+          seg.querySelectorAll('button').forEach((b) => b.addEventListener('click', async () => {
+            lv = b.dataset.lv; paint();
+            try { await supabase.from('blak_prefs').upsert({ user_id: u.id, proactivity: lv, updated_at: new Date().toISOString() }, { onConflict: 'user_id' }); } catch (e) {}
+          }));
+        }
 
         const theme = $('ac-theme');
         const paintTheme = () => { theme.textContent = (document.documentElement.getAttribute('data-theme') === 'light') ? 'Light' : 'Dark'; };
