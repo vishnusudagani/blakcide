@@ -1639,32 +1639,64 @@ import AppLayout from '../../layouts/AppLayout.astro';
       try {
         const { data } = await supabase.from('symp_knowledge_facts').select('area,key,value').eq('user_id', userId);
         const facts = data || [];
-        const ctx = facts.find(f => f.key === 'current_situation') || facts.find(f => f.key === 'short_term_goals');
-        const sub = $('bx-greet-sub'); if (sub && ctx && ctx.value) sub.textContent = String(ctx.value).slice(0, 70);
-        const pct = computeCompleteness(facts);
-        const it = $('bx-insight-title'), is = $('bx-insight-sub');
-        if (it) it.textContent = pct > 0 ? ('Blak knows about ' + pct + '% of you') : 'Blak is getting to know you';
-        if (is) is.textContent = pct > 0 ? 'see & shape your profile →' : 'the more you talk, the more it learns →';
+        let pool = buildInsights(facts);
+        // Fold in Blak's live mood insight as one more rotating card.
         try {
           const { data: ins } = await supabase.rpc('blak_insights');
-          if (ins && ins.kind === 'mood_day' && ins.title) {
-            const card = $('bx-insight');
-            if (it) it.textContent = ins.title;
-            if (is) is.textContent = 'Want to see why? →';
-            if (card && !card.dataset.wired) {
-              card.dataset.wired = '1';
-              card.addEventListener('click', (e) => {
-                e.preventDefault();
-                const tx = card.querySelector('.bx-insight-tx');
-                let why = card.querySelector('.bx-insight-why');
-                if (why) { why.remove(); if (is) is.textContent = 'Want to see why? →'; return; }
-                why = document.createElement('i'); why.className = 'bx-insight-why'; why.textContent = ins.why || ''; if (tx) tx.appendChild(why);
-                if (is) is.textContent = 'Tap to hide';
-              });
-            }
-          }
+          if (ins && ins.kind === 'mood_day' && ins.title) pool.unshift({ title: ins.title, sub: 'see your day →' });
         } catch (e) {}
+        showInsight(pool);
       } catch (e) {}
+    }
+
+    // Build a pool of warm, human one-liners from the user's own facts. One is
+    // shown at a time and rotates on every visit, so the home never goes stale.
+    function buildInsights(facts) {
+      const out = [];
+      const seen = new Set();
+      const strip = (v) => String(v || '').replace(/^(likes?|loves?|enjoys?|has|is|wants? to|wants?|interested in|prefers?)\s+/i, '').replace(/\.$/, '').trim();
+      const flourish = (v) => {
+        const s = v.toLowerCase();
+        if (/\bcars?\b|driving|automobile/.test(s)) return ' — all the best with the next one! 🚗';
+        if (/\bbikes?\b|motorcycle/.test(s)) return ' 🏍️';
+        if (/sing|music|guitar|piano/.test(s)) return ' 🎤';
+        if (/travel|trip|goa|beach|vacation|holiday/.test(s)) return ' — hope you get there ✈️';
+        if (/gym|fitness|run|workout/.test(s)) return ' 💪';
+        if (/cook|food|biryani|eat/.test(s)) return ' 🍛';
+        if (/code|coding|program|develop|build/.test(s)) return ' 👩‍💻';
+        return ' ✨';
+      };
+      const add = (title, sub) => { const t = String(title || '').trim(); if (t && !seen.has(t)) { seen.add(t); out.push({ title: t.slice(0, 110), sub: sub || 'see & shape your profile →' }); } };
+      const get = (area, key) => facts.find(f => f.area === area && f.key === key);
+      const any = (key) => facts.find(f => f.key === key);
+
+      const interests = get('tastes', 'interests'); if (interests) add('You’re into ' + strip(interests.value) + flourish(interests.value));
+      const colour = any('favourite_colour') || any('favorite_colour') || any('favourite_color'); if (colour) add(strip(colour.value).replace(/^favourite colou?r is\s*/i, 'Team ') );
+      const food = get('other', 'favorite_food') || any('food_preferences') || get('tastes', 'media_tastes'); if (food) add(strip(food.value) + ' — good taste 🍛');
+      const goal = get('goals', 'short_term_goals'); if (goal) add(strip(goal.value) + ' — rooting for you 🤞');
+      const win = get('goals', 'wins'); if (win) add(strip(win.value) + ' — nice one! 🎉');
+      const sit = get('world', 'current_situation'); if (sit) add(strip(sit.value) + ' — how’s that going?');
+      const lifts = get('inner', 'lifts_them'); if (lifts) add(strip(lifts.value) + ' 🌟');
+      const langs = get('identity', 'languages'); if (langs) add(strip(langs.value) + ' — love the range 🌍');
+      const work = get('world', 'work'); if (work) add(strip(work.value));
+      // A couple of open-bucket gems too.
+      for (const f of facts.filter(f => f.area === 'other').slice(0, 4)) add(strip(f.value) + flourish(f.value));
+      return out;
+    }
+
+    function showInsight(pool) {
+      const it = $('bx-insight-title'), is = $('bx-insight-sub');
+      if (!pool || !pool.length) {
+        if (it) it.textContent = 'Blak is getting to know you';
+        if (is) is.textContent = 'the more you talk, the more it learns →';
+        return;
+      }
+      // Rotate: advance a stored index every visit so it changes frequently.
+      let i = 0;
+      try { i = (parseInt(localStorage.getItem('bx-insight-i') || '-1', 10) + 1); if (!Number.isFinite(i) || i < 0) i = 0; localStorage.setItem('bx-insight-i', String(i)); } catch (e) {}
+      const pick = pool[i % pool.length];
+      if (it) it.textContent = pick.title;
+      if (is) is.textContent = pick.sub;
     }
 
     // ── Boot: land on Blak's home — never auto-open a past thread ─────────

@@ -13,7 +13,6 @@ const { active = 'home', title = 'Home', soon = false, chat = false } = Astro.pr
 // Each pillar carries a distinct glyph + its brand colour (tokens.css):
 // Blak = spark (coral) · Minit = caring message (mint) · Nexus = constellation (aqua) · Persona = identity frame (lavender).
 const nav = [
-  { id: 'home',    href: '/beta/',         label: 'Home',    c: 'gold',  svg: '<path d="M3 11l9-7 9 7M5 10v10h14V10"/>' },
   { id: 'blak',    href: '/beta/blak/',    label: 'Blak',    c: 'coral', svg: '<path d="M12 4l1.7 5 5 1.7-5 1.7L12 17.4l-1.7-5L5.3 10.7l5-1.7z"/><path d="M18.8 3.6l.5 1.6 1.6.5-1.6.5-.5 1.6-.5-1.6-1.6-.5 1.6-.5z"/>' },
   { id: 'persona', href: '/beta/persona/', label: 'Persona', c: 'lav',   soon: true, svg: '<rect x="4" y="4" width="16" height="16" rx="5.5"/><circle cx="12" cy="10" r="2.5"/><path d="M7.9 17.3a4.5 4.5 0 0 1 8.2 0"/>' },
   { id: 'minit',   href: '/beta/minit/',   label: 'Minit',   c: 'mint',  svg: '<path d="M20 11.5a7.5 7.5 0 0 1-10.8 6.7L4 20l1.8-4.7A7.5 7.5 0 1 1 20 11.5z"/><path d="M12 14.7l-2.3-2.2a1.55 1.55 0 1 1 2.3-2.05 1.55 1.55 0 1 1 2.3 2.05z"/>' },

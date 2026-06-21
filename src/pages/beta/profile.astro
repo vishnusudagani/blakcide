@@ -12,9 +12,8 @@ import AppLayout from '../../layouts/AppLayout.astro';
       <h1 class="ap-h1">What Blak knows about you</h1>
       <p class="ap-sub">Blak fills this in as you talk — quietly, never prying. It's all yours: edit anything, delete anything. The more complete it is, the better Blak knows you.</p>
 
-      <div class="pf-meter" role="img" aria-label="Profile completeness">
-        <div class="pf-meter-bar"><span class="pf-meter-fill" id="pf-fill" style="width:0%"></span></div>
-        <span class="pf-meter-label" id="pf-pct">Blak knows about 0% of you</span>
+      <div class="pf-meter">
+        <span class="pf-meter-label" id="pf-pct">Getting to know you…</span>
       </div>
       <a class="pf-talk" href="/beta/blak/">Talk to Blak →</a>
     </header>
@@ -214,9 +213,10 @@ import AppLayout from '../../layouts/AppLayout.astro';
     }
 
     function render() {
-      const pct = computeCompleteness(facts);
-      if (fillEl) fillEl.style.width = pct + '%';
-      if (pctEl) pctEl.textContent = 'Blak knows about ' + pct + '% of you';
+      // No "completeness %": a couple of answers should never read as "33% done".
+      // An honest count of what Blak has genuinely picked up instead.
+      const n = facts.filter(f => f && f.value).length;
+      if (pctEl) pctEl.textContent = n ? ('Blak has picked up ' + n + ' thing' + (n > 1 ? 's' : '') + ' about you') : 'Blak is just getting to know you';
       const areas = KNOWLEDGE_AREAS.concat([OPEN_AREA]);
       root.innerHTML = areas.map(renderArea).join('');
       const input = document.getElementById('pf-edit-input') || document.getElementById('pf-open-label');
