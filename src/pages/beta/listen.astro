@@ -348,7 +348,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
         user = await getUser();
         if (!user) { root.innerHTML = '<div class="lsn-msg">Please sign in.</div>'; return; }
         const { data: lp } = await supabase.from('listeners').select('*').eq('user_id', user.id).maybeSingle();
-        if (!lp) { root.innerHTML = '<div class="lsn-msg">This area is for Minit listeners.<br/><br/><a href="/beta/">← Back to Blaksyd</a></div>'; return; }
+        if (!lp) { root.innerHTML = '<div class="lsn-msg">This area is for Minit listeners.<br/><br/>Want to be there for people? <a href="/beta/apply/">Apply to be a listener →</a><br/><br/><a href="/beta/">← Back to Blaksyd</a></div>'; return; }
         profile = lp; availEl.hidden = false; paintAvailability();
         toggleEl.addEventListener('click', toggleAvailability);
         if (profile.is_online) { startHeartbeat(); try { if ('Notification' in window && Notification.permission === 'default') Notification.requestPermission(); } catch (e) {} }
