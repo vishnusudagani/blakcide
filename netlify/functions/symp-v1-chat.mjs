@@ -165,16 +165,20 @@ export default async (req) => {
 
         // Vibe write — fire and forget.
         const lastUser = [...messages].reverse().find(m => m.role === 'user')?.content || '';
+        // In clone mode the assistant speaks AS the user (first person); learning from
+        // its own words would echo the clone's guesses back into the profile. So learn
+        // only from what the USER actually said.
+        const learnAssistant = mode === 'clone' ? '' : assembled;
         // Honour the persona's consent toggle: a persona with build_profile_from
         // off must not feed the vibe tracker or the knowledge profile.
         if (mayLearn) {
             recordEventAsync(user_id, {
                 source: 'ai_chat',
                 sourceSessionId: source_session_id,
-                evidence: `User: ${lastUser}\n\nAssistant: ${assembled}`,
+                evidence: learnAssistant ? `User: ${lastUser}\n\nAssistant: ${learnAssistant}` : `User: ${lastUser}`,
             });
             // Hand learning off to the background function (reliable, off the request path).
-            await fireLearn(req, user_id, lastUser, assembled);
+            await fireLearn(req, user_id, lastUser, learnAssistant);
         }
 
         // Self-correction analysis — synchronous but cheap (regex-only).
@@ -232,14 +236,16 @@ export default async (req) => {
             // keeps the serverless function alive until this finishes. Work queued
             // AFTER close gets dropped when the runtime freezes on response complete.
             const lastUser = [...messages].reverse().find(m => m.role === 'user')?.content || '';
+            // Clone mode: learn only from the user's words (see non-stream path).
+            const learnAssistant = mode === 'clone' ? '' : assembledForVibe;
             // Honour the persona's consent toggle (see non-stream path above).
             if (mayLearn) {
                 recordEventAsync(user_id, {
                     source: 'ai_chat',
                     sourceSessionId: source_session_id,
-                    evidence: `User: ${lastUser}\n\nAssistant: ${assembledForVibe}`,
+                    evidence: learnAssistant ? `User: ${lastUser}\n\nAssistant: ${learnAssistant}` : `User: ${lastUser}`,
                 });
-                await fireLearn(req, user_id, lastUser, assembledForVibe);
+                await fireLearn(req, user_id, lastUser, learnAssistant);
             }
 
             // Self-correction analysis — pins next-turn corrective hint.
