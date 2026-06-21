@@ -1,0 +1,276 @@
+---
+// Your archive — a calm place to look back at what you've shared with Blaksyd.
+// Three tabs: Images you've shared, Voice notes you've sent, and a day-by-day
+// calendar (the "day in review"). Reached from the profile page. All reads are
+// the user's own rows (owner RLS for media; the day-review endpoint is JWT-gated
+// and scoped server-side to the authenticated user).
+import AppLayout from '../../layouts/AppLayout.astro';
+---
+<AppLayout active="profile" title="Archive">
+  <div class="ap-page ar">
+    <header class="ar-head">
+      <p class="ap-kicker">Your archive</p>
+      <h1 class="ap-h1">Look back</h1>
+      <p class="ap-sub">Everything you’ve shared with Blak, kept for you — and a day-by-day view of your time here.</p>
+    </header>
+
+    <div class="ar-tabs" role="tablist">
+      <button class="ar-tab on" id="ar-t-images" role="tab" aria-selected="true">Images</button>
+      <button class="ar-tab" id="ar-t-voice" role="tab" aria-selected="false">Voice notes</button>
+      <button class="ar-tab" id="ar-t-cal" role="tab" aria-selected="false">Calendar</button>
+    </div>
+
+    <!-- Images -->
+    <section class="ar-panel" id="ar-p-images" data-noswipe>
+      <div class="ar-loading">Loading your images…</div>
+    </section>
+
+    <!-- Voice notes -->
+    <section class="ar-panel" id="ar-p-voice" hidden data-noswipe>
+      <div class="ar-loading">Loading your voice notes…</div>
+    </section>
+
+    <!-- Calendar -->
+    <section class="ar-panel" id="ar-p-cal" hidden data-noswipe>
+      <div class="ap-card ar-cal">
+        <div class="ar-cal-head">
+          <button type="button" class="ar-cal-nav" id="ar-cal-prev" aria-label="Previous month">‹</button>
+          <h2 class="ar-cal-title" id="ar-cal-title">—</h2>
+          <button type="button" class="ar-cal-nav" id="ar-cal-next" aria-label="Next month">›</button>
+        </div>
+        <p class="ar-cal-blurb">Pick a day to see what Blaksyd saved — chats, moods, journals and more.</p>
+        <div class="ar-cal-grid" id="ar-cal-grid"></div>
+        <div class="ar-day" id="ar-day" hidden></div>
+      </div>
+    </section>
+  </div>
+
+  <!-- Image lightbox -->
+  <div class="ar-lb" id="ar-lb" hidden>
+    <button class="ar-lb-x" id="ar-lb-x" aria-label="Close">✕</button>
+    <img id="ar-lb-img" alt="Shared image" />
+  </div>
+
+  <style is:global>
+    .ar-head { margin-bottom: 1.2rem; }
+    .ar-tabs { display: flex; gap: .3rem; padding: .25rem; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-pill); margin-bottom: 1.2rem; }
+    .ar-tab { flex: 1; background: none; border: 0; border-radius: var(--r-pill); color: var(--ink-soft); font: inherit; font-size: var(--fs-sm); font-weight: 600; padding: .55rem .4rem; min-height: 44px; cursor: pointer; transition: background .15s, color .15s; }
+    .ar-tab.on { background: var(--cta); color: var(--cta-ink); }
+
+    .ar-loading, .ar-empty { color: var(--ink-faint); padding: 2rem .2rem; font-size: var(--fs-sm); }
+    .ar-empty b { display: block; color: var(--ink); font-size: var(--fs-md); margin-bottom: .25rem; font-family: var(--font-display); }
+
+    /* Images grid */
+    .ar-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; }
+    @media (min-width: 560px) { .ar-grid { grid-template-columns: repeat(4, 1fr); gap: 7px; } }
+    .ar-thumb { position: relative; aspect-ratio: 1; border: 0; padding: 0; border-radius: var(--r-sm); overflow: hidden; cursor: pointer; background: var(--surface-strong); }
+    .ar-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .25s var(--ease-out); }
+    .ar-thumb:hover img { transform: scale(1.05); }
+
+    /* Voice notes */
+    .ar-vn-list { display: flex; flex-direction: column; gap: .6rem; }
+    .ar-vn { padding: .85rem 1rem; }
+    .ar-vn audio { width: 100%; height: 38px; display: block; }
+    .ar-vn-meta { display: flex; align-items: center; gap: .6rem; margin-top: .5rem; }
+    .ar-vn-date { font-family: var(--font-mono); font-size: var(--fs-2xs); color: var(--ink-faint); }
+    .ar-vn-tx { color: var(--ink-soft); font-size: var(--fs-sm); margin: .5rem 0 0; line-height: 1.5; }
+
+    /* Calendar (compact — capped so cells don't get huge) */
+    .ar-cal { padding: 1.1rem 1.2rem 1.25rem; }
+    .ar-cal-head { display: flex; align-items: center; gap: .5rem; max-width: 360px; margin: 0 auto; }
+    .ar-cal-title { font-family: var(--font-display); font-weight: 600; font-size: var(--fs-lg); margin: 0; flex: 1; text-align: center; color: var(--ink); }
+    .ar-cal-nav { background: none; border: 1px solid var(--line); color: var(--ink); border-radius: var(--r-sm); width: 44px; height: 44px; cursor: pointer; font-size: 1.2rem; line-height: 1; flex: none; }
+    .ar-cal-nav:hover:not(:disabled) { border-color: var(--line-strong); color: var(--coral); }
+    .ar-cal-nav:disabled { opacity: .35; cursor: default; }
+    .ar-cal-blurb { color: var(--ink-faint); font-size: var(--fs-sm); margin: .55rem auto .85rem; max-width: 360px; text-align: center; }
+    .ar-cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; max-width: 360px; margin: 0 auto; }
+    .ar-cal-wd { text-align: center; font-family: var(--font-mono); font-size: var(--fs-2xs); color: var(--ink-faint); padding: .15rem 0 .3rem; }
+    .ar-cal-cell { position: relative; aspect-ratio: 1; display: flex; align-items: center; justify-content: center; background: none; border: 0; border-radius: var(--r-sm); color: var(--ink-soft); font: inherit; font-size: var(--fs-sm); cursor: pointer; -webkit-tap-highlight-color: transparent; }
+    .ar-cal-cell.blank { visibility: hidden; cursor: default; }
+    .ar-cal-cell:hover:not(.blank):not(:disabled) { background: var(--surface-strong); color: var(--ink); }
+    .ar-cal-cell.today { box-shadow: inset 0 0 0 1px var(--line-strong); }
+    .ar-cal-cell.sel { background: var(--cta); color: var(--cta-ink); }
+    .ar-cal-cell:disabled { color: var(--ink-faint); opacity: .35; cursor: default; }
+    .ar-cal-dot { position: absolute; bottom: 5px; left: 50%; transform: translateX(-50%); width: 5px; height: 5px; border-radius: 50%; background: var(--coral); }
+    .ar-cal-cell.sel .ar-cal-dot { background: var(--cta-ink); }
+    .ar-day { margin: 1rem auto 0; padding-top: 1rem; border-top: 1px solid var(--line); max-width: 460px; }
+    .ar-day[hidden] { display: none; }
+    .ar-day-date { font-family: var(--font-mono); font-size: var(--fs-xs); color: var(--ink-faint); margin: 0 0 .45rem; letter-spacing: .03em; }
+    .ar-day-body { font-size: var(--fs-md); line-height: 1.62; color: var(--ink); white-space: pre-wrap; word-wrap: break-word; margin: 0; }
+    .ar-day-body.loading, .ar-day-empty { color: var(--ink-faint); margin: 0; }
+    .ar-day-counts { display: flex; flex-wrap: wrap; gap: .35rem; margin-top: .75rem; }
+    .ar-day-count { font-family: var(--font-mono); font-size: 9px; letter-spacing: .04em; text-transform: uppercase; padding: 2px 8px; border-radius: 999px; color: var(--ink-soft); background: var(--surface); border: 1px solid var(--line); }
+
+    /* Lightbox */
+    .ar-lb { position: fixed; inset: 0; z-index: 90; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,.86); padding: 1.5rem; animation: ar-fade .2s ease both; }
+    .ar-lb[hidden] { display: none; }
+    .ar-lb img { max-width: 100%; max-height: 88vh; border-radius: var(--r-sm); object-fit: contain; }
+    .ar-lb-x { position: absolute; top: calc(.8rem + env(safe-area-inset-top)); right: 1rem; background: rgba(0,0,0,.4); border: 0; color: #fff; font-size: 1.3rem; width: 44px; height: 44px; border-radius: 50%; cursor: pointer; }
+    @keyframes ar-fade { from { opacity: 0; } to { opacity: 1; } }
+  </style>
+
+  <script>
+    import { supabase } from '../../lib/supabaseClient';
+
+    const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    const $ = (id) => document.getElementById(id);
+    const fmtDate = (iso) => { try { return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }); } catch (e) { return ''; } };
+
+    let user = null;
+    const loaded = { images: false, voice: false, cal: false };
+
+    async function token() { try { return (await supabase.auth.getSession()).data?.session?.access_token || null; } catch (e) { return null; } }
+
+    // ── Tabs ──────────────────────────────────────────────────────────────
+    const tabs = { images: $('ar-t-images'), voice: $('ar-t-voice'), cal: $('ar-t-cal') };
+    const panels = { images: $('ar-p-images'), voice: $('ar-p-voice'), cal: $('ar-p-cal') };
+    function showTab(name) {
+      for (const k of Object.keys(panels)) {
+        const on = k === name;
+        tabs[k].classList.toggle('on', on);
+        tabs[k].setAttribute('aria-selected', on ? 'true' : 'false');
+        panels[k].hidden = !on;
+      }
+      if (name === 'images' && !loaded.images) { loaded.images = true; loadImages(); }
+      if (name === 'voice'  && !loaded.voice)  { loaded.voice = true;  loadVoice(); }
+      if (name === 'cal'    && !loaded.cal)    { loaded.cal = true;    initCalendar(); }
+    }
+    tabs.images.addEventListener('click', () => showTab('images'));
+    tabs.voice.addEventListener('click', () => showTab('voice'));
+    tabs.cal.addEventListener('click', () => showTab('cal'));
+
+    // ── Images ────────────────────────────────────────────────────────────
+    async function loadImages() {
+      const panel = panels.images;
+      try {
+        const { data } = await supabase.from('messages')
+          .select('id,media_url,media_description,created_at')
+          .eq('sender_id', user.id).eq('media_type', 'image').not('media_url', 'is', null)
+          .order('created_at', { ascending: false }).limit(300);
+        const rows = data || [];
+        if (!rows.length) { panel.innerHTML = '<div class="ar-empty"><b>No images yet</b>Photos you share with Blak in chat show up here.</div>'; return; }
+        panel.innerHTML = '<div class="ar-grid">' + rows.map((r) =>
+          `<button class="ar-thumb" data-full="${esc(r.media_url)}" title="${esc(r.media_description || fmtDate(r.created_at))}"><img loading="lazy" src="${esc(r.media_url)}" alt="${esc(r.media_description || 'Shared image')}" /></button>`
+        ).join('') + '</div>';
+      } catch (e) { panel.innerHTML = '<div class="ar-empty">Couldn’t load your images just now.</div>'; }
+    }
+
+    // Lightbox
+    const lb = $('ar-lb'), lbImg = $('ar-lb-img');
+    function closeLb() { lb.hidden = true; lbImg.src = ''; }
+    document.addEventListener('click', (e) => {
+      const t = e.target.closest('.ar-thumb');
+      if (t) { lbImg.src = t.dataset.full; lb.hidden = false; return; }
+    });
+    $('ar-lb-x').addEventListener('click', closeLb);
+    lb.addEventListener('click', (e) => { if (e.target === lb) closeLb(); });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !lb.hidden) closeLb(); });
+
+    // ── Voice notes ─────────────────────────────────────────────────────────
+    async function loadVoice() {
+      const panel = panels.voice;
+      try {
+        const { data } = await supabase.from('messages')
+          .select('id,media_url,media_description,created_at')
+          .eq('sender_id', user.id).eq('media_type', 'audio').not('media_url', 'is', null)
+          .order('created_at', { ascending: false }).limit(300);
+        const rows = data || [];
+        if (!rows.length) { panel.innerHTML = '<div class="ar-empty"><b>No voice notes yet</b>Voice notes you record for Blak show up here.</div>'; return; }
+        panel.innerHTML = '<div class="ar-vn-list">' + rows.map((r) =>
+          '<div class="ap-card ar-vn">' +
+            `<audio controls preload="none" src="${esc(r.media_url)}"></audio>` +
+            `<div class="ar-vn-meta"><span class="ar-vn-date">${esc(fmtDate(r.created_at))}</span></div>` +
+            (r.media_description ? `<p class="ar-vn-tx">“${esc(r.media_description)}”</p>` : '') +
+          '</div>'
+        ).join('') + '</div>';
+      } catch (e) { panel.innerHTML = '<div class="ar-empty">Couldn’t load your voice notes just now.</div>'; }
+    }
+
+    // ── Calendar (day in review) ──────────────────────────────────────────────
+    const calGrid = $('ar-cal-grid'), calTitle = $('ar-cal-title'), calPrev = $('ar-cal-prev'), calNext = $('ar-cal-next'), dayEl = $('ar-day');
+    const MO = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+    const WD = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+    const pad = (n) => String(n).padStart(2, '0');
+    const ymd = (y, m, d) => `${y}-${pad(m + 1)}-${pad(d)}`;
+    const tzo = () => new Date().getTimezoneOffset();
+    let calY, calM, selDate = null, activeDates = new Set();
+
+    function renderGrid() {
+      const now = new Date();
+      const todayStr = ymd(now.getFullYear(), now.getMonth(), now.getDate());
+      const first = new Date(calY, calM, 1).getDay();
+      const days = new Date(calY, calM + 1, 0).getDate();
+      let html = WD.map((w) => `<div class="ar-cal-wd">${w}</div>`).join('');
+      for (let i = 0; i < first; i++) html += '<button class="ar-cal-cell blank" tabindex="-1"></button>';
+      for (let d = 1; d <= days; d++) {
+        const ds = ymd(calY, calM, d);
+        const future = ds > todayStr;
+        const cls = ['ar-cal-cell'];
+        if (ds === todayStr) cls.push('today');
+        if (ds === selDate) cls.push('sel');
+        const dot = activeDates.has(ds) ? '<span class="ar-cal-dot"></span>' : '';
+        html += `<button class="${cls.join(' ')}" data-d="${ds}"${future ? ' disabled' : ''}>${d}${dot}</button>`;
+      }
+      calGrid.innerHTML = html;
+    }
+
+    async function loadMonth(y, m) {
+      calY = y; calM = m;
+      calTitle.textContent = MO[m] + ' ' + y;
+      activeDates = new Set();
+      renderGrid();
+      const now = new Date();
+      calNext.disabled = (y > now.getFullYear()) || (y === now.getFullYear() && m >= now.getMonth());
+      try {
+        const jwt = await token();
+        const r = await fetch('/api/blaksyd/symp/day-review', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + (jwt || '') }, body: JSON.stringify({ month: `${y}-${pad(m + 1)}`, tzo: tzo() }) });
+        const j = await r.json().catch(() => null);
+        const dates = j && j.data && j.data.dates;
+        if (Array.isArray(dates)) { activeDates = new Set(dates); renderGrid(); }
+      } catch (e) { /* dots best-effort */ }
+    }
+
+    async function openDay(ds) {
+      dayEl.hidden = false;
+      const human = new Date(ds + 'T00:00:00').toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+      dayEl.innerHTML = `<p class="ar-day-date">${esc(human)}</p><p class="ar-day-body loading">Looking back at your day…</p>`;
+      try {
+        const jwt = await token();
+        const r = await fetch('/api/blaksyd/symp/day-review', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + (jwt || '') }, body: JSON.stringify({ date: ds, tzo: tzo() }) });
+        const j = await r.json().catch(() => null);
+        const data = j && j.data;
+        if (!data) throw new Error('x');
+        const body = (data.empty || !data.summary)
+          ? '<p class="ar-day-empty">Nothing saved for this day — a quiet one, or before you joined.</p>'
+          : `<p class="ar-day-body">${esc(data.summary)}</p>`;
+        const c = data.counts || {};
+        const chips = [];
+        if (c.chats) chips.push(c.chats + ' message' + (c.chats > 1 ? 's' : '') + ' with Blak');
+        if (c.moods) chips.push(c.moods + ' mood' + (c.moods > 1 ? 's' : ''));
+        if (c.journals) chips.push(c.journals + ' journal' + (c.journals > 1 ? 's' : ''));
+        if (c.minit) chips.push(c.minit + ' Minit');
+        if (c.nexus) chips.push(c.nexus + ' Nexus');
+        const counts = chips.length ? `<div class="ar-day-counts">${chips.map((x) => `<span class="ar-day-count">${esc(x)}</span>`).join('')}</div>` : '';
+        dayEl.innerHTML = `<p class="ar-day-date">${esc(human)}</p>${body}${counts}`;
+      } catch (e) {
+        dayEl.innerHTML = `<p class="ar-day-date">${esc(human)}</p><p class="ar-day-empty">Couldn’t load this day — try again in a moment.</p>`;
+      }
+    }
+
+    calGrid.addEventListener('click', (e) => {
+      const btn = e.target.closest('.ar-cal-cell[data-d]');
+      if (!btn || btn.disabled) return;
+      selDate = btn.dataset.d; renderGrid(); openDay(selDate);
+    });
+    calPrev.addEventListener('click', () => { let m = calM - 1, y = calY; if (m < 0) { m = 11; y--; } loadMonth(y, m); });
+    calNext.addEventListener('click', () => { if (calNext.disabled) return; let m = calM + 1, y = calY; if (m > 11) { m = 0; y++; } loadMonth(y, m); });
+    function initCalendar() { const n = new Date(); loadMonth(n.getFullYear(), n.getMonth()); }
+
+    (async () => {
+      if (!supabase) { panels.images.innerHTML = '<div class="ar-empty">Sign-in isn’t configured in this environment yet.</div>'; return; }
+      try { const { data } = await supabase.auth.getSession(); user = data?.session?.user || null; } catch (e) { user = null; }
+      if (!user) { return; } // AppLayout's auth gate bounces to sign-in
+      showTab('images'); // default tab loads its data
+    })();
+  </script>
+</AppLayout>
