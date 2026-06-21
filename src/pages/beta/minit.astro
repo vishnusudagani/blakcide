@@ -96,6 +96,28 @@ import AppLayout from '../../layouts/AppLayout.astro';
     .mnx-pip { flex: 1; height: 6px; border-radius: var(--r-pill); background: var(--surface-strong); }
     .mnx-pip.on { background: linear-gradient(90deg, var(--mint), var(--mint-deep)); box-shadow: 0 0 6px rgba(106,211,184,.4); }
     .mnx-meter-foot { font-size: var(--fs-xs); color: var(--ink-faint); margin-top: .6rem; text-align: left; }
+    /* Phase 2 — language preference + onboarding + meanwhile */
+    .mnx-lang { display: inline-flex; align-items: center; gap: .5rem; margin-top: .7rem; }
+    .mnx-lang-k { font-size: var(--fs-2xs); font-family: var(--font-mono); letter-spacing: .06em; text-transform: uppercase; color: var(--ink-faint); }
+    .mnx-lang-opts { display: inline-flex; gap: .25rem; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-pill); padding: 2px; }
+    .mnx-lang-opt { font: inherit; font-size: var(--fs-xs); color: var(--ink-soft); background: none; border: 0; border-radius: var(--r-pill); padding: .3rem .6rem; min-height: 32px; cursor: pointer; }
+    .mnx-lang-opt.on { background: var(--surface-strong); color: var(--ink); font-weight: 600; box-shadow: inset 0 0 0 1px var(--line-strong); }
+    .mnx-onb { max-width: 420px; margin: 0 auto; padding: clamp(1rem, 5vh, 2.5rem) 1.1rem; text-align: center; display: flex; flex-direction: column; align-items: center; }
+    .mnx-onb-orb { width: 72px; height: 72px; margin-bottom: 1.2rem; }
+    .mnx-onb-h { font-family: var(--font-display); font-size: clamp(1.5rem, 1.2rem + 1.6vw, 1.9rem); font-weight: 650; letter-spacing: -.02em; color: var(--ink); margin: .3rem 0 .5rem; }
+    .mnx-onb-p { font-size: var(--fs-md); color: var(--ink-soft); line-height: 1.6; margin: 0 0 1.4rem; max-width: 32ch; }
+    .mnx-onb-dots { display: flex; gap: .4rem; margin-bottom: 1.4rem; }
+    .mnx-onb-dots i { width: 7px; height: 7px; border-radius: 50%; background: var(--line-strong); transition: background var(--t-fast) var(--ease-out), width var(--t-fast) var(--ease-out); }
+    .mnx-onb-dots i.on { background: var(--coral); width: 18px; border-radius: 4px; }
+    .mnx-onb-link { margin-top: .8rem; font: inherit; font-size: var(--fs-sm); color: var(--ink-faint); background: none; border: 0; cursor: pointer; min-height: 44px; }
+    .mnx-onb-link:hover { color: var(--ink-soft); }
+    .mnx-meanwhile { display: flex; gap: 1.4rem; justify-content: center; margin-top: 1rem; }
+    .mnx-mw { font-size: var(--fs-sm); color: var(--coral); text-decoration: none; min-height: 44px; display: inline-flex; align-items: center; }
+    .mnx-mw:hover { text-decoration: underline; }
+    .mnx-sched-more { margin-top: 1.2rem; }
+    .mnx-sched-more summary { font-size: var(--fs-sm); color: var(--ink-faint); cursor: pointer; list-style: none; min-height: 44px; display: flex; align-items: center; justify-content: center; }
+    .mnx-sched-more summary::-webkit-details-marker { display: none; }
+    .mnx-sched-more summary:hover { color: var(--ink-soft); }
     @keyframes mnx-dot-pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(106,211,184,.55); } 60% { box-shadow: 0 0 0 6px rgba(106,211,184,0); } }
     @media (prefers-reduced-motion: reduce) { .mnx-orb, .mnx-echo, .mnx-live-dot { animation: none; } .mnx-echo { opacity: .25; } }
     .mnx-go { display: inline-flex; align-items: center; justify-content: center; gap: .5rem; width: 100%; padding: 1rem 1.1rem; border: 0; border-radius: var(--r-pill); font: inherit; font-size: var(--fs-xl); font-weight: 650; color: #06231C; cursor: pointer; background: linear-gradient(135deg, var(--mint) 0%, var(--mint-deep) 70%, var(--aqua) 130%); box-shadow: 0 14px 38px rgba(106,211,184,.42); transition: transform var(--t-fast) var(--ease-out), opacity var(--t-fast) var(--ease-out); }
@@ -516,11 +538,41 @@ import AppLayout from '../../layouts/AppLayout.astro';
         try { const { data } = await supabase.from('connect_sessions').select('listener_id').eq('user_id', user.id).eq('status', 'completed').not('listener_id', 'is', null).order('created_at', { ascending: false }).limit(1); return data && data[0] ? data[0].listener_id : null; } catch { return null; }
       }
 
+      // First-run: a warm, 3-step intro (what Minit is/isn't · anonymity · safe exit).
+      function showOnboarding() {
+        immersive(false);
+        const steps = [
+          { h: 'Real people, here to listen', p: "Minit is real, trained people — not bots, not advice machines. Just someone who gets it, whenever you need them. Text or voice." },
+          { h: 'You stay anonymous', p: "You'll see their name; they never see yours. Share only what you want — anonymous is on by default." },
+          { h: 'Leave anytime, no judgment', p: "No pressure, ever. Tap to end whenever you like. Minit holds space for both sides — it's kind by design." },
+        ];
+        let i = 0;
+        const finish = () => { try { localStorage.setItem('mnx_onboarded', '1'); } catch (e) {} showEntry(); };
+        function render() {
+          const s = steps[i];
+          root.innerHTML = `<div class="mnx-onb">
+            <div class="mnx-empty-orb mnx-onb-orb" aria-hidden="true"></div>
+            <p class="mnx-kick2">Minit · real people</p>
+            <h2 class="mnx-onb-h">${s.h}</h2>
+            <p class="mnx-onb-p">${s.p}</p>
+            <div class="mnx-onb-dots">${steps.map((_, n) => `<i class="${n === i ? 'on' : ''}"></i>`).join('')}</div>
+            <button type="button" class="mnx-go" id="mnx-onb-next">${i < steps.length - 1 ? 'Next' : 'I’m ready'} <span class="mnx-cta-arrow">→</span></button>
+            ${i > 0 ? '<button type="button" class="mnx-onb-link" id="mnx-onb-back">Back</button>' : '<button type="button" class="mnx-onb-link" id="mnx-onb-skip">Skip</button>'}
+          </div>`;
+          document.getElementById('mnx-onb-next')?.addEventListener('click', () => { if (i < steps.length - 1) { i++; render(); } else finish(); });
+          document.getElementById('mnx-onb-back')?.addEventListener('click', () => { i--; render(); });
+          document.getElementById('mnx-onb-skip')?.addEventListener('click', finish);
+        }
+        render();
+      }
+
       async function showEntry() {
         chatOpen = false; immersive(false); matchedName = '';
+        try { if (!localStorage.getItem('mnx_onboarded')) return showOnboarding(); } catch (e) {}
         root.innerHTML = '<div class="mnx-skel" style="margin-top:1rem"><i></i><i></i><i></i></div>';
         const [count, history, credits] = await Promise.all([availableCount(), loadHistory(), checkCredits()]);
         const anonPref = localStorage.getItem('mnx_anon') !== 'false';
+        const langPref = (() => { try { return localStorage.getItem('mnx_lang') || 'English'; } catch (e) { return 'English'; } })();
         const fname = ((user && user.user_metadata && (user.user_metadata.full_name || user.user_metadata.name || user.user_metadata.given_name)) || '').trim().split(' ')[0];
         const hr = new Date().getHours();
         let gTitle, gSub;
@@ -547,6 +599,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
             ${live}
             <button type="button" class="mnx-go" id="mnx-start"${credits.ok ? '' : ' disabled'}>Start talking <span class="mnx-cta-arrow">→</span></button>
             <button type="button" class="mnx-anon-min ${anonPref ? 'on' : ''}" id="mnx-anon" aria-pressed="${anonPref}"><span class="mnx-anon-ico">${LOCK_SVG}</span> Anonymous <i>${anonPref ? 'on' : 'off'}</i><span class="mnx-sw2"></span></button>
+            <div class="mnx-lang" id="mnx-lang" role="group" aria-label="Preferred language"><span class="mnx-lang-k">Listener speaks</span><span class="mnx-lang-opts">${['English', 'Hindi', 'Telugu'].map((l) => `<button type="button" class="mnx-lang-opt ${l === langPref ? 'on' : ''}" data-l="${l}">${l === 'English' ? 'EN' : l === 'Hindi' ? 'हिं' : 'తె'}</button>`).join('')}</span></div>
             <div class="mnx-meter">
               <div class="mnx-meter-top"><span class="mnx-meter-label">Today’s minits</span><span class="mnx-meter-val">${credits.leftToday} left</span></div>
               <div class="mnx-pips">${pips}</div>
@@ -558,6 +611,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
         let anon = anonPref;
         const anonBtn = document.getElementById('mnx-anon');
         anonBtn?.addEventListener('click', () => { anon = !anon; localStorage.setItem('mnx_anon', anon ? 'true' : 'false'); anonBtn.classList.toggle('on', anon); anonBtn.setAttribute('aria-pressed', String(anon)); const i = anonBtn.querySelector('i'); if (i) i.textContent = anon ? 'on' : 'off'; });
+        document.getElementById('mnx-lang')?.addEventListener('click', (e) => { const b = e.target.closest('.mnx-lang-opt'); if (!b) return; try { localStorage.setItem('mnx_lang', b.dataset.l); } catch (er) {} document.querySelectorAll('#mnx-lang .mnx-lang-opt').forEach((x) => x.classList.toggle('on', x === b)); });
         document.getElementById('mnx-start')?.addEventListener('click', async (e) => {
           if (busy) return; busy = true; e.currentTarget.setAttribute('disabled', '');
           const c = await checkCredits();
@@ -658,7 +712,8 @@ import AppLayout from '../../layouts/AppLayout.astro';
         if (brief === undefined) { busy = false; return showBriefApprove(isAnonymous, preferredId); }
         immersive(true);
         root.innerHTML = `<div class="mnx-ring"><div class="mnx-scan"><span class="mnx-scan-sweep"></span><span class="mnx-scan-core"></span></div><h3>Finding someone for you…</h3><p>${preferredId ? 'Looking for your listener.' : 'Connecting you with a real person who’s here.'}</p></div>`;
-        const [res] = await Promise.all([supabase.rpc('minit_start_session', { preferred: preferredId || null, is_anon: !!isAnonymous }), wait(1400)]);
+        const intake = (() => { const o = {}; try { o.language = localStorage.getItem('mnx_lang') || 'English'; } catch (e) {} if (brief && Array.isArray(brief.topics) && brief.topics.length) o.topics = brief.topics.slice(0, 6); return o; })();
+        const [res] = await Promise.all([supabase.rpc('minit_start_session', { preferred: preferredId || null, is_anon: !!isAnonymous, p_intake: intake }), wait(1400)]);
         busy = false;
         if (res.error) {
           console.error('[minit] start_session failed:', res.error?.code, res.error?.message);
@@ -712,7 +767,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
       }
       function showBusyAll(isAnonymous) {
         immersive(false);
-        root.innerHTML = `<div class="mnx-schedule"><div class="mnx-empty-orb"></div><h3>Every listener’s with someone right now</h3><p>Rather than wait in a line, let us ping you the moment one’s free — you’ll be first up. Or text Blak in the meantime.</p><div class="mnx-choice"><button type="button" class="mnx-go" id="mnx-notify">Notify me when one’s free</button><a class="mnx-go mnx-go-alt" href="/beta/blak/" style="text-decoration:none">Text Blak instead</a></div><div class="mnx-ring-actions"><button type="button" class="mnx-cancel" id="mnx-busyback">Back</button></div></div>`;
+        root.innerHTML = `<div class="mnx-schedule"><div class="mnx-empty-orb"></div><h3>Every listener’s with someone right now</h3><p>Hold your place — we’ll ping you the moment one’s free, and you’ll be first up. You don’t have to sit with it alone in the meantime.</p><div class="mnx-choice"><button type="button" class="mnx-go" id="mnx-notify">Notify me when one’s free</button></div><div class="mnx-meanwhile"><a class="mnx-mw" href="/beta/blak/">Talk to Blak</a><a class="mnx-mw" href="/beta/nexus/">Drop into Nexus</a></div><div class="mnx-ring-actions"><button type="button" class="mnx-cancel" id="mnx-busyback">Back</button></div></div>`;
         document.getElementById('mnx-notify')?.addEventListener('click', () => requestCallback(isAnonymous, null));
         document.getElementById('mnx-busyback')?.addEventListener('click', showEntry);
       }
@@ -783,7 +838,8 @@ import AppLayout from '../../layouts/AppLayout.astro';
         immersive(false);
         let val = '';
         try { const d = new Date(Date.now() + 3600000); val = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); } catch (e) {}
-        root.innerHTML = `<div class="mnx-schedule"><div class="mnx-empty-orb"></div><h3>No one’s free right now</h3><p>What time works for you? We’ll have someone ready.</p><div class="mnx-timepick"><input type="time" id="mnx-time-input" class="mnx-time-input" value="${val}" aria-label="Preferred time" /></div><div class="mnx-choice" style="margin-top:1.2rem"><button type="button" class="mnx-go" id="mnx-time-set">Set this time <span class="mnx-cta-arrow">→</span></button></div><div class="mnx-ring-actions"><button type="button" class="mnx-cancel" id="mnx-sback">Back</button></div></div>`;
+        root.innerHTML = `<div class="mnx-schedule"><div class="mnx-empty-orb"></div><h3>No one’s free right now</h3><p>Hold your place — we’ll ping you the moment someone’s on. You don’t have to be alone with it in the meantime.</p><div class="mnx-choice"><button type="button" class="mnx-go" id="mnx-notify">Notify me when someone’s free</button></div><div class="mnx-meanwhile"><a class="mnx-mw" href="/beta/blak/">Talk to Blak</a><a class="mnx-mw" href="/beta/nexus/">Drop into Nexus</a></div><details class="mnx-sched-more"><summary>or pick a time to check back</summary><div class="mnx-timepick" style="margin-top:.8rem"><input type="time" id="mnx-time-input" class="mnx-time-input" value="${val}" aria-label="Preferred time" /></div><button type="button" class="mnx-go mnx-go-alt" id="mnx-time-set" style="margin-top:.8rem">Set this time</button></details><div class="mnx-ring-actions"><button type="button" class="mnx-cancel" id="mnx-sback">Back</button></div></div>`;
+        document.getElementById('mnx-notify')?.addEventListener('click', () => requestCallback(isAnonymous, null));
         document.getElementById('mnx-time-set')?.addEventListener('click', () => { const v = document.getElementById('mnx-time-input')?.value; if (v) scheduleFor(v, isAnonymous); });
         document.getElementById('mnx-sback')?.addEventListener('click', showEntry);
       }
