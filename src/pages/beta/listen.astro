@@ -122,6 +122,9 @@ import AppLayout from '../../layouts/AppLayout.astro';
     .lsn-panel .hint { font-size: var(--fs-2xs); color: var(--ink-faint); margin-top: .3rem; }
     .lsn-panel .wa { display: inline-flex; align-items: center; gap: .4rem; margin-top: .6rem; padding: .5rem .9rem; border-radius: var(--r-pill); background: linear-gradient(135deg, #25D366, #128C7E); color: #04231a; font-weight: 650; font-size: var(--fs-sm); text-decoration: none; }
     .lsn-flag { margin-top: .6rem; margin-left: .5rem; min-height: 44px; min-width: 44px; padding: .5rem .9rem; border-radius: var(--r-pill); background: var(--surface-strong); border: 1px solid var(--line-strong); color: var(--ink-soft); font: inherit; font-size: var(--fs-sm); cursor: pointer; }
+    .lsn-escalate { display: block; margin-top: .8rem; width: 100%; min-height: 44px; padding: .55rem .9rem; border-radius: var(--r-pill); background: rgba(255,107,157,.12); border: 1px solid rgba(255,107,157,.4); color: var(--coral); font: inherit; font-size: var(--fs-sm); font-weight: 650; cursor: pointer; }
+    .lsn-escalate:hover { background: rgba(255,107,157,.2); }
+    html[data-theme="light"] .lsn-escalate { color: var(--coral-ink); }
     .lsn-feed { flex: 1; overflow-y: auto; padding: 1rem .9rem; display: flex; flex-direction: column; gap: .35rem; justify-content: flex-start; }
     .lsn-sys { text-align: center; font-size: var(--fs-xs); color: var(--ink-faint); padding: .4rem 0; }
     .lsn-row { display: flex; flex-direction: column; } .lsn-row.me { align-items: flex-end; } .lsn-row.them { align-items: flex-start; }
@@ -459,7 +462,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
           <div class="lsn-call" id="lsn-call" hidden></div>
           <div class="lsn-ctx" id="lsn-ctx">They reached out just now. Listen first — context, not interrogation.</div>
           <div class="lsn-panel" id="lsn-notes"><textarea id="lsn-notes-text" placeholder="Private notes — only you can ever see these…"></textarea><div class="hint">Saved automatically to your private notes.</div></div>
-          <div class="lsn-panel" id="lsn-help"><div style="color:var(--ink);font-weight:600">Worried about their safety?</div><div class="hint">If someone may be in danger, point them to urgent help and flag this for the team.</div><a class="wa" href="https://wa.me/917702063434" target="_blank" rel="noopener">Blaksyd Assist on WhatsApp</a><button type="button" class="lsn-flag" id="lsn-flag">Flag this session</button></div>
+          <div class="lsn-panel" id="lsn-help"><div style="color:var(--ink);font-weight:600">Worried about their safety?</div><div class="hint">Stay calm and present. If someone may be in immediate danger, escalate — a senior listener is alerted right away and this session is flagged for the team.</div><button type="button" class="lsn-escalate" id="lsn-escalate">Escalate to a senior</button><button type="button" class="lsn-flag" id="lsn-flag">Flag this session</button><a class="wa" href="https://wa.me/917702063434" target="_blank" rel="noopener">Blaksyd Assist on WhatsApp</a></div>
           <div class="lsn-feed" id="lsn-feed" role="log" aria-live="polite"><div class="lsn-sys">🔒 You’re connected. Listen first — they reached out to you.</div></div>
           <button type="button" class="lsn-newmsgs" id="lsn-newmsgs">↓ New messages</button>
           <div class="lsn-input"><input type="text" id="lsn-text" placeholder="Write back…" autocomplete="off" aria-label="Message" /><button type="button" class="lsn-send" id="lsn-send" aria-label="Send">${SEND_SVG}</button></div>
@@ -517,6 +520,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
         const helpBtn = document.getElementById('lsn-help-btn'), helpBox = document.getElementById('lsn-help');
         helpBtn.addEventListener('click', () => { const open = helpBox.classList.toggle('open'); helpBtn.classList.toggle('on', open); notesBox.classList.remove('open'); notesBtn.classList.remove('on'); });
         document.getElementById('lsn-flag').addEventListener('click', async (e) => { await supabase.from('connect_sessions').update({ flagged_at: new Date().toISOString(), flag_reason: 'listener-flagged' }).eq('id', activeSessionId); logEvent('flagged'); e.currentTarget.textContent = 'Flagged ✓'; e.currentTarget.disabled = true; });
+        document.getElementById('lsn-escalate')?.addEventListener('click', async (e) => { const btn = e.currentTarget; btn.disabled = true; btn.textContent = 'Alerting a senior…'; try { await supabase.rpc('minit_escalate', { p_session: activeSessionId, p_note: (notesText && notesText.value ? notesText.value.slice(0, 300) : null) }); btn.textContent = 'Senior alerted ✓'; logEvent('escalated'); } catch (er) { btn.textContent = 'Escalate to a senior'; btn.disabled = false; } });
 
         if (session.intake && session.intake.share_history && session.user_id) { try { await loadSharedHistory(session, feed); } catch (e) {} }
         const { data: msgs } = await supabase.from('messages').select('*').eq('session_id', activeSessionId).order('created_at', { ascending: true });
