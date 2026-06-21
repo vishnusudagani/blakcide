@@ -12,9 +12,8 @@ import AppLayout from '../../layouts/AppLayout.astro';
       <h1 class="ap-h1">What Blaksyd understands about you</h1>
       <p class="ap-sub">Blaksyd quietly learns from your chats with Blak, your activity on Nexus, and how you reflect after Minit — never prying. It's all yours: edit anything, delete anything, or tell it “this isn't me.”</p>
 
-      <div class="pf-meter" role="img" aria-label="Profile completeness">
-        <div class="pf-meter-bar"><span class="pf-meter-fill" id="pf-fill" style="width:0%"></span></div>
-        <span class="pf-meter-label" id="pf-pct">Blaksyd understands about 0% of you</span>
+      <div class="pf-meter">
+        <span class="pf-meter-label" id="pf-pct">Getting to know you…</span>
       </div>
       <a class="pf-talk" href="/beta/blak/">Talk to Blak →</a>
     </header>
@@ -232,9 +231,10 @@ import AppLayout from '../../layouts/AppLayout.astro';
     }
 
     function render() {
-      const pct = computeCompleteness(facts);
-      if (fillEl) fillEl.style.width = pct + '%';
-      if (pctEl) pctEl.textContent = 'Blaksyd understands about ' + pct + '% of you';
+      // No "completeness %": a couple of answers should never read as "33% done".
+      // An honest count of what Blaksyd has genuinely picked up instead.
+      const n = facts.filter(f => f && f.value).length;
+      if (pctEl) pctEl.textContent = n ? ('Blaksyd has picked up ' + n + ' thing' + (n > 1 ? 's' : '') + ' about you') : 'Blaksyd is just getting to know you';
       const areas = KNOWLEDGE_AREAS.concat([OPEN_AREA]);
       const bySrc = (s) => facts.some((f) => f.source === s);
       const footer = (bySrc('nexus') || bySrc('minit') || bySrc('blak'))
