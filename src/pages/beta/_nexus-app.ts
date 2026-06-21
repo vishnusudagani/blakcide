@@ -323,6 +323,7 @@
         chan.send({ type: 'broadcast', event: 'msg', payload: { handle: ME.handle, color: ME.color, text: v } });
         appendMsg({ text: v }, true); heartbeat(here, 1);
       });
+      el('nx-room-input').addEventListener('focus', () => setTimeout(() => el('nx-room-input').scrollIntoView({ block: 'center' }), 200));
 
       // ── create room (modal) ───────────────────────────────────────────────
       const modal = el('nx-modal');
@@ -595,6 +596,7 @@
         dmImg = null; if (dmImgInput) dmImgInput.value = ''; el('nx-dm-preview').hidden = true;
         dmAppend(data, true);
       });
+      el('nx-dm-input').addEventListener('focus', () => setTimeout(() => el('nx-dm-input').scrollIntoView({ block: 'center' }), 200));
 
       // ── create tribe (persistent community; signed-in only) ───────────────
       const tribeModal = el('nx-tribe-modal');

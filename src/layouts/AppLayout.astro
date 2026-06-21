@@ -96,8 +96,8 @@ const nav = [
     .ap-notif-dot { width: 10px; height: 10px; border-radius: 50%; flex: none; background: var(--mint-deep); box-shadow: 0 0 10px var(--mint-deep); }
     .ap-notif-tx { flex: 1; min-width: 0; }
     .ap-notif-tx b { display: block; font-size: var(--fs-sm); color: var(--ink); font-weight: 650; }
-    .ap-notif-tx span { display: block; font-size: var(--fs-xs); color: var(--ink-soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .ap-notif-x { flex: none; width: 28px; height: 28px; border-radius: 50%; border: 0; background: var(--surface); color: var(--ink-faint); cursor: pointer; font-size: .95rem; line-height: 1; }
+    .ap-notif-tx span { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; font-size: var(--fs-xs); color: var(--ink-soft); overflow: hidden; }
+    .ap-notif-x { flex: none; width: 44px; height: 44px; border: 8px solid transparent; background-clip: padding-box; border-radius: 50%; background-color: var(--surface); color: var(--ink-faint); cursor: pointer; font-size: .95rem; line-height: 1; display: grid; place-items: center; }
     .ap-notif-x:hover { color: var(--ink); }
     @media (max-width: 560px) { .ap-notif { top: auto; bottom: calc(96px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%) translateY(180%); } .ap-notif.show { transform: translateX(-50%) translateY(0); } }
     @media (prefers-reduced-motion: reduce) { .ap-notif { transition: opacity .3s ease; } }
@@ -193,7 +193,7 @@ const nav = [
       html[data-theme="light"] .ap-rail { background: rgba(255, 252, 244, .94); }
       /* Floating liquid-glass capsule (Apple Vision Pro vibe) — centered, frosted */
       .ap-nav {
-        position: fixed; bottom: calc(.8rem + env(safe-area-inset-bottom, 0)); left: 50%; transform: translateX(-50%);
+        position: fixed; bottom: calc(.8rem + env(safe-area-inset-bottom, 0px)); left: 50%; transform: translateX(-50%);
         width: auto; margin: 0; flex-direction: row; justify-content: center; align-items: center; gap: .4rem;
         padding: .4rem .5rem; border-radius: var(--r-pill); z-index: 30;
         background: rgba(18, 20, 40, .4);
