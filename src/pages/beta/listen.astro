@@ -114,6 +114,8 @@ import AppLayout from '../../layouts/AppLayout.astro';
     .lsn-chat-end.confirm { background: var(--coral); color: #fff; border-color: transparent; }
     .lsn-ctx { flex: none; padding: .55rem .9rem; border-bottom: 1px solid var(--line); background: var(--surface); font-size: var(--fs-sm); color: var(--ink-soft); max-height: 28vh; overflow-y: auto; }
     .lsn-ctx b { color: var(--ink); font-weight: 600; }
+    .lsn-ctx p { margin: .25rem 0; }
+    .lsn-brief-tag { display: block; font-family: var(--font-mono); font-size: var(--fs-2xs); letter-spacing: .06em; text-transform: uppercase; color: var(--coral); margin-bottom: .25rem; }
     .lsn-panel { position: absolute; left: 0; right: 0; bottom: 58px; z-index: 6; padding: .8rem .9rem; background: var(--glass-strong); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); border-top: 1px solid var(--line-strong); box-shadow: 0 -12px 30px rgba(0,0,0,.32); max-height: 62%; overflow: auto; transform: translateY(120%); opacity: 0; pointer-events: none; transition: transform var(--t-base) var(--ease-out), opacity var(--t-base) var(--ease-out); }
     .lsn-panel.open { transform: translateY(0); opacity: 1; pointer-events: auto; }
     .lsn-panel textarea { width: 100%; box-sizing: border-box; background: var(--bg-warm); border: 1px solid var(--line-strong); border-radius: var(--r-sm); padding: .5rem .6rem; color: var(--ink); font: inherit; font-size: 16px; resize: vertical; min-height: 52px; outline: none; }
@@ -139,6 +141,12 @@ import AppLayout from '../../layouts/AppLayout.astro';
     .lsn-feel button:hover { transform: translateY(-2px); }
     .lsn-feel button.on { border-color: var(--mint-deep); background: rgba(106,211,184,.14); }
     .lsn-modal-actions { display: flex; gap: .6rem; margin-top: 1rem; }
+    .lsn-note4blak { text-align: left; margin: 1rem 0 .2rem; }
+    .lsn-note4blak label { display: block; font-size: var(--fs-xs); color: var(--ink-soft); margin-bottom: .35rem; }
+    .lsn-note4blak label em { font-style: normal; color: var(--coral); font-weight: 600; }
+    .lsn-note4blak label i { font-style: normal; color: var(--ink-faint); }
+    .lsn-note4blak input { width: 100%; box-sizing: border-box; background: var(--surface); border: 1px solid var(--line-strong); border-radius: var(--r-pill); color: var(--ink); font: inherit; font-size: 16px; padding: .55rem .9rem; }
+    .lsn-note4blak input:focus { outline: none; border-color: var(--coral); }
     .lsn-btn-ghost { flex: 1; padding: .7rem; border-radius: var(--r-pill); background: var(--surface); border: 1px solid var(--line-strong); color: var(--ink-soft); font: inherit; font-size: var(--fs-sm); cursor: pointer; }
     .lsn-btn-go { flex: 2; padding: .7rem; border-radius: var(--r-pill); border: 0; color: #06231C; font: inherit; font-size: var(--fs-sm); font-weight: 650; cursor: pointer; background: linear-gradient(135deg, var(--mint), var(--mint-deep)); }
     .lsn-row.them .lsn-bubble { background: var(--surface-strong); border: 1px solid var(--line); color: var(--ink); border-bottom-left-radius: 5px; }
@@ -479,8 +487,25 @@ import AppLayout from '../../layouts/AppLayout.astro';
             if (cx && bits.length) { cx.innerHTML = '<b>They mentioned:</b> '; cx.appendChild(document.createTextNode(bits.join(' · '))); }
           }
         } catch (e) {}
-        // surface a brief if one exists (server-generated; usually none yet) — overrides the intake line
-        try { const { data: br } = await supabase.from('symp_listener_briefs').select('brief').eq('connect_session_id', session.id).maybeSingle(); if (br && br.brief) { const txt = typeof br.brief === 'string' ? br.brief : (br.brief.summary || br.brief.recommended_focus || ''); if (txt) document.getElementById('lsn-ctx').innerHTML = '<b>Blak brief:</b> ' + String(txt); } } catch (e) {}
+        // surface Blak's co-pilot brief if the seeker approved one — "shape, not content"; overrides the intake line
+        try {
+          const { data: br } = await supabase.from('symp_listener_briefs').select('brief').eq('connect_session_id', session.id).maybeSingle();
+          if (br && br.brief) {
+            const b = br.brief;
+            const eh = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+            const ctx = document.getElementById('lsn-ctx');
+            if (typeof b === 'string') { if (b.trim()) ctx.innerHTML = '<span class="lsn-brief-tag">✦ Blak brief</span><p>' + eh(b) + '</p>'; }
+            else {
+              const rows = [];
+              if (b.shape) rows.push('<p>' + eh(b.shape) + '</p>');
+              if (Array.isArray(b.topics) && b.topics.length) rows.push('<p><b>wants to get into:</b> ' + b.topics.map(eh).join(', ') + '</p>');
+              if (Array.isArray(b.helps) && b.helps.length) rows.push('<p><b>what helps:</b> ' + b.helps.map(eh).join(', ') + '</p>');
+              if (Array.isArray(b.nogo) && b.nogo.length) rows.push('<p><b>steer clear:</b> ' + b.nogo.map(eh).join(', ') + '</p>');
+              if (b.continuity) rows.push('<p><i>' + eh(b.continuity) + '</i></p>');
+              if (rows.length) ctx.innerHTML = '<span class="lsn-brief-tag">✦ Blak brief</span>' + rows.join('');
+            }
+          }
+        } catch (e) {}
 
         // private notes
         const notesBtn = document.getElementById('lsn-notes-btn'), notesBox = document.getElementById('lsn-notes'), notesText = document.getElementById('lsn-notes-text');
@@ -611,19 +636,19 @@ import AppLayout from '../../layouts/AppLayout.astro';
 
       let endArmed = false;
       function confirmEnd(e) { const btn = e.currentTarget; if (!endArmed) { endArmed = true; btn.classList.add('confirm'); btn.textContent = 'Tap to confirm'; setTimeout(() => { endArmed = false; btn.classList.remove('confirm'); btn.textContent = 'End'; }, 3000); return; } endSession(); }
-      async function endSession() { if (!activeSessionId) return; const sid = activeSessionId; isEnding = true; endCall(true); logEvent('ended', { by: 'listener' }); teardownChat(); await supabase.from('connect_sessions').update({ status: 'completed', ended_at: new Date().toISOString() }).eq('id', sid); showDebrief(); }
+      async function endSession() { if (!activeSessionId) return; const sid = activeSessionId; isEnding = true; endCall(true); logEvent('ended', { by: 'listener' }); teardownChat(); await supabase.from('connect_sessions').update({ status: 'completed', ended_at: new Date().toISOString() }).eq('id', sid); showDebrief(sid); }
       // Listener wellbeing (4c): a quick check-in after each session, with a gentle
       // break nudge once they've supported several people today.
-      async function showDebrief() {
+      async function showDebrief(sid) {
         let today = 0;
         try { const { count } = await supabase.from('connect_sessions').select('id', { count: 'exact', head: true }).eq('listener_id', profile.id).eq('status', 'completed').gte('created_at', startOfToday()); today = count || 0; } catch (e) {}
         const heavy = today >= 6;
         const modal = document.createElement('div'); modal.className = 'lsn-modal';
-        modal.innerHTML = `<div class="lsn-modal-card"><h3>Session ended</h3><p>How are you after that one?</p><div class="lsn-feel" id="lsn-feel"><button data-f="ok" title="OK">🙂</button><button data-f="heavy" title="A bit heavy">😕</button><button data-f="drained" title="Drained">😣</button></div>${heavy ? `<p class="lsn-break">You’ve been there for ${today} people today. It’s okay to take a break — you matter too.</p>` : ''}<div class="lsn-modal-actions">${heavy ? '<button type="button" class="lsn-btn-ghost" id="lsn-break">Take a break</button>' : ''}<button type="button" class="lsn-btn-go" id="lsn-debrief-done">Done</button></div></div>`;
+        modal.innerHTML = `<div class="lsn-modal-card"><h3>Session ended</h3><p>How are you after that one?</p><div class="lsn-feel" id="lsn-feel"><button data-f="ok" title="OK">🙂</button><button data-f="heavy" title="A bit heavy">😕</button><button data-f="drained" title="Drained">😣</button></div><div class="lsn-note4blak"><label>A line for Blak — the <em>shape</em>, not the content <i>(optional)</i></label><input id="lsn-blakline" type="text" maxlength="180" placeholder="e.g. carrying a lot from work; needs gentleness" /></div>${heavy ? `<p class="lsn-break">You’ve been there for ${today} people today. It’s okay to take a break — you matter too.</p>` : ''}<div class="lsn-modal-actions">${heavy ? '<button type="button" class="lsn-btn-ghost" id="lsn-break">Take a break</button>' : ''}<button type="button" class="lsn-btn-go" id="lsn-debrief-done">Done</button></div></div>`;
         document.body.appendChild(modal);
         let feel = null;
         modal.querySelectorAll('#lsn-feel button').forEach((b) => b.addEventListener('click', () => { feel = b.getAttribute('data-f'); modal.querySelectorAll('#lsn-feel button').forEach((x) => x.classList.toggle('on', x === b)); }));
-        const finish = (goOffline) => { try { logEvent('debrief', { feel, today }); } catch (e) {} modal.remove(); if (goOffline && profile.is_online) { toggleAvailability(); } else { renderHome(); } };
+        const finish = (goOffline) => { const line = (((modal.querySelector('#lsn-blakline') || {}).value) || '').trim(); if (sid && line) { try { supabase.rpc('minit_brief_writeback', { p_session: sid, p_note: null, p_shape: line, p_tags: null }); } catch (e) {} } try { logEvent('debrief', { feel, today, blakline: !!line }); } catch (e) {} modal.remove(); if (goOffline && profile.is_online) { toggleAvailability(); } else { renderHome(); } };
         modal.querySelector('#lsn-debrief-done').addEventListener('click', () => finish(false));
         modal.querySelector('#lsn-break')?.addEventListener('click', () => finish(true));
         modal.addEventListener('click', (e) => { if (e.target === modal) finish(false); });

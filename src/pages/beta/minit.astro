@@ -48,6 +48,37 @@ import AppLayout from '../../layouts/AppLayout.astro';
     .mnx-live.off .mnx-live-dot { background: var(--ink-faint); box-shadow: none; animation: none; }
     .mnx-cta-arrow { font-weight: 400; transition: transform var(--t-fast) var(--ease-out); }
     .mnx-go:hover .mnx-cta-arrow { transform: translateX(3px); }
+    /* Co-pilot brief approval */
+    .mnx-brief { max-width: 460px; margin: 0 auto; padding: 1.4rem 1.1rem 2rem; text-align: center; }
+    .mnx-brief-spark { font-size: 1.7rem; color: var(--coral); }
+    .mnx-brief h3 { font-family: var(--font-display); font-size: var(--fs-2xl); font-weight: 650; margin: .4rem 0 .3rem; color: var(--ink); }
+    .mnx-brief-sub { font-size: var(--fs-sm); color: var(--ink-soft); line-height: 1.55; margin: 0 auto 1.1rem; max-width: 38ch; }
+    .mnx-brief-sub em { color: var(--coral); font-style: normal; font-weight: 600; }
+    .mnx-brief-card { text-align: left; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); padding: .4rem 1.1rem; min-height: 80px; }
+    .mnx-brief-row { padding: .6rem 0; border-top: 1px solid var(--line); }
+    .mnx-brief-row:first-child { border-top: 0; }
+    .mnx-brief-k { display: block; font-family: var(--font-mono); font-size: var(--fs-2xs); letter-spacing: .08em; text-transform: uppercase; color: var(--ink-faint); margin-bottom: .4rem; }
+    .mnx-brief-shape { width: 100%; box-sizing: border-box; background: var(--bg); border: 1px solid var(--line-strong); border-radius: var(--r-sm); color: var(--ink); font: inherit; font-size: 16px; padding: .5rem .6rem; resize: vertical; line-height: 1.5; }
+    .mnx-brief-shape:focus { outline: none; border-color: var(--coral); }
+    .mnx-brief-chips { display: flex; flex-wrap: wrap; gap: .4rem; }
+    .mnx-brief-chip { display: inline-flex; align-items: center; gap: .35rem; font: inherit; font-size: var(--fs-sm); color: var(--ink); background: var(--surface-strong); border: 1px solid var(--line-strong); border-radius: var(--r-pill); padding: .35rem .7rem; cursor: pointer; min-height: 36px; }
+    .mnx-brief-chip i { font-style: normal; color: var(--ink-faint); font-size: .82em; }
+    .mnx-brief-chip:hover { border-color: var(--coral); } .mnx-brief-chip:hover i { color: var(--coral); }
+    .mnx-brief-cont, .mnx-brief-empty { margin: 0; font-size: var(--fs-sm); line-height: 1.5; }
+    .mnx-brief-cont { color: var(--ink-soft); } .mnx-brief-empty { color: var(--ink-faint); }
+    .mnx-brief-load { display: flex; gap: .4rem; justify-content: center; padding: 1.2rem; }
+    .mnx-brief-load i { width: 8px; height: 8px; border-radius: 50%; background: var(--coral); animation: mnx-bd 1s infinite var(--ease-soft); }
+    .mnx-brief-load i:nth-child(2) { animation-delay: .15s; } .mnx-brief-load i:nth-child(3) { animation-delay: .3s; }
+    @keyframes mnx-bd { 0%, 100% { opacity: .3; transform: translateY(0); } 50% { opacity: 1; transform: translateY(-4px); } }
+    .mnx-brief-focus { display: block; text-align: left; margin: 1rem 0 0; }
+    .mnx-brief-focus span { display: block; font-size: var(--fs-sm); color: var(--ink-soft); margin-bottom: .35rem; }
+    .mnx-brief-focus i { color: var(--ink-faint); font-style: normal; }
+    .mnx-brief-focus input { width: 100%; box-sizing: border-box; background: var(--surface); border: 1px solid var(--line-strong); border-radius: var(--r-pill); color: var(--ink); font: inherit; font-size: 16px; padding: .65rem 1rem; }
+    .mnx-brief-focus input:focus { outline: none; border-color: var(--coral); }
+    .mnx-brief-actions { display: flex; flex-direction: column; gap: .55rem; margin-top: 1.3rem; }
+    .mnx-brief-skip { font: inherit; font-size: var(--fs-sm); color: var(--ink-soft); background: none; border: 0; cursor: pointer; min-height: 44px; }
+    .mnx-brief-skip:hover { color: var(--ink); }
+    .mnx-brief-back { margin-top: .8rem; font: inherit; font-size: var(--fs-sm); color: var(--ink-faint); background: none; border: 0; cursor: pointer; min-height: 44px; }
     .mnx-anon-min { display: inline-flex; align-items: center; gap: .45rem; margin: .9rem auto 0; min-height: 44px; padding: .4rem .2rem; background: none; border: 0; font: inherit; font-size: var(--fs-sm); color: var(--ink-faint); cursor: pointer; }
     .mnx-anon-min i { font-style: normal; color: var(--ink-faint); font-weight: 600; }
     .mnx-anon-min.on i { color: var(--mint-deep); }
@@ -574,7 +605,57 @@ import AppLayout from '../../layouts/AppLayout.astro';
         feed.scrollTop = feed.scrollHeight;
       }
 
-      async function startTalking(isAnonymous, preferredId) {
+      // Co-pilot brief — "context, not content." Before connecting, Blak drafts the
+      // shape of the conversation; the seeker reviews/trims and chooses to share it.
+      async function showBriefApprove(isAnonymous, preferredId) {
+        immersive(true);
+        root.innerHTML = `<div class="mnx-brief">
+          <div class="mnx-brief-spark" aria-hidden="true">✦</div>
+          <h3>Blak will brief your listener</h3>
+          <p class="mnx-brief-sub">So you never have to re-explain. You choose what's shared — this is the <em>shape</em> of things, never your words.</p>
+          <div class="mnx-brief-card" id="mnx-brief-card"><div class="mnx-brief-load"><i></i><i></i><i></i></div></div>
+          <label class="mnx-brief-focus"><span>Anything they should know going in? <i>(optional)</i></span><input id="mnx-brief-focus" type="text" maxlength="200" placeholder="e.g. rough week, just need to vent" /></label>
+          <div class="mnx-brief-actions">
+            <button type="button" class="mnx-go" id="mnx-brief-share">Share &amp; connect <span class="mnx-cta-arrow">→</span></button>
+            <button type="button" class="mnx-brief-skip" id="mnx-brief-skip">Connect without sharing</button>
+          </div>
+          <button type="button" class="mnx-brief-back" id="mnx-brief-back">← Back</button>
+        </div>`;
+        document.getElementById('mnx-brief-back')?.addEventListener('click', showEntry);
+        const card = document.getElementById('mnx-brief-card');
+        const focusEl = document.getElementById('mnx-brief-focus');
+        let brief = { shape: '', topics: [], nogo: [], helps: [], continuity: '' };
+        try { const { data, error } = await supabase.functions.invoke('minit-brief', { body: {} }); if (!error && data && data.brief) brief = Object.assign(brief, data.brief); } catch (e) {}
+        const KMAP = { 'topics': 'topics', 'steer clear': 'nogo', 'what helps': 'helps' };
+        function render() {
+          const chips = (k, items) => items.length ? `<div class="mnx-brief-row"><span class="mnx-brief-k">${esc(k)}</span><div class="mnx-brief-chips">${items.map((t, i) => `<button type="button" class="mnx-brief-chip" data-kind="${esc(k)}" data-i="${i}">${esc(t)} <i>✕</i></button>`).join('')}</div></div>` : '';
+          card.innerHTML =
+            (brief.shape ? `<div class="mnx-brief-row"><span class="mnx-brief-k">how you're arriving</span><textarea class="mnx-brief-shape" id="mnx-brief-shape" rows="2" maxlength="280">${esc(brief.shape)}</textarea></div>` : '') +
+            chips('topics', brief.topics) + chips('steer clear', brief.nogo) + chips('what helps', brief.helps) +
+            (brief.continuity ? `<div class="mnx-brief-row"><span class="mnx-brief-k">since last time</span><p class="mnx-brief-cont">${esc(brief.continuity)}</p></div>` : '') +
+            ((!brief.shape && !brief.topics.length && !brief.helps.length && !brief.nogo.length) ? `<p class="mnx-brief-empty">Nothing auto-added — add a line below if you like, or just connect.</p>` : '');
+          const sh = document.getElementById('mnx-brief-shape');
+          if (sh) sh.addEventListener('input', () => { brief.shape = sh.value; });
+        }
+        render();
+        card.addEventListener('click', (e) => {
+          const c = e.target.closest('.mnx-brief-chip'); if (!c) return;
+          const arrKey = KMAP[c.dataset.kind]; if (!arrKey) return;
+          brief[arrKey].splice(Number(c.dataset.i), 1); render();
+        });
+        function collect() {
+          const sh = document.getElementById('mnx-brief-shape'); if (sh) brief.shape = sh.value.trim();
+          const f = ((focusEl && focusEl.value) || '').trim();
+          const topics = brief.topics.slice(); if (f && !topics.includes(f)) topics.unshift(f);
+          const has = brief.shape || topics.length || brief.helps.length || brief.nogo.length || brief.continuity;
+          return has ? Object.assign({}, brief, { topics }) : null;
+        }
+        document.getElementById('mnx-brief-share')?.addEventListener('click', () => { if (busy) return; busy = true; logEvent('brief_shared'); startTalking(isAnonymous, preferredId, collect()); });
+        document.getElementById('mnx-brief-skip')?.addEventListener('click', () => { if (busy) return; busy = true; logEvent('brief_skipped'); startTalking(isAnonymous, preferredId, null); });
+      }
+
+      async function startTalking(isAnonymous, preferredId, brief) {
+        if (brief === undefined) { busy = false; return showBriefApprove(isAnonymous, preferredId); }
         immersive(true);
         root.innerHTML = `<div class="mnx-ring"><div class="mnx-scan"><span class="mnx-scan-sweep"></span><span class="mnx-scan-core"></span></div><h3>Finding someone for you…</h3><p>${preferredId ? 'Looking for your listener.' : 'Connecting you with a real person who’s here.'}</p></div>`;
         const [res] = await Promise.all([supabase.rpc('minit_start_session', { preferred: preferredId || null, is_anon: !!isAnonymous }), wait(1400)]);
@@ -582,12 +663,13 @@ import AppLayout from '../../layouts/AppLayout.astro';
         if (res.error) {
           console.error('[minit] start_session failed:', res.error?.code, res.error?.message);
           if (await sessionExpired() || res.error?.code === '42501') { showSessionExpired(); return; }
-          showError('Couldn’t reach the room just now.', () => { busy = true; startTalking(isAnonymous, preferredId); }); return;
+          showError('Couldn’t reach the room just now.', () => { busy = true; startTalking(isAnonymous, preferredId, brief); }); return;
         }
         const row = Array.isArray(res.data) ? res.data[0] : res.data;
         const outcome = row && row.outcome;
         if (outcome === 'open' || outcome === 'queued') {
           activeSessionId = row.session_id; activeListenerId = row.listener_id;
+          if (brief && activeListenerId) { try { await supabase.from('symp_listener_briefs').insert({ connect_session_id: activeSessionId, user_id: user.id, listener_id: activeListenerId, brief }); } catch (e) {} }
           try { supabase.from('minit_callbacks').update({ status: 'fulfilled' }).eq('user_id', user.id).in('status', ['waiting', 'notified']); } catch (e) {}
           logEvent('listener_found', { outcome });
           matchedName = await fetchListenerName(activeSessionId);
