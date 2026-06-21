@@ -106,12 +106,14 @@ import AppLayout from '../../layouts/AppLayout.astro';
       </div>
       <div class="bx-call-stage">
         <div class="bx-call-orb" id="bx-call-orb"></div>
-        <p class="bx-call-status" id="bx-call-status">tap the mic and talk</p>
+        <p class="bx-call-status" id="bx-call-status">starting…</p>
         <div class="bx-call-cap" id="bx-call-caption"></div>
       </div>
-      <button type="button" class="bx-call-mic" id="bx-call-mic" aria-label="Tap to talk">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v4"/></svg>
+      <button type="button" class="bx-call-mic" id="bx-call-mic" aria-label="Mute microphone" title="Mute">
+        <svg class="bx-ic-on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v4"/></svg>
+        <svg class="bx-ic-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 1l22 22"/><path d="M9 9v3a3 3 0 0 0 5.1 2.1M15 9.3V4a3 3 0 0 0-5.9-.6"/><path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2a7 7 0 0 1-.1 1.2"/><path d="M12 19v4"/></svg>
       </button>
+      <p class="bx-call-hint" id="bx-call-hint">just talk — Blak is listening</p>
     </div>
 
     <!-- Chat history drawer -->
@@ -174,6 +176,11 @@ import AppLayout from '../../layouts/AppLayout.astro';
     .bx-col { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
     .bx-row.me .bx-col { align-items: flex-end; }
     .bx-bub { padding: .72rem .98rem; border-radius: var(--r-md); font-size: var(--fs-base); line-height: 1.55; white-space: pre-wrap; word-wrap: break-word; overflow-wrap: anywhere; }
+    .bx-bub ul.bx-md, .bx-bub ol.bx-md { margin: .3rem 0 .15rem; padding-left: 1.3rem; }
+    .bx-bub ul.bx-md li, .bx-bub ol.bx-md li { margin: .12rem 0; }
+    .bx-bub code { font-family: var(--font-mono); font-size: .88em; background: var(--surface-strong); padding: .05em .35em; border-radius: 5px; }
+    .bx-bub strong { font-weight: 700; }
+    .bx-vn-cap { margin: .4rem 0 0; font-size: var(--fs-sm); color: var(--ink-soft); line-height: 1.45; font-style: italic; }
     .bx-calloffer { margin-top: .45rem; display: inline-flex; align-items: center; gap: .45rem; border: none; border-radius: var(--r-pill); padding: .5rem 1rem; font: inherit; font-size: var(--fs-sm); font-weight: 700; cursor: pointer; background: var(--cta); color: var(--cta-ink); box-shadow: var(--shadow-cta); transition: transform .15s var(--ease-out); }
     .bx-calloffer svg { width: 16px; height: 16px; }
     .bx-calloffer:active { transform: scale(.96); }
@@ -374,6 +381,11 @@ import AppLayout from '../../layouts/AppLayout.astro';
     .bx-call-mic.rec { background: #ff6b6b; animation: bx-callpulse 1.2s ease-in-out infinite; }
     .bx-call-mic.muted { background: var(--surface-strong); color: var(--ink-faint); box-shadow: none; }
     .bx-call-mic svg { width: 30px; height: 30px; }
+    .bx-call-mic .bx-ic-off { display: none; }
+    .bx-call-mic.muted .bx-ic-on { display: none; }
+    .bx-call-mic.muted .bx-ic-off { display: block; }
+    .bx-call-hint { text-align: center; color: var(--ink-faint); font-size: var(--fs-xs); margin: -1.7rem 0 1.6rem; transition: opacity .2s; }
+    .bx-call-ov.muted-on .bx-call-hint { opacity: 0; }
     @keyframes bx-callpulse { 0%,100%{box-shadow:0 0 0 6px rgba(255,107,107,.18)} 50%{box-shadow:0 0 0 16px rgba(255,107,107,.05)} }
 
     /* ── Chat history drawer ── (the trigger button .bx-hist lives in the header above) */
@@ -602,6 +614,30 @@ import AppLayout from '../../layouts/AppLayout.astro';
     stream.addEventListener('scroll', () => { atBottom = nearBottom(); jumpBtn.hidden = atBottom; });
     jumpBtn.addEventListener('click', () => { atBottom = true; stream.scrollTop = stream.scrollHeight; jumpBtn.hidden = true; });
 
+    // Safe, minimal markdown for Blak's replies — Blak stays conversational, but
+    // can use a clean list / **bold** / `code` when it genuinely helps (steps,
+    // a plan, a recipe). HTML is escaped FIRST, so this can't inject markup.
+    function renderRich(text) {
+      const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+      const inline = (s) => esc(s)
+        .replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>')
+        .replace(/`([^`\n]+)`/g, '<code>$1</code>')
+        .replace(/(^|[^*])\*([^*\n]+)\*/g, '$1<em>$2</em>');
+      const lines = String(text || '').split('\n');
+      let html = '', list = null;
+      const closeList = () => { if (list) { html += list === 'ul' ? '</ul>' : '</ol>'; list = null; } };
+      for (const raw of lines) {
+        const ul = raw.match(/^\s*[-•]\s+(.+)$/);
+        const ol = raw.match(/^\s*\d+[.)]\s+(.+)$/);
+        if (ul) { if (list !== 'ul') { closeList(); html += '<ul class="bx-md">'; list = 'ul'; } html += '<li>' + inline(ul[1]) + '</li>'; continue; }
+        if (ol) { if (list !== 'ol') { closeList(); html += '<ol class="bx-md">'; list = 'ol'; } html += '<li>' + inline(ol[1]) + '</li>'; continue; }
+        closeList();
+        html += inline(raw) + '\n';
+      }
+      closeList();
+      return html.replace(/\n+$/, '');
+    }
+
     // Render one message row. Returns handles for live updating (streaming).
     function addRow(side, text, opts = {}) {
       const ts = opts.ts || Date.now();
@@ -616,10 +652,15 @@ import AppLayout from '../../layouts/AppLayout.astro';
       } else {
         if (opts.media_type === 'audio' && opts.media_url) {
           const au = document.createElement('audio'); au.className = 'bx-audio'; au.controls = true; au.preload = 'metadata'; au.src = opts.media_url; bub.appendChild(au);
+          if (opts.media_description) { const cap = document.createElement('p'); cap.className = 'bx-vn-cap'; cap.textContent = '“' + opts.media_description + '”'; bub.appendChild(cap); }
         } else if (opts.media_url) {
           const im = document.createElement('img'); im.className = 'bx-img'; im.src = opts.media_url; im.alt = 'shared image'; im.loading = 'lazy'; bub.appendChild(im);
         }
-        if (text || !opts.media_url) { const tx = document.createElement('span'); tx.textContent = text; bub.appendChild(tx); }
+        if (text || !opts.media_url) {
+          const tx = document.createElement('span');
+          if (side === 'them' && text) tx.innerHTML = renderRich(text); else tx.textContent = text;
+          bub.appendChild(tx);
+        }
         addMeta(col, ts, side, opts.media_url && !text ? '' : text, opts.msg || null);
       }
       stream.appendChild(row);
@@ -639,7 +680,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
       stream.innerHTML = '';
       for (const m of history) {
         if (!m.content && !m.media_url) continue;   // skip empty/failed turns (don't render blank bubbles)
-        addRow(m.role === 'user' ? 'me' : 'them', m.content, { ts: m.ts, media_url: m.media_url, media_type: m.media_type, msg: m });
+        addRow(m.role === 'user' ? 'me' : 'them', m.content, { ts: m.ts, media_url: m.media_url, media_type: m.media_type, media_description: m.media_description, msg: m });
       }
       attachRegen();
       scrollToBottom(true);
@@ -922,7 +963,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
         }
         acc = acc.trim();
         const shown = acc || "Mmm — I didn't catch that. Say it once more?";
-        typing.bub.textContent = shown;
+        typing.bub.innerHTML = renderRich(shown);   // light markdown for the final reply
         stamp(typing);
         const am = { role: 'assistant', content: shown, ts: typing.ts };
         history.push(am);
@@ -1386,11 +1427,12 @@ import AppLayout from '../../layouts/AppLayout.astro';
       const localUrl = URL.createObjectURL(blob);
       const um = { role: 'user', content: '', ts: Date.now(), media_url: localUrl, media_type: 'audio', media_description: null };
       history.push(um);
-      addRow('me', '', { media_url: localUrl, media_type: 'audio' });   // instant playable bubble
+      const vh = addRow('me', '', { media_url: localUrl, media_type: 'audio' });   // instant playable bubble
       updateChips();
       const [url, txt] = await Promise.all([uploadVoiceNote(blob), transcribeBlob(blob)]);
       if (url) um.media_url = url;                                       // persist the storage URL
       um.media_description = txt || null;
+      if (txt && vh && vh.bub && !vh.bub.querySelector('.bx-vn-cap')) { const cap = document.createElement('p'); cap.className = 'bx-vn-cap'; cap.textContent = '“' + txt + '”'; vh.bub.appendChild(cap); }   // show what Blak heard
       dbInsertMessage('user', '', { url: url || null, type: 'audio', description: txt || null }).then((id) => { if (id) um.id = id; });
       if (txt && CALL_INTENT.test(txt)) { offerCall(); return; }   // voice note asked to call → offer it
       await runTurn(txt || '');
@@ -1680,7 +1722,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
       ensureCallThread = null;
       callSaveChain.then(() => render()).catch(() => {});   // reveal the saved call turns in the thread
     }
-    function startListening() { callState = 'listening'; speechFrames = 0; silenceFrames = 0; callMic.classList.remove('rec'); setCall('', muted ? 'muted — tap mic to resume' : 'listening… just talk'); }
+    function startListening() { callState = 'listening'; speechFrames = 0; silenceFrames = 0; callMic.classList.remove('rec'); setCall('', muted ? 'muted — tap to unmute' : 'listening… just talk'); }
     function rmsLevel() {
       const buf = new Float32Array(analyser.fftSize); analyser.getFloatTimeDomainData(buf);
       let s = 0; for (let i = 0; i < buf.length; i++) s += buf[i] * buf[i];
@@ -1759,9 +1801,13 @@ import AppLayout from '../../layouts/AppLayout.astro';
         if (!ok && callState !== 'idle') setCall('', 'call dropped — tap call to reconnect');
       }
     });
-    if (callMic) callMic.addEventListener('click', () => {   // mute / unmute
+    if (callMic) callMic.addEventListener('click', () => {   // mute / unmute (the call is always hands-free)
       muted = !muted; callMic.classList.toggle('muted', muted);
-      if (liveMode) { setCall(muted ? '' : 'listening', muted ? 'muted — tap mic to resume' : 'listening… just talk'); return; }
+      callMic.setAttribute('aria-label', muted ? 'Unmute microphone' : 'Mute microphone');
+      callMic.title = muted ? 'Unmute' : 'Mute';
+      callOv.classList.toggle('muted-on', muted);
+      const hint = $('bx-call-hint'); if (hint) hint.textContent = muted ? "you're muted — tap to unmute" : 'just talk — Blak is listening';
+      if (liveMode) { setCall(muted ? '' : 'listening', muted ? 'muted — tap to unmute' : 'listening… just talk'); return; }
       if (muted) { if (mrec && mrec.state !== 'inactive') { try { mrec.stop(); } catch (e) {} } if (callSrc) { try { callSrc.stop(); } catch (e) {} } }
       startListening();
     });
