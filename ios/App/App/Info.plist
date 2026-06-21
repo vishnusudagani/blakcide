@@ -22,6 +22,23 @@
 	<string>$(MARKETING_VERSION)</string>
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>com.blaksyd.app</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.blaksyd.app</string>
+			</array>
+		</dict>
+	</array>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Blaksyd uses your microphone for voice conversations with Blak and Minit listeners, and for voice notes.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Blaksyd uses your camera to add photos to your chats, journal, and persona.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Blaksyd lets you attach images from your photo library to your chats, journal, and personas.</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>UILaunchStoryboardName</key>
