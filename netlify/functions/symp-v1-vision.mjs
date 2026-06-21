@@ -13,10 +13,13 @@ const { ENDPOINTS, ERROR_CODES } = SympContract;
 
 const PROMPT = 'Describe this image in 1–3 natural sentences. Be specific: mention what objects, people, places, food, or atmosphere you see. Write as if a friend is casually describing a photo — no formal tone, no "I see..."';
 
+// Read fine detail (text in a sign/menu/screenshot) when answering a question.
+function question_detail(prompt) { return prompt && prompt !== PROMPT ? 'high' : 'low'; }
+
 // Vision needs a MULTIMODAL model. The shared inference router is pinned to a
 // text-only background model (Groq Llama), so describe via Azure gpt-4.1-mini —
 // the same multimodal model that powers the user chat. Never throws; null on miss.
-async function describeImageAzure(imageUrl) {
+async function describeImageAzure(imageUrl, prompt = PROMPT) {
     const ep = process.env.AZURE_OPENAI_ENDPOINT, dep = process.env.AZURE_OPENAI_DEPLOYMENT, key = process.env.AZURE_OPENAI_API_KEY;
     if (!ep || !dep || !key) return null;
     const ver = process.env.AZURE_OPENAI_API_VERSION || '2024-10-21';
@@ -27,10 +30,10 @@ async function describeImageAzure(imageUrl) {
             headers: { 'api-key': key, 'Content-Type': 'application/json' },
             body:    JSON.stringify({
                 messages: [{ role: 'user', content: [
-                    { type: 'text', text: PROMPT },
-                    { type: 'image_url', image_url: { url: imageUrl, detail: 'low' } },
+                    { type: 'text', text: prompt },
+                    { type: 'image_url', image_url: { url: imageUrl, detail: question_detail(prompt) } },
                 ] }],
-                max_tokens: 200, temperature: 0.7,
+                max_tokens: 240, temperature: 0.6,
             }),
         });
         if (!r.ok) return null;
@@ -57,21 +60,25 @@ export default async (req) => {
         return jsonError(ERROR_CODES.BAD_REQUEST, 'Invalid JSON body', 400, requestId);
     }
 
-    const { user_id, imageUrl } = parsed.data || {};
+    const { user_id, imageUrl, question } = parsed.data || {};
     if (!imageUrl) {
         return jsonError(ERROR_CODES.BAD_REQUEST, 'imageUrl is required', 400, requestId);
     }
+    // A question → re-examine the image to answer it; otherwise a casual describe.
+    const prompt = (typeof question === 'string' && question.trim())
+        ? `Answer this question about the image in 1–3 short, natural, specific sentences (casual, like a friend): "${question.trim().slice(0, 300)}". If the answer isn't visible in the image, say so plainly.`
+        : PROMPT;
 
     try {
         // Multimodal describe via Azure first; fall back to the router, then a generic line.
-        let description = await describeImageAzure(imageUrl);
+        let description = await describeImageAzure(imageUrl, prompt);
         if (!description) {
             try {
                 const out = await chatComplete({
-                    task: 'vision', max_tokens: 200, temperature: 0.7,
+                    task: 'vision', max_tokens: 240, temperature: 0.6,
                     messages: [{ role: 'user', content: [
-                        { type: 'text', text: PROMPT },
-                        { type: 'image_url', image_url: { url: imageUrl, detail: 'low' } },
+                        { type: 'text', text: prompt },
+                        { type: 'image_url', image_url: { url: imageUrl, detail: question_detail(prompt) } },
                     ] }],
                 });
                 description = out.content?.trim() || null;

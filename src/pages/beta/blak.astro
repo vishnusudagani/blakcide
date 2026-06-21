@@ -66,6 +66,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
         <button type="button" id="bx-add-photo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg> Photo</button>
         <button type="button" id="bx-add-group"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg> New group with Blak</button>
         <button type="button" id="bx-add-summary"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg> Summarize this chat</button>
+        <button type="button" id="bx-add-doc"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h6"/></svg> Document / PDF</button>
         <button type="button" id="bx-add-export"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M8 11l4 4 4-4M5 21h14"/></svg> Export this chat</button>
       </div>
       <div class="bx-edit-pill" id="bx-edit-pill" hidden data-noswipe>
@@ -81,6 +82,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
           </button>
           <input type="file" id="bx-file" accept="image/*" hidden />
+          <input type="file" id="bx-doc-file" accept=".pdf,.txt,.md,.markdown,.csv,.json,.log,.rtf,text/*,application/pdf" hidden />
           <textarea id="bx-input" rows="1" placeholder="Message Blak…" autocomplete="off"></textarea>
           <button type="button" class="bx-act" id="bx-send" aria-label="Send or record a voice note">
             <svg class="bx-ic-mic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v4"/></svg>
@@ -181,6 +183,9 @@ import AppLayout from '../../layouts/AppLayout.astro';
     .bx-bub code { font-family: var(--font-mono); font-size: .88em; background: var(--surface-strong); padding: .05em .35em; border-radius: 5px; }
     .bx-bub strong { font-weight: 700; }
     .bx-vn-cap { margin: .4rem 0 0; font-size: var(--fs-sm); color: var(--ink-soft); line-height: 1.45; font-style: italic; }
+    .bx-doc { display: inline-flex; align-items: center; gap: .5rem; color: var(--ink); }
+    .bx-doc svg { width: 22px; height: 22px; color: var(--coral); flex: none; }
+    .bx-doc-nm { font-size: var(--fs-sm); font-weight: 600; word-break: break-word; }
     .bx-calloffer { margin-top: .45rem; display: inline-flex; align-items: center; gap: .45rem; border: none; border-radius: var(--r-pill); padding: .5rem 1rem; font: inherit; font-size: var(--fs-sm); font-weight: 700; cursor: pointer; background: var(--cta); color: var(--cta-ink); box-shadow: var(--shadow-cta); transition: transform .15s var(--ease-out); }
     .bx-calloffer svg { width: 16px; height: 16px; }
     .bx-calloffer:active { transform: scale(.96); }
@@ -653,10 +658,15 @@ import AppLayout from '../../layouts/AppLayout.astro';
         if (opts.media_type === 'audio' && opts.media_url) {
           const au = document.createElement('audio'); au.className = 'bx-audio'; au.controls = true; au.preload = 'metadata'; au.src = opts.media_url; bub.appendChild(au);
           if (opts.media_description) { const cap = document.createElement('p'); cap.className = 'bx-vn-cap'; cap.textContent = '“' + opts.media_description + '”'; bub.appendChild(cap); }
+        } else if (opts.media_type === 'doc') {
+          const chip = document.createElement('span'); chip.className = 'bx-doc';
+          chip.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h6"/></svg>';
+          const nm = document.createElement('span'); nm.className = 'bx-doc-nm'; nm.textContent = text || 'Document'; chip.appendChild(nm);
+          bub.appendChild(chip);
         } else if (opts.media_url) {
           const im = document.createElement('img'); im.className = 'bx-img'; im.src = opts.media_url; im.alt = 'shared image'; im.loading = 'lazy'; bub.appendChild(im);
         }
-        if (text || !opts.media_url) {
+        if (opts.media_type !== 'doc' && (text || !opts.media_url)) {
           const tx = document.createElement('span');
           if (side === 'them' && text) tx.innerHTML = renderRich(text); else tx.textContent = text;
           bub.appendChild(tx);
@@ -888,11 +898,14 @@ import AppLayout from '../../layouts/AppLayout.astro';
                       if (m.media_type === 'audio') {
                         if (m.media_description) c = (c ? c + '\n\n' : '') + '[Voice note I sent — transcript: ' + m.media_description + ']';
                         else if (!c) c = '[I sent a voice note.]';
+                      } else if (m.media_type === 'doc') {
+                        c = '[Document I shared' + (c ? ' (' + c + ')' : '') + ' — contents:\n' + String(m.media_description || '').slice(0, 12000) + ']';
                       } else if (m.media_description) {
                         c = (c ? c + '\n\n' : '') + '[Image I shared — it shows: ' + m.media_description + ']';
                       } else if (!c && m.media_url) {
                         c = '[I shared an image.]';
                       }
+                      if (m.visionContext) c = (c ? c + '\n\n' : '') + '[Looking again at that image, I checked: ' + m.visionContext + ']';
                       return { role: m.role, content: c };
                     });
     }
@@ -1150,6 +1163,11 @@ import AppLayout from '../../layouts/AppLayout.astro';
         dbInsertMessage('user', text, img ? { url: img.url, type: img.type, description: um.media_description } : null).then((id) => { if (id) um.id = id; });
         if (text && !img && REMIND_INTENT.test(text)) { await handleReminder(text); setBusy(false); return; }   // "remind me to…" → save it
         if (text && !img && CALL_INTENT.test(text)) { setBusy(false); offerCall(); return; }   // they asked to call → offer it
+        // Re-examine a recently shared image when the message clearly asks about it.
+        if (text && !img && IMG_REF.test(text) && isImgQuestion(text)) {
+          const recentImg = history.slice(0, -1).slice(-6).reverse().find((m) => m.media_type === 'image' && m.media_url);
+          if (recentImg) { const ans = await visionAsk(recentImg.media_url, text); if (ans) um.visionContext = ans; }
+        }
         await runTurn(text, typing);
       } catch (e) {
         setBusy(false);
@@ -1326,6 +1344,55 @@ import AppLayout from '../../layouts/AppLayout.astro';
       addBtn.classList.remove('busy');
       if (url) { pendingImage = { url, type: 'image' }; showPreview(url); input.focus(); }
     });
+
+    // ── Documents / PDFs: extract text in the browser, feed it to Blak ─────────
+    const docInput = $('bx-doc-file');
+    const addDoc = $('bx-add-doc');
+    if (addDoc) addDoc.addEventListener('click', () => { closeAddMenu(); if (docInput) docInput.click(); });
+    async function extractDocText(file) {
+      const ext = (String(file.name || '').split('.').pop() || '').toLowerCase();
+      if (ext === 'pdf' || file.type === 'application/pdf') {
+        try {
+          const pdfjs = await import(/* @vite-ignore */ 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.7.76/build/pdf.min.mjs');
+          try { pdfjs.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.7.76/build/pdf.worker.min.mjs'; } catch (e) {}
+          const buf = await file.arrayBuffer();
+          const doc = await pdfjs.getDocument({ data: buf }).promise;
+          const pages = Math.min(doc.numPages, 40);
+          let text = '';
+          for (let i = 1; i <= pages; i++) { const pg = await doc.getPage(i); const tc = await pg.getTextContent(); text += tc.items.map((it) => it.str).join(' ') + '\n'; }
+          return text.replace(/\s+\n/g, '\n').trim();
+        } catch (e) { return ''; }
+      }
+      try { return (await file.text()).slice(0, 60000); } catch (e) { return ''; }   // text-based files
+    }
+    async function sendDoc(file) {
+      if (!file || sending) return;
+      const name = (file.name || 'document').slice(0, 80);
+      setBusy(true); addBtn.classList.add('busy');
+      try {
+        const docText = await extractDocText(file);
+        addBtn.classList.remove('busy');
+        if (!docText) { const h = addRow('them', ''); h.bub.textContent = "i couldn't read that one — try a PDF or a text file?"; stamp(h); setBusy(false); return; }
+        if (!activeChatId) { const c = await dbCreateChat(name); if (c) activeChatId = c.id; }
+        const um = { role: 'user', content: name, ts: Date.now(), media_type: 'doc', media_description: docText };
+        history.push(um); addRow('me', name, { media_type: 'doc', msg: um }); updateChips();
+        dbInsertMessage('user', name, { type: 'doc', description: docText }).then((id) => { if (id) um.id = id; });
+        await runTurn('');   // Blak replies about the doc (its text is in context)
+      } catch (e) { setBusy(false); }
+    }
+    if (docInput) docInput.addEventListener('change', () => { const f = docInput.files && docInput.files[0]; docInput.value = ''; if (f) sendDoc(f); });
+
+    // ── Re-examine a shared image: a follow-up question re-looks at the photo ──
+    const IMG_REF = /\b(image|photo|pic|picture|screenshot|selfie|that|this|it|sign|menu|text|says?|written|colou?r|wearing|background)\b/i;
+    const isImgQuestion = (t) => /\?\s*$/.test(t) || /^(what|whats|who|where|when|why|how|which|does|do|is|are|can|could|read|tell me|describe|any)\b/i.test(String(t).trim());
+    async function visionAsk(url, q) {
+      try {
+        const jwt = await getToken(); if (!jwt) return '';
+        const r = await fetch('/api/blaksyd/symp/vision', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + jwt }, body: JSON.stringify({ imageUrl: url, question: q }) });
+        const j = await r.json().catch(() => null);
+        return (j && j.data && j.data.description) || '';
+      } catch (e) { return ''; }
+    }
 
     // ── Voice notes: hold-to-record → release → preview → delete / send ───────
     // WhatsApp-style. Hold the mic to record, release to stop, then play it back
