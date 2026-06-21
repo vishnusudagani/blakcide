@@ -23,14 +23,13 @@ const state = {
   user: null,
   container: null,
   connections: [],   // rows from symp_integrations (defensive: [] if table absent)
-  gmailPending: false,
   note: '',          // transient status line under the master card
   booking: { open: false, step: 'dest', from: 'Current location', to: '', options: [], selected: null, result: null },
 };
 
 const conn = (provider) => state.connections.find((c) => c.provider === provider) || null;
 const gmailConn = () => conn('gmail');
-const learningOn = () => state.gmailPending || !!gmailConn();
+const learningOn = () => !!gmailConn();
 
 // ---------- render: app card ----------
 function appCard(app) {
@@ -157,8 +156,7 @@ function masterCard() {
       '<div class="int-m-row">' +
         '<span class="int-m-ic">' + MAIL_ICON + '</span>' +
         '<div class="int-m-tx"><b>Connect Gmail</b><i>One connection lets Blak learn your taste &amp; spend from receipts — across every app.</i></div>' +
-        '<button class="int-connect" data-act="gmail-connect"' + (state.gmailPending ? ' disabled' : '') + '>' +
-          (state.gmailPending ? 'Soon' : 'Connect') + '</button>' +
+        '<button class="int-connect" data-act="gmail-connect">Connect</button>' +
       '</div>';
   }
   const note = state.note ? '<p class="int-note">' + esc(state.note) + '</p>' : '';
@@ -211,12 +209,21 @@ async function savePref(text) {
   paint();
 }
 
-function connectGmail() {
-  // Preview: the Google OAuth (gmail.readonly) backend lands with the foundation.
-  // When it does, swap this for supabase.auth OAuth + a server token store.
-  state.gmailPending = true;
-  state.note = 'Receipt-reading is being switched on — you’ll connect Gmail right here shortly. Meanwhile, tell Blak a taste below.';
+async function connectGmail() {
+  state.note = 'Opening Google…';
   paint();
+  try {
+    const { data, error } = await state.supabase.functions.invoke('gmail-oauth-start');
+    if (error || !data || !data.url) {
+      state.note = 'Couldn’t start Gmail connect — please try again.';
+      paint();
+      return;
+    }
+    window.location.href = data.url; // → Google consent → callback → back here
+  } catch (e) {
+    state.note = 'Couldn’t start Gmail connect — please try again.';
+    paint();
+  }
 }
 
 async function disconnectGmail() {
@@ -306,6 +313,29 @@ export async function mountIntegrations({ supabase, user, container }) {
   } catch (e) {
     state.connections = [];
   }
+
+  // Handle the return from the Gmail OAuth redirect (?gmail=connected|error).
+  try {
+    const g = new URLSearchParams(location.search).get('gmail');
+    if (g === 'connected') {
+      state.note = 'Gmail connected ✓ Blak is reading your receipts…';
+      supabase.functions.invoke('gmail-receipts').then(async () => {
+        try {
+          const { data } = await supabase
+            .from('symp_integrations')
+            .select('provider,category,status,display_name,last_sync_at')
+            .eq('user_id', user.id);
+          state.connections = data || [];
+        } catch (e) { /* keep prior */ }
+        state.note = 'Gmail connected ✓ Blak has started learning from your receipts.';
+        paint();
+      }).catch(() => {});
+    } else if (g === 'error') {
+      state.note = 'Gmail connect didn’t complete — please try again.';
+    }
+    if (g) history.replaceState({}, '', location.pathname);
+  } catch (e) { /* ignore */ }
+
   container.addEventListener('click', onClick);
   container.addEventListener('keydown', onKeydown);
   paint();

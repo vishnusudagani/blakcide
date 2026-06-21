@@ -1,15 +1,15 @@
 // gmail-receipts — sync a user's order/ride receipts from Gmail into learned
 // facts. Owner-scoped: the JWT identifies the user; facts are written to THEIR
-// rows only. The Gmail access token comes from a server-only store added with
-// the OAuth backend — until then this returns gmail_not_connected, but a debug
-// body of { messages: [...] } drives the full parse -> facts -> write pipeline
-// (useful for testing the pipeline before OAuth is live).
+// rows only. The Gmail access token comes from the server-only token store
+// (filled by the gmail-oauth-callback flow). A debug body of { messages: [...] }
+// drives the full parse -> facts -> write pipeline without Gmail (for testing).
 
 import { admin } from "../_shared/supabase.ts";
 import { fetchReceipts } from "../_shared/receipts/gmail.ts";
 import { parseEmails } from "../_shared/receipts/parse.ts";
 import { deriveFacts } from "../_shared/receipts/facts.ts";
 import type { ParsedEmail } from "../_shared/receipts/types.ts";
+import { getGmailToken } from "../_shared/google-oauth.ts";
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -18,13 +18,6 @@ const CORS = {
 };
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { ...CORS, "Content-Type": "application/json" } });
-
-// TODO(foundation): read the user's stored gmail.readonly access token from a
-// server-only token store (refresh via the saved refresh token). Returns null
-// until the Google OAuth backend is wired.
-async function getGmailToken(_userId: string): Promise<string | null> {
-  return null;
-}
 
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
@@ -46,7 +39,11 @@ Deno.serve(async (req: Request) => {
   if (Array.isArray(body.messages) && body.messages.length) {
     emails = body.messages;
   } else {
-    const token = await getGmailToken(user.id);
+    const clientId = Deno.env.get("GOOGLE_OAUTH_CLIENT_ID");
+    const clientSecret = Deno.env.get("GOOGLE_OAUTH_CLIENT_SECRET");
+    const token = clientId && clientSecret
+      ? await getGmailToken(db, user.id, clientId, clientSecret)
+      : null;
     if (!token) return json({ ok: false, reason: "gmail_not_connected" });
     emails = await fetchReceipts(token);
   }
