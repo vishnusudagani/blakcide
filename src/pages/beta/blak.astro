@@ -61,6 +61,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
       <div class="bx-add-menu" id="bx-add-menu" hidden data-noswipe>
         <button type="button" id="bx-add-photo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg> Photo</button>
         <button type="button" id="bx-add-group"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg> New group with Blak</button>
+        <button type="button" id="bx-add-summary"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg> Summarize this chat</button>
       </div>
       <div class="bx-attach-preview" id="bx-attach-preview" hidden data-noswipe></div>
       <div class="bx-vn" id="bx-vn" hidden data-noswipe></div>
@@ -117,6 +118,16 @@ import AppLayout from '../../layouts/AppLayout.astro';
           <button type="button" class="bx-cv-foot-link" id="bx-cv-signout">Sign out</button>
         </div>
       </aside>
+    </div>
+
+    <!-- Thread summary — slides up -->
+    <div class="bx-sum" id="bx-sum" hidden data-noswipe>
+      <div class="bx-sum-scrim" id="bx-sum-scrim"></div>
+      <div class="bx-sum-sheet" role="dialog" aria-label="Chat recap">
+        <div class="bx-sum-grip"></div>
+        <div class="bx-sum-head"><b id="bx-sum-title">Recap</b><button type="button" class="bx-sum-x" id="bx-sum-x" aria-label="Close">✕</button></div>
+        <div class="bx-sum-body" id="bx-sum-body"></div>
+      </div>
     </div>
   </div>
 
@@ -362,6 +373,27 @@ import AppLayout from '../../layouts/AppLayout.astro';
     .bx-cv-item:hover .bx-cv-del { opacity: 1; }
     .bx-cv-del:hover { color: var(--coral); }
     .bx-cv-empty { color: var(--ink-faint); font-size: var(--fs-sm); padding: 1rem .6rem; }
+    .bx-cv-sum { flex: none; display: inline-flex; align-items: center; color: var(--ink-faint); background: none; border: 0; padding: .5rem .45rem; cursor: pointer; opacity: .55; transition: opacity .15s, color .15s; }
+    .bx-cv-sum:hover { opacity: 1; color: var(--coral); }
+    .bx-cv-sum svg { width: 15px; height: 15px; }
+
+    /* Thread summary sheet */
+    .bx-sum { position: fixed; inset: 0; z-index: 80; display: flex; align-items: flex-end; justify-content: center; }
+    .bx-sum[hidden] { display: none; }
+    .bx-sum-scrim { position: absolute; inset: 0; background: rgba(0,0,0,.45); animation: bx-fade .2s ease both; }
+    .bx-sum-sheet { position: relative; width: 100%; max-width: 760px; max-height: 82vh; overflow-y: auto; -webkit-overflow-scrolling: touch; background: var(--surface); border: 1px solid var(--line); border-bottom: 0; border-radius: 20px 20px 0 0; padding: .4rem clamp(1rem, 4vw, 1.35rem) calc(1.4rem + env(safe-area-inset-bottom)); box-shadow: 0 -12px 44px rgba(0,0,0,.32); animation: bx-sheet-up .26s var(--ease-out) both; }
+    @keyframes bx-sheet-up { from { transform: translateY(100%); } to { transform: translateY(0); } }
+    @keyframes bx-fade { from { opacity: 0; } to { opacity: 1; } }
+    .bx-sum-grip { width: 38px; height: 4px; border-radius: 999px; background: var(--line-strong); margin: .4rem auto .15rem; }
+    .bx-sum-head { display: flex; align-items: center; gap: .6rem; padding: .15rem 0 .55rem; }
+    .bx-sum-head b { font-family: var(--font-display); font-size: var(--fs-lg); color: var(--ink); }
+    .bx-sum-x { margin-left: auto; background: none; border: 0; color: var(--ink-faint); font-size: 1.05rem; cursor: pointer; min-width: 44px; min-height: 36px; }
+    .bx-sum-x:hover { color: var(--ink); }
+    .bx-sum-body { font-size: var(--fs-base); line-height: 1.62; color: var(--ink); white-space: pre-wrap; word-wrap: break-word; overflow-wrap: anywhere; }
+    .bx-sum-body.loading { color: var(--ink-faint); }
+    .bx-sum-actions { display: flex; align-items: center; gap: .45rem; margin-top: 1.1rem; padding-top: .9rem; border-top: 1px solid var(--line); }
+    .bx-sum-rdlbl { color: var(--ink-soft); font-size: var(--fs-sm); cursor: pointer; }
+    .bx-sum-rdlbl:hover { color: var(--coral); }
 
     /* ── Mobile (the screen is mostly used on phones) ── */
     @media (max-width: 480px) {
@@ -953,7 +985,51 @@ import AppLayout from '../../layouts/AppLayout.astro';
     const addPhoto = $('bx-add-photo'), addGroup = $('bx-add-group');
     if (addPhoto) addPhoto.addEventListener('click', () => { closeAddMenu(); if (fileInput) fileInput.click(); });
     if (addGroup) addGroup.addEventListener('click', () => { closeAddMenu(); window.location.href = '/beta/group/'; });
+    const addSummary = $('bx-add-summary');
+    if (addSummary) addSummary.addEventListener('click', () => { closeAddMenu(); summarizeThread(activeChatId, null); });
     document.addEventListener('click', (e) => { if (addMenu && !addMenu.hidden && !addMenu.contains(e.target) && !addBtn.contains(e.target)) closeAddMenu(); });
+
+    // ── Summarize a thread → warm recap in a slide-up sheet ───────────────────
+    const sumSheet = $('bx-sum'), sumScrim = $('bx-sum-scrim'), sumX = $('bx-sum-x'),
+          sumBody = $('bx-sum-body'), sumTitle = $('bx-sum-title');
+    function closeSum() { try { stopSpeak(); } catch (e) {} if (sumSheet) sumSheet.hidden = true; }
+    if (sumScrim) sumScrim.addEventListener('click', closeSum);
+    if (sumX) sumX.addEventListener('click', closeSum);
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && sumSheet && !sumSheet.hidden) closeSum(); });
+
+    function renderSum(summary) {
+      sumBody.className = 'bx-sum-body';
+      sumBody.textContent = summary;
+      const acts = document.createElement('div'); acts.className = 'bx-sum-actions';
+      const rd = document.createElement('button'); rd.type = 'button'; rd.className = 'bx-speak'; rd.title = 'Read aloud'; rd.setAttribute('aria-label', 'Read aloud'); rd.innerHTML = SPK.spk;
+      rd.addEventListener('click', () => speakMessage(summary, rd));
+      const lbl = document.createElement('span'); lbl.className = 'bx-sum-rdlbl'; lbl.textContent = 'Read aloud';
+      lbl.addEventListener('click', () => speakMessage(summary, rd));
+      acts.appendChild(rd); acts.appendChild(lbl);
+      sumBody.appendChild(acts);
+    }
+
+    async function summarizeThread(chatId, title) {
+      if (!chatId || !sumSheet) return;
+      let msgs = (chatId === activeChatId) ? history : await dbLoadMessages(chatId);
+      const real = (msgs || []).filter((m) => (m.role === 'user' || m.role === 'assistant') && ((m.content && m.content.trim()) || m.media_url || m.media_type));
+      sumTitle.textContent = title || 'Recap';
+      sumBody.className = 'bx-sum-body loading';
+      sumBody.textContent = 'Reading back through this chat…';
+      sumSheet.hidden = false;
+      if (real.length < 2) { sumBody.className = 'bx-sum-body'; sumBody.textContent = "There's not much here yet — chat a little more and I'll recap it for you."; return; }
+      try {
+        const jwt = await getToken();
+        const payloadMsgs = real.slice(-80).map((m) => ({ role: m.role, content: m.content || '', media_type: m.media_type || null, media_description: m.media_description || null, media_url: m.media_url || null }));
+        const r = await fetch('/api/blaksyd/symp/summarize', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + (jwt || '') }, body: JSON.stringify({ messages: payloadMsgs, title: title || null }) });
+        const j = await r.json().catch(() => null);
+        const summary = j && j.data && j.data.summary;
+        if (!summary) throw new Error('no_summary');
+        renderSum(summary);
+      } catch (e) {
+        sumBody.className = 'bx-sum-body'; sumBody.textContent = "I couldn't pull that together just now — try again in a moment.";
+      }
+    }
     if (fileInput) fileInput.addEventListener('change', async () => {
       const file = fileInput.files && fileInput.files[0]; fileInput.value = '';
       if (!file) return;
@@ -1116,9 +1192,12 @@ import AppLayout from '../../layouts/AppLayout.astro';
       for (const c of arr) {
         const row = document.createElement('div');
         row.className = 'bx-cv-item' + (c.id === activeChatId ? ' on' : '');
-        row.innerHTML = '<button class="bx-cv-open" type="button"></button><button class="bx-cv-del" type="button" aria-label="Delete chat">✕</button>';
+        row.innerHTML = '<button class="bx-cv-open" type="button"></button>'
+          + '<button class="bx-cv-sum" type="button" aria-label="Summarize chat" title="Summarize"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg></button>'
+          + '<button class="bx-cv-del" type="button" aria-label="Delete chat">✕</button>';
         row.querySelector('.bx-cv-open').textContent = c.title || 'New chat';
         row.querySelector('.bx-cv-open').onclick = () => { if (c.id !== activeChatId) openChat(c.id); closeDrawer(); };
+        row.querySelector('.bx-cv-sum').onclick = (e) => { e.stopPropagation(); closeDrawer(); summarizeThread(c.id, c.title); };
         row.querySelector('.bx-cv-del').onclick = (e) => { e.stopPropagation(); deleteConvo(c.id); };
         convoList.appendChild(row);
       }
