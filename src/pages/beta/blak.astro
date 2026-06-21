@@ -166,6 +166,13 @@ import AppLayout from '../../layouts/AppLayout.astro';
     .bx-regen { font-family: var(--font-mono); font-size: var(--fs-3xs); letter-spacing: .04em; color: var(--ink-faint); background: none; border: 0; cursor: pointer; display: inline-flex; align-items: center; gap: .25rem; padding: 0; transition: color .18s; }
     .bx-regen:hover { color: var(--coral); }
     .bx-regen svg { width: 12px; height: 12px; }
+    .bx-meta .bx-time { padding: 0; }
+    .bx-speak { color: var(--ink-faint); background: none; border: 0; cursor: pointer; display: inline-flex; align-items: center; padding: 0; transition: color .18s; -webkit-tap-highlight-color: transparent; }
+    .bx-speak:hover { color: var(--coral); }
+    .bx-speak.playing { color: var(--coral); }
+    .bx-speak svg { width: 14px; height: 14px; display: block; }
+    .bx-speak.loading svg { animation: bx-spin .8s linear infinite; }
+    @keyframes bx-spin { to { transform: rotate(360deg); } }
     .bx-retry { margin-top: .4rem; align-self: flex-start; font-family: inherit; font-size: var(--fs-sm); color: var(--coral); background: rgba(255,107,157,.1); border: 1px solid rgba(255,107,157,.3); border-radius: var(--r-pill); padding: .35rem .8rem; cursor: pointer; transition: .18s; }
     .bx-retry:hover { background: rgba(255,107,157,.18); }
     .bx-row.err .bx-bub { color: var(--ink-soft); background: var(--surface); border-color: var(--line-strong); }
@@ -528,10 +535,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
           const im = document.createElement('img'); im.className = 'bx-img'; im.src = opts.media_url; im.alt = 'shared image'; im.loading = 'lazy'; bub.appendChild(im);
         }
         if (text || !opts.media_url) { const tx = document.createElement('span'); tx.textContent = text; bub.appendChild(tx); }
-        const time = document.createElement('time');
-        time.className = 'bx-time';
-        time.textContent = fmtTime(ts);
-        col.appendChild(time);
+        addMeta(col, ts, side, opts.media_url && !text ? '' : text);
       }
       stream.appendChild(row);
       scrollToBottom(side === 'me');
@@ -539,10 +543,11 @@ import AppLayout from '../../layouts/AppLayout.astro';
     }
 
     function stamp(handle) {
-      if (handle.col.querySelector('.bx-time')) return;
-      const time = document.createElement('time');
-      time.className = 'bx-time'; time.textContent = fmtTime(handle.ts);
-      handle.col.appendChild(time);
+      if (handle.col.querySelector('.bx-meta')) return;
+      const side = handle.row && handle.row.classList.contains('them') ? 'them' : 'me';
+      const isErr = handle.row && handle.row.classList.contains('err');
+      const text = (side === 'them' && !isErr && handle.bub) ? (handle.bub.textContent || '') : '';
+      addMeta(handle.col, handle.ts, side, text);
     }
 
     function render() {
@@ -588,6 +593,137 @@ import AppLayout from '../../layouts/AppLayout.astro';
       if (!supabase) return null;
       try { return (await supabase.auth.getSession()).data?.session?.access_token || null; }
       catch { return null; }
+    }
+
+    // ── Read aloud: speak a Blak message in Blak's voice ──────────────────────
+    // Reuses the call's Gemini voice via the bridge /tts endpoint (POST {voice,
+    // text} → {audio: base64 wav}). The bridge hard-caps text at 240 chars, so we
+    // chunk long messages at sentence boundaries and play them gaplessly,
+    // prefetching the next clip while the current one plays.
+    const SPK = {
+      spk:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/></svg>',
+      stop: '<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><rect x="6" y="6" width="12" height="12" rx="2.5"/></svg>',
+      spin: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3a9 9 0 1 0 9 9"/></svg>',
+    };
+    let ttsCfg = null;          // { url, voice } — derived once from the call session
+    let speakAudio = null;      // the <audio> currently playing
+    let speakBtn = null;        // the button driving the active read-aloud
+    let speakSeq = 0;           // bumped to cancel any in-flight read-aloud
+
+    async function ensureTts() {
+      if (ttsCfg) return ttsCfg;
+      try {
+        const jwt = await getToken();
+        const r = await fetch('/api/gemini-live-session', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + (jwt || '') }, body: '{}' });
+        const j = await r.json().catch(() => null);
+        if (j && j.wsUrl) ttsCfg = { url: j.wsUrl.replace(/^wss:/, 'https:').replace(/\/live$/, '/tts'), voice: j.voice || 'Aoede' };
+      } catch (e) { /* read-aloud unavailable */ }
+      return ttsCfg;
+    }
+
+    function stripForSpeech(t) {
+      return String(t || '')
+        .replace(/```[\s\S]*?```/g, ' ')                 // code blocks
+        .replace(/`([^`]+)`/g, '$1')                     // inline code
+        .replace(/!\[[^\]]*\]\([^)]*\)/g, ' ')           // images
+        .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')         // links → label
+        .replace(/https?:\/\/\S+/g, ' ')                 // raw urls
+        .replace(/[*_#>~|]/g, '')                        // markdown symbols
+        .replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{2190}-\u{21FF}\u{2B00}-\u{2BFF}\u{FE0F}\u{200D}]/gu, '') // emoji
+        .replace(/\s+/g, ' ').trim();
+    }
+
+    function chunkForTts(text, max = 230) {
+      const clean = stripForSpeech(text);
+      if (!clean) return [];
+      if (clean.length <= max) return [clean];
+      const sentences = clean.match(/[^.!?]+[.!?]+(?:["')\]]+)?|\S[^.!?]*$/g) || [clean];
+      const chunks = []; let cur = '';
+      for (let s of sentences) {
+        s = s.trim(); if (!s) continue;
+        while (s.length > max) {                          // a single over-long sentence
+          let cut = s.lastIndexOf(' ', max); if (cut < max * 0.6) cut = max;
+          chunks.push(s.slice(0, cut).trim()); s = s.slice(cut).trim();
+        }
+        if (!cur) cur = s;
+        else if ((cur + ' ' + s).length <= max) cur += ' ' + s;
+        else { chunks.push(cur); cur = s; }
+      }
+      if (cur) chunks.push(cur);
+      return chunks;
+    }
+
+    async function synthClip(text) {
+      try {
+        const cfg = await ensureTts(); if (!cfg) return null;
+        const jwt = await getToken();
+        const r = await fetch(cfg.url, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + (jwt || '') }, body: JSON.stringify({ voice: cfg.voice, text }) });
+        const j = await r.json().catch(() => null);
+        return (j && j.audio) ? 'data:audio/wav;base64,' + j.audio : null;
+      } catch (e) { return null; }
+    }
+
+    function playClip(src, seq) {
+      return new Promise((resolve) => {
+        const a = new Audio(src); speakAudio = a;
+        const done = () => { if (speakAudio === a) speakAudio = null; resolve(); };
+        a.onended = done; a.onerror = done;
+        a.play().catch(done);
+        if (seq !== speakSeq) { try { a.pause(); } catch (e) {} done(); }
+      });
+    }
+
+    function setSpeakIcon(btn, state) {
+      if (!btn) return;
+      btn.classList.toggle('playing', state === 'playing');
+      btn.classList.toggle('loading', state === 'loading');
+      btn.innerHTML = state === 'loading' ? SPK.spin : state === 'playing' ? SPK.stop : SPK.spk;
+    }
+
+    function stopSpeak() {
+      speakSeq++;                                          // cancel any in-flight loop
+      if (speakAudio) { try { speakAudio.pause(); } catch (e) {} speakAudio = null; }
+      if (speakBtn) { setSpeakIcon(speakBtn, 'idle'); speakBtn = null; }
+    }
+
+    async function speakMessage(rawText, btn) {
+      if (speakBtn === btn) { stopSpeak(); return; }       // tap again → stop
+      stopSpeak();                                         // stop anything else first
+      const chunks = chunkForTts(rawText);
+      if (!chunks.length) return;
+      const seq = ++speakSeq;
+      speakBtn = btn; setSpeakIcon(btn, 'loading');
+      const jobs = new Array(chunks.length).fill(null);
+      const job = (i) => { if (i < chunks.length && !jobs[i]) jobs[i] = synthClip(chunks[i]); return jobs[i]; };
+      job(0);                                              // kick off the first clip
+      for (let i = 0; i < chunks.length; i++) {
+        const src = await job(i);
+        if (seq !== speakSeq) return;                      // stopped or replaced
+        job(i + 1);                                        // prefetch next while this plays
+        if (!src) continue;                                // skip a failed clip
+        setSpeakIcon(btn, 'playing');
+        await playClip(src, seq);
+        if (seq !== speakSeq) return;
+      }
+      if (seq === speakSeq) { speakBtn = null; setSpeakIcon(btn, 'idle'); }
+    }
+
+    // Build the meta row under a bubble: timestamp + (for Blak's messages) a
+    // read-aloud button. Idempotent — safe to call from both addRow and stamp().
+    function addMeta(col, ts, side, text) {
+      if (!col || col.querySelector('.bx-meta')) return;
+      const meta = document.createElement('div'); meta.className = 'bx-meta';
+      const time = document.createElement('time'); time.className = 'bx-time'; time.textContent = fmtTime(ts);
+      meta.appendChild(time);
+      if (side === 'them' && text && text.trim()) {
+        const sp = document.createElement('button');
+        sp.type = 'button'; sp.className = 'bx-speak'; sp.title = 'Read aloud'; sp.setAttribute('aria-label', 'Read aloud');
+        sp.innerHTML = SPK.spk;
+        const say = text;
+        sp.addEventListener('click', () => speakMessage(say, sp));
+        meta.appendChild(sp);
+      }
+      col.appendChild(meta);
     }
 
     function payload() {
