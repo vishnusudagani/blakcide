@@ -32,16 +32,29 @@ export default async (req) => {
         return new Response('invalid signature', { status: 401 });
     }
 
-    // Hand off to the background worker (returns 202 immediately) then ACK Meta.
-    const origin = `https://${req.headers.get('host')}`;
+    // Route by webhook field: 'calls' → the voice call bridge (Pipecat/Cloud Run,
+    // if WHATSAPP_CALL_BRIDGE_URL is set); everything else ('messages', etc.) → the
+    // background chat worker. One Meta callback URL serves both.
+    let field = 'messages';
+    try { field = JSON.parse(raw)?.entry?.[0]?.changes?.[0]?.field || 'messages'; } catch (_) { /* keep default */ }
+
+    const bridge = process.env.WHATSAPP_CALL_BRIDGE_URL;
+    const target = (field === 'calls' && bridge)
+        ? `${bridge.replace(/\/+$/, '')}/whatsapp`
+        : `https://${req.headers.get('host')}/.netlify/functions/whatsapp-webhook-background`;
+
     try {
-        await fetch(`${origin}/.netlify/functions/whatsapp-webhook-background`, {
+        await fetch(target, {
             method:  'POST',
-            headers: { 'content-type': 'application/json', 'x-wa-internal': process.env.SYMP_API_KEY || '' },
-            body:    raw,
+            headers: {
+                'content-type':       'application/json',
+                'x-hub-signature-256': req.headers.get('x-hub-signature-256') || '', // let the bridge re-verify
+                'x-wa-internal':      process.env.SYMP_API_KEY || '',
+            },
+            body: raw,
         });
     } catch (e) {
-        console.error('[whatsapp-webhook] background dispatch failed:', e?.message || e);
+        console.error('[whatsapp-webhook] dispatch failed:', e?.message || e);
     }
     return new Response('EVENT_RECEIVED', { status: 200 });
 };

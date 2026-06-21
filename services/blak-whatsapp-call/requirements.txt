@@ -1,0 +1,6 @@
+# Verify exact extras against the pinned Pipecat version at deploy time.
+pipecat-ai[google,silero,webrtc]
+fastapi
+uvicorn[standard]
+aiohttp
+python-dotenv
