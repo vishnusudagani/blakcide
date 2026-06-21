@@ -14,26 +14,38 @@ exports.handler = async (event) => {
 
     let body = {};
     try { body = JSON.parse(event.body || '{}'); } catch (_) { /* ignore */ }
-    const { user_id, userText, assistantText } = body || {};
+    const { user_id, userText, assistantText, persona_id, persona_name, skip_global } = body || {};
     if (!user_id || !userText) return { statusCode: 200, body: 'noop' };
 
-    // No time pressure here — background functions get up to 15 minutes.
-    try {
-        const { extractKnowledge } = await import('../../symp-core/lib/knowledge-extractor.mjs');
-        await extractKnowledge(user_id, { userText, assistantText });
-    } catch (e) { console.warn('[learn-bg] extract failed:', e && e.message); }
+    // Fantasy persona: update the persona's OWN memory of this user — always, since
+    // it's the character remembering you, independent of the global-profile toggle.
+    if (persona_id) {
+        try {
+            const { updatePersonaMemory } = await import('../../symp-core/lib/persona-memory.mjs');
+            await updatePersonaMemory(user_id, persona_id, persona_name, { userText, assistantText });
+        } catch (e) { console.warn('[learn-bg] persona memory failed:', e && e.message); }
+    }
 
-    try {
-        const { updateRollingMemory } = await import('../../symp-core/lib/memory-updater.mjs');
-        await updateRollingMemory(user_id, { userText, assistantText });
-    } catch (e) { console.warn('[learn-bg] memory failed:', e && e.message); }
+    // Global profile learning (knowledge + rolling memory + follow-through) — skipped
+    // when a persona's build_profile_from is off. No time pressure: bg gets ~15 min.
+    if (!skip_global) {
+        try {
+            const { extractKnowledge } = await import('../../symp-core/lib/knowledge-extractor.mjs');
+            await extractKnowledge(user_id, { userText, assistantText });
+        } catch (e) { console.warn('[learn-bg] extract failed:', e && e.message); }
 
-    // Proactive follow-through: if Blak promised to check in (or the user has a
-    // clear upcoming thing), silently schedule a future nudge. Auto-detected.
-    try {
-        const { scheduleFollowThrough } = await import('../../symp-core/lib/proactive.mjs');
-        await scheduleFollowThrough(user_id, userText, assistantText);
-    } catch (e) { console.warn('[learn-bg] followthrough failed:', e && e.message); }
+        try {
+            const { updateRollingMemory } = await import('../../symp-core/lib/memory-updater.mjs');
+            await updateRollingMemory(user_id, { userText, assistantText });
+        } catch (e) { console.warn('[learn-bg] memory failed:', e && e.message); }
+
+        // Proactive follow-through: if Blak promised to check in (or the user has a
+        // clear upcoming thing), silently schedule a future nudge. Auto-detected.
+        try {
+            const { scheduleFollowThrough } = await import('../../symp-core/lib/proactive.mjs');
+            await scheduleFollowThrough(user_id, userText, assistantText);
+        } catch (e) { console.warn('[learn-bg] followthrough failed:', e && e.message); }
+    }
 
     return { statusCode: 200, body: 'done' };
 };

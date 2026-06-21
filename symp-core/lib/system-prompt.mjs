@@ -11,7 +11,7 @@ import { buildVaultContextMessage } from './vault-context.mjs';
 import { buildKnowledgeBlock }      from './knowledge-context.mjs';
 import { getPersonaCard, renderPersonaCard } from './persona-engine.mjs';
 import { getVibe, renderVibeSnapshot } from './vibe-tracker.mjs';
-import { fetchPersonaState, fetchPersonaFacts, fetchBlaksydProfile } from './supabase.mjs';
+import { fetchPersonaState, fetchPersonaFacts, fetchBlaksydProfile, fetchPersonaMemory } from './supabase.mjs';
 import { buildCorrectionHint }      from './diagnostic.mjs';
 
 // ── CANONICAL DIRECTIVE (verbatim — do not paraphrase) ──────────────────────
@@ -263,6 +263,11 @@ export async function buildChatSystemStack(userId, opts = {}) {
             { role: 'system', content: CRITICAL_OVERRIDE_TEXT },
             { role: 'system', content: REAL_TIME_DATA_TEXT },
         ];
+        // The persona's OWN memory of this user + history — always on (the character
+        // remembering you; separate from the consent-gated global profile below).
+        if (userId && p.id) {
+            try { const pmem = await fetchPersonaMemory(userId, p.id); if (pmem) pstack.push({ role: 'system', content: `=== WHAT YOU REMEMBER ===\nYour private memory of this person and your history together (you are ${p.name}). Weave it in naturally like someone who remembers — never recite or read it back.\n${pmem}\n=== END MEMORY ===` }); } catch (_) { /* ignore */ }
+        }
         if (userId && p.can_use_profile === true) {
             try { const vibe = await getVibe(userId); const snap = renderVibeSnapshot(vibe); if (snap) pstack.push({ role: 'system', content: snap }); } catch (_) { /* ignore */ }
             try { const vaultMsg = await buildVaultContextMessage(userId); if (vaultMsg && vaultMsg.content) pstack.push(vaultMsg); } catch (_) { /* ignore */ }
@@ -339,6 +344,10 @@ export async function buildInstructionsText(userId, opts = {}) {
             buildFantasyPersonaCard(p, { forVoice: true }),
             CARE_AND_SAFETY_TEXT, CRITICAL_OVERRIDE_TEXT, REAL_TIME_DATA_TEXT,
         ];
+        // Persona's own memory of this user + history — always on (see chat path).
+        if (userId && p.id) {
+            try { const pmem = await fetchPersonaMemory(userId, p.id); if (pmem) parts.push(`=== WHAT YOU REMEMBER ===\nYour private memory of this person and your history together (you are ${p.name}). Weave it in naturally, never recite.\n${pmem}\n=== END MEMORY ===`); } catch (_) { /* ignore */ }
+        }
         if (userId && p.can_use_profile === true) {
             try { const vibe = await getVibe(userId); const snap = renderVibeSnapshot(vibe); if (snap) parts.push(snap); } catch (_) { /* ignore */ }
             try { const vaultMsg = await buildVaultContextMessage(userId); if (vaultMsg && vaultMsg.content) parts.push(vaultMsg.content); } catch (_) { /* ignore */ }

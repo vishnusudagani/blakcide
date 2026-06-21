@@ -42,14 +42,22 @@ const { ENDPOINTS, ERROR_CODES, SYMP_REQUEST_ID_HEADER } = SympContract;
 // Fire-and-forget trigger to the background learning function. The 202 returns
 // fast (so awaiting it is safe within the request), then extraction + memory run
 // independently with no deadline. Best-effort — never blocks or breaks the chat.
-async function fireLearn(req, userId, userText, assistantText) {
+async function fireLearn(req, userId, userText, assistantText, opts = {}) {
     if (!userId || !userText) return;
     try {
         const origin = new URL(req.url).origin;
         await fetch(`${origin}/.netlify/functions/blak-learn-background`, {
             method:  'POST',
             headers: { 'Content-Type': 'application/json', 'x-blak-secret': process.env.SYMP_API_KEY || '' },
-            body:    JSON.stringify({ user_id: userId, userText, assistantText }),
+            body:    JSON.stringify({
+                user_id: userId, userText, assistantText,
+                // Fantasy persona chat: update the persona's OWN memory of this user.
+                // skip_global=true when the persona's build_profile_from is off (memory
+                // still updates; the global profile/knowledge does not).
+                persona_id:   opts.persona_id   || null,
+                persona_name: opts.persona_name || null,
+                skip_global:  !!opts.skip_global,
+            }),
         });
     } catch (e) { /* learning is best-effort */ }
 }
@@ -169,9 +177,15 @@ export default async (req) => {
         // its own words would echo the clone's guesses back into the profile. So learn
         // only from what the USER actually said.
         const learnAssistant = mode === 'clone' ? '' : assembled;
-        // Honour the persona's consent toggle: a persona with build_profile_from
-        // off must not feed the vibe tracker or the knowledge profile.
-        if (mayLearn) {
+        // Fantasy persona: its OWN memory of you always updates (that's how the
+        // character remembers your history); the global profile/vibe stay gated by
+        // the build_profile_from consent toggle. Blak/clone path is unchanged.
+        if (persona) {
+            await fireLearn(req, user_id, lastUser, learnAssistant, { persona_id, persona_name: persona.name, skip_global: !mayLearn });
+            if (mayLearn) {
+                recordEventAsync(user_id, { source: 'ai_chat', sourceSessionId: source_session_id, evidence: learnAssistant ? `User: ${lastUser}\n\nAssistant: ${learnAssistant}` : `User: ${lastUser}` });
+            }
+        } else if (mayLearn) {
             recordEventAsync(user_id, {
                 source: 'ai_chat',
                 sourceSessionId: source_session_id,
@@ -238,8 +252,14 @@ export default async (req) => {
             const lastUser = [...messages].reverse().find(m => m.role === 'user')?.content || '';
             // Clone mode: learn only from the user's words (see non-stream path).
             const learnAssistant = mode === 'clone' ? '' : assembledForVibe;
-            // Honour the persona's consent toggle (see non-stream path above).
-            if (mayLearn) {
+            // Persona's own memory always updates; global profile/vibe gated by consent
+            // (see non-stream path above). Blak/clone path unchanged.
+            if (persona) {
+                await fireLearn(req, user_id, lastUser, learnAssistant, { persona_id, persona_name: persona.name, skip_global: !mayLearn });
+                if (mayLearn) {
+                    recordEventAsync(user_id, { source: 'ai_chat', sourceSessionId: source_session_id, evidence: learnAssistant ? `User: ${lastUser}\n\nAssistant: ${learnAssistant}` : `User: ${lastUser}` });
+                }
+            } else if (mayLearn) {
                 recordEventAsync(user_id, {
                     source: 'ai_chat',
                     sourceSessionId: source_session_id,

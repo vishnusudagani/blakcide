@@ -35,6 +35,36 @@ async function sbFetch(path, { method = 'GET', body, prefer } = {}) {
     return { ok: res.ok, status: res.status, data };
 }
 
+// ── Per-persona memory (the character's own memory of one user) ──────────
+
+export async function fetchPersonaMemory(userId, personaId) {
+    if (!userId || !personaId) return '';
+    const { ok, data } = await sbFetch(
+        `symp_persona_memory?user_id=eq.${encodeURIComponent(userId)}&persona_id=eq.${encodeURIComponent(personaId)}&select=memory`
+    );
+    return (ok && Array.isArray(data) && data[0] && data[0].memory) ? data[0].memory : '';
+}
+
+export async function upsertPersonaMemory(userId, personaId, memory) {
+    if (!userId || !personaId) return false;
+    const body = { memory: String(memory || '').slice(0, 4000), updated_at: new Date().toISOString() };
+    const existing = await sbFetch(
+        `symp_persona_memory?user_id=eq.${encodeURIComponent(userId)}&persona_id=eq.${encodeURIComponent(personaId)}&select=user_id`
+    );
+    if (existing.ok && Array.isArray(existing.data) && existing.data[0]) {
+        const upd = await sbFetch(
+            `symp_persona_memory?user_id=eq.${encodeURIComponent(userId)}&persona_id=eq.${encodeURIComponent(personaId)}`,
+            { method: 'PATCH', body }
+        );
+        return upd.ok;
+    }
+    const ins = await sbFetch('symp_persona_memory', {
+        method: 'POST',
+        body: { user_id: userId, persona_id: personaId, ...body },
+    });
+    return ins.ok;
+}
+
 // ── Reads ───────────────────────────────────────────────────────────────
 
 export async function fetchBlaksydProfile(userId) {
