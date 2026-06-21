@@ -331,6 +331,8 @@ async function loadExisting() {
       selectedPurpose = data.purpose || 'ai_friend';
       $('pf-backstory').value = data.backstory || '';
       $('pf-tone').value = data.voice_tone || '';
+      $('pf-knowledge').value = data.knowledge_note || '';
+      $('pf-examples').value = data.example_dialogues || '';
       selectedVoice = data.voice || 'Aoede';
       avatar = data.avatar && (data.avatar.style || data.avatar.type === 'image') ? data.avatar : avatar;
       initAvatarState();
@@ -364,6 +366,8 @@ $('pf-save').addEventListener('click', async () => {
     backstory: $('pf-backstory').value.trim() || null,
     traits,
     voice_tone: $('pf-tone').value.trim() || null,
+    knowledge_note: $('pf-knowledge').value.trim() || null,
+    example_dialogues: $('pf-examples').value.trim() || null,
     voice: selectedVoice,
     languages: [...$('pf-langs').querySelectorAll('.pf-chip.sel')].map((b: any) => b.dataset.l),
     build_profile_from: $('pf-build').classList.contains('on'),

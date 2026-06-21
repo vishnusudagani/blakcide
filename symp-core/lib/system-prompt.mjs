@@ -173,6 +173,8 @@ export function buildFantasyPersonaCard(p, { forVoice = false } = {}) {
     if (p.backstory) lines.push(`Your story: ${p.backstory}`);
     if (Array.isArray(p.traits) && p.traits.length) lines.push(`Your personality: ${p.traits.join(', ')}.`);
     if (p.voice_tone) lines.push(`How you talk: ${p.voice_tone}`);
+    if (p.knowledge_note) lines.push(`WHAT YOU KNOW — your world, lore and facts you always know (treat as true; reference it naturally, don't dump it all):\n${p.knowledge_note}`);
+    if (p.example_dialogues) lines.push(`HOW YOU TALK — example lines in your own voice. Match this rhythm, wording and tone closely:\n${p.example_dialogues}`);
     const guide = FANTASY_PURPOSE_GUIDE[p.purpose];
     if (guide) lines.push(guide);
     lines.push(

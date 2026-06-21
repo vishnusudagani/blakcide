@@ -81,9 +81,11 @@ import AppLayout from '../../../layouts/AppLayout.astro';
         <input id="pf-trait-input" class="pf-trait-add" placeholder="+ your own" maxlength="24" autocomplete="off" />
       </div>
       <details class="pf-more">
-        <summary>Add a backstory &amp; talking style <span class="pf-opt">(optional)</span></summary>
+        <summary>Backstory, knowledge &amp; talking style <span class="pf-opt">(optional)</span></summary>
         <div class="pf-area-wrap"><textarea id="pf-backstory" class="pf-area" rows="3" placeholder="Who are they? Their story, what they love, how they got here…"></textarea><button type="button" class="pf-improve" data-f="backstory" title="Improve with AI">✨</button></div>
         <div class="pf-area-wrap"><textarea id="pf-tone" class="pf-area" rows="2" placeholder="How they talk — e.g. short replies, dry humour, never preachy."></textarea><button type="button" class="pf-improve" data-f="voice_tone" title="Improve with AI">✨</button></div>
+        <div class="pf-area-wrap"><textarea id="pf-knowledge" class="pf-area" rows="3" placeholder="What should it always know? Lore, your world, facts, rules — for a tutor, a character, an expert on something…"></textarea></div>
+        <div class="pf-area-wrap"><textarea id="pf-examples" class="pf-area" rows="3" placeholder="A few example lines in their voice — sample exchanges that lock exactly how they talk."></textarea></div>
       </details>
     </section>
 
