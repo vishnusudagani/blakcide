@@ -31,11 +31,19 @@ import AppLayout from '../../../layouts/AppLayout.astro';
           <div class="gr-title" id="gr-title">Group</div>
           <button type="button" class="gr-sub" id="gr-sub" title="Members">…</button>
         </div>
+        <button type="button" class="gr-voice-btn" id="gr-voice-btn" title="Start / join voice"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.9.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg></button>
         <button type="button" class="gr-share" id="gr-share" title="Share invite code"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg></button>
         <button type="button" class="gr-menu-btn" id="gr-menu-btn" aria-label="Room menu"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg></button>
       </header>
 
       <div class="gr-ended" id="gr-ended" hidden>This group has ended.</div>
+      <div class="gr-callbar" id="gr-callbar" hidden>
+        <span class="gr-callbar-dot"></span>
+        <span class="gr-callbar-label" id="gr-callbar-label">In voice</span>
+        <span class="gr-callbar-people" id="gr-callbar-people"></span>
+        <button type="button" class="gr-callbar-btn" id="gr-call-mute">Mute</button>
+        <button type="button" class="gr-callbar-btn leave" id="gr-call-leave">Leave</button>
+      </div>
       <div class="gr-stream" id="gr-stream"></div>
 
       <form class="gr-form" id="gr-form" autocomplete="off">
@@ -90,7 +98,19 @@ import AppLayout from '../../../layouts/AppLayout.astro';
   .gr-share, .gr-menu-btn { flex: none; width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; border: 1px solid var(--line); background: var(--surface); color: var(--ink-soft); cursor: pointer; }
   .gr-share svg, .gr-menu-btn svg { width: 18px; height: 18px; }
   .gr-share:hover, .gr-menu-btn:hover { color: var(--coral); border-color: var(--coral); }
+  .gr-voice-btn { flex: none; width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; border: 1px solid var(--line); background: var(--surface); color: var(--coral); cursor: pointer; }
+  .gr-voice-btn svg { width: 18px; height: 18px; }
+  .gr-voice-btn:hover { border-color: var(--coral); transform: translateY(-1px); }
+  .gr-voice-btn.live { background: var(--cta, var(--accent-grad)); color: var(--cta-ink, #3a1430); border-color: transparent; }
   .gr-ended { text-align: center; font-size: var(--fs-sm); color: var(--ink-soft); background: var(--surface-strong); padding: .5rem; }
+  .gr-callbar { display: flex; align-items: center; gap: .5rem; padding: .5rem .7rem; margin: .4rem .2rem 0; border-radius: 14px; background: color-mix(in srgb, var(--mint-deep, #22c55e) 12%, var(--surface)); border: 1px solid color-mix(in srgb, var(--mint-deep, #22c55e) 30%, transparent); flex: none; }
+  .gr-callbar[hidden] { display: none; }
+  .gr-callbar-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--mint-deep, #22c55e); box-shadow: 0 0 8px var(--mint-deep, #22c55e); animation: gr-pulse 1.8s ease-in-out infinite; flex: none; }
+  @keyframes gr-pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+  .gr-callbar-label { font-size: var(--fs-sm); font-weight: 700; color: var(--ink); flex: none; }
+  .gr-callbar-people { flex: 1; min-width: 0; font-size: var(--fs-xs); color: var(--ink-soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .gr-callbar-btn { flex: none; border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: var(--r-pill); padding: .3rem .7rem; font: inherit; font-size: var(--fs-xs); font-weight: 600; cursor: pointer; }
+  .gr-callbar-btn.leave { background: #ff4d4f; color: #fff; border: none; }
 
   .gr-stream { flex: 1; min-height: 0; overflow-y: auto; padding: 1rem .2rem 1.2rem; display: flex; flex-direction: column; gap: .5rem; }
   .gr-row { display: flex; flex-direction: column; max-width: 82%; }
