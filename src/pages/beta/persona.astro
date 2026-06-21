@@ -500,9 +500,14 @@ import AppLayout from '../../layouts/AppLayout.astro';
       getUserRef().catch(() => null);
 
       try {
-        const cr = await fetch(API + '/api/chat', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ user_id: session.userId, messages: history.slice(-12) }),
+        // Talk to the RICH brain as the user's own clone: JWT-authed proxy →
+        // symp-v1-chat with mode:'clone' (first-person identity + their profile +
+        // continuous learning). SSE format is identical, so the voice pipeline below
+        // is unchanged.
+        const cr = await fetch(API + '/api/blaksyd/symp/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + session.token },
+          body: JSON.stringify({ messages: history.slice(-12), mode: 'clone', stream: true }),
         });
         if (!cr.ok || !cr.body) throw new Error('http_' + cr.status);
         const reader = cr.body.getReader();
