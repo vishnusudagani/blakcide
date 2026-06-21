@@ -27,10 +27,10 @@ import AppLayout from '../../layouts/AppLayout.astro';
       <span class="ac-tile-go">→</span>
     </a>
 
-    <section class="ac-card">
-      <div class="ac-head"><h2 class="ac-h">Your apps</h2><span class="ac-soon">soon</span></div>
-      <p class="ac-sub">Connect the apps you live in. Blak will quietly act across them for you — your calendar, messages, music, and more.</p>
-      <div class="ac-apps" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+    <section class="ac-card ac-int-card">
+      <div class="ac-head"><h2 class="ac-h">Your apps</h2></div>
+      <p class="ac-sub">Connect the apps you live in. Blak learns what you love and — starting with cabs — gets things done for you.</p>
+      <div id="ac-integrations" class="int-root"><div class="int-loading">Loading your apps…</div></div>
     </section>
 
     <div class="ac-tile ac-tile-soon" role="note">
@@ -92,10 +92,89 @@ import AppLayout from '../../layouts/AppLayout.astro';
     html[data-theme="light"] .ac-out { color: var(--coral-ink); }
     .ac-out:hover { border-color: rgba(255,107,157,.65); }
     .ac-ver { text-align: center; font-size: var(--fs-xs); color: var(--ink-ghost); margin-top: 1rem; }
+
+    /* ---- App integrations — the "Your apps" grid ---- */
+    .ac-int-card { padding-bottom: 1.3rem; }
+    .int-root { display: flex; flex-direction: column; gap: 1.1rem; margin-top: 1rem; }
+    .int-loading { color: var(--ink-faint); font-size: var(--fs-sm); padding: .4rem 0; }
+
+    /* master: Gmail connect + manual taste */
+    .int-master { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); padding: .95rem 1rem; }
+    .int-m-row { display: flex; align-items: center; gap: .7rem; }
+    .int-m-ic { width: 38px; height: 38px; flex: none; border-radius: 11px; display: grid; place-items: center; color: var(--ink-faint); background: var(--surface-strong); border: 1px solid var(--line); }
+    .int-m-ic svg { width: 20px; height: 20px; }
+    .int-m-ic.on { color: var(--mint-deep); border-color: rgba(106,211,184,.35); background: rgba(106,211,184,.10); }
+    html[data-theme="light"] .int-m-ic.on { color: var(--mint-ink); }
+    .int-m-tx { flex: 1; min-width: 0; }
+    .int-m-tx b { display: block; font-size: var(--fs-md); color: var(--ink); font-weight: 600; }
+    .int-m-tx i { font-style: normal; display: block; font-size: var(--fs-xs); color: var(--ink-soft); margin-top: .1rem; line-height: 1.4; }
+    .int-connect { flex: none; min-height: 44px; padding: .5rem 1.2rem; border-radius: var(--r-pill); border: 0; color: #06231C; font: inherit; font-size: var(--fs-sm); font-weight: 650; cursor: pointer; background: linear-gradient(135deg, var(--mint), var(--mint-deep)); }
+    .int-connect[disabled] { opacity: .5; cursor: default; }
+    .int-ghost { flex: none; min-height: 44px; padding: .5rem 1.1rem; border-radius: var(--r-pill); background: var(--surface); border: 1px solid var(--line-strong); color: var(--ink-soft); font: inherit; font-size: var(--fs-sm); cursor: pointer; }
+    .int-ghost:hover { border-color: rgba(255,107,157,.4); color: var(--coral); }
+    html[data-theme="light"] .int-ghost:hover { color: var(--coral-ink); }
+    .int-note { font-size: var(--fs-sm); color: var(--mint-deep); margin-top: .65rem; line-height: 1.45; }
+    html[data-theme="light"] .int-note { color: var(--mint-ink); }
+    .int-divider { height: 1px; background: var(--line); margin: .9rem 0; }
+    .int-pref-label { display: block; font-size: var(--fs-2xs); font-family: var(--font-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--ink-faint); margin-bottom: .4rem; }
+    .int-pref, .int-book { display: flex; gap: .5rem; }
+    .int-input { flex: 1; min-width: 0; background: var(--bg); border: 1px solid var(--line-strong); border-radius: var(--r-md); padding: .6rem .8rem; color: var(--ink); font: inherit; font-size: 16px; outline: none; }
+    .int-input:focus { border-color: rgba(106,211,184,.55); }
+    .int-pref-go, .int-book-go { flex: none; min-height: 44px; padding: .55rem 1.1rem; border-radius: var(--r-pill); background: var(--surface-strong); border: 1px solid var(--line-strong); color: var(--ink); font: inherit; font-size: var(--fs-sm); font-weight: 600; cursor: pointer; }
+    .int-pref-go:hover, .int-book-go:hover { border-color: rgba(106,211,184,.5); }
+    .int-fwd { font-size: var(--fs-xs); color: var(--ink-faint); margin-top: .7rem; line-height: 1.45; }
+    .int-fwd b { color: var(--ink-soft); font-weight: 600; }
+
+    /* category block */
+    .int-cat-head { display: flex; align-items: center; gap: .55rem; margin-bottom: .6rem; }
+    .int-cat-ic { width: 30px; height: 30px; flex: none; border-radius: 9px; display: grid; place-items: center; background: var(--surface-strong); border: 1px solid var(--line); }
+    .int-cat-ic svg { width: 18px; height: 18px; }
+    .int-cat-ic.coral { color: var(--coral); }
+    html[data-theme="light"] .int-cat-ic.coral { color: var(--coral-ink); }
+    .int-cat-ic.gold { color: var(--gold); }
+    html[data-theme="light"] .int-cat-ic.gold { color: var(--gold-ink); }
+    .int-cat-ic.aqua { color: var(--aqua); }
+    html[data-theme="light"] .int-cat-ic.aqua { color: var(--aqua-ink); }
+    .int-cat-title { font-size: var(--fs-md); font-weight: 600; color: var(--ink); margin: 0; }
+
+    /* Blak action banner */
+    .int-action { border-radius: var(--r-md); padding: .8rem .9rem; margin-bottom: .7rem; border: 1px solid var(--line); background: var(--surface); }
+    .int-action.is-live { border-color: rgba(91,192,255,.32); background: rgba(91,192,255,.06); }
+    .int-action-main { display: flex; align-items: center; gap: .5rem; }
+    .int-action-label { font-size: var(--fs-md); font-weight: 600; color: var(--ink); }
+    .int-action-pill { margin-left: auto; font-family: var(--font-mono); font-size: var(--fs-3xs); letter-spacing: .08em; text-transform: uppercase; padding: .15rem .55rem; border-radius: var(--r-pill); }
+    .is-soon .int-action-pill { color: var(--gold); background: rgba(255,210,122,.12); border: 1px solid rgba(255,210,122,.3); }
+    html[data-theme="light"] .is-soon .int-action-pill { color: var(--gold-ink); border-color: rgba(138,100,16,.3); }
+    .is-live .int-action-pill { color: var(--aqua); background: rgba(91,192,255,.14); border: 1px solid rgba(91,192,255,.35); }
+    html[data-theme="light"] .is-live .int-action-pill { color: var(--aqua-ink); }
+    .int-action-note { font-size: var(--fs-xs); color: var(--ink-soft); margin: .35rem 0 0; line-height: 1.45; }
+    .int-cta { margin-top: .7rem; min-height: 44px; padding: .55rem 1.2rem; border-radius: var(--r-pill); border: 0; color: var(--cta-ink); background: var(--cta); font: inherit; font-size: var(--fs-sm); font-weight: 650; cursor: pointer; box-shadow: var(--shadow-cta); transition: transform var(--t-fast) var(--ease-out); }
+    .int-cta:hover { transform: translateY(-1px); }
+    .int-book { margin-top: .7rem; }
+
+    /* app grid + cards */
+    .int-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(142px, 1fr)); gap: .55rem; }
+    .int-app { background: var(--glass); border: 1px solid var(--line); border-radius: var(--r-md); padding: .7rem .75rem .65rem; display: flex; flex-direction: column; gap: .5rem; }
+    .int-app-top { display: flex; align-items: center; gap: .5rem; min-width: 0; }
+    .int-logo { width: 32px; height: 32px; flex: none; border-radius: 9px; display: grid; place-items: center; font-weight: 700; font-size: var(--fs-md); }
+    .int-app-name { font-size: var(--fs-sm); color: var(--ink); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .int-badges { display: flex; flex-wrap: wrap; gap: .3rem; min-height: 18px; }
+    .int-badge { font-family: var(--font-mono); font-size: 9px; letter-spacing: .03em; text-transform: uppercase; padding: 2px 6px; border-radius: var(--r-pill); border: 1px solid var(--line); }
+    .int-badge.learn { color: var(--mint-deep); border-color: rgba(106,211,184,.3); }
+    html[data-theme="light"] .int-badge.learn { color: var(--mint-ink); }
+    .int-badge.muted { color: var(--ink-faint); }
+    .int-app-actions { margin-top: auto; }
+    .int-open { width: 100%; min-height: 38px; padding: .35rem .6rem; border-radius: var(--r-sm); background: var(--surface); border: 1px solid var(--line-strong); color: var(--ink-soft); font: inherit; font-size: var(--fs-xs); cursor: pointer; }
+    .int-open:hover { color: var(--ink); border-color: var(--ink-faint); }
+
+    .int-manage { display: inline-block; font-size: var(--fs-sm); color: var(--coral); margin-top: .2rem; }
+    .int-manage:hover { text-decoration: underline; }
+    html[data-theme="light"] .int-manage { color: var(--coral-ink); }
   </style>
 
   <script>
     import { supabase } from '../../lib/supabaseClient';
+    import { mountIntegrations } from '../../lib/integrations.mjs';
     const $ = (id) => document.getElementById(id);
     if (!supabase) {
       const h = $('ac-hello'); if (h) h.textContent = 'Sign-in isn’t configured here.';
@@ -112,6 +191,15 @@ import AppLayout from '../../layouts/AppLayout.astro';
         $('ac-email').textContent = u.email || '';
         $('ac-name').value = name;
         $('ac-wa').value = md.whatsapp || '';
+
+        // App integrations — the category-grouped "Your apps" grid.
+        const intEl = $('ac-integrations');
+        if (intEl) {
+          mountIntegrations({ supabase, user: u, container: intEl }).catch((e) => {
+            intEl.innerHTML = '<p class="int-loading">Couldn’t load your apps.</p>';
+            console.error(e);
+          });
+        }
 
         const save = $('ac-save'), saved = $('ac-saved');
         save.addEventListener('click', async () => {
