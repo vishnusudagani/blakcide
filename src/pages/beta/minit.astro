@@ -140,6 +140,16 @@ import AppLayout from '../../layouts/AppLayout.astro';
     .mnx-crisis-line b { font-size: var(--fs-md); color: var(--ink); }
     .mnx-crisis-line span { font-size: var(--fs-xs); color: var(--ink-soft); }
     .mnx-crisis-note { font-size: var(--fs-sm); color: var(--ink-faint); text-align: center; line-height: 1.5; margin: .2rem 0; }
+    /* Phase 3 — seeker in-session safety menu + age prompt */
+    .mnx-safety-list { display: flex; flex-direction: column; gap: .5rem; margin: 1.1rem 0; }
+    .mnx-safety-item { display: flex; flex-direction: column; gap: .15rem; text-align: left; padding: .7rem .9rem; border-radius: var(--r-md); background: var(--surface); border: 1px solid var(--line-strong); cursor: pointer; font: inherit; min-height: 44px; }
+    .mnx-safety-item:hover { border-color: var(--coral); }
+    .mnx-safety-item b { font-size: var(--fs-md); color: var(--ink); }
+    .mnx-safety-item span { font-size: var(--fs-xs); color: var(--ink-soft); }
+    .mnx-safety-item.danger b { color: var(--coral); }
+    html[data-theme="light"] .mnx-safety-item.danger b { color: var(--coral-ink); }
+    .mnx-dob-input { width: 100%; box-sizing: border-box; margin: 1rem 0; background: var(--surface); border: 1px solid var(--line-strong); border-radius: var(--r-md); color: var(--ink); font: inherit; font-size: 16px; padding: .6rem .8rem; }
+    .mnx-dob-input:focus { outline: none; border-color: var(--coral); }
     .mnx-threads { margin-top: 1.6rem; padding-top: 1.4rem; border-top: 1px solid var(--line); }
     .mnx-threads-label { font-family: var(--font-mono); font-size: var(--fs-xs); letter-spacing: .1em; text-transform: uppercase; color: var(--ink-faint); margin-bottom: .7rem; }
     .mnx-thread { display: flex; align-items: center; gap: .8rem; width: 100%; text-align: left; padding: .8rem 1rem; margin-bottom: .5rem; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); cursor: pointer; font: inherit; }
@@ -708,8 +718,83 @@ import AppLayout from '../../layouts/AppLayout.astro';
         document.getElementById('mnx-brief-skip')?.addEventListener('click', () => { if (busy) return; busy = true; logEvent('brief_skipped'); startTalking(isAnonymous, preferredId, null); });
       }
 
+      // ── Phase 3 safety: 18+ gate + in-session controls ─────────────────────
+      let ageChecked = false;
+      async function ensureAge() {
+        if (ageChecked) return 'ok';
+        let under = null;
+        try {
+          const { data } = await supabase.from('user_profiles').select('dob, age').eq('id', user.id).maybeSingle();
+          if (data && (data.dob || data.age != null)) {
+            const cutoff = new Date(); cutoff.setFullYear(cutoff.getFullYear() - 18);
+            under = data.dob ? (new Date(data.dob) > cutoff) : (data.age < 18);
+          }
+        } catch (e) { ageChecked = true; return 'ok'; }
+        if (under === null) return await promptDob();
+        if (!under) ageChecked = true;
+        return under ? 'under' : 'ok';
+      }
+      function promptDob() {
+        return new Promise((resolve) => {
+          const m = document.createElement('div'); m.className = 'mnx-modal';
+          m.innerHTML = `<div class="mnx-modal-card" style="text-align:center"><div style="font-size:1.6rem">🎂</div><h3>One quick thing</h3><p>Minit is for adults — 18 and over. Mind confirming your date of birth? We keep it private.</p><input type="date" id="mnx-dob" class="mnx-dob-input" aria-label="Date of birth" /><div class="mnx-modal-actions"><button type="button" class="mnx-btn-ghost" id="mnx-dob-cancel">Not now</button><button type="button" class="mnx-btn-go" id="mnx-dob-ok">Confirm</button></div></div>`;
+          document.body.appendChild(m);
+          const done = (v) => { m.remove(); resolve(v); };
+          m.addEventListener('click', (e) => { if (e.target === m) done('cancel'); });
+          m.querySelector('#mnx-dob-cancel').addEventListener('click', () => done('cancel'));
+          m.querySelector('#mnx-dob-ok').addEventListener('click', async () => {
+            const v = document.getElementById('mnx-dob')?.value; if (!v) return;
+            const dobD = new Date(v); const cutoff = new Date(); cutoff.setFullYear(cutoff.getFullYear() - 18);
+            const under = dobD > cutoff;
+            const age = Math.max(0, Math.floor((Date.now() - dobD.getTime()) / 31557600000));
+            try { await supabase.from('user_profiles').update({ dob: v, age }).eq('id', user.id); } catch (e) {}
+            if (!under) ageChecked = true;
+            done(under ? 'under' : 'ok');
+          });
+        });
+      }
+      function showUnderage() {
+        immersive(false);
+        root.innerHTML = `<div class="mnx-schedule"><div class="mnx-empty-orb"></div><h3>Minit is for adults</h3><p>Talking with our listeners is for people 18 and over. Blak is always here for you, though — any time, day or night.</p><div class="mnx-choice"><a class="mnx-go" href="/beta/blak/" style="text-decoration:none">Talk to Blak</a></div><div class="mnx-ring-actions"><button type="button" class="mnx-cancel" id="mnx-ua-back">Back</button></div></div>`;
+        document.getElementById('mnx-ua-back')?.addEventListener('click', showEntry);
+      }
+      function showSafetyMenu() {
+        const m = document.createElement('div'); m.className = 'mnx-modal';
+        m.innerHTML = `<div class="mnx-modal-card" style="text-align:left"><h3 style="text-align:center">Anytime you need</h3><div class="mnx-safety-list"><button type="button" class="mnx-safety-item" data-a="pause"><b>Take a breath</b><span>Pause for a moment — your listener will wait.</span></button><button type="button" class="mnx-safety-item" data-a="topic"><b>Change the subject</b><span>Gently let them know you'd like to move on.</span></button><button type="button" class="mnx-safety-item danger" data-a="report"><b>Something feels off</b><span>Report this session — it goes straight to our team.</span></button></div><div class="mnx-modal-actions"><button type="button" class="mnx-btn-go" id="mnx-safety-close" style="flex:1">Close</button></div></div>`;
+        document.body.appendChild(m);
+        const close = () => m.remove();
+        m.addEventListener('click', (e) => { if (e.target === m) close(); });
+        m.querySelector('#mnx-safety-close').addEventListener('click', close);
+        m.querySelectorAll('.mnx-safety-item').forEach((b) => b.addEventListener('click', () => {
+          const a = b.dataset.a; close();
+          if (a === 'pause') showPause();
+          else if (a === 'topic') { const inp = document.getElementById('mnx-text'); if (inp) { inp.value = 'I’d like to gently change the subject, if that’s okay.'; sendMessage(); } }
+          else if (a === 'report') reportSession();
+        }));
+      }
+      function showPause() {
+        const p = document.createElement('div'); p.className = 'mnx-modal';
+        p.innerHTML = `<div class="mnx-modal-card" style="text-align:center"><div class="mnx-empty-orb" style="margin:0 auto 1rem"></div><h3>Take your time</h3><p>No rush. Breathe. Your listener’s still here whenever you’re ready.</p><div class="mnx-modal-actions"><button type="button" class="mnx-btn-go" id="mnx-pause-done" style="flex:1">I’m ready</button></div></div>`;
+        document.body.appendChild(p);
+        const close = () => p.remove();
+        p.addEventListener('click', (e) => { if (e.target === p) close(); });
+        p.querySelector('#mnx-pause-done').addEventListener('click', close);
+      }
+      async function reportSession() {
+        try { await supabase.from('connect_sessions').update({ flagged_at: new Date().toISOString(), flag_reason: 'seeker-flagged' }).eq('id', activeSessionId); logEvent('reported', { by: 'seeker' }); } catch (e) {}
+        const m = document.createElement('div'); m.className = 'mnx-modal';
+        m.innerHTML = `<div class="mnx-modal-card" style="text-align:center"><div style="font-size:1.6rem">🛡️</div><h3>Thank you for telling us</h3><p>This session’s been flagged for our team to look at. You can end anytime — you’re always in control.</p><div class="mnx-modal-actions"><button type="button" class="mnx-btn-go" id="mnx-rep-close" style="flex:1">Close</button></div></div>`;
+        document.body.appendChild(m);
+        const close = () => m.remove();
+        m.addEventListener('click', (e) => { if (e.target === m) close(); });
+        m.querySelector('#mnx-rep-close').addEventListener('click', close);
+      }
+
       async function startTalking(isAnonymous, preferredId, brief) {
         if (brief === undefined) { busy = false; return showBriefApprove(isAnonymous, preferredId); }
+        const ageStatus = await ensureAge();
+        if (ageStatus === 'under') { busy = false; return showUnderage(); }
+        if (ageStatus === 'cancel') { busy = false; return showEntry(); }
         immersive(true);
         root.innerHTML = `<div class="mnx-ring"><div class="mnx-scan"><span class="mnx-scan-sweep"></span><span class="mnx-scan-core"></span></div><h3>Finding someone for you…</h3><p>${preferredId ? 'Looking for your listener.' : 'Connecting you with a real person who’s here.'}</p></div>`;
         const intake = (() => { const o = {}; try { o.language = localStorage.getItem('mnx_lang') || 'English'; } catch (e) {} if (brief && Array.isArray(brief.topics) && brief.topics.length) o.topics = brief.topics.slice(0, 6); return o; })();
@@ -733,6 +818,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
         else if (outcome === 'banned') { logEvent('banned'); showRestricted(); }
         else if (outcome === 'busy_full') { logEvent('busy_full'); showBusyAll(isAnonymous); }
         else if (outcome === 'capped') { logEvent('capped'); showCapped(); }
+        else if (outcome === 'underage') { logEvent('underage'); showUnderage(); }
         else { logEvent('no_listener'); showSchedule(isAnonymous); }
       }
       async function fetchListenerName(sid) {
@@ -877,7 +963,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
         if (chatOpen) return; chatOpen = true; immersive(true);
         if (connectWatchdog) clearTimeout(connectWatchdog);
         root.innerHTML = `<div class="mnx-chat">
-          <div class="mnx-chat-head"><div class="mnx-chat-pic">${PERSON_SVG}</div><div class="mnx-chat-who"><b id="mnx-who">${matchedName ? esc(matchedName) : 'Your listener'}</b><i><span style="width:6px;height:6px;border-radius:50%;background:currentColor;display:inline-block"></span> here with you · private</i></div><span class="mnx-budget" id="mnx-budget"></span><button type="button" class="mnx-icon-btn" id="mnx-call-btn" style="margin-left:auto" aria-label="Voice call" title="Voice call">${PHONE_SVG}</button><button type="button" class="mnx-chat-end" id="mnx-end">End</button></div>
+          <div class="mnx-chat-head"><div class="mnx-chat-pic">${PERSON_SVG}</div><div class="mnx-chat-who"><b id="mnx-who">${matchedName ? esc(matchedName) : 'Your listener'}</b><i><span style="width:6px;height:6px;border-radius:50%;background:currentColor;display:inline-block"></span> here with you · private</i></div><span class="mnx-budget" id="mnx-budget"></span><button type="button" class="mnx-icon-btn" id="mnx-call-btn" style="margin-left:auto" aria-label="Voice call" title="Voice call">${PHONE_SVG}</button><button type="button" class="mnx-icon-btn" id="mnx-safety" aria-label="Safety and options" title="Safety and options"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></button><button type="button" class="mnx-chat-end" id="mnx-end">End</button></div>
           <div class="mnx-call" id="mnx-call" hidden></div>
           <div class="mnx-feed" id="mnx-feed" role="log" aria-live="polite"><div class="mnx-sys">🔒 You’re connected to a real person. Say what’s on your mind.</div></div>
           <button type="button" class="mnx-newmsgs" id="mnx-newmsgs">↓ New messages</button>
@@ -887,6 +973,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
         document.getElementById('mnx-send')?.addEventListener('click', sendMessage);
         document.getElementById('mnx-end')?.addEventListener('click', confirmEnd);
         document.getElementById('mnx-call-btn')?.addEventListener('click', startCall);
+        document.getElementById('mnx-safety')?.addEventListener('click', showSafetyMenu);
         if (!matchedName) fetchListenerName(activeSessionId).then((n) => { if (n) { matchedName = n; const w = document.getElementById('mnx-who'); if (w) w.textContent = n; } });
         document.getElementById('mnx-newmsgs')?.addEventListener('click', () => { feed.scrollTop = feed.scrollHeight; document.getElementById('mnx-newmsgs').classList.remove('show'); });
         feed.addEventListener('scroll', () => { if (nearBottom(feed)) document.getElementById('mnx-newmsgs')?.classList.remove('show'); });
