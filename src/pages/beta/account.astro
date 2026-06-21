@@ -170,6 +170,26 @@ import AppLayout from '../../layouts/AppLayout.astro';
     .int-manage { display: inline-block; font-size: var(--fs-sm); color: var(--coral); margin-top: .2rem; }
     .int-manage:hover { text-decoration: underline; }
     html[data-theme="light"] .int-manage { color: var(--coral-ink); }
+
+    /* cab booking flow (preview until ONDC sandbox is wired) */
+    .int-book { align-items: center; }
+    .int-pv { font-family: var(--font-mono); font-size: var(--fs-3xs); letter-spacing: .08em; text-transform: uppercase; color: var(--aqua); border: 1px solid rgba(91,192,255,.35); border-radius: var(--r-pill); padding: .1rem .45rem; margin-left: .4rem }
+    html[data-theme="light"] .int-pv { color: var(--aqua-ink) }
+    .int-book-head { font-size: var(--fs-sm); color: var(--ink); font-weight: 600; margin: .2rem 0 .5rem; display: flex; align-items: center }
+    .int-book-status { font-size: var(--fs-sm); color: var(--ink-soft); padding: .55rem 0 }
+    .int-rides { display: flex; flex-direction: column; gap: .45rem; margin-top: .7rem }
+    .int-ride { display: grid; grid-template-columns: 1fr auto; grid-template-areas: "mode fare" "meta fare"; gap: 0 .6rem; text-align: left; padding: .55rem .8rem; border-radius: var(--r-md); background: var(--surface); border: 1px solid var(--line-strong); cursor: pointer; transition: border-color var(--t-fast) var(--ease-out) }
+    .int-ride:hover { border-color: rgba(91,192,255,.5) }
+    .int-ride-mode { grid-area: mode; font-size: var(--fs-sm); color: var(--ink); font-weight: 600 }
+    .int-ride-meta { grid-area: meta; font-size: var(--fs-xs); color: var(--ink-faint) }
+    .int-ride-fare { grid-area: fare; align-self: center; font-size: var(--fs-md); color: var(--ink); font-weight: 650 }
+    .int-confirm { margin-top: .7rem }
+    .int-confirm-row { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: .6rem .8rem; border-radius: var(--r-md); background: var(--surface); border: 1px solid var(--line); font-size: var(--fs-sm); color: var(--ink) }
+    .int-confirm-note { font-size: var(--fs-xs); color: var(--ink-soft); margin: .5rem 0 .7rem; line-height: 1.45 }
+    .int-confirm-go { margin-top: 0 }
+    .int-link { background: none; border: 0; color: var(--ink-faint); font: inherit; font-size: var(--fs-xs); cursor: pointer; padding: .5rem .2rem; text-decoration: underline; text-underline-offset: 2px }
+    .int-link:hover { color: var(--ink-soft) }
+    .int-booked { margin-top: .7rem }
   </style>
 
   <script>

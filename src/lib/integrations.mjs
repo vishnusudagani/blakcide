@@ -4,14 +4,15 @@
 // plus the master "learn" controls. What's real today vs. wired-for-foundation:
 //   • REAL NOW: "Tell Blak a taste" writes a live fact to symp_knowledge_facts;
 //     "Open ↗" deep-links the app; data-control links to the profile page.
-//   • STUBBED (clean, honest, ready to wire): Connect Gmail (needs the Google
-//     OAuth backend), and the cab "Ask Blak to book a ride" panel (needs the
-//     ONDC provider sandbox). Both show exactly what they'll do.
+//   • PREVIEW (foundation-gated): Connect Gmail (needs the Google OAuth backend),
+//     and the cab booking flow (needs the ONDC provider sandbox — see ondc-rides).
+//     Both are clearly labelled so nobody thinks a real ride/connection happened.
 //
 // State (which providers a user connected) lives in symp_integrations; reads are
 // defensive so the grid still renders before that migration is applied.
 
 import { CATEGORIES, APPS, MAIL_ICON, appsByCategory } from './integrations-catalog.mjs';
+import { searchRides, confirmRide, RIDES_LIVE } from './ondc-rides.mjs';
 
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) =>
   ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -23,8 +24,8 @@ const state = {
   container: null,
   connections: [],   // rows from symp_integrations (defensive: [] if table absent)
   gmailPending: false,
-  bookingOpen: false,
   note: '',          // transient status line under the master card
+  booking: { open: false, step: 'dest', from: 'Current location', to: '', options: [], selected: null, result: null },
 };
 
 const conn = (provider) => state.connections.find((c) => c.provider === provider) || null;
@@ -64,9 +65,9 @@ function categoryBlock(cat) {
       '</div>' +
       '<p class="int-action-note">' + esc(a.note) + '</p>' +
       (live
-        ? '<button class="int-cta" data-act="book-toggle">' + (state.bookingOpen ? 'Close' : 'Book a ride') + '</button>'
+        ? '<button class="int-cta" data-act="book-toggle">' + (state.booking.open ? 'Close' : 'Book a ride') + '</button>'
         : '') +
-      (live && state.bookingOpen ? bookingPanel() : '') +
+      (live && state.booking.open ? bookingPanel() : '') +
     '</div>';
   return (
     '<section class="int-cat">' +
@@ -80,12 +81,62 @@ function categoryBlock(cat) {
   );
 }
 
-// ---------- render: cab booking panel (UI real; submit stubbed to ONDC) ----------
+// ---------- render: cab booking flow (Beckn-shaped; preview until RIDES_LIVE) ----------
+const pvPill = () => (RIDES_LIVE ? '' : '<span class="int-pv">Preview</span>');
+
 function bookingPanel() {
+  const b = state.booking;
+  if (b.step === 'searching') return '<p class="int-book-status">Blak is finding you a ride…</p>';
+  if (b.step === 'confirming') return '<p class="int-book-status">Confirming your ride…</p>';
+  if (b.step === 'options') {
+    const rows = b.options.map((o) =>
+      '<button class="int-ride" data-act="book-pick" data-id="' + esc(o.id) + '">' +
+        '<span class="int-ride-mode">' + esc(o.mode) + '</span>' +
+        '<span class="int-ride-meta">' + esc(o.provider) + ' · ~' + o.etaMin + ' min</span>' +
+        '<span class="int-ride-fare">₹' + o.fareInr + '</span>' +
+      '</button>'
+    ).join('');
+    return (
+      '<div class="int-rides">' +
+        '<div class="int-book-head">Rides to “' + esc(b.to) + '” ' + pvPill() + '</div>' +
+        rows +
+        '<button class="int-link" data-act="book-reset">Change destination</button>' +
+      '</div>'
+    );
+  }
+  if (b.step === 'confirm') {
+    const o = b.selected;
+    return (
+      '<div class="int-confirm">' +
+        '<div class="int-book-head">Confirm ' + pvPill() + '</div>' +
+        '<div class="int-confirm-row"><span>' + esc(o.mode) + ' · ' + esc(o.provider) + '</span><b>₹' + o.fareInr + '</b></div>' +
+        '<p class="int-confirm-note">' + (RIDES_LIVE
+          ? 'Pay ₹' + o.fareInr + ' with one UPI tap to confirm.'
+          : 'Preview only — no real ride or payment. Real booking + UPI confirm switch on with the ONDC sandbox.') + '</p>' +
+        '<div class="int-book">' +
+          '<button class="int-link" data-act="book-back">Back</button>' +
+          '<button class="int-cta int-confirm-go" data-act="book-confirm">' + (RIDES_LIVE ? 'Confirm & pay' : 'Confirm (preview)') + '</button>' +
+        '</div>' +
+      '</div>'
+    );
+  }
+  if (b.step === 'booked') {
+    const o = b.selected;
+    return (
+      '<div class="int-booked">' +
+        '<div class="int-book-head">' + (RIDES_LIVE ? 'Ride confirmed' : 'Preview complete') + ' ' + pvPill() + '</div>' +
+        '<p class="int-book-status">' + (RIDES_LIVE
+          ? esc(o.mode) + ' on the way · OTP ' + esc((b.result && b.result.otp) || '••••')
+          : 'That’s how booking will feel. Real rides arrive when the ONDC provider sandbox is connected.') + '</p>' +
+        '<button class="int-link" data-act="book-reset">Book another</button>' +
+      '</div>'
+    );
+  }
+  // default: destination entry
   return (
     '<div class="int-book">' +
-      '<input class="int-input" id="int-dest" placeholder="Where to? (e.g. Hi-Tech City)" />' +
-      '<button class="int-book-go" data-act="book-go">Book with Blak</button>' +
+      '<input class="int-input" id="int-dest" placeholder="Where to? (e.g. Hi-Tech City)" value="' + esc(b.to) + '" />' +
+      '<button class="int-book-go" data-act="book-find">Find rides</button>' +
     '</div>'
   );
 }
@@ -134,7 +185,7 @@ function paint() {
 }
 
 // ---------- actions ----------
-function openApp(url, name) {
+function openApp(url) {
   if (!url) return;
   try { window.open(url, '_blank', 'noopener'); } catch (e) { location.href = url; }
 }
@@ -161,7 +212,7 @@ async function savePref(text) {
 }
 
 function connectGmail() {
-  // Stub: the Google OAuth (gmail.readonly) backend lands with the foundation.
+  // Preview: the Google OAuth (gmail.readonly) backend lands with the foundation.
   // When it does, swap this for supabase.auth OAuth + a server token store.
   state.gmailPending = true;
   state.note = 'Receipt-reading is being switched on — you’ll connect Gmail right here shortly. Meanwhile, tell Blak a taste below.';
@@ -180,38 +231,64 @@ async function disconnectGmail() {
   paint();
 }
 
-function bookRide(dest) {
-  // Stub: real booking goes through the ONDC provider (sandbox first). This shows
-  // the intended flow until those keys are in.
-  const where = String(dest || '').trim();
-  state.bookingOpen = false;
-  state.note = where
-    ? 'Got it — a ride to "' + where + '". Blak books real rides over ONDC; that connection switches on with the provider sandbox.'
-    : 'Blak books real rides over ONDC — that connection switches on with the provider sandbox.';
+async function findRides() {
+  if (!state.booking.to) return;
+  state.booking.step = 'searching';
   paint();
+  try {
+    const res = await searchRides({ from: state.booking.from, to: state.booking.to });
+    state.booking.options = res.options || [];
+    state.booking.step = 'options';
+  } catch (e) {
+    state.booking.step = 'dest';
+    state.note = 'Couldn’t fetch rides right now.';
+  }
+  paint();
+}
+
+async function confirmBooking() {
+  state.booking.step = 'confirming';
+  paint();
+  try {
+    state.booking.result = await confirmRide({
+      option: state.booking.selected, from: state.booking.from, to: state.booking.to,
+    });
+    state.booking.step = 'booked';
+  } catch (e) {
+    state.booking.step = 'confirm';
+    state.note = 'Couldn’t confirm right now.';
+  }
+  paint();
+}
+
+function resetBooking(keepOpen) {
+  state.booking.step = 'dest';
+  state.booking.options = [];
+  state.booking.selected = null;
+  state.booking.result = null;
+  if (keepOpen === false) state.booking.open = false;
 }
 
 function onClick(e) {
   const btn = e.target.closest('[data-act]');
   if (!btn) return;
   const act = btn.dataset.act;
-  if (act === 'open') openApp(btn.dataset.url, btn.dataset.name);
-  else if (act === 'pref-save') {
-    const el = document.getElementById('int-pref');
-    savePref(el ? el.value : '');
-  } else if (act === 'gmail-connect') connectGmail();
+  if (act === 'open') openApp(btn.dataset.url);
+  else if (act === 'pref-save') { const el = document.getElementById('int-pref'); savePref(el ? el.value : ''); }
+  else if (act === 'gmail-connect') connectGmail();
   else if (act === 'gmail-disconnect') disconnectGmail();
-  else if (act === 'book-toggle') { state.bookingOpen = !state.bookingOpen; paint(); }
-  else if (act === 'book-go') {
-    const el = document.getElementById('int-dest');
-    bookRide(el ? el.value : '');
-  }
+  else if (act === 'book-toggle') { state.booking.open = !state.booking.open; if (state.booking.open) resetBooking(true); paint(); }
+  else if (act === 'book-find') { const el = document.getElementById('int-dest'); state.booking.to = el ? el.value.trim() : ''; findRides(); }
+  else if (act === 'book-pick') { state.booking.selected = state.booking.options.find((o) => o.id === btn.dataset.id) || null; state.booking.step = 'confirm'; paint(); }
+  else if (act === 'book-back') { state.booking.step = 'options'; paint(); }
+  else if (act === 'book-confirm') { confirmBooking(); }
+  else if (act === 'book-reset') { resetBooking(true); paint(); }
 }
 
 function onKeydown(e) {
   if (e.key !== 'Enter') return;
   if (e.target.id === 'int-pref') { e.preventDefault(); savePref(e.target.value); }
-  else if (e.target.id === 'int-dest') { e.preventDefault(); bookRide(e.target.value); }
+  else if (e.target.id === 'int-dest') { e.preventDefault(); state.booking.to = e.target.value.trim(); findRides(); }
 }
 
 export async function mountIntegrations({ supabase, user, container }) {
