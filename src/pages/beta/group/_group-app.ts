@@ -69,6 +69,7 @@ function markEnded() {
   $('gr-ended').hidden = false;
   $('gr-input').disabled = true; $('gr-send').disabled = true;
   $('gr-end').hidden = true;
+  if (inVoice) leaveVoice();
 }
 async function loadMembers() {
   try { const { data } = await supabase!.from('blak_group_members').select('user_id,display_name,role').eq('room_id', roomId); members = data || []; } catch { members = []; }
@@ -129,6 +130,9 @@ function wireRoomUI() {
   $('gr-sub').addEventListener('click', openSheet);
   $('gr-menu-btn').addEventListener('click', openSheet);
   $('gr-sheet-scrim').addEventListener('click', closeSheet);
+  $('gr-voice-btn').addEventListener('click', startVoice);
+  $('gr-call-mute').addEventListener('click', toggleMute);
+  $('gr-call-leave').addEventListener('click', leaveVoice);
   $('gr-share').addEventListener('click', async () => {
     const txt = 'Join my Blak group — code: ' + roomCode;
     try { if (navigator.share) { await navigator.share({ text: txt }); } else { await navigator.clipboard.writeText(roomCode); toast('Invite code copied'); } }
@@ -143,6 +147,52 @@ function wireRoomUI() {
     try { await supabase!.rpc('bg_end_room', { p_room: roomId }); markEnded(); $('gr-sheet').hidden = true; } catch (e) {}
   });
 }
+
+// ── Voice call (LiveKit) ──────────────────────────────────────────────────────
+let lkRoom: any = null, inVoice = false, lkMuted = false, lkWake: any = null;
+async function acquireWake() { try { if ('wakeLock' in navigator && !lkWake) { lkWake = await (navigator as any).wakeLock.request('screen'); lkWake.addEventListener('release', () => { lkWake = null; }); } } catch (e) {} }
+function releaseWake() { try { if (lkWake) { lkWake.release(); lkWake = null; } } catch (e) {} }
+function renderVoicePeople() {
+  if (!lkRoom) return;
+  const remotes = lkRoom.remoteParticipants ? [...lkRoom.remoteParticipants.values()] : [];
+  const names = [myName + ' (you)', ...remotes.map((p: any) => p.name || 'Someone')];
+  $('gr-callbar-label').textContent = 'In voice · ' + names.length;
+  $('gr-callbar-people').textContent = names.join(', ');
+}
+function endVoiceUI() {
+  inVoice = false; lkMuted = false;
+  $('gr-callbar').hidden = true; $('gr-voice-btn').classList.remove('live'); $('gr-call-mute').textContent = 'Mute';
+  document.querySelectorAll('audio[data-lk]').forEach((e) => e.remove());
+  releaseWake();
+}
+async function startVoice() {
+  if (inVoice || ended) return;
+  $('gr-voice-btn').classList.add('live'); toast('Connecting voice…');
+  let cfg: any = null;
+  try {
+    const jwt = (await supabase!.auth.getSession()).data?.session?.access_token;
+    const r = await fetch('/api/blaksyd/symp/livekit-token', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + jwt }, body: JSON.stringify({ room_id: roomId, display_name: myName }) });
+    if (r.status === 503) { $('gr-voice-btn').classList.remove('live'); toast('Voice isn’t switched on yet'); return; }
+    cfg = await r.json();
+  } catch (e) { $('gr-voice-btn').classList.remove('live'); toast('Could not start voice'); return; }
+  if (!cfg || !cfg.ok || !cfg.data || !cfg.data.token) { $('gr-voice-btn').classList.remove('live'); toast('Voice unavailable'); return; }
+  try {
+    const lk: any = await import('livekit-client');
+    lkRoom = new lk.Room({ adaptiveStream: true, dynacast: true });
+    lkRoom.on(lk.RoomEvent.TrackSubscribed, (track: any) => { if (track.kind === 'audio') { const el = track.attach(); el.setAttribute('data-lk', '1'); el.style.display = 'none'; document.body.appendChild(el); } renderVoicePeople(); });
+    lkRoom.on(lk.RoomEvent.TrackUnsubscribed, (track: any) => { try { track.detach().forEach((e: any) => e.remove()); } catch (e) {} renderVoicePeople(); });
+    lkRoom.on(lk.RoomEvent.ParticipantConnected, renderVoicePeople);
+    lkRoom.on(lk.RoomEvent.ParticipantDisconnected, renderVoicePeople);
+    lkRoom.on(lk.RoomEvent.Disconnected, () => endVoiceUI());
+    await lkRoom.connect(cfg.data.url, cfg.data.token);
+    await lkRoom.localParticipant.setMicrophoneEnabled(true);
+    inVoice = true; $('gr-callbar').hidden = false; $('gr-voice-btn').classList.add('live');
+    acquireWake(); renderVoicePeople();
+  } catch (e) { $('gr-voice-btn').classList.remove('live'); toast('Could not join voice'); try { if (lkRoom) await lkRoom.disconnect(); } catch (e2) {} lkRoom = null; }
+}
+async function leaveVoice() { try { if (lkRoom) await lkRoom.disconnect(); } catch (e) {} lkRoom = null; endVoiceUI(); }
+async function toggleMute() { if (!lkRoom) return; lkMuted = !lkMuted; try { await lkRoom.localParticipant.setMicrophoneEnabled(!lkMuted); } catch (e) {} $('gr-call-mute').textContent = lkMuted ? 'Unmute' : 'Mute'; }
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && inVoice) acquireWake(); });
 
 async function openRoom() {
   $('gr-room').hidden = false;
