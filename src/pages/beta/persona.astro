@@ -51,7 +51,28 @@ import AppLayout from '../../layouts/AppLayout.astro';
         </div>
       </section>
 
-      <!-- ── 2. TALK TO YOUR PERSONA ──────────────────────────────── -->
+      <!-- ── 2. YOUR MIND — self-interview (feeds the same profile) ── -->
+      <section class="ap-card px-card">
+        <div class="px-card-head">
+          <h2 class="px-card-title">Your mind</h2>
+          <span class="px-card-tag" id="px-mind-tag">tell it about you</span>
+        </div>
+        <p class="px-phrase-label">Tell your Persona about you — in your own words, any language. The more you share, the more it thinks like you.</p>
+        <blockquote class="px-phrase" id="px-mind-q"></blockquote>
+        <div class="px-mind">
+          <textarea id="px-mind-answer" class="px-mind-text" rows="3" placeholder="Type or speak your answer…"></textarea>
+          <div class="px-mind-actions">
+            <button type="button" class="px-mic-sm" id="px-mind-mic" aria-label="Speak your answer" title="Speak">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v4"/></svg>
+            </button>
+            <button type="button" class="px-btn px-btn-go" id="px-mind-save">Save &amp; next</button>
+            <button type="button" class="px-btn px-btn-ghost" id="px-mind-skip">Skip</button>
+          </div>
+        </div>
+        <p class="px-msg" id="px-mind-msg" role="status"></p>
+      </section>
+
+      <!-- ── 3. TALK TO YOUR PERSONA ──────────────────────────────── -->
       <section class="ap-card px-card">
         <div class="px-card-head">
           <h2 class="px-card-title">Talk to your persona</h2>
@@ -126,6 +147,9 @@ import AppLayout from '../../layouts/AppLayout.astro';
     .px-train { margin: 1rem 0; }
     .px-train-hint { margin: .5rem 0 0; font-size: var(--fs-sm); color: var(--ink-soft); }
     .px-train-msg { margin: .5rem 0 0; }
+    .px-mind { display: flex; flex-direction: column; gap: .6rem; }
+    .px-mind-text { width: 100%; box-sizing: border-box; resize: vertical; min-height: 3.4rem; padding: .7rem .8rem; border-radius: 12px; border: 1px solid var(--line); background: transparent; color: var(--ink); font: inherit; font-size: 16px; line-height: 1.5; }
+    .px-mind-actions { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; }
 
     /* talk */
     .px-thread { display: flex; flex-direction: column; gap: .7rem; max-height: 320px; overflow-y: auto; padding: .3rem .1rem .6rem; }
@@ -646,6 +670,71 @@ import AppLayout from '../../layouts/AppLayout.astro';
       };
     }
 
+    // ── Your Mind: a self-interview that feeds the SAME profile the clone reads.
+    // Each answer is pushed through the shared learning loop (call-learn →
+    // extractKnowledge + updateRollingMemory), so the clone's mind grows fast. ──
+    const MIND_QUESTIONS = [
+      "What's a strong opinion you hold that not everyone agrees with?",
+      "Tell me about someone who matters a lot to you — and why.",
+      "What's a story about yourself you always end up telling people?",
+      "How would your closest friends describe you?",
+      "What do you care about more than most people do?",
+      "What always makes you laugh?",
+      "What were you like growing up?",
+      "What's a goal or dream you're chasing right now?",
+      "What's a hot take you'd happily defend?",
+      "Walk me through what a normal day looks like for you.",
+      "What's something you've completely changed your mind about?",
+      "What do you do when you're stressed or low?",
+      "What's a small thing that genuinely makes you happy?",
+      "Who do you look up to, and why?",
+    ];
+    let mindIndex = 0, mindSaved = 0;
+    function renderMindQuestion() { $('px-mind-q').textContent = MIND_QUESTIONS[mindIndex % MIND_QUESTIONS.length]; }
+    function nextMind() { mindIndex = (mindIndex + 1) % MIND_QUESTIONS.length; renderMindQuestion(); }
+
+    async function onMindSave() {
+      const q = MIND_QUESTIONS[mindIndex % MIND_QUESTIONS.length];
+      const a = $('px-mind-answer').value.trim();
+      if (a.length < 2) { setMsg($('px-mind-msg'), 'err', 'Say a little more — a sentence or two.'); return; }
+      if (!session || !session.token) { setMsg($('px-mind-msg'), 'err', 'Sign in first.'); return; }
+      const btn = $('px-mind-save'); btn.disabled = true;
+      setMsg($('px-mind-msg'), 'busy', 'Saving to your mind…');
+      try {
+        const r = await fetch(API + '/api/blaksyd/symp/call-learn', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + session.token },
+          body: JSON.stringify({ userText: q + '\n\nMy answer: ' + a, assistantText: '' }),
+        });
+        if (!r.ok) throw new Error('http_' + r.status);
+        mindSaved++;
+        $('px-mind-answer').value = '';
+        $('px-mind-tag').textContent = mindSaved + ' shared — your clone is learning you';
+        setMsg($('px-mind-msg'), 'ok', 'Got it. Your Persona just learned a little more about you.');
+        nextMind();
+      } catch (e) {
+        setMsg($('px-mind-msg'), 'err', 'Could not save just now. Try again.');
+      } finally { btn.disabled = false; }
+    }
+
+    // Dictate the answer with the browser's speech recognition (its own recognizer,
+    // independent of the talk mic).
+    let mindRecog = null, mindListening = false;
+    function setupMindMic() {
+      const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SR) { $('px-mind-mic').style.display = 'none'; return; }
+      $('px-mind-mic').onclick = () => {
+        if (mindListening) { mindRecog && mindRecog.stop(); return; }
+        mindRecog = new SR();
+        mindRecog.lang = navigator.language || 'en-US';
+        mindRecog.interimResults = false; mindRecog.maxAlternatives = 1;
+        mindRecog.onresult = (e) => { const t = e.results[0][0].transcript; if (t) { const ta = $('px-mind-answer'); ta.value = (ta.value ? ta.value + ' ' : '') + t.trim(); } };
+        mindRecog.onend = () => { mindListening = false; $('px-mind-mic').classList.remove('is-rec'); };
+        mindRecog.onerror = () => { mindListening = false; $('px-mind-mic').classList.remove('is-rec'); };
+        mindListening = true; $('px-mind-mic').classList.add('is-rec'); mindRecog.start();
+      };
+    }
+
     // ── boot ──────────────────────────────────────────────────────────────
     (async () => {
       svaraWarmPing();   // start warming the voice GPU now — overlaps with the interview
@@ -659,6 +748,10 @@ import AppLayout from '../../layouts/AppLayout.astro';
       $('px-redo').onclick = resetReview;
       $('px-delete').onclick = onDelete;
       $('px-train-btn').onclick = onTrain;
+      renderMindQuestion();
+      setupMindMic();
+      $('px-mind-save').onclick = onMindSave;
+      $('px-mind-skip').onclick = nextMind;
       $('px-form').addEventListener('submit', (e) => {
         e.preventDefault();
         const v = $('px-input').value.trim(); if (!v) return;
