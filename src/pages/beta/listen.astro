@@ -58,6 +58,11 @@ import AppLayout from '../../layouts/AppLayout.astro';
     .lsn-stat { padding: .55rem 1rem; min-width: 76px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); }
     .lsn-stat b { display: block; font-size: var(--fs-xl); color: var(--ink); font-weight: 650; }
     .lsn-stat span { font-size: var(--fs-2xs); font-family: var(--font-mono); letter-spacing: .06em; text-transform: uppercase; color: var(--ink-faint); }
+    .lsn-helped { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem; margin: -.6rem 0 1.4rem; }
+    .lsn-helped-k { font-size: var(--fs-2xs); font-family: var(--font-mono); letter-spacing: .06em; text-transform: uppercase; color: var(--ink-faint); }
+    .lsn-helped-tag { display: inline-flex; align-items: center; gap: .3rem; font-size: var(--fs-xs); color: var(--mint-deep); background: rgba(106,211,184,.12); border: 1px solid rgba(106,211,184,.3); border-radius: var(--r-pill); padding: .2rem .6rem; }
+    .lsn-helped-tag i { font-style: normal; color: var(--ink-faint); font-size: .85em; }
+    html[data-theme="light"] .lsn-helped-tag { color: var(--mint-ink); }
 
     .lsn-state { text-align: center; padding: 2.2rem 1.4rem; }
     .lsn-state-orb { width: 60px; height: 60px; border-radius: 50%; margin: 0 auto 1.1rem; background: radial-gradient(circle at 35% 30%, rgba(255,255,255,.5), var(--mint-deep)); box-shadow: 0 0 26px rgba(106,211,184,.35); }
@@ -379,10 +384,14 @@ import AppLayout from '../../layouts/AppLayout.astro';
       }
 
       async function statsHTML() {
-        let today = 0;
-        try { const { count } = await supabase.from('connect_sessions').select('id', { count: 'exact', head: true }).eq('listener_id', profile.id).eq('status', 'completed').gte('created_at', startOfToday()); today = count || 0; } catch (e) {}
+        let st = null;
+        try { const { data } = await supabase.rpc('minit_listener_stats'); st = data; } catch (e) {}
+        const eht = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
         const rating = profile.rating != null ? Number(profile.rating).toFixed(1) : '—';
-        return `<div class="lsn-stats"><div class="lsn-stat"><b>${rating}</b><span>rating</span></div><div class="lsn-stat"><b>${profile.reviews_count || 0}</b><span>reviews</span></div><div class="lsn-stat"><b>${today}</b><span>today</span></div></div>`;
+        const today = (st && st.today) || 0, week = (st && st.week) || 0, all = (st && st.alltime) || 0;
+        const helped = (st && Array.isArray(st.helped)) ? st.helped : [];
+        const helpedHTML = helped.length ? `<div class="lsn-helped"><span class="lsn-helped-k">people felt</span>${helped.map((h) => `<span class="lsn-helped-tag">${eht(h.tag)}<i>${Number(h.n) || ''}</i></span>`).join('')}</div>` : '';
+        return `<div class="lsn-stats"><div class="lsn-stat"><b>${rating}</b><span>rating</span></div><div class="lsn-stat"><b>${profile.reviews_count || 0}</b><span>reviews</span></div><div class="lsn-stat"><b>${today}</b><span>today</span></div><div class="lsn-stat"><b>${week}</b><span>this week</span></div><div class="lsn-stat"><b>${all}</b><span>all time</span></div></div>${helpedHTML}`;
       }
 
       async function renderHome() {
