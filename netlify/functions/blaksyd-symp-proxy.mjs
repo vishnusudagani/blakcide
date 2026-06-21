@@ -31,6 +31,7 @@ const RATE_LIMITS = {
     vision: ['ai_vision', 15, 120], transcribe: ['ai_transcribe', 20, 200],
     tts: ['ai_misc', 40, 400], title: ['ai_misc', 40, 400], 'proactive-checkin': ['ai_misc', 40, 400],
     'persona-generate': ['ai_misc', 30, 200],
+    summarize: ['ai_misc', 30, 200], 'day-review': ['ai_misc', 40, 400],
     // Per-turn call learning — own bucket so it never starves chat; generous for
     // long calls, cheap (free-tier extractor), and fail-open if the limiter trips.
     'call-learn': ['ai_learn', 60, 600],
@@ -88,6 +89,7 @@ export default async (req) => {
     // (vault/:user_id) and raw whisper WS are deliberately excluded.
     const ALLOWED = new Set([
         'health', 'chat', 'voice', 'title', 'transcribe', 'vision', 'tts', 'persona-generate', 'call-learn', 'group-mediate', 'livekit-token',
+        'summarize', 'day-review',
         'session/ingest', 'analyse/run', 'copilot/hint',
         'proactive-checkin',
         // Unified Soul:

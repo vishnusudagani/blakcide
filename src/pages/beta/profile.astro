@@ -19,6 +19,17 @@ import AppLayout from '../../layouts/AppLayout.astro';
       <a class="pf-talk" href="/beta/blak/">Talk to Blak →</a>
     </header>
 
+    <section class="ap-card pf-cal" id="pf-cal" hidden>
+      <div class="pf-cal-head">
+        <button type="button" class="pf-cal-nav" id="pf-cal-prev" aria-label="Previous month">‹</button>
+        <h2 class="pf-cal-title" id="pf-cal-title">—</h2>
+        <button type="button" class="pf-cal-nav" id="pf-cal-next" aria-label="Next month">›</button>
+      </div>
+      <p class="pf-cal-blurb">Your days, remembered. Pick one to see what Blaksyd saved — chats, moods, journals and more.</p>
+      <div class="pf-cal-grid" id="pf-cal-grid"></div>
+      <div class="pf-day" id="pf-day" hidden></div>
+    </section>
+
     <div id="pf-root" class="pf-root">
       <div class="pf-loading">Loading your profile…</div>
     </div>
@@ -35,6 +46,33 @@ import AppLayout from '../../layouts/AppLayout.astro';
 
     .pf-loading { color: var(--ink-faint); padding: 2rem 0; }
     .pf-root { display: flex; flex-direction: column; gap: 1rem; }
+
+    /* Day-in-review calendar */
+    .pf-cal { padding: 1.1rem 1.2rem 1.25rem; margin-bottom: 1rem; }
+    .pf-cal[hidden] { display: none; }
+    .pf-cal-head { display: flex; align-items: center; gap: .5rem; }
+    .pf-cal-title { font-family: var(--font-display); font-weight: 600; font-size: var(--fs-xl); margin: 0; flex: 1; text-align: center; color: var(--ink); }
+    .pf-cal-nav { background: none; border: 1px solid var(--line); color: var(--ink); border-radius: var(--r-sm); width: 44px; height: 44px; cursor: pointer; font-size: 1.2rem; line-height: 1; flex: none; }
+    .pf-cal-nav:hover:not(:disabled) { border-color: var(--line-strong); color: var(--coral); }
+    .pf-cal-nav:disabled { opacity: .35; cursor: default; }
+    .pf-cal-blurb { color: var(--ink-faint); font-size: var(--fs-sm); margin: .55rem 0 .85rem; }
+    .pf-cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; }
+    .pf-cal-wd { text-align: center; font-family: var(--font-mono); font-size: var(--fs-2xs); color: var(--ink-faint); padding: .15rem 0 .3rem; }
+    .pf-cal-cell { position: relative; aspect-ratio: 1; display: flex; align-items: center; justify-content: center; background: none; border: 0; border-radius: var(--r-sm); color: var(--ink-soft); font: inherit; font-size: var(--fs-sm); cursor: pointer; -webkit-tap-highlight-color: transparent; }
+    .pf-cal-cell.blank { visibility: hidden; cursor: default; }
+    .pf-cal-cell:hover:not(.blank):not(:disabled) { background: var(--surface-strong); color: var(--ink); }
+    .pf-cal-cell.today { box-shadow: inset 0 0 0 1px var(--line-strong); }
+    .pf-cal-cell.sel { background: var(--cta); color: var(--cta-ink); }
+    .pf-cal-cell:disabled { color: var(--ink-faint); opacity: .35; cursor: default; }
+    .pf-cal-dot { position: absolute; bottom: 5px; left: 50%; transform: translateX(-50%); width: 5px; height: 5px; border-radius: 50%; background: var(--coral); }
+    .pf-cal-cell.sel .pf-cal-dot { background: var(--cta-ink); }
+    .pf-day { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--line); }
+    .pf-day[hidden] { display: none; }
+    .pf-day-date { font-family: var(--font-mono); font-size: var(--fs-xs); color: var(--ink-faint); margin: 0 0 .45rem; letter-spacing: .03em; }
+    .pf-day-body { font-size: var(--fs-md); line-height: 1.62; color: var(--ink); white-space: pre-wrap; word-wrap: break-word; margin: 0; }
+    .pf-day-body.loading, .pf-day-empty { color: var(--ink-faint); margin: 0; }
+    .pf-day-counts { display: flex; flex-wrap: wrap; gap: .35rem; margin-top: .75rem; }
+    .pf-day-count { font-family: var(--font-mono); font-size: 9px; letter-spacing: .04em; text-transform: uppercase; padding: 2px 8px; border-radius: 999px; color: var(--ink-soft); background: var(--surface); border: 1px solid var(--line); }
 
     .pf-area { padding: 1.1rem 1.2rem 1.25rem; }
     .pf-area-head { display: flex; align-items: baseline; gap: .6rem; margin-bottom: .35rem; }
@@ -270,6 +308,100 @@ import AppLayout from '../../layouts/AppLayout.astro';
       }
     });
 
+    // ── Day-in-review calendar ────────────────────────────────────────────
+    const calCard = document.getElementById('pf-cal');
+    const calGrid = document.getElementById('pf-cal-grid');
+    const calTitle = document.getElementById('pf-cal-title');
+    const calPrev = document.getElementById('pf-cal-prev');
+    const calNext = document.getElementById('pf-cal-next');
+    const dayEl = document.getElementById('pf-day');
+    const MO = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+    const WD = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+    const pad = (n) => String(n).padStart(2, '0');
+    const ymd = (y, m, d) => `${y}-${pad(m + 1)}-${pad(d)}`;
+    const tzo = () => new Date().getTimezoneOffset();
+    let calY, calM, selDate = null, activeDates = new Set();
+
+    async function token() { try { return (await supabase.auth.getSession()).data?.session?.access_token || null; } catch (e) { return null; } }
+
+    function renderGrid() {
+      const now = new Date();
+      const todayStr = ymd(now.getFullYear(), now.getMonth(), now.getDate());
+      const first = new Date(calY, calM, 1).getDay();
+      const days = new Date(calY, calM + 1, 0).getDate();
+      let html = WD.map((w) => `<div class="pf-cal-wd">${w}</div>`).join('');
+      for (let i = 0; i < first; i++) html += '<button class="pf-cal-cell blank" tabindex="-1"></button>';
+      for (let d = 1; d <= days; d++) {
+        const ds = ymd(calY, calM, d);
+        const future = ds > todayStr;
+        const cls = ['pf-cal-cell'];
+        if (ds === todayStr) cls.push('today');
+        if (ds === selDate) cls.push('sel');
+        const dot = activeDates.has(ds) ? '<span class="pf-cal-dot"></span>' : '';
+        html += `<button class="${cls.join(' ')}" data-d="${ds}"${future ? ' disabled' : ''}>${d}${dot}</button>`;
+      }
+      calGrid.innerHTML = html;
+    }
+
+    async function loadMonth(y, m) {
+      calY = y; calM = m;
+      calTitle.textContent = MO[m] + ' ' + y;
+      activeDates = new Set();
+      renderGrid();
+      // disable "next" when we're at the current month
+      const now = new Date();
+      calNext.disabled = (y > now.getFullYear()) || (y === now.getFullYear() && m >= now.getMonth());
+      try {
+        const jwt = await token();
+        const r = await fetch('/api/blaksyd/symp/day-review', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + (jwt || '') }, body: JSON.stringify({ month: `${y}-${pad(m + 1)}`, tzo: tzo() }) });
+        const j = await r.json().catch(() => null);
+        const dates = j && j.data && j.data.dates;
+        if (Array.isArray(dates)) { activeDates = new Set(dates); renderGrid(); }
+      } catch (e) { /* dots best-effort */ }
+    }
+
+    async function openDay(ds) {
+      dayEl.hidden = false;
+      const human = new Date(ds + 'T00:00:00').toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+      dayEl.innerHTML = `<p class="pf-day-date">${esc(human)}</p><p class="pf-day-body loading">Looking back at your day…</p>`;
+      try {
+        const jwt = await token();
+        const r = await fetch('/api/blaksyd/symp/day-review', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + (jwt || '') }, body: JSON.stringify({ date: ds, tzo: tzo() }) });
+        const j = await r.json().catch(() => null);
+        const data = j && j.data;
+        if (!data) throw new Error('x');
+        const body = (data.empty || !data.summary)
+          ? '<p class="pf-day-empty">Nothing saved for this day — a quiet one, or before you joined.</p>'
+          : `<p class="pf-day-body">${esc(data.summary)}</p>`;
+        const c = data.counts || {};
+        const chips = [];
+        if (c.chats) chips.push(c.chats + ' message' + (c.chats > 1 ? 's' : '') + ' with Blak');
+        if (c.moods) chips.push(c.moods + ' mood' + (c.moods > 1 ? 's' : ''));
+        if (c.journals) chips.push(c.journals + ' journal' + (c.journals > 1 ? 's' : ''));
+        if (c.minit) chips.push(c.minit + ' Minit');
+        if (c.nexus) chips.push(c.nexus + ' Nexus');
+        const counts = chips.length ? `<div class="pf-day-counts">${chips.map((x) => `<span class="pf-day-count">${esc(x)}</span>`).join('')}</div>` : '';
+        dayEl.innerHTML = `<p class="pf-day-date">${esc(human)}</p>${body}${counts}`;
+      } catch (e) {
+        dayEl.innerHTML = `<p class="pf-day-date">${esc(human)}</p><p class="pf-day-empty">Couldn’t load this day — try again in a moment.</p>`;
+      }
+    }
+
+    if (calGrid) calGrid.addEventListener('click', (e) => {
+      const btn = e.target.closest('.pf-cal-cell[data-d]');
+      if (!btn || btn.disabled) return;
+      selDate = btn.dataset.d; renderGrid(); openDay(selDate);
+    });
+    if (calPrev) calPrev.addEventListener('click', () => { let m = calM - 1, y = calY; if (m < 0) { m = 11; y--; } loadMonth(y, m); });
+    if (calNext) calNext.addEventListener('click', () => { if (calNext.disabled) return; let m = calM + 1, y = calY; if (m > 11) { m = 0; y++; } loadMonth(y, m); });
+
+    function initCalendar() {
+      if (!calCard) return;
+      calCard.hidden = false;
+      const n = new Date();
+      loadMonth(n.getFullYear(), n.getMonth());
+    }
+
     (async () => {
       if (!supabase) { root.innerHTML = '<div class="pf-loading">Sign-in isn’t configured in this environment yet.</div>'; return; }
       try {
@@ -278,6 +410,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
       } catch (e) { user = null; }
       if (!user) { return; } // AppLayout's auth gate will bounce to sign-in
       await reload();
+      initCalendar();
     })();
   </script>
 </AppLayout>
