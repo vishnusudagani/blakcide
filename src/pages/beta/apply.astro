@@ -1,0 +1,109 @@
+---
+// Become a Minit listener — the self-serve application (Phase 4 supply funnel).
+// Applicant submits → status 'applied' → admin screens & certifies (/beta/admin)
+// → certify provisions a `listeners` row. Owner-RLS on listener_applications.
+import AppLayout from '../../layouts/AppLayout.astro';
+---
+<AppLayout active="account" title="Become a listener">
+  <div class="ap-page">
+    <header class="ly-head">
+      <p class="ap-kicker">Minit</p>
+      <h1 class="ap-h1">Become a listener</h1>
+      <p class="ap-sub">Minit listeners are real, trained people who hold space for others — anonymously and kindly, with care on both sides. Tell us about you; we read every application personally.</p>
+    </header>
+    <div id="ly-root" class="ly-root"><div class="ly-loading">Loading…</div></div>
+  </div>
+
+  <style is:global>
+    .ly-head { margin-bottom: 1.4rem; }
+    .ly-root { max-width: 560px; }
+    .ly-loading { color: var(--ink-faint); padding: 2rem 0; }
+    .ly-form { display: flex; flex-direction: column; gap: 1.1rem; }
+    .ly-l { display: block; font-size: var(--fs-sm); color: var(--ink-soft); font-weight: 600; }
+    .ly-opt { color: var(--ink-faint); font-weight: 400; }
+    .ly-in { display: block; width: 100%; box-sizing: border-box; margin-top: .4rem; background: var(--surface); border: 1px solid var(--line-strong); border-radius: var(--r-md); color: var(--ink); font: inherit; font-size: 16px; padding: .65rem .85rem; }
+    .ly-in:focus { outline: none; border-color: var(--coral); }
+    .ly-ta { resize: vertical; line-height: 1.5; }
+    .ly-chips { display: flex; flex-wrap: wrap; gap: .45rem; margin-top: .5rem; }
+    .ly-chip { font: inherit; font-size: var(--fs-sm); color: var(--ink-soft); background: var(--surface); border: 1px solid var(--line-strong); border-radius: var(--r-pill); padding: .4rem .85rem; min-height: 40px; cursor: pointer; }
+    .ly-chip.on { background: var(--cta-grad); color: #1b1030; border-color: transparent; font-weight: 600; }
+    .ly-train { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); padding: 1rem 1.1rem; font-size: var(--fs-sm); color: var(--ink-soft); }
+    .ly-train b { color: var(--ink); }
+    .ly-train ul { margin: .6rem 0; padding-left: 1.1rem; display: flex; flex-direction: column; gap: .4rem; }
+    .ly-agree { display: flex; align-items: flex-start; gap: .55rem; margin-top: .7rem; color: var(--ink); font-weight: 600; cursor: pointer; }
+    .ly-agree input { margin-top: .15rem; width: 18px; height: 18px; flex: none; accent-color: var(--coral); }
+    .ly-go { align-self: flex-start; min-height: 48px; padding: .7rem 1.5rem; border-radius: var(--r-pill); border: 0; background: var(--cta-grad); color: #1b1030; font: inherit; font-weight: 700; font-size: var(--fs-md); cursor: pointer; box-shadow: 0 0 20px rgba(255,107,157,.3); }
+    .ly-go[disabled] { opacity: .6; cursor: default; }
+    .ly-card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); padding: 2rem 1.4rem; text-align: center; }
+    .ly-card h2 { font-family: var(--font-display); font-size: var(--fs-2xl); color: var(--ink); margin: 0; }
+    .ly-card p { color: var(--ink-soft); margin: .6rem 0 1.2rem; line-height: 1.6; }
+    .ly-done-orb { width: 64px; height: 64px; margin: 0 auto 1rem; border-radius: 50%; background: radial-gradient(circle at 50% 40%, rgba(106,211,184,.5), rgba(91,192,255,.2) 60%, transparent 72%); }
+  </style>
+
+  <script>
+    import { supabase } from '../../lib/supabaseClient';
+    const root = document.getElementById('ly-root');
+    const LANGS = ['English', 'Hindi', 'Telugu'];
+    const SPECS = ['Anxiety & stress', 'Loneliness', 'Relationships', 'Student life', 'Work & burnout', 'Grief', 'Just listening'];
+    let user = null;
+    const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+    function form() {
+      root.innerHTML = `
+        <form id="ly-form" class="ly-form">
+          <label class="ly-l">Your name <span class="ly-opt">(what seekers see)</span><input class="ly-in" id="ly-name" maxlength="40" required placeholder="e.g. Aanya" /></label>
+          <div class="ly-l">Languages you can listen in
+            <div class="ly-chips" id="ly-langs">${LANGS.map((l) => `<button type="button" class="ly-chip" data-v="${l}">${l}</button>`).join('')}</div>
+          </div>
+          <div class="ly-l">What you're good with <span class="ly-opt">(pick a few)</span>
+            <div class="ly-chips" id="ly-specs">${SPECS.map((s) => `<button type="button" class="ly-chip" data-v="${esc(s)}">${esc(s)}</button>`).join('')}</div>
+          </div>
+          <label class="ly-l">A line about you <span class="ly-opt">(optional)</span><textarea class="ly-in ly-ta" id="ly-blurb" maxlength="200" rows="2" placeholder="Warm and brief — what a seeker would see."></textarea></label>
+          <label class="ly-l">Why do you want to listen?<textarea class="ly-in ly-ta" id="ly-why" maxlength="600" rows="3" required placeholder="What draws you to this?"></textarea></label>
+          <label class="ly-l">Someone says: “I don’t even know why I’m here, nothing helps.” How would you respond?<textarea class="ly-in ly-ta" id="ly-scenario" maxlength="600" rows="3" required placeholder="In your own words…"></textarea></label>
+          <div class="ly-train">
+            <b>Before you apply — the essentials:</b>
+            <ul>
+              <li>Listen first. You’re not here to fix or advise — you’re here so they’re not alone.</li>
+              <li>Anonymous &amp; private. Never ask who they are; never share what’s said.</li>
+              <li>Two-sided safety. If someone may be in danger, escalate — you don’t carry it alone.</li>
+              <li>Not therapy. We don’t diagnose or label. We’re human company, not clinical care.</li>
+            </ul>
+            <label class="ly-agree"><input type="checkbox" id="ly-agree" /> I’ve read these and I’ll listen this way.</label>
+          </div>
+          <button type="submit" class="ly-go" id="ly-submit">Send application</button>
+        </form>`;
+      const langSel = new Set(), specSel = new Set();
+      const toggle = (host, set) => host.addEventListener('click', (e) => { const b = e.target.closest('.ly-chip'); if (!b) return; const v = b.dataset.v; if (set.has(v)) { set.delete(v); b.classList.remove('on'); } else { set.add(v); b.classList.add('on'); } });
+      toggle(root.querySelector('#ly-langs'), langSel);
+      toggle(root.querySelector('#ly-specs'), specSel);
+      root.querySelector('#ly-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const name = document.getElementById('ly-name').value.trim();
+        const why = document.getElementById('ly-why').value.trim();
+        const scenario = document.getElementById('ly-scenario').value.trim();
+        if (!name || !why || !scenario) return;
+        if (!langSel.size) { alert('Please pick at least one language you can listen in.'); return; }
+        if (!document.getElementById('ly-agree').checked) { alert('Please read and agree to how Minit listening works.'); return; }
+        const btn = document.getElementById('ly-submit'); btn.disabled = true; btn.textContent = 'Sending…';
+        const row = { user_id: user.id, display_name: name, languages: [...langSel], specialties: [...specSel], blurb: document.getElementById('ly-blurb').value.trim() || null, why, screening: { scenario }, agreed: true, status: 'applied' };
+        const { error } = await supabase.from('listener_applications').insert(row);
+        if (error) { btn.disabled = false; btn.textContent = 'Send application'; alert('Could not send: ' + error.message); return; }
+        done();
+      });
+    }
+    function done() { root.innerHTML = '<div class="ly-card"><div class="ly-done-orb"></div><h2>Thank you — we’ve got it.</h2><p>We read every application personally. If it’s a fit, we’ll be in touch to get you set up. Thank you for wanting to be there for people.</p><a class="ly-go" href="/beta/" style="text-decoration:none;display:inline-flex">Back to Blaksyd</a></div>'; }
+    function already(kind) { root.innerHTML = kind === 'listener'
+      ? '<div class="ly-card"><h2>You’re already a listener 💛</h2><p>Head to your console whenever you’re ready to go online.</p><a class="ly-go" href="/beta/listen/" style="text-decoration:none;display:inline-flex">Open listener console</a></div>'
+      : '<div class="ly-card"><h2>Your application’s in</h2><p>Thanks for applying — we’re reviewing it now and we’ll reach out if it’s a fit.</p><a class="ly-go" href="/beta/" style="text-decoration:none;display:inline-flex">Back to Blaksyd</a></div>'; }
+
+    (async () => {
+      if (!supabase) { root.innerHTML = '<div class="ly-loading">Sign-in isn’t configured in this environment yet.</div>'; return; }
+      try { const { data } = await supabase.auth.getSession(); user = data?.session?.user || null; } catch (e) { user = null; }
+      if (!user) return; // AppLayout's auth gate bounces to sign-in
+      try { const { data: l } = await supabase.from('listeners').select('id').eq('user_id', user.id).maybeSingle(); if (l) return already('listener'); } catch (e) {}
+      try { const { data: a } = await supabase.from('listener_applications').select('status').eq('user_id', user.id).in('status', ['applied', 'screening']).maybeSingle(); if (a) return already('applied'); } catch (e) {}
+      form();
+    })();
+  </script>
+</AppLayout>

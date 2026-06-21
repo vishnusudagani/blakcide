@@ -28,6 +28,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
     .adm-sec .adm-count { font-size: var(--fs-xs); font-family: var(--font-mono); color: var(--ink-faint); }
     .adm-row { display: flex; align-items: center; gap: .8rem; padding: .8rem 1rem; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); margin-bottom: .5rem; }
     .adm-row.flag { border-left: 3px solid var(--coral); }
+    .adm-app-actions { display: flex; gap: .4rem; flex: none; flex-wrap: wrap; }
     .adm-row-main { flex: 1; min-width: 0; word-break: break-word; overflow-wrap: anywhere; }
     .adm-row-main b { font-size: var(--fs-md); color: var(--ink); font-weight: 600; }
     .adm-row-main .mono { font-family: var(--font-mono); font-size: var(--fs-2xs); color: var(--ink-faint); }
@@ -62,10 +63,12 @@ import AppLayout from '../../layouts/AppLayout.astro';
       async function load() {
         const { data, error } = await supabase.rpc('minit_admin_overview');
         if (error) { root.innerHTML = '<div class="adm-msg">This area is for the Blaksyd Trust &amp; Safety team.</div>'; return; }
-        render(data);
+        let apps = [];
+        try { const { data: ad } = await supabase.rpc('minit_admin_applications'); apps = ad || []; } catch (e) {}
+        render(data, apps);
       }
 
-      function render(d) {
+      function render(d, apps) {
         const s = d.stats || {};
         const flagged = d.flagged || [], bans = d.bans || [], listeners = d.listeners || [];
         const stat = (n, l) => `<div class="adm-stat"><b>${n ?? 0}</b><span>${l}</span></div>`;
@@ -78,6 +81,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
           <div class="adm-sec"><h2>Flagged sessions <span class="adm-count">${flagged.length}</span></h2>${flagged.length ? flagged.map(flagRow).join('') : '<div class="adm-empty">No flags. All quiet.</div>'}</div>
           <div class="adm-sec"><h2>Banned users <span class="adm-count">${bans.length}</span></h2>${bans.length ? bans.map(banRow).join('') : '<div class="adm-empty">No active bans.</div>'}</div>
           <div class="adm-sec"><h2>Listeners <span class="adm-count">${listeners.length}</span></h2>${listeners.length ? listeners.map(lRow).join('') : '<div class="adm-empty">No listeners yet.</div>'}</div>
+          <div class="adm-sec"><h2>Applications <span class="adm-count">${apps.length}</span></h2>${apps.length ? apps.map((a) => `<div class="adm-row"><div class="adm-row-main"><b>${esc(a.display_name)}</b> <span class="mono">${(a.languages || []).join(', ')}${a.specialties && a.specialties.length ? ' · ' + a.specialties.join(', ') : ''}</span><i>${esc(a.why || '')}</i>${a.screening && a.screening.scenario ? `<i style="margin-top:.3rem">Scenario: ${esc(a.screening.scenario)}</i>` : ''}</div><div class="adm-app-actions"><button type="button" class="adm-btn" data-approve="${a.id}">Certify</button><button type="button" class="adm-btn danger" data-reject="${a.id}">Decline</button></div></div>`).join('') : '<div class="adm-empty">No applications waiting.</div>'}</div>
           <div class="adm-sec"><h2>Provision a listener</h2>
             <form class="adm-form" id="adm-prov">
               <input class="full" type="email" id="pv-email" placeholder="Email (must have signed in)" required />
@@ -106,6 +110,8 @@ import AppLayout from '../../layouts/AppLayout.astro';
           if (error) { b.disabled = false; alert('Unban failed: ' + error.message); return; }
           load();
         }));
+        root.querySelectorAll('[data-approve]').forEach((b) => b.addEventListener('click', async () => { b.disabled = true; const { error } = await supabase.rpc('minit_admin_review_application', { p_id: b.getAttribute('data-approve'), p_approve: true, p_note: null }); if (error) { b.disabled = false; alert('Certify failed: ' + error.message); return; } load(); }));
+        root.querySelectorAll('[data-reject]').forEach((b) => b.addEventListener('click', async () => { const note = window.prompt('Reason (optional)?', ''); if (note === null) return; b.disabled = true; const { error } = await supabase.rpc('minit_admin_review_application', { p_id: b.getAttribute('data-reject'), p_approve: false, p_note: note || null }); if (error) { b.disabled = false; alert('Decline failed: ' + error.message); return; } load(); }));
         const splitList = (v) => v.split(',').map((x) => x.trim()).filter(Boolean);
         document.getElementById('adm-prov')?.addEventListener('submit', async (e) => {
           e.preventDefault();
