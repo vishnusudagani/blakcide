@@ -32,6 +32,52 @@ const esc = (s: any) => { const d = document.createElement('div'); d.textContent
 const fmtTime = (ts: number) => { try { return new Date(ts).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }); } catch { return ''; } };
 async function getToken() { try { return (await supabase!.auth.getSession()).data?.session?.access_token || null; } catch { return null; } }
 
+// ── Hear a reply in the persona's voice (reuses the /tts bridge: { voice, text } → WAV) ──
+let ttsUrl: string | null = null;
+let curAudio: HTMLAudioElement | null = null;
+const SPK_ICON = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H2v6h4l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/></svg>';
+async function deriveTtsUrl() {
+  try {
+    const jwt = await getToken();
+    const r = await fetch('/api/gemini-live-session', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + (jwt || '') }, body: '{}' });
+    const j = await r.json().catch(() => null);
+    if (j && j.wsUrl) ttsUrl = j.wsUrl.replace(/^wss:/, 'https:').replace(/\/live$/, '/tts');
+  } catch (e) { /* voice unavailable — button is a silent no-op */ }
+}
+function stopReply() {
+  if (curAudio) { try { curAudio.pause(); } catch (e) {} curAudio = null; }
+  document.querySelectorAll('.pc-speak').forEach((b: any) => { b.style.opacity = '.6'; b.style.color = ''; });
+}
+async function speakReply(text: string, btn: any) {
+  text = (text || '').trim();
+  if (!text) return;
+  if (btn.dataset.on === '1') { stopReply(); return; }
+  stopReply();
+  if (!ttsUrl) { await deriveTtsUrl(); if (!ttsUrl) return; }
+  btn.dataset.on = '1'; btn.style.opacity = '1'; btn.style.color = '#ff6b5e';
+  const reset = () => { btn.dataset.on = ''; btn.style.opacity = '.6'; btn.style.color = ''; };
+  try {
+    const jwt = await getToken();
+    const r = await fetch(ttsUrl!, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + jwt }, body: JSON.stringify({ voice: persona?.voice || 'Aoede', text }) });
+    const j = await r.json().catch(() => null);
+    if (j && j.audio) {
+      curAudio = new Audio('data:audio/wav;base64,' + j.audio);
+      curAudio.onended = reset; curAudio.onerror = reset;
+      curAudio.play().catch(reset);
+    } else { reset(); }
+  } catch (e) { reset(); }
+}
+function addSpeakBtn(h: any) {
+  if (!h || !h.col || h.col.querySelector('.pc-speak')) return;
+  const b = document.createElement('button');
+  b.type = 'button'; b.className = 'pc-speak';
+  b.setAttribute('aria-label', 'Hear it in ' + (persona?.name || 'their') + ' voice');
+  b.style.cssText = 'display:inline-flex;align-items:center;margin-top:.25rem;padding:.1rem .3rem;border:none;background:transparent;color:inherit;opacity:.6;cursor:pointer;border-radius:6px;';
+  b.innerHTML = SPK_ICON;
+  b.onclick = () => speakReply(h.bub.textContent || '', b);
+  h.col.appendChild(b);
+}
+
 // ── DB (owner RLS) ───────────────────────────────────────────────────────────
 async function dbFindChat() {
   try {
@@ -78,7 +124,9 @@ function addRow(side: 'me' | 'them', text: string, opts: any = {}) {
   else { const tx = document.createElement('span'); tx.textContent = text; bub.appendChild(tx); const tm = document.createElement('time'); tm.className = 'pc-time'; tm.textContent = fmtTime(ts); col.appendChild(tm); }
   const empty = $('pc-empty'); if (empty) empty.remove();
   stream.appendChild(row); scrollBottom(side === 'me');
-  return { row, col, bub, ts };
+  const h = { row, col, bub, ts };
+  if (side === 'them' && !opts.typing) addSpeakBtn(h);
+  return h;
 }
 function stamp(h: any) { if (h.col.querySelector('.pc-time')) return; const t = document.createElement('time'); t.className = 'pc-time'; t.textContent = fmtTime(h.ts); h.col.appendChild(t); }
 function render() {
@@ -141,14 +189,14 @@ async function runTurn(srcText: string) {
     if (!acc) { await new Promise(r => setTimeout(r, 700)); acc = await attempt(typing); }
     acc = acc.trim();
     const shown = acc || 'Mmm — say that again?';
-    typing.bub.textContent = shown; stamp(typing);
+    typing.bub.textContent = shown; stamp(typing); addSpeakBtn(typing);
     const am: any = { role: 'assistant', content: shown, ts: typing.ts };
     history.push(am); dbInsertMessage('assistant', shown).then(id => { if (id) am.id = id; });
     setBusy(false);
   } catch (e: any) {
     if (e.name === 'AbortError') {
       const partial = (typing.bub.textContent || '').trim();
-      if (partial) { stamp(typing); const am: any = { role: 'assistant', content: partial, ts: typing.ts }; history.push(am); dbInsertMessage('assistant', partial); }
+      if (partial) { stamp(typing); addSpeakBtn(typing); const am: any = { role: 'assistant', content: partial, ts: typing.ts }; history.push(am); dbInsertMessage('assistant', partial); }
       else typing.row.remove();
       setBusy(false);
     } else { showError(typing, srcText); }
