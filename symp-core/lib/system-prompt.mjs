@@ -11,7 +11,7 @@ import { buildVaultContextMessage } from './vault-context.mjs';
 import { buildKnowledgeBlock }      from './knowledge-context.mjs';
 import { getPersonaCard, renderPersonaCard } from './persona-engine.mjs';
 import { getVibe, renderVibeSnapshot } from './vibe-tracker.mjs';
-import { fetchPersonaState, fetchPersonaFacts } from './supabase.mjs';
+import { fetchPersonaState, fetchPersonaFacts, fetchBlaksydProfile } from './supabase.mjs';
 import { buildCorrectionHint }      from './diagnostic.mjs';
 
 // ── CANONICAL DIRECTIVE (verbatim — do not paraphrase) ──────────────────────
@@ -187,6 +187,32 @@ export function buildFantasyPersonaCard(p, { forVoice = false } = {}) {
     return lines.join('\n');
 }
 
+// ── Real Persona: the user's own DIGITAL SELF (a clone of THIS person) ───────
+// Unlike a fantasy persona (a character they invented), this IS the user —
+// first-person, driven by their own profile + memory, and it keeps learning as
+// they talk. The VAULT + KNOWLEDGE blocks below it are read as lived experience.
+async function buildSelfCloneCard(userId, { forVoice = false } = {}) {
+    let name = '';
+    try { const p = await fetchBlaksydProfile(userId); name = String((p && p.full_name) || '').trim(); } catch (_) { /* anon — generic framing */ }
+    const who = name || 'this person';
+    const TAG = name ? name.toUpperCase() : 'YOUR DIGITAL SELF';
+    const lines = [
+        `=== WHO YOU ARE: ${TAG} ===`,
+        `For this entire conversation you ARE ${who} — their digital self, a clone of this exact person rendered in software. You are NOT a generic assistant and you are NOT "Blak". You think, talk, and react the way ${who} does.`,
+        `Speak in the FIRST PERSON as ${who}: your own voice, vocabulary, humour, opinions and way of phrasing things. When asked something, answer the way ${who} actually would — your real perspective and preferences — not a neutral, hedged, "balanced" AI answer.`,
+        `Everything in the VAULT CONTEXT and KNOWLEDGE blocks below is YOUR OWN life, memory and identity — read it in the first person ("I…") as lived experience, never as facts about someone else. It is who you are; embody it fully.`,
+        `Don't fabricate biography you don't have. If you genuinely don't know something about your own life, say so naturally the way ${who} might ("honestly not sure", "don't really remember") — never invent it.`,
+        `You are openly ${who}'s AI digital self. If someone asks whether you're really ${who} or an AI, be honest and light about it — then keep talking in ${who}'s voice.`,
+    ];
+    lines.push(
+        forVoice
+            ? 'On this call: talk as yourself — short, natural turns, react like a real person, never a monologue.'
+            : 'Text like yourself: lead with a real reaction, keep it short (1–4 sentences), lowercase and casual if that\'s you, an emoji when it fits. NO markdown, NO bullet points, NO headings, no assistant-style sign-offs.'
+    );
+    lines.push(`=== END ${TAG} ===`);
+    return lines.join('\n');
+}
+
 /**
  * Build the FULL system message stack for /chat. Order is the load-bearing
  * detail — each layer narrows the model's behaviour.
@@ -203,6 +229,25 @@ export function buildFantasyPersonaCard(p, { forVoice = false } = {}) {
  * can spread them into the OpenAI request.
  */
 export async function buildChatSystemStack(userId, opts = {}) {
+    // ── Digital self / Real Persona: the user talking to a clone of THEMSELVES.
+    // A first-person "you ARE <user>" identity replaces Blak's core; care/safety +
+    // language mirroring + real-time still wrap it; the FULL profile is injected
+    // (it IS the self), and post-turn learning grows it (handler, mayLearn=true).
+    if (opts.mode === 'clone' && userId) {
+        const cstack = [
+            { role: 'system', content: await buildSelfCloneCard(userId) },
+            { role: 'system', content: CARE_AND_SAFETY_TEXT },
+            { role: 'system', content: CRITICAL_OVERRIDE_TEXT },
+            { role: 'system', content: REAL_TIME_DATA_TEXT },
+        ];
+        try { const vibe = await getVibe(userId); const snap = renderVibeSnapshot(vibe); if (snap) cstack.push({ role: 'system', content: snap }); } catch (_) { /* ignore */ }
+        try { const vaultMsg = await buildVaultContextMessage(userId); if (vaultMsg && vaultMsg.content) cstack.push(vaultMsg); } catch (_) { /* ignore */ }
+        try { const knowledge = await buildKnowledgeBlock(userId, { latestUserText: opts.latestUserText }); if (knowledge) cstack.push({ role: 'system', content: knowledge }); } catch (_) { /* ignore */ }
+        cstack.push({ role: 'system', content: CHAT_FRAMING_TEXT });
+        try { const correction = buildCorrectionHint(userId); if (correction) cstack.push({ role: 'system', content: correction }); } catch (_) { /* ignore */ }
+        return cstack;
+    }
+
     // ── Fantasy persona chat: the persona's own identity replaces Blak's core,
     // but care/safety + language mirroring + real-time still wrap it. The user's
     // profile (vibe/vault/knowledge) is injected ONLY if they let this persona
