@@ -4,16 +4,16 @@
 // (filled by the gmail-oauth-callback flow). A debug body of { messages: [...] }
 // drives the full parse -> facts -> write pipeline without Gmail (for testing).
 
-import { admin } from "../_shared/supabase.ts";
+import { admin, getUserFromRequest } from "../_shared/supabase.ts";
 import { fetchReceipts } from "../_shared/receipts/gmail.ts";
-import { parseEmails } from "../_shared/receipts/parse.ts";
+import { parseEmail } from "../_shared/receipts/parse.ts";
 import { deriveFacts } from "../_shared/receipts/facts.ts";
-import type { ParsedEmail } from "../_shared/receipts/types.ts";
+import type { ParsedEmail, Order } from "../_shared/receipts/types.ts";
 import { getGmailToken } from "../_shared/google-oauth.ts";
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 const json = (body: unknown, status = 200) =>
@@ -23,13 +23,10 @@ Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
   if (req.method !== "POST") return json({ ok: false, error: "method_not_allowed" }, 405);
 
-  const jwt = (req.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "");
-  if (!jwt) return json({ ok: false, error: "unauthorized" }, 401);
+  const user = await getUserFromRequest(req);
+  if (!user) return json({ ok: false, error: "unauthorized" }, 401);
 
   const db = admin();
-  const { data: userData, error: userErr } = await db.auth.getUser(jwt);
-  const user = userData?.user;
-  if (userErr || !user) return json({ ok: false, error: "unauthorized" }, 401);
 
   let body: { messages?: ParsedEmail[] } = {};
   try { body = await req.json(); } catch { /* no body */ }
@@ -48,8 +45,30 @@ Deno.serve(async (req: Request) => {
     emails = await fetchReceipts(token);
   }
 
-  const orders = parseEmails(emails);
+  // Parse + collect diagnostics (TEMPORARY, for tuning extractors to real email
+  // formats). Logs sender/subject/extracted-fields/snippet of the user's own
+  // receipts to this project's function logs; remove once extractors are tuned.
+  const orders: Order[] = [];
+  const diag: Record<string, unknown>[] = [];
+  for (const e of emails) {
+    const o = parseEmail(e);
+    if (o) orders.push(o);
+    if (diag.length < 40) {
+      diag.push({
+        from: (e.from || "").slice(0, 70),
+        subject: (e.subject || "").slice(0, 90),
+        provider: o ? o.provider : "unmatched",
+        amt: o ? o.amountInr : null,
+        merchant: o ? o.merchant : null,
+        dest: o ? o.destination : null,
+        items: o ? o.items.length : 0,
+        snippet: (e.text || "").replace(/\s+/g, " ").slice(0, 220),
+      });
+    }
+  }
   const facts = deriveFacts(orders);
+  console.log(`gmail-receipts diag: scanned=${emails.length} parsed=${orders.length} facts=${facts.length}`);
+  for (const d of diag) console.log("RCPT " + JSON.stringify(d));
 
   // Upsert facts as Blak-inferred knowledge (idempotent on user_id, area, key).
   if (facts.length) {

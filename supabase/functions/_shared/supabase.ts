@@ -28,6 +28,42 @@ export function admin(): SupabaseClient {
 }
 
 /**
+ * Resolve the calling user from a request's Authorization header — the canonical
+ * edge-function pattern: an ANON-keyed client scoped to the user's JWT, then
+ * getUser(). More reliable than service-role getUser(jwt). Logs the reason on
+ * failure so auth problems are debuggable. Returns null if unauthenticated.
+ */
+export async function getUserFromRequest(
+  req: Request,
+): Promise<{ id: string; email: string | null } | null> {
+  const authHeader = req.headers.get("Authorization") || "";
+  if (!authHeader) {
+    console.error("auth: missing Authorization header");
+    return null;
+  }
+  const url = Deno.env.get("SUPABASE_URL");
+  const anon = Deno.env.get("SUPABASE_ANON_KEY");
+  if (!url || !anon) {
+    console.error("auth: missing SUPABASE_URL / SUPABASE_ANON_KEY");
+    return null;
+  }
+  const client = createClient(url, anon, {
+    global: { headers: { Authorization: authHeader } },
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+  const { data, error } = await client.auth.getUser();
+  if (error || !data?.user) {
+    let role = "?";
+    try {
+      role = JSON.parse(atob((authHeader.replace(/^Bearer\s+/i, "").split(".")[1] || ""))).role || "?";
+    } catch { role = "decode_err"; }
+    console.error("auth: getUser failed:", error?.message || "no user", "| token role:", role);
+    return null;
+  }
+  return { id: data.user.id, email: data.user.email ?? null };
+}
+
+/**
  * Emergency kill switch — reuses the existing global_settings row that the
  * website's chat-stream already honors. When enabled, the webhook stays silent
  * (no model call, no token spend, no outbound message). Cached briefly so we

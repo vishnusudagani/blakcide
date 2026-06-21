@@ -149,6 +149,7 @@ function masterCard() {
       '<div class="int-m-row">' +
         '<span class="int-m-ic on">' + MAIL_ICON + '</span>' +
         '<div class="int-m-tx"><b>Gmail connected</b><i>' + esc(g.display_name || 'Reading your receipts') + '</i></div>' +
+        '<button class="int-ghost" data-act="gmail-sync">Sync now</button>' +
         '<button class="int-ghost" data-act="gmail-disconnect">Disconnect</button>' +
       '</div>';
   } else {
@@ -233,9 +234,34 @@ async function disconnectGmail() {
       .eq('user_id', state.user.id).eq('provider', 'gmail');
   } catch (e) { /* table may not exist yet — fall through */ }
   state.connections = state.connections.filter((c) => c.provider !== 'gmail');
-  state.gmailPending = false;
   state.note = '';
   paint();
+}
+
+async function refreshConnections() {
+  try {
+    const { data } = await state.supabase
+      .from('symp_integrations')
+      .select('provider,category,status,display_name,last_sync_at')
+      .eq('user_id', state.user.id);
+    state.connections = data || [];
+  } catch (e) { /* keep existing */ }
+}
+
+async function syncGmail() {
+  state.note = 'Syncing your receipts…';
+  paint();
+  try {
+    const { data, error } = await state.supabase.functions.invoke('gmail-receipts');
+    if (error) { state.note = 'Sync failed — please try again.'; paint(); return; }
+    const d = data || {};
+    state.note = 'Synced ✓ scanned ' + (d.scanned ?? 0) + ' receipts · learned ' + (d.facts ?? 0) + ' facts. See your profile →';
+    await refreshConnections();
+    paint();
+  } catch (e) {
+    state.note = 'Sync failed — please try again.';
+    paint();
+  }
 }
 
 async function findRides() {
@@ -283,6 +309,7 @@ function onClick(e) {
   if (act === 'open') openApp(btn.dataset.url);
   else if (act === 'pref-save') { const el = document.getElementById('int-pref'); savePref(el ? el.value : ''); }
   else if (act === 'gmail-connect') connectGmail();
+  else if (act === 'gmail-sync') syncGmail();
   else if (act === 'gmail-disconnect') disconnectGmail();
   else if (act === 'book-toggle') { state.booking.open = !state.booking.open; if (state.booking.open) resetBooking(true); paint(); }
   else if (act === 'book-find') { const el = document.getElementById('int-dest'); state.booking.to = el ? el.value.trim() : ''; findRides(); }
