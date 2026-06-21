@@ -340,6 +340,11 @@ import AppLayout from '../../layouts/AppLayout.astro';
     .mnx-stars span { color: var(--line-strong); transition: color var(--t-fast) var(--ease-out), transform var(--t-fast) var(--ease-out); }
     .mnx-stars span:hover { transform: scale(1.12); }
     .mnx-stars span.on { color: var(--gold); }
+    .mnx-helped-q { font-size: var(--fs-sm); color: var(--ink-soft); margin: .2rem 0 .5rem; }
+    .mnx-helped-opt { color: var(--ink-faint); }
+    .mnx-helped { display: flex; flex-wrap: wrap; gap: .4rem; justify-content: center; margin-bottom: .4rem; }
+    .mnx-help-tag { font: inherit; font-size: var(--fs-xs); color: var(--ink-soft); background: var(--surface); border: 1px solid var(--line-strong); border-radius: var(--r-pill); padding: .35rem .7rem; min-height: 36px; cursor: pointer; }
+    .mnx-help-tag.on { background: rgba(106,211,184,.16); border-color: var(--mint-deep); color: var(--mint-deep); font-weight: 600; }
     .mnx-modal-actions { display: flex; gap: .6rem; margin-top: 1rem; }
     .mnx-btn-ghost { flex: 1; padding: .7rem; border-radius: var(--r-pill); background: var(--surface); border: 1px solid var(--line-strong); color: var(--ink-soft); font: inherit; font-size: var(--fs-sm); cursor: pointer; }
     .mnx-btn-go { flex: 2; padding: .7rem; border-radius: var(--r-pill); border: 0; color: #06231C; font: inherit; font-size: var(--fs-sm); font-weight: 650; cursor: pointer; background: linear-gradient(135deg, var(--mint), var(--mint-deep)); }
@@ -1088,21 +1093,24 @@ import AppLayout from '../../layouts/AppLayout.astro';
 
       function showReview(sessionId, listenerId) {
         immersive(false);
-        let stars = 0, feel = null;
+        let stars = 0, feel = null; const helped = new Set();
         const modal = document.createElement('div'); modal.className = 'mnx-modal';
         modal.innerHTML = `<div class="mnx-modal-card"><div style="font-size:1.6rem">✨</div><h3>How do you feel now?</h3><p>Compared to when you came in.</p>
           <div class="mnx-feel" id="mnx-feel"><button data-f="lighter" title="Lighter">🙂</button><button data-f="same" title="About the same">😐</button><button data-f="heavy" title="Still heavy">😔</button></div>
           <p style="margin-top:.8rem">And your listener?</p>
           <div class="mnx-stars" id="mnx-stars">${[1,2,3,4,5].map((n) => `<span data-n="${n}">★</span>`).join('')}</div>
+          <p class="mnx-helped-q">What helped? <span class="mnx-helped-opt">(optional)</span></p>
+          <div class="mnx-helped" id="mnx-helped">${['Felt heard', 'Gave me space', 'Really listened', 'Gentle', 'Helped me think'].map((t) => `<button type="button" class="mnx-help-tag" data-t="${t}">${t}</button>`).join('')}</div>
           <input id="mnx-reflect-note" type="text" maxlength="200" placeholder="A word on what this was about? (optional — just for you)" style="width:100%;box-sizing:border-box;margin-top:1rem;background:var(--surface);border:1px solid var(--line-strong);border-radius:var(--r-pill);padding:.65rem 1rem;color:var(--ink);font:inherit;font-size:16px;outline:none" />
           <div class="mnx-modal-actions"><button type="button" class="mnx-btn-ghost" id="mnx-skip">Skip</button><button type="button" class="mnx-btn-go" id="mnx-submit">Done</button></div></div>`;
         document.body.appendChild(modal);
         modal.querySelectorAll('#mnx-feel button').forEach((bn) => bn.addEventListener('click', () => { feel = bn.getAttribute('data-f'); modal.querySelectorAll('#mnx-feel button').forEach((x) => x.classList.toggle('on', x === bn)); }));
         modal.querySelectorAll('#mnx-stars span').forEach((s) => s.addEventListener('click', () => { stars = Number(s.getAttribute('data-n')); modal.querySelectorAll('#mnx-stars span').forEach((x) => x.classList.toggle('on', Number(x.getAttribute('data-n')) <= stars)); }));
+        modal.querySelectorAll('#mnx-helped .mnx-help-tag').forEach((b) => b.addEventListener('click', () => { const t = b.getAttribute('data-t'); if (helped.has(t)) { helped.delete(t); b.classList.remove('on'); } else { helped.add(t); b.classList.add('on'); } }));
         const finish = () => { modal.remove(); resetToEntry(); };
         modal.querySelector('#mnx-skip').addEventListener('click', finish);
         modal.querySelector('#mnx-submit').addEventListener('click', async () => {
-          if (stars) { try { await supabase.from('listener_reviews').insert([{ session_id: sessionId, listener_id: listenerId, user_id: user.id, rating: stars, review_text: feel ? ('felt: ' + feel) : null }]); } catch (e) {} }
+          if (stars) { try { await supabase.from('listener_reviews').insert([{ session_id: sessionId, listener_id: listenerId, user_id: user.id, rating: stars, review_text: feel ? ('felt: ' + feel) : null, helped: helped.size ? [...helped] : null }]); } catch (e) {} }
           // Optional reflection (the seeker's own words) → minit_reflections, the
           // private learning signal. Feeds the nightly Minit synthesis (P3).
           const note = (modal.querySelector('#mnx-reflect-note')?.value || '').trim();
