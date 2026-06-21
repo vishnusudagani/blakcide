@@ -108,6 +108,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
       <div class="bx-cv-scrim" id="bx-cv-scrim"></div>
       <aside class="bx-cv-panel">
         <div class="bx-cv-head"><b>Your chats</b><button type="button" class="bx-cv-new" id="bx-cv-new">＋ New chat</button></div>
+        <input type="search" class="bx-cv-search" id="bx-cv-search" placeholder="Search your chats…" autocomplete="off" />
         <div class="bx-cv-list" id="bx-cv-list"></div>
         <div class="bx-cv-foot">
           <a class="bx-cv-foot-link" href="/beta/">Home</a>
@@ -156,6 +157,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
     .bx-calloffer svg { width: 16px; height: 16px; }
     .bx-calloffer:active { transform: scale(.96); }
     .bx-calloffer:disabled { opacity: .6; cursor: default; }
+    .bx-call-turn .bx-bub::after { content: ' 📞'; font-size: .78em; opacity: .4; }
     .bx-row.them .bx-bub { background: var(--surface-strong); border: 1px solid var(--line); border-bottom-left-radius: 6px; color: var(--ink); }
     .bx-row.me .bx-bub { background: rgba(91,192,255,.14); border: 1px solid rgba(91,192,255,.26); border-bottom-right-radius: 6px; color: var(--ink); }
     html[data-theme="light"] .bx-row.me .bx-bub { background: rgba(24,114,176,.1); border-color: rgba(24,114,176,.22); }
@@ -342,6 +344,8 @@ import AppLayout from '../../layouts/AppLayout.astro';
     .bx-cv-head { display: flex; align-items: center; justify-content: space-between; padding: .3rem .3rem 1rem; }
     .bx-cv-head b { font-size: var(--fs-lg); }
     .bx-cv-new { font: inherit; font-size: var(--fs-sm); color: var(--cta-ink); background: var(--cta); border: 0; border-radius: var(--r-pill); padding: .45rem .85rem; cursor: pointer; }
+    .bx-cv-search { margin: .1rem 0 .5rem; width: 100%; border: 1px solid var(--line); border-radius: var(--r-pill); padding: .5rem .85rem; background: var(--surface); color: var(--ink); font: inherit; font-size: 16px; }
+    .bx-cv-search:focus { outline: none; border-color: var(--coral); }
     .bx-cv-list { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: .25rem; }
     .bx-cv-item { display: flex; align-items: center; border-radius: var(--r-sm); transition: background .15s; }
     .bx-cv-item:hover { background: var(--surface); }
@@ -510,7 +514,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
     function addRow(side, text, opts = {}) {
       const ts = opts.ts || Date.now();
       const row = document.createElement('div');
-      row.className = 'bx-row ' + side + (opts.err ? ' err' : '');
+      row.className = 'bx-row ' + side + (opts.err ? ' err' : '') + (opts.media_type === 'call' ? ' bx-call-turn' : '');
       const av = side === 'them' ? '<span class="bx-av"></span>' : '';
       row.innerHTML = av + '<div class="bx-col"><div class="bx-bub"></div></div>';
       const col = row.querySelector('.bx-col');
@@ -959,11 +963,20 @@ import AppLayout from '../../layouts/AppLayout.astro';
       history = [];
       render(); updateChips(); closeDrawer(); input.focus();
     }
-    async function renderConvoList() {
-      convoList.innerHTML = '<p class="bx-cv-empty">Loading…</p>';
-      const arr = await dbListChats();
+    async function renderConvoList(query) {
+      query = (query || '').trim();
+      convoList.innerHTML = '<p class="bx-cv-empty">' + (query ? 'Searching…' : 'Loading…') + '</p>';
+      let arr;
+      if (query) {
+        const ids = new Set();
+        try { const { data } = await supabase.from('messages').select('chat_id').ilike('content', '%' + query + '%').limit(100); (data || []).forEach((m) => ids.add(m.chat_id)); } catch (e) {}
+        const ql = query.toLowerCase();
+        arr = (await dbListChats()).filter((c) => ids.has(c.id) || (c.title || '').toLowerCase().includes(ql));
+      } else {
+        arr = await dbListChats();
+      }
       convoList.innerHTML = '';
-      if (!arr.length) { convoList.innerHTML = '<p class="bx-cv-empty">No chats yet</p>'; return; }
+      if (!arr.length) { convoList.innerHTML = '<p class="bx-cv-empty">' + (query ? 'No matches' : 'No chats yet') + '</p>'; return; }
       for (const c of arr) {
         const row = document.createElement('div');
         row.className = 'bx-cv-item' + (c.id === activeChatId ? ' on' : '');
@@ -983,9 +996,10 @@ import AppLayout from '../../layouts/AppLayout.astro';
       }
       renderConvoList();
     }
-    function openDrawer() { renderConvoList(); convoDrawer.hidden = false; }
+    function openDrawer() { const s = $('bx-cv-search'); if (s) s.value = ''; renderConvoList(); convoDrawer.hidden = false; }
     function closeDrawer() { convoDrawer.hidden = true; }
     if (historyBtn) historyBtn.addEventListener('click', openDrawer);
+    { let cvT = null; const cvS = $('bx-cv-search'); if (cvS) cvS.addEventListener('input', () => { clearTimeout(cvT); cvT = setTimeout(() => renderConvoList(cvS.value), 220); }); }
     if (cvNew) cvNew.addEventListener('click', newConvo);
     if (cvScrim) cvScrim.addEventListener('click', closeDrawer);
 
@@ -1050,6 +1064,19 @@ import AppLayout from '../../layouts/AppLayout.astro';
         }).catch(() => {});
       } catch (e) { /* learning is best-effort */ }
     }
+    // Save each spoken exchange into the chat thread so calls show up in the history
+    // sidebar like any conversation. Lazily creates a thread on the first real turn;
+    // serialized via callSaveChain to keep turn order + avoid a double create.
+    let ensureCallThread = null;
+    let callSaveChain = Promise.resolve();
+    async function saveCallTurn(u, a) {
+      u = (u || '').trim(); a = (a || '').trim();
+      if (!u && !a) return;
+      if (!activeChatId) { if (!ensureCallThread) ensureCallThread = dbCreateChat('Voice call'); const c = await ensureCallThread; if (c && !activeChatId) activeChatId = c.id; }
+      if (!activeChatId) return;
+      if (u) { const m = { role: 'user', content: u, ts: Date.now(), media_type: 'call' }; history.push(m); const id = await dbInsertMessage('user', u, { type: 'call' }); if (id) m.id = id; }
+      if (a) { const m = { role: 'assistant', content: a, ts: Date.now(), media_type: 'call' }; history.push(m); const id = await dbInsertMessage('assistant', a, { type: 'call' }); if (id) m.id = id; }
+    }
     function gHandle(o) {
       if (!o) return;
       const sc = o.serverContent; if (!sc) return;
@@ -1057,7 +1084,8 @@ import AppLayout from '../../layouts/AppLayout.astro';
         if (gsrcNode) { try { gsrcNode.stop(); } catch (e) {} }
         gNextPlay = actx ? actx.currentTime : 0;
         if (gDuckTimer) { clearTimeout(gDuckTimer); gDuckTimer = null; }
-        flushCallLearn(gYou, gCap); gYou = ''; gCap = '';   // barge-in ends the exchange
+        { const u = gYou, a = gCap; flushCallLearn(u, a); callSaveChain = callSaveChain.then(() => saveCallTurn(u, a)).catch(() => {}); }
+        gYou = ''; gCap = '';   // barge-in ends the exchange
         gAiSpeaking = false; setCall('listening', 'listening…'); return;
       }
       if (sc.modelTurn && sc.modelTurn.parts) sc.modelTurn.parts.forEach((p) => {
@@ -1070,7 +1098,9 @@ import AppLayout from '../../layouts/AppLayout.astro';
       }
       if (sc.turnComplete) {
         if (gCap.trim()) { const you = callCap.querySelector('.cc-you'); callCap.innerHTML = (you ? you.outerHTML : '') + '<p class="cc-blak">' + escHtml(gCap.trim()) + '</p>'; }
-        flushCallLearn(gYou, gCap);   // learn from this spoken exchange (profile + memory)
+        const u = gYou, a = gCap;
+        flushCallLearn(u, a);   // learn from this spoken exchange (profile + memory)
+        callSaveChain = callSaveChain.then(() => saveCallTurn(u, a)).catch(() => {});   // save it to the thread (→ sidebar)
         gYou = ''; gCap = '';
         // Do NOT un-duck here — audio is still scheduled ahead. The duck timer
         // in gPlay flips back to "listening" once playback actually drains.
@@ -1154,6 +1184,8 @@ import AppLayout from '../../layouts/AppLayout.astro';
       if (micStream) { micStream.getTracks().forEach(t => t.stop()); micStream = null; }
       releaseWakeLock();
       callOv.hidden = true; setCall('', '');
+      ensureCallThread = null;
+      callSaveChain.then(() => render()).catch(() => {});   // reveal the saved call turns in the thread
     }
     function startListening() { callState = 'listening'; speechFrames = 0; silenceFrames = 0; callMic.classList.remove('rec'); setCall('', muted ? 'muted — tap mic to resume' : 'listening… just talk'); }
     function rmsLevel() {
