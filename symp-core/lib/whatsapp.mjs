@@ -237,3 +237,72 @@ export async function markConsentNoted(phone) {
         body: { consent_noted_at: new Date().toISOString() },
     }).catch(() => {});
 }
+
+// ── Linking: web ↔ WhatsApp (one brain everywhere) ───────────────────────────
+
+// Bind a phone identity to an existing (web) Blaksyd account: repoint the
+// wa_identity AND migrate its chat thread + knowledge facts to the web user, so
+// both surfaces share one memory. Service-role only.
+export async function linkPhoneToUser(phone, webUserId) {
+    if (!phone || !webUserId) return { ok: false };
+    const found = await sbFetch(`wa_identities?phone=eq.${encodeURIComponent(phone)}&select=*`);
+    const row = (found.ok && Array.isArray(found.data) && found.data[0]) ? found.data[0] : null;
+    if (!row) return { ok: false };
+    const oldUserId = row.user_id;
+    const nowIso = new Date().toISOString();
+
+    if (oldUserId !== webUserId) {
+        // 1. Move the WhatsApp chat thread(s) to the web account.
+        await sbFetch(`chats?user_id=eq.${oldUserId}`, {
+            method: 'PATCH', prefer: 'return=minimal', body: { user_id: webUserId },
+        }).catch(() => {});
+        // 2. Migrate knowledge facts, skipping (area,key) the web user already has (web wins).
+        const existing = await sbFetch(`symp_knowledge_facts?user_id=eq.${webUserId}&select=area,key`);
+        const have = new Set((existing.ok && Array.isArray(existing.data) ? existing.data : []).map((f) => `${f.area}|${f.key}`));
+        const waFacts = await sbFetch(`symp_knowledge_facts?user_id=eq.${oldUserId}&select=id,area,key`);
+        if (waFacts.ok && Array.isArray(waFacts.data)) {
+            for (const f of waFacts.data) {
+                const path = `symp_knowledge_facts?id=eq.${f.id}`;
+                if (have.has(`${f.area}|${f.key}`)) {
+                    await sbFetch(path, { method: 'DELETE', prefer: 'return=minimal' }).catch(() => {});
+                } else {
+                    await sbFetch(path, { method: 'PATCH', prefer: 'return=minimal', body: { user_id: webUserId } }).catch(() => {});
+                }
+            }
+        }
+    }
+    // 3. Repoint the identity.
+    await sbFetch(`wa_identities?phone=eq.${encodeURIComponent(phone)}`, {
+        method: 'PATCH', prefer: 'return=minimal',
+        body: { user_id: webUserId, linked_web: true, updated_at: nowIso },
+    }).catch(() => {});
+    return { ok: true, merged: oldUserId !== webUserId };
+}
+
+// Create a one-time web→WhatsApp link code for a logged-in web user. The web app
+// turns it into a wa.me deep link; when the user sends it from WhatsApp, the
+// webhook binds that phone to this account.
+export async function createLinkCode(webUserId, { ttlMinutes = 30 } = {}) {
+    if (!webUserId) return { ok: false };
+    const rand = (n) => Array.from({ length: n }, () => 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'[Math.floor(Math.random() * 32)]).join('');
+    const code = 'BLAK-LINK-' + rand(8);
+    const r = await sbFetch('wa_link_codes', {
+        method: 'POST', prefer: 'return=minimal',
+        body: { code, direction: 'web_to_wa', user_id: webUserId, expires_at: new Date(Date.now() + ttlMinutes * 60_000).toISOString() },
+    });
+    return r.ok ? { ok: true, code } : { ok: false };
+}
+
+// Validate + consume a web→WhatsApp link code sent from `phone`, binding the account.
+export async function consumeLinkCode(code, phone) {
+    const r = await sbFetch(`wa_link_codes?code=eq.${encodeURIComponent(code)}&direction=eq.web_to_wa&consumed_at=is.null&select=*`);
+    const row = (r.ok && Array.isArray(r.data) && r.data[0]) ? r.data[0] : null;
+    if (!row) return { ok: false };
+    if (row.expires_at && new Date(row.expires_at) < new Date()) return { ok: false };
+    const link = await linkPhoneToUser(phone, row.user_id);
+    if (!link.ok) return { ok: false };
+    await sbFetch(`wa_link_codes?id=eq.${row.id}`, {
+        method: 'PATCH', prefer: 'return=minimal', body: { consumed_at: new Date().toISOString(), phone },
+    }).catch(() => {});
+    return { ok: true, userId: row.user_id };
+}

@@ -14,7 +14,7 @@
 import {
     getOrCreateIdentity, persistMessage, loadThreadHistory,
     touchInbound, touchOutbound, isNewEvent, markConsentNoted,
-    sendText, downloadMedia,
+    sendText, downloadMedia, consumeLinkCode,
 } from '../../symp-core/lib/whatsapp.mjs';
 import { buildChatSystemStack } from '../../symp-core/lib/system-prompt.mjs';
 import { chatCompleteFailover }  from '../../symp-core/lib/llm-providers.mjs';
@@ -50,6 +50,22 @@ async function handleEvent(payload) {
 
     const id = await getOrCreateIdentity(phone, waName);
     await touchInbound(phone);
+
+    // Web→WhatsApp linking: if this text is a pending link code, bind the account + stop.
+    if (kind === 'text') {
+        const m = (msg.text?.body || '').match(/BLAK-LINK-[A-Z0-9]{8}/i);
+        if (m) {
+            const res = await consumeLinkCode(m[0].toUpperCase(), phone);
+            const reply = res.ok
+                ? "linked ✅ same Blak across WhatsApp and the app now — your stuff carries over 🖤"
+                : "hmm, that link code didn't work — it may have expired. grab a fresh one in the app 🙂";
+            await persistMessage({ chatId: id.chatId, role: 'user', content: msg.text.body });
+            await persistMessage({ chatId: id.chatId, role: 'ai', content: reply });
+            await sendText(phone, reply);
+            await touchOutbound(phone);
+            return;
+        }
+    }
 
     const userText = await extractText(msg, kind);
     if (!userText) {
