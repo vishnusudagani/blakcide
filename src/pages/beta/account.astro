@@ -50,6 +50,17 @@ import AppLayout from '../../layouts/AppLayout.astro';
     </section>
 
     <section class="ac-card">
+      <h2 class="ac-h">What Blak learns &amp; shares</h2>
+      <p class="ac-sub">You decide what feeds your 360° picture and what's shared across Blaksyd. Change it any time.</p>
+      <div class="ac-toggles" id="ac-consent">
+        <label class="ac-tg"><span><b>Learn from our chats</b><i>Let Blak quietly build your profile as you talk</i></span><input type="checkbox" data-k="learn" /></label>
+        <label class="ac-tg"><span><b>Brief a human listener</b><i>Share the shape of what's going on with a Minit listener — never the raw words</i></span><input type="checkbox" data-k="share_minit" /></label>
+        <label class="ac-tg"><span><b>Shape my Persona</b><i>Use what Blak knows to train your digital self</i></span><input type="checkbox" data-k="share_persona" /></label>
+        <label class="ac-tg"><span><b>Suggest communities</b><i>Use your interests to point you to Nexus tribes</i></span><input type="checkbox" data-k="share_nexus" /></label>
+      </div>
+    </section>
+
+    <section class="ac-card">
       <h2 class="ac-h">Your data</h2>
       <p class="ac-sub">It's all yours. Download everything Blaksyd has saved about you — your profile, chats, journals, moods and reminders — any time.</p>
       <div class="ac-save-row"><button type="button" class="ac-save" id="ac-export">Download my data</button><span class="ac-saved" id="ac-exported"></span></div>
@@ -73,6 +84,16 @@ import AppLayout from '../../layouts/AppLayout.astro';
     .ac-seg { display: flex; gap: .3rem; padding: .25rem; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-pill); margin-top: .7rem; }
     .ac-seg button { flex: 1; background: none; border: 0; border-radius: var(--r-pill); color: var(--ink-soft); font: inherit; font-size: var(--fs-sm); font-weight: 600; padding: .5rem .3rem; min-height: 42px; cursor: pointer; transition: background .15s, color .15s; }
     .ac-seg button.on { background: var(--cta); color: var(--cta-ink); }
+    .ac-toggles { display: flex; flex-direction: column; margin-top: .5rem; }
+    .ac-tg { display: flex; align-items: center; gap: 1rem; padding: .75rem 0; border-top: 1px solid var(--line); cursor: pointer; }
+    .ac-tg:first-child { border-top: 0; }
+    .ac-tg > span { flex: 1; display: flex; flex-direction: column; gap: .12rem; }
+    .ac-tg b { font-size: var(--fs-md); font-weight: 600; color: var(--ink); }
+    .ac-tg i { font-style: normal; font-size: var(--fs-xs); color: var(--ink-faint); line-height: 1.4; }
+    .ac-tg input { appearance: none; -webkit-appearance: none; width: 44px; height: 26px; border-radius: 999px; background: var(--surface-strong); border: 1px solid var(--line-strong); position: relative; cursor: pointer; flex: none; transition: background .18s; }
+    .ac-tg input::after { content: ''; position: absolute; top: 2px; left: 2px; width: 20px; height: 20px; border-radius: 50%; background: #fff; transition: transform .18s; }
+    .ac-tg input:checked { background: var(--cta); border-color: transparent; }
+    .ac-tg input:checked::after { transform: translateX(18px); }
     .ac-head { display: flex; align-items: center; gap: .6rem; }
     .ac-h { font-size: var(--fs-md); font-weight: 600; color: var(--ink); }
     .ac-sub { font-size: var(--fs-sm); color: var(--ink-soft); margin-top: .5rem; line-height: 1.5; }
@@ -153,6 +174,24 @@ import AppLayout from '../../layouts/AppLayout.astro';
             lv = b.dataset.lv; paint();
             try { await supabase.from('blak_prefs').upsert({ user_id: u.id, proactivity: lv, updated_at: new Date().toISOString() }, { onConflict: 'user_id' }); } catch (e) {}
           }));
+        }
+
+        const consent = $('ac-consent');
+        if (consent) {
+          const DEF = { share_minit: true, share_persona: true, share_nexus: false };
+          let s = {};
+          try { const { data } = await supabase.from('symp_profile_settings').select('learning_paused,share_minit,share_persona,share_nexus').eq('user_id', u.id).maybeSingle(); s = data || {}; } catch (e) {}
+          consent.querySelectorAll('input[type=checkbox]').forEach((cb) => {
+            const k = cb.dataset.k;
+            if (k === 'learn') cb.checked = s.learning_paused !== true;
+            else cb.checked = (s[k] === undefined || s[k] === null) ? DEF[k] : s[k] === true;
+          });
+          consent.addEventListener('change', async (e) => {
+            const cb = e.target.closest('input[type=checkbox]'); if (!cb) return;
+            const k = cb.dataset.k;
+            const patch = (k === 'learn') ? { learning_paused: !cb.checked } : { [k]: cb.checked };
+            try { await supabase.from('symp_profile_settings').upsert({ user_id: u.id, ...patch, updated_at: new Date().toISOString() }, { onConflict: 'user_id' }); } catch (err) {}
+          });
         }
 
         const exportBtn = $('ac-export'), exported = $('ac-exported');
