@@ -24,6 +24,10 @@ import AppLayout from '../../../layouts/AppLayout.astro';
     <!-- Composer -->
     <form class="pc-form" id="pc-form" autocomplete="off">
       <textarea id="pc-input" class="pc-input" rows="1" placeholder="Message…" maxlength="4000"></textarea>
+      <input type="file" id="pc-file" accept="image/*" hidden />
+      <button type="button" class="pc-voice" id="pc-add" aria-label="Add a photo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>
+      </button>
       <button type="button" class="pc-voice" id="pc-voice" aria-label="Voice note">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v4"/></svg>
       </button>
