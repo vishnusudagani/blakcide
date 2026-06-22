@@ -313,6 +313,25 @@ import AppLayout from '../../layouts/AppLayout.astro';
     .mnx-history-btn:hover { color: var(--mint-deep); }
     .mnx-history-btn span { transition: transform var(--t-fast) var(--ease-out); }
     .mnx-history-btn:hover span { transform: translateX(3px); }
+    /* Phase 7 — closure + look-back */
+    .mnx-close { max-width: 420px; margin: 0 auto; padding: clamp(1rem,6vh,3rem) 1.1rem; text-align: center; display: flex; flex-direction: column; align-items: center; }
+    .mnx-close-orb { width: 80px; height: 80px; border-radius: 50%; margin-bottom: 1.3rem; background: radial-gradient(circle at 50% 38%, rgba(106,211,184,.55), rgba(91,192,255,.18) 60%, transparent 74%); box-shadow: 0 0 40px rgba(106,211,184,.3); animation: mnx-breathe 5s var(--ease-soft) infinite; }
+    @keyframes mnx-breathe { 0%,100% { transform: scale(1); } 50% { transform: scale(1.06); } }
+    .mnx-close h3 { font-family: var(--font-display); font-size: clamp(1.4rem,1.1rem+1.6vw,1.8rem); font-weight: 650; color: var(--ink); margin: 0 0 .5rem; }
+    .mnx-close p { font-size: var(--fs-md); color: var(--ink-soft); line-height: 1.6; margin: 0 0 1.6rem; max-width: 32ch; }
+    .mnx-close-next { display: flex; flex-direction: column; gap: .55rem; width: 100%; }
+    .mnx-close-opt { display: flex; flex-direction: column; gap: .15rem; text-align: left; text-decoration: none; padding: .75rem .95rem; border-radius: var(--r-md); background: var(--surface); border: 1px solid var(--line-strong); cursor: pointer; font: inherit; min-height: 44px; }
+    .mnx-close-opt:hover { border-color: var(--mint-deep); }
+    .mnx-close-opt b { font-size: var(--fs-md); color: var(--ink); }
+    .mnx-close-opt span { font-size: var(--fs-xs); color: var(--ink-soft); }
+    .mnx-lb { max-width: 460px; margin: 0 auto; padding: clamp(1rem,5vh,2.5rem) 1.1rem; text-align: center; }
+    .mnx-lb h3 { font-family: var(--font-display); font-size: var(--fs-2xl); font-weight: 650; color: var(--ink); margin: .2rem 0 1.2rem; }
+    .mnx-lb p { color: var(--ink-soft); }
+    .mnx-lb-track { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; padding: 1rem; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); }
+    .mnx-lb-dot { width: 12px; height: 12px; border-radius: 50%; }
+    .mnx-lb-legend { display: flex; gap: 1rem; justify-content: center; margin: .9rem 0 .4rem; font-size: var(--fs-xs); color: var(--ink-faint); }
+    .mnx-lb-legend i { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: .3rem; vertical-align: middle; }
+    .mnx-lb-sum { font-size: var(--fs-md); color: var(--ink-soft); line-height: 1.6; max-width: 34ch; margin: .4rem auto 0; }
     .mnx-drawer { position: fixed; inset: 0; z-index: 9000; }
     .mnx-drawer[hidden] { display: none; }
     .mnx-drawer-scrim { position: absolute; inset: 0; background: rgba(8,9,26,.6); -webkit-backdrop-filter: blur(2px); backdrop-filter: blur(2px); opacity: 0; transition: opacity var(--t-base) var(--ease-out); }
@@ -603,6 +622,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
         const pips = Array.from({ length: 10 }, (_, i) => `<i class="mnx-pip ${i < credits.leftToday ? 'on' : ''}"></i>`).join('');
         const threadItems = history.map((h) => `<button type="button" class="mnx-thread" data-id="${h.id}" data-lid="${h.listener_id || ''}"><span class="mnx-thread-orb" style="${orbStyle(h.listener_id)}"></span><span class="mnx-thread-meta"><b>${esc(h.snippet)}</b><i>${h.when}</i></span><span class="mnx-thread-go">→</span></button>`).join('');
         const historyBtn = history.length ? `<button type="button" class="mnx-history-btn" id="mnx-history">View past conversations <span>→</span></button>` : '';
+        const lookbackBtn = history.length ? `<button type="button" class="mnx-history-btn" id="mnx-lookback">Look back at how you’ve been <span>→</span></button>` : '';
         const drawer = history.length ? `<div class="mnx-drawer" id="mnx-drawer" hidden><div class="mnx-drawer-scrim" id="mnx-drawer-scrim"></div><aside class="mnx-drawer-panel"><div class="mnx-drawer-head"><b>Your conversations</b><button type="button" class="mnx-drawer-close" id="mnx-drawer-close" aria-label="Close">✕</button></div><div class="mnx-drawer-list">${threadItems}</div></aside></div>` : '';
         root.innerHTML = `<div class="mnx-stage">
           <div class="mnx-entry">
@@ -621,12 +641,14 @@ import AppLayout from '../../layouts/AppLayout.astro';
               <p class="mnx-meter-foot">${credits.ok ? credits.leftWeek + ' of 30 left this week · resets daily' : 'No minits left — more at midnight'}</p>
             </div>
             ${historyBtn}
+            ${lookbackBtn}
           </div>
         </div>${drawer}`;
         let anon = anonPref;
         const anonBtn = document.getElementById('mnx-anon');
         anonBtn?.addEventListener('click', () => { anon = !anon; localStorage.setItem('mnx_anon', anon ? 'true' : 'false'); anonBtn.classList.toggle('on', anon); anonBtn.setAttribute('aria-pressed', String(anon)); const i = anonBtn.querySelector('i'); if (i) i.textContent = anon ? 'on' : 'off'; });
         document.getElementById('mnx-lang')?.addEventListener('click', (e) => { const b = e.target.closest('.mnx-lang-opt'); if (!b) return; try { localStorage.setItem('mnx_lang', b.dataset.l); } catch (er) {} document.querySelectorAll('#mnx-lang .mnx-lang-opt').forEach((x) => x.classList.toggle('on', x === b)); });
+        document.getElementById('mnx-lookback')?.addEventListener('click', showLookBack);
         document.getElementById('mnx-start')?.addEventListener('click', async (e) => {
           if (busy) return; busy = true; e.currentTarget.setAttribute('disabled', '');
           const c = await checkCredits();
@@ -1091,6 +1113,49 @@ import AppLayout from '../../layouts/AppLayout.astro';
       async function endSession() { if (!activeSessionId) return; const sid = activeSessionId, lid = activeListenerId; isEnding = true; endCall(true); logEvent('ended', { by: 'seeker' }); teardown(); await supabase.from('connect_sessions').update({ status: 'completed', ended_at: new Date().toISOString() }).eq('id', sid); showReview(sid, lid); }
       function endByOther() { if (isEnding) return; isEnding = true; logEvent('ended', { by: 'listener' }); teardown(); showReview(activeSessionId, activeListenerId); }
 
+      // Phase 7 — a gentle close after a session, not an abrupt reset (#35/#38/#39).
+      function showClosure() {
+        immersive(true);
+        root.innerHTML = `<div class="mnx-close">
+          <div class="mnx-close-orb" aria-hidden="true"></div>
+          <h3>You showed up for yourself today.</h3>
+          <p>That takes something. Be gentle with yourself — you can come back whenever you need.</p>
+          <div class="mnx-close-next">
+            <button type="button" class="mnx-close-opt" id="mnx-close-lookback"><b>Look back</b><span>See how you’ve been feeling lately</span></button>
+            <a class="mnx-close-opt" href="/beta/nexus/"><b>You’re not alone</b><span>See who else is around on Nexus</span></a>
+          </div>
+          <button type="button" class="mnx-go" id="mnx-close-done" style="margin-top:1.3rem">Done</button>
+        </div>`;
+        document.getElementById('mnx-close-lookback')?.addEventListener('click', showLookBack);
+        document.getElementById('mnx-close-done')?.addEventListener('click', resetToEntry);
+      }
+      // Mood-over-time, gently (#36) — built from the user's own optional reflections.
+      async function showLookBack() {
+        immersive(true);
+        root.innerHTML = `<div class="mnx-lb"><div class="mnx-skel" style="margin-top:1rem"><i></i><i></i><i></i></div></div>`;
+        let refs = [];
+        try { const { data } = await supabase.from('minit_reflections').select('mood, created_at').eq('user_id', user.id).order('created_at', { ascending: true }).limit(60); refs = (data || []).filter((r) => r.mood); } catch (e) {}
+        const back = '<div class="mnx-ring-actions"><button type="button" class="mnx-cancel" id="mnx-lb-back">Back</button></div>';
+        if (!refs.length) {
+          root.innerHTML = `<div class="mnx-lb"><div class="mnx-empty-orb"></div><h3>Your check-ins will gather here</h3><p>After a few sessions, you’ll see how you’ve been feeling over time — gently, just for you.</p>${back}</div>`;
+        } else {
+          const SCORE = { great: 3, okay: 2, low: 1, anxious: 1, angry: 1 };
+          const COL = { great: 'var(--mint-deep)', okay: 'var(--gold)', low: 'var(--coral)', anxious: 'var(--coral)', angry: 'var(--coral)' };
+          const dots = refs.map((r) => { let lbl = ''; try { lbl = new Date(r.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }); } catch (e) {} return `<span class="mnx-lb-dot" style="background:${COL[r.mood] || 'var(--line-strong)'}" title="${esc(lbl)}"></span>`; }).join('');
+          let summary = 'Each dot is a moment you showed up. That adds up.';
+          if (refs.length >= 4) {
+            const n = refs.length, recent = refs.slice(-3), earlier = refs.slice(0, n - 3);
+            const avg = (a) => a.reduce((s, r) => s + (SCORE[r.mood] || 2), 0) / a.length;
+            const dr = avg(recent) - avg(earlier);
+            if (dr > 0.4) summary = 'You’ve been leaning a little lighter lately. That’s worth noticing.';
+            else if (dr < -0.4) summary = 'It’s been a heavier stretch lately. That’s okay — you keep showing up, and that counts.';
+            else summary = 'Pretty steady lately. You keep coming back, and that matters.';
+          }
+          root.innerHTML = `<div class="mnx-lb"><p class="mnx-kick2">Looking back</p><h3>How you’ve been</h3><div class="mnx-lb-track">${dots}</div><div class="mnx-lb-legend"><span><i style="background:var(--mint-deep)"></i> lighter</span><span><i style="background:var(--gold)"></i> okay</span><span><i style="background:var(--coral)"></i> heavy</span></div><p class="mnx-lb-sum">${esc(summary)}</p>${back}</div>`;
+        }
+        document.getElementById('mnx-lb-back')?.addEventListener('click', showEntry);
+      }
+
       function showReview(sessionId, listenerId) {
         immersive(false);
         let stars = 0, feel = null; const helped = new Set();
@@ -1107,7 +1172,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
         modal.querySelectorAll('#mnx-feel button').forEach((bn) => bn.addEventListener('click', () => { feel = bn.getAttribute('data-f'); modal.querySelectorAll('#mnx-feel button').forEach((x) => x.classList.toggle('on', x === bn)); }));
         modal.querySelectorAll('#mnx-stars span').forEach((s) => s.addEventListener('click', () => { stars = Number(s.getAttribute('data-n')); modal.querySelectorAll('#mnx-stars span').forEach((x) => x.classList.toggle('on', Number(x.getAttribute('data-n')) <= stars)); }));
         modal.querySelectorAll('#mnx-helped .mnx-help-tag').forEach((b) => b.addEventListener('click', () => { const t = b.getAttribute('data-t'); if (helped.has(t)) { helped.delete(t); b.classList.remove('on'); } else { helped.add(t); b.classList.add('on'); } }));
-        const finish = () => { modal.remove(); resetToEntry(); };
+        const finish = () => { modal.remove(); showClosure(); };
         modal.querySelector('#mnx-skip').addEventListener('click', finish);
         modal.querySelector('#mnx-submit').addEventListener('click', async () => {
           if (stars) { try { await supabase.from('listener_reviews').insert([{ session_id: sessionId, listener_id: listenerId, user_id: user.id, rating: stars, review_text: feel ? ('felt: ' + feel) : null, helped: helped.size ? [...helped] : null }]); } catch (e) {} }
