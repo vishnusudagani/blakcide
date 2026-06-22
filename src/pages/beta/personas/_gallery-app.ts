@@ -8,6 +8,7 @@ const emptyEl = document.getElementById('pg-empty') as HTMLElement;
 
 const TRASH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>';
 const PENCIL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>';
+const DUP = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
 
 function avatarUrl(av: any) {
   av = av || {};
@@ -27,6 +28,7 @@ function cardEl(p: any) {
   a.className = 'pg-card';
   a.innerHTML =
     '<button type="button" class="pg-edit" aria-label="Edit persona">' + PENCIL + '</button>' +
+    '<button type="button" class="pg-dup" aria-label="Duplicate persona">' + DUP + '</button>' +
     '<button type="button" class="pg-del" aria-label="Delete persona">' + TRASH + '</button>' +
     '<img class="pg-av" alt="" loading="lazy" src="' + esc(avatarUrl(p.avatar)) + '" />' +
     '<div class="pg-name">' + esc(p.name || 'Untitled') + '</div>' +
@@ -34,12 +36,28 @@ function cardEl(p: any) {
     (p.tagline ? '<div class="pg-tag">' + esc(p.tagline) + '</div>' : '');
   // Tap the card → talk to it. The pencil edits; the trash deletes.
   a.addEventListener('click', (e: any) => {
-    if (e.target.closest('.pg-del') || e.target.closest('.pg-edit')) return;
+    if (e.target.closest('.pg-del') || e.target.closest('.pg-edit') || e.target.closest('.pg-dup')) return;
     window.location.href = '/beta/personas/chat/?id=' + encodeURIComponent(p.id);
   });
   a.querySelector('.pg-edit')!.addEventListener('click', (e) => {
     e.stopPropagation();
     window.location.href = '/beta/personas/edit/?id=' + encodeURIComponent(p.id);
+  });
+  a.querySelector('.pg-dup')!.addEventListener('click', async (e) => {
+    e.stopPropagation();
+    const btn = a.querySelector('.pg-dup') as HTMLElement; btn.style.opacity = '.4';
+    try {
+      const uid = await userId();
+      const { data: full } = await supabase!.from('fantasy_personas').select('*').eq('id', p.id).single();
+      if (!full || !uid) throw new Error('no');
+      const row: any = { ...full };
+      delete row.id; delete row.created_at; delete row.updated_at;
+      row.user_id = uid;
+      row.name = ((full.name || 'Persona') + ' (copy)').slice(0, 40);
+      const { data: created } = await supabase!.from('fantasy_personas').insert(row).select('id,name,tagline,purpose,avatar').single();
+      if (created) { grid.insertBefore(cardEl(created), createCard); refreshEmpty(); }
+      btn.style.opacity = '';
+    } catch (err) { btn.style.opacity = ''; alert('Could not duplicate — try again.'); }
   });
   a.querySelector('.pg-del')!.addEventListener('click', async (e) => {
     e.stopPropagation();
