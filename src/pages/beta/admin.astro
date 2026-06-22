@@ -20,6 +20,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
     @keyframes adm-spin { to { transform: rotate(360deg); } }
     .adm-msg { padding: 2rem 1.4rem; text-align: center; color: var(--ink-soft); }
     .adm-stats { display: flex; gap: .7rem; flex-wrap: wrap; margin-bottom: 1.6rem; }
+    .adm-outcomes-note { font-size: var(--fs-xs); color: var(--ink-faint); margin: .6rem 0 0; }
     .adm-stat { padding: .6rem 1.1rem; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); }
     .adm-stat b { display: block; font-size: var(--fs-2xl); color: var(--ink); font-weight: 650; }
     .adm-stat span { font-size: var(--fs-2xs); font-family: var(--font-mono); letter-spacing: .06em; text-transform: uppercase; color: var(--ink-faint); }
@@ -65,19 +66,25 @@ import AppLayout from '../../layouts/AppLayout.astro';
         if (error) { root.innerHTML = '<div class="adm-msg">This area is for the Blaksyd Trust &amp; Safety team.</div>'; return; }
         let apps = [];
         try { const { data: ad } = await supabase.rpc('minit_admin_applications'); apps = ad || []; } catch (e) {}
-        render(data, apps);
+        let metrics = null;
+        try { const { data: md } = await supabase.rpc('minit_admin_metrics'); metrics = md || null; } catch (e) {}
+        render(data, apps, metrics);
       }
 
-      function render(d, apps) {
+      function render(d, apps, m) {
         const s = d.stats || {};
         const flagged = d.flagged || [], bans = d.bans || [], listeners = d.listeners || [];
         const stat = (n, l) => `<div class="adm-stat"><b>${n ?? 0}</b><span>${l}</span></div>`;
+        const pct = (x) => (x == null ? '—' : Math.round(x * 100) + '%');
+        const fmtWait = (sec) => { sec = Number(sec) || 0; return sec >= 60 ? Math.round(sec / 60) + 'm' : Math.round(sec) + 's'; };
+        const outcomes = m && m.listener !== false ? `<div class="adm-sec"><h2>Outcomes <span class="adm-count">last ${m.window_days || 30} days</span></h2><div class="adm-stats">${stat(pct(m.connect_rate), 'connect rate')}${stat(m.completed, 'sessions')}${stat(fmtWait(m.avg_wait_s), 'avg wait')}${stat(pct(m.repeat_rate), 'return rate')}${stat(pct(m.mood_lighter_rate), 'left lighter')}${stat(m.safety_per_1k, 'flags / 1k')}</div><p class="adm-outcomes-note">${m.reflections || 0} reflections · ${m.lighter || 0} lighter / ${m.heavy || 0} heavy</p></div>` : '';
         const flagRow = (f) => `<div class="adm-row flag"><div class="adm-row-main"><b>Flagged session</b> <span class="mono">seeker ${shortId(f.user_id)} · ${fmt(f.flagged_at)}</span><i>${esc(f.flag_reason || 'flagged')} · status: ${esc(f.status)}</i></div>${f.banned ? '<span class="adm-tag banned">banned</span><button type="button" class="adm-btn" data-unban="' + f.user_id + '">Unban</button>' : '<button type="button" class="adm-btn danger" data-ban="' + f.user_id + '">Ban seeker</button>'}</div>`;
         const banRow = (b) => `<div class="adm-row"><div class="adm-row-main"><b class="mono">user ${shortId(b.user_id)}</b><i>${esc(b.reason || 'no reason')} · ${b.expires_at ? 'until ' + fmt(b.expires_at) : 'permanent'} · since ${fmt(b.created_at)}</i></div><button type="button" class="adm-btn" data-unban="${b.user_id}">Unban</button></div>`;
         const lRow = (l) => `<div class="adm-row"><div class="adm-row-main"><b>${esc(l.display_name || 'Listener')}</b> <span class="adm-tag ${l.is_online ? 'on' : 'off'}">${l.is_online ? 'online' : 'offline'}</span><i>★ ${l.rating != null ? Number(l.rating).toFixed(1) : '—'} · ${l.reviews_count || 0} reviews · ${shortId(l.id)}</i></div></div>`;
 
         root.innerHTML = `
           <div class="adm-stats">${stat(s.completed, 'completed')}${stat(s.active, 'active now')}${stat(s.flagged, 'flagged')}${stat(bans.length, 'banned')}${stat(listeners.length, 'listeners')}</div>
+          ${outcomes}
           <div class="adm-sec"><h2>Flagged sessions <span class="adm-count">${flagged.length}</span></h2>${flagged.length ? flagged.map(flagRow).join('') : '<div class="adm-empty">No flags. All quiet.</div>'}</div>
           <div class="adm-sec"><h2>Banned users <span class="adm-count">${bans.length}</span></h2>${bans.length ? bans.map(banRow).join('') : '<div class="adm-empty">No active bans.</div>'}</div>
           <div class="adm-sec"><h2>Listeners <span class="adm-count">${listeners.length}</span></h2>${listeners.length ? listeners.map(lRow).join('') : '<div class="adm-empty">No listeners yet.</div>'}</div>
