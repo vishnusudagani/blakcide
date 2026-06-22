@@ -39,6 +39,11 @@ import AppLayout from '../../layouts/AppLayout.astro';
 
       <div class="bx-reminders" id="bx-reminders" hidden data-noswipe></div>
 
+      <a class="bx-nexus" id="bx-nexus" hidden data-noswipe href="/beta/nexus/">
+        <span class="bx-nexus-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="7" r="2.1"/><circle cx="18" cy="7" r="2.1"/><circle cx="12" cy="17.5" r="2.1"/><path d="M7.9 8 10.6 15.6M16.1 8 13.4 15.6M8.1 7h7.8"/></svg></span>
+        <span class="bx-nexus-tx"><b id="bx-nexus-title">Find your people</b><i id="bx-nexus-sub">see what your tribes are talking about →</i></span>
+      </a>
+
       <div class="bx-mood" id="bx-mood">
         <span class="bx-mood-q">How are you feeling today?</span>
         <div class="bx-mood-row" data-noswipe>
@@ -67,6 +72,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
         <button type="button" id="bx-add-group"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg> New group with Blak</button>
         <button type="button" id="bx-add-incognito"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.9 4.2A9 9 0 0 1 12 4c5 0 9 4.5 9 8a12 12 0 0 1-2 3M6.6 6.6A12.4 12.4 0 0 0 3 12c0 3.5 4 8 9 8a9 9 0 0 0 4-1M1 1l22 22"/></svg> Incognito chat</button>
         <button type="button" id="bx-add-human"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11.5a7.5 7.5 0 0 1-10.8 6.7L4 20l1.8-4.7A7.5 7.5 0 1 1 20 11.5z"/><circle cx="9" cy="11.5" r="1"/><circle cx="12" cy="11.5" r="1"/><circle cx="15" cy="11.5" r="1"/></svg> Talk to a human</button>
+        <button type="button" id="bx-add-persona"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="5.5"/><circle cx="12" cy="10" r="2.5"/><path d="M7.9 17.3a4.5 4.5 0 0 1 8.2 0"/></svg> Talk to a Persona</button>
         <button type="button" id="bx-add-summary"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg> Summarize this chat</button>
         <button type="button" id="bx-add-doc"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h6"/></svg> Document / PDF</button>
         <button type="button" id="bx-add-export"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M8 11l4 4 4-4M5 21h14"/></svg> Export this chat</button>
@@ -514,6 +520,14 @@ import AppLayout from '../../layouts/AppLayout.astro';
     .bx-nudge-acts button { background: none; border: 1px solid var(--line-strong); color: var(--ink-soft); border-radius: var(--r-pill); font: inherit; font-size: var(--fs-xs); padding: .32rem .85rem; cursor: pointer; }
     .bx-nudge-acts button:hover { color: var(--ink); }
     .bx-nudge-reply { color: var(--cta-ink) !important; background: var(--cta) !important; border-color: transparent !important; }
+    .bx-nexus { display: inline-flex; align-items: center; gap: .7rem; padding: .7rem .95rem; border-radius: var(--r-md); background: var(--glass-strong); border: 1px solid var(--line-strong); box-shadow: var(--shadow-soft); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); transition: .18s var(--ease-out); text-decoration: none; }
+    .bx-nexus[hidden] { display: none; }
+    .bx-nexus:hover { border-color: var(--aqua, #5bc0ff); transform: translateY(-1px); }
+    .bx-nexus-ic { flex: none; width: 34px; height: 34px; border-radius: var(--r-sm); display: grid; place-items: center; color: var(--aqua, #5bc0ff); background: rgba(120,200,255,.12); border: 1px solid rgba(120,200,255,.26); }
+    .bx-nexus-ic svg { width: 18px; height: 18px; }
+    .bx-nexus-tx { display: flex; flex-direction: column; gap: 1px; text-align: left; min-width: 0; }
+    .bx-nexus-tx b { font-size: var(--fs-md); font-weight: 600; color: var(--ink); }
+    .bx-nexus-tx i { font-style: normal; font-size: var(--fs-xs); color: var(--ink-faint); }
     .bx-insight-card { display: inline-flex; align-items: center; gap: .7rem; padding: .7rem .95rem; border-radius: var(--r-md); background: var(--glass-strong); border: 1px solid var(--line-strong); box-shadow: var(--shadow-soft); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); transition: .18s var(--ease-out); }
     .bx-insight-card:hover { border-color: var(--coral); transform: translateY(-1px); }
     .bx-insight-card .bx-insight-ic { flex: none; width: 34px; height: 34px; border-radius: var(--r-sm); display: grid; place-items: center; color: var(--mint-deep); background: rgba(106,211,184,.14); border: 1px solid rgba(106,211,184,.26); }
@@ -876,6 +890,25 @@ import AppLayout from '../../layouts/AppLayout.astro';
 
     // Build the meta row under a bubble: timestamp + copy + (Blak) read-aloud +
     // (your text messages) edit. Idempotent — safe from both addRow and stamp().
+    // Remember this in the profile (#30): save a message verbatim into the
+    // open bucket of "What Blak knows about you" — explicit, user-owned.
+    async function rememberToProfile(text, btn) {
+      if (!supabase || !userId || !text) return;
+      const val = String(text).trim().slice(0, 600);
+      if (!val) return;
+      const { error } = await supabase.from('symp_knowledge_facts').upsert({
+        user_id: userId, area: 'other', key: 'note_' + Date.now(),
+        label: 'You asked Blak to remember this', value: val,
+        source: 'user', status: 'user_edited', confidence: 1, last_seen_at: new Date().toISOString(),
+      }, { onConflict: 'user_id,area,key' });
+      if (btn) {
+        const old = btn.innerHTML;
+        btn.innerHTML = error ? '✕' : '✓';
+        btn.title = error ? 'Could not save' : 'Saved to your profile';
+        setTimeout(() => { btn.innerHTML = old; btn.title = 'Remember in profile'; }, 1600);
+      }
+    }
+
     function addMeta(col, ts, side, text, msg) {
       if (!col || col.querySelector('.bx-meta')) return;
       const meta = document.createElement('div'); meta.className = 'bx-meta';
@@ -888,6 +921,12 @@ import AppLayout from '../../layouts/AppLayout.astro';
         const txt = text;
         cp.addEventListener('click', () => copyMsg(txt, cp));
         meta.appendChild(cp);
+        const rm = document.createElement('button');
+        rm.type = 'button'; rm.className = 'bx-copy bx-remember'; rm.title = 'Remember in profile'; rm.setAttribute('aria-label', 'Remember in profile');
+        rm.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>';
+        const rtxt = text;
+        rm.addEventListener('click', () => rememberToProfile(rtxt, rm));
+        meta.appendChild(rm);
       }
       if (side === 'them' && text && text.trim()) {
         const sp = document.createElement('button');
@@ -1107,6 +1146,33 @@ import AppLayout from '../../layouts/AppLayout.astro';
     }
 
     // ── Proactive nudges: Blak reaching out (surfaced on the home screen) ──────
+    // Surface a relevant Nexus tribe from the user's interests (a warm intro to
+    // their people). Lightweight keyword match — no embeddings needed.
+    async function loadNexusSuggestion() {
+      const card = $('bx-nexus'); if (!card || !supabase || !userId) return;
+      try {
+        const { data: facts } = await supabase.from('symp_knowledge_facts').select('value').eq('user_id', userId).in('key', ['interests', 'favorite_topics', 'media_tastes']);
+        const text = (facts || []).map((f) => f.value || '').join(' ').toLowerCase();
+        if (!text.trim()) return;
+        const STOP = new Set(['likes', 'like', 'loves', 'love', 'enjoys', 'really', 'about', 'with', 'their', 'they', 'them', 'also', 'very', 'into', 'things', 'stuff', 'kinds', 'kind', 'good', 'much', 'lot']);
+        const words = [...new Set((text.match(/[a-z]{4,}/g) || []).filter((w) => !STOP.has(w)))];
+        if (!words.length) return;
+        const { data: comms } = await supabase.from('nexus_communities').select('slug,name,description').eq('visibility', 'public').limit(60);
+        if (!comms || !comms.length) return;
+        let best = null, bestScore = 0;
+        for (const c of comms) {
+          const hay = ((c.name || '') + ' ' + (c.description || '')).toLowerCase();
+          let score = 0; for (const w of words) if (hay.includes(w)) score++;
+          if (score > bestScore) { bestScore = score; best = c; }
+        }
+        if (!best || bestScore < 1) return;
+        const t = $('bx-nexus-title'), s = $('bx-nexus-sub');
+        if (t) t.textContent = 'Your people are in ' + best.name;
+        if (s) s.textContent = 'see what your tribe is talking about →';
+        card.hidden = false;
+      } catch (e) {}
+    }
+
     async function loadNudges() {
       const wrap = $('bx-nudges'); if (!wrap || !supabase || !userId) return;
       try {
@@ -1283,6 +1349,8 @@ import AppLayout from '../../layouts/AppLayout.astro';
     if (addIncog) addIncog.addEventListener('click', () => { closeAddMenu(); enterIncognito(); });
     const addHuman = $('bx-add-human');
     if (addHuman) addHuman.addEventListener('click', () => { closeAddMenu(); handoffToMinit(); });
+    const addPersona = $('bx-add-persona');
+    if (addPersona) addPersona.addEventListener('click', () => { closeAddMenu(); window.location.href = '/beta/personas/'; });
     { const ix = $('bx-incog-exit'); if (ix) ix.addEventListener('click', () => { newConvo(); }); }
     const addSummary = $('bx-add-summary');
     if (addSummary) addSummary.addEventListener('click', () => { closeAddMenu(); summarizeThread(activeChatId, null); });
@@ -2143,6 +2211,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
       loadGreetingAndInsight();
       loadReminders();
       loadNudges();
+      loadNexusSuggestion();
       setupMood();
     })();
   </script>
