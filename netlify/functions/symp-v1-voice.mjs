@@ -94,7 +94,7 @@ export default async (req) => {
     // profile. Calls now learn durable facts too (true cross-context, one profile).
     recordEventAsync(user_id, { source: 'ai_call', evidence: `User: ${transcript}\n\nAssistant: ${reply}` });
     updateRollingMemoryAsync(user_id, { userText: transcript, assistantText: reply });
-    extractKnowledgeAsync(user_id, { userText: transcript, assistantText: reply });
+    extractKnowledgeAsync(user_id, { userText: transcript, assistantText: reply, sourceKind: 'voice' });
 
     logAccess({ requestId, endpoint: 'voice', statusCode: 200, latencyMs: Date.now() - t0, userId: user_id });
     return new Response(

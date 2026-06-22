@@ -252,9 +252,29 @@ export async function fetchKnowledgeFacts(userId) {
     const { ok, data } = await sbFetch(
         `symp_knowledge_facts?user_id=eq.${encodeURIComponent(userId)}` +
         `&order=area.asc,updated_at.desc` +
-        `&select=id,area,key,label,value,source,confidence,status,evidence,updated_at,last_seen_at`
+        `&select=id,area,key,label,value,source,confidence,status,evidence,evidence_at,source_kind,source_ref,` +
+        `visibility,never_raise,pinned,archived,last_confirmed_at,valid_until,updated_at,last_seen_at`
     );
     return (ok && Array.isArray(data)) ? data : [];
+}
+
+/**
+ * A subtle, non-clinical read of recent mood check-ins (mood_logs) for the
+ * context engine. NEVER a "score" or diagnosis — just a gentle tone cue.
+ * Returns { n, dominant, latest, counts } or null.
+ */
+export async function fetchRecentMoodSummary(userId, { days = 14 } = {}) {
+    const since = new Date(Date.now() - days * 86400000).toISOString();
+    const { ok, data } = await sbFetch(
+        `mood_logs?user_id=eq.${encodeURIComponent(userId)}&created_at=gte.${encodeURIComponent(since)}` +
+        `&select=mood,created_at&order=created_at.desc&limit=60`
+    );
+    if (!ok || !Array.isArray(data) || !data.length) return null;
+    const counts = {};
+    for (const r of data) counts[r.mood] = (counts[r.mood] || 0) + 1;
+    let dominant = null, max = 0;
+    for (const [m, c] of Object.entries(counts)) if (c > max) { max = c; dominant = m; }
+    return { n: data.length, dominant, latest: data[0].mood, counts };
 }
 
 /**
@@ -264,7 +284,7 @@ export async function fetchKnowledgeFacts(userId) {
  *  - Otherwise we refine value/label/confidence/source/evidence + bump dates.
  * Returns { ok, action:'created'|'updated'|'locked-skip'|'noop' }.
  */
-export async function upsertKnowledgeFact({ userId, area, key, label, value, source = 'blak', confidence = 0.6, evidence = null }) {
+export async function upsertKnowledgeFact({ userId, area, key, label, value, source = 'blak', confidence = 0.6, evidence = null, evidenceAt = null, sourceKind = null, sourceRef = null }) {
     if (!userId || !area || !key || !value) return { ok: false, action: 'noop' };
     const u = encodeURIComponent(userId);
     const a = encodeURIComponent(area);
@@ -272,7 +292,7 @@ export async function upsertKnowledgeFact({ userId, area, key, label, value, sou
     const nowIso = new Date().toISOString();
 
     const existing = await sbFetch(
-        `symp_knowledge_facts?user_id=eq.${u}&area=eq.${a}&key=eq.${k}&select=id,status`
+        `symp_knowledge_facts?user_id=eq.${u}&area=eq.${a}&key=eq.${k}&select=id,status,value`
     );
     const row = (existing.ok && Array.isArray(existing.data) && existing.data[0]) ? existing.data[0] : null;
 
@@ -284,20 +304,167 @@ export async function upsertKnowledgeFact({ userId, area, key, label, value, sou
             return { ok: true, action: 'locked-skip' };
         }
         const body = { value, source, confidence, last_seen_at: nowIso };
-        if (label)    body.label    = label;
-        if (evidence) body.evidence = evidence;
+        if (label)      body.label       = label;
+        if (evidence)   body.evidence    = evidence;
+        if (evidenceAt) body.evidence_at = evidenceAt;
+        if (sourceKind) body.source_kind = sourceKind;
+        if (sourceRef)  body.source_ref  = sourceRef;
         const upd = await sbFetch(`symp_knowledge_facts?id=eq.${row.id}`, {
             method: 'PATCH', body, prefer: 'return=minimal',
         });
+        // Versioning (#7): keep the prior value when Blak genuinely changes a fact.
+        if (upd.ok && row.value && row.value !== value) {
+            await recordFactHistory({
+                userId, factId: row.id, area, key,
+                oldValue: row.value, newValue: value, changedBy: 'blak', reason: sourceKind || null,
+            }).catch(() => {});
+        }
         return { ok: upd.ok, action: 'updated' };
     }
 
     const ins = await sbFetch('symp_knowledge_facts', {
         method: 'POST',
-        body:   { user_id: userId, area, key, label: label || null, value, source, confidence, evidence: evidence || null },
+        body:   {
+            user_id: userId, area, key, label: label || null, value, source, confidence,
+            evidence: evidence || null, evidence_at: evidenceAt || null,
+            source_kind: sourceKind || null, source_ref: sourceRef || null,
+        },
         prefer: 'return=minimal',
     });
     return { ok: ins.ok, action: 'created', error: ins.ok ? null : ins.data };
+}
+
+// ── Knowledge: entities (people / pets / places as first-class — #1, #37) ──
+export async function fetchEntities(userId) {
+    const { ok, data } = await sbFetch(
+        `symp_knowledge_entities?user_id=eq.${encodeURIComponent(userId)}` +
+        `&order=importance.desc,updated_at.desc&select=*`
+    );
+    return (ok && Array.isArray(data)) ? data : [];
+}
+
+export async function upsertEntity({ userId, kind, name, role = null, relation = null, notes = null, avatarUrl = null, birthday = null, sentiment = null, importance = 0.5, sensitive = false, source = 'blak', confidence = 0.6, visibility = 'shared' }) {
+    if (!userId || !kind || !name) return { ok: false, action: 'noop' };
+    const u = encodeURIComponent(userId), kk = encodeURIComponent(kind), nn = encodeURIComponent(name);
+    const nowIso = new Date().toISOString();
+    const existing = await sbFetch(
+        `symp_knowledge_entities?user_id=eq.${u}&kind=eq.${kk}&name=eq.${nn}&select=id,status`
+    );
+    const row = (existing.ok && Array.isArray(existing.data) && existing.data[0]) ? existing.data[0] : null;
+    if (row) {
+        if (row.status === 'user_edited') {
+            await sbFetch(`symp_knowledge_entities?id=eq.${row.id}`, { method: 'PATCH', body: { last_seen_at: nowIso }, prefer: 'return=minimal' });
+            return { ok: true, action: 'locked-skip' };
+        }
+        const body = { last_seen_at: nowIso, source, confidence };
+        if (role != null)       body.role       = role;
+        if (relation != null)   body.relation   = relation;
+        if (notes != null)      body.notes      = notes;
+        if (avatarUrl != null)  body.avatar_url = avatarUrl;
+        if (birthday != null)   body.birthday   = birthday;
+        if (sentiment != null)  body.sentiment  = sentiment;
+        if (importance != null) body.importance = importance;
+        const upd = await sbFetch(`symp_knowledge_entities?id=eq.${row.id}`, { method: 'PATCH', body, prefer: 'return=minimal' });
+        return { ok: upd.ok, action: 'updated' };
+    }
+    const ins = await sbFetch('symp_knowledge_entities', {
+        method: 'POST',
+        body: { user_id: userId, kind, name, role, relation, notes, avatar_url: avatarUrl, birthday, sentiment, importance, sensitive, visibility, source, confidence },
+        prefer: 'return=minimal',
+    });
+    return { ok: ins.ok, action: 'created', error: ins.ok ? null : ins.data };
+}
+
+// ── Knowledge: events (dated facts → timeline & countdowns — #2, #8) ───────
+export async function fetchEvents(userId) {
+    const { ok, data } = await sbFetch(
+        `symp_knowledge_events?user_id=eq.${encodeURIComponent(userId)}` +
+        `&order=occurred_on.desc.nullslast&select=*`
+    );
+    return (ok && Array.isArray(data)) ? data : [];
+}
+
+export async function upsertEvent({ userId, title, kind = 'event', occurredOn = null, occurredAt = null, endOn = null, allDay = true, recurrence = null, entityId = null, factId = null, notes = null, source = 'blak', sourceKind = null, sourceRef = null, confidence = 0.6, visibility = 'shared' }) {
+    if (!userId || !title) return { ok: false, action: 'noop' };
+    const u = encodeURIComponent(userId), t = encodeURIComponent(title);
+    const onClause = occurredOn ? `&occurred_on=eq.${encodeURIComponent(occurredOn)}` : '&occurred_on=is.null';
+    const existing = await sbFetch(`symp_knowledge_events?user_id=eq.${u}&title=eq.${t}${onClause}&select=id,status`);
+    const row = (existing.ok && Array.isArray(existing.data) && existing.data[0]) ? existing.data[0] : null;
+    if (row) {
+        if (row.status === 'user_edited') return { ok: true, action: 'locked-skip' };
+        const body = { kind, occurred_at: occurredAt, end_on: endOn, all_day: allDay, recurrence, entity_id: entityId, fact_id: factId, notes, confidence, visibility };
+        const upd = await sbFetch(`symp_knowledge_events?id=eq.${row.id}`, { method: 'PATCH', body, prefer: 'return=minimal' });
+        return { ok: upd.ok, action: 'updated' };
+    }
+    const ins = await sbFetch('symp_knowledge_events', {
+        method: 'POST',
+        body: { user_id: userId, title, kind, occurred_on: occurredOn, occurred_at: occurredAt, end_on: endOn, all_day: allDay, recurrence, entity_id: entityId, fact_id: factId, notes, source, source_kind: sourceKind, source_ref: sourceRef, confidence, visibility },
+        prefer: 'return=minimal',
+    });
+    return { ok: ins.ok, action: 'created', error: ins.ok ? null : ins.data };
+}
+
+// ── Knowledge: fact history (versioning — #7) ─────────────────────────────
+export async function recordFactHistory({ userId, factId = null, area = null, key = null, oldValue = null, newValue = null, changedBy = 'blak', reason = null }) {
+    if (!userId) return { ok: false };
+    const ins = await sbFetch('symp_knowledge_fact_history', {
+        method: 'POST',
+        body: { user_id: userId, fact_id: factId, area, key, old_value: oldValue, new_value: newValue, changed_by: changedBy, reason },
+        prefer: 'return=minimal',
+    });
+    return { ok: ins.ok };
+}
+
+export async function fetchFactHistory(userId, factId) {
+    const { ok, data } = await sbFetch(
+        `symp_knowledge_fact_history?user_id=eq.${encodeURIComponent(userId)}&fact_id=eq.${encodeURIComponent(factId)}` +
+        `&order=changed_at.desc&select=*`
+    );
+    return (ok && Array.isArray(data)) ? data : [];
+}
+
+// ── Knowledge: tombstones ("forget & don't relearn" — #20) ────────────────
+export async function fetchTombstones(userId) {
+    const { ok, data } = await sbFetch(
+        `symp_knowledge_tombstones?user_id=eq.${encodeURIComponent(userId)}&select=scope,area,key,value_norm`
+    );
+    return (ok && Array.isArray(data)) ? data : [];
+}
+
+export async function addTombstone({ userId, scope = 'fact', area = null, key = null, valueNorm = null, reason = null }) {
+    if (!userId) return { ok: false };
+    const ins = await sbFetch('symp_knowledge_tombstones', {
+        method: 'POST',
+        body: { user_id: userId, scope, area, key, value_norm: valueNorm, reason },
+        prefer: 'return=minimal',
+    });
+    return { ok: ins.ok };
+}
+
+// ── Profile settings (consent-first toggles — #18, #46–50) ────────────────
+export async function fetchProfileSettings(userId) {
+    const { ok, data } = await sbFetch(
+        `symp_profile_settings?user_id=eq.${encodeURIComponent(userId)}&select=*`
+    );
+    return (ok && Array.isArray(data) && data[0]) ? data[0] : null;
+}
+
+// ── Profile synthesis ("About you" narrative cache — #36) ─────────────────
+export async function fetchSynthesis(userId) {
+    const { ok, data } = await sbFetch(
+        `symp_profile_synthesis?user_id=eq.${encodeURIComponent(userId)}&select=*`
+    );
+    return (ok && Array.isArray(data) && data[0]) ? data[0] : null;
+}
+
+export async function saveSynthesis({ userId, narrative, factCount = 0, model = null }) {
+    if (!userId) return { ok: false };
+    const up = await sbFetch('symp_profile_synthesis', {
+        method: 'POST',
+        body: { user_id: userId, narrative, fact_count: factCount, model, generated_at: new Date().toISOString() },
+        prefer: 'return=minimal,resolution=merge-duplicates',
+    });
+    return { ok: up.ok };
 }
 
 // ── Vibe state / events ─────────────────────────────────────────────────

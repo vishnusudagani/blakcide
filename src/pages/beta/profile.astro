@@ -1,16 +1,22 @@
 ---
 // Your profile — the user-visible "what Blak knows about you" page.
-// Blak fills it silently from conversation (server-side extractor); here the
-// user can see, edit, and delete everything (owner-only RLS, so the browser
-// client reads/writes its own rows directly). Reached from the avatar button.
+// Blak fills it silently from conversation (server-side extractor v2: facts +
+// people/pets + dated events); here the user can see, edit, control visibility,
+// see WHY Blak believes each thing, and delete/forget anything (owner-only RLS,
+// so the browser client reads/writes its own rows directly). Reached from the
+// avatar button + the Blak home insight card.
+//
+// All page logic lives in ../../lib/profile/profile-app.js (external module,
+// one-line import below): a large inline Astro <script> can be bundled but not
+// injected, which renders the page blank — the external-module import avoids it.
 import AppLayout from '../../layouts/AppLayout.astro';
 ---
 <AppLayout active="profile" title="Profile">
   <div class="ap-page">
     <header class="pf-head">
       <p class="ap-kicker">Your profile</p>
-      <h1 class="ap-h1">What Blaksyd understands about you</h1>
-      <p class="ap-sub">Blaksyd quietly learns from your chats with Blak, your activity on Nexus, and how you reflect after Minit — never prying. It's all yours: edit anything, delete anything, or tell it “this isn't me.”</p>
+      <h1 class="ap-h1">What Blak knows about you</h1>
+      <p class="ap-sub">Blak fills this in as you talk — quietly, never prying. It's all yours: see why Blak believes anything, choose who sees it, edit or forget anything. The more complete it is, the better Blak knows you.</p>
 
       <div class="pf-meter">
         <span class="pf-meter-label" id="pf-pct">Getting to know you…</span>
@@ -30,16 +36,15 @@ import AppLayout from '../../layouts/AppLayout.astro';
   </div>
 
   <style is:global>
-    .pf-head { margin-bottom: 1.6rem; }
+    .pf-head { margin-bottom: 1.4rem; }
     .pf-meter { margin-top: 1.1rem; display: flex; align-items: center; gap: .8rem; flex-wrap: wrap; }
-    .pf-meter-bar { flex: 1 1 240px; height: 8px; border-radius: 999px; background: var(--surface-strong); overflow: hidden; border: 1px solid var(--line); }
-    .pf-meter-fill { display: block; height: 100%; border-radius: 999px; background: var(--cta-grad); box-shadow: 0 0 12px rgba(255,107,157,.4); transition: width .6s var(--ease-out); }
     .pf-meter-label { font-family: var(--font-mono); font-size: var(--fs-xs); letter-spacing: .04em; color: var(--ink-soft); white-space: nowrap; }
     .pf-talk { display: inline-block; margin-top: .9rem; font-size: var(--fs-sm); color: var(--coral); }
     .pf-talk:hover { text-decoration: underline; }
 
     .pf-loading { color: var(--ink-faint); padding: 2rem 0; }
     .pf-root { display: flex; flex-direction: column; gap: 1rem; }
+    .pf-faint { color: var(--ink-faint); font-style: italic; }
 
     /* Archive entry button */
     .pf-archive { display: flex; align-items: center; gap: .9rem; padding: 1rem 1.15rem; margin-bottom: 1rem; text-decoration: none; color: var(--ink); transition: border-color .15s; }
@@ -50,6 +55,21 @@ import AppLayout from '../../layouts/AppLayout.astro';
     .pf-archive-sub { color: var(--ink-faint); font-size: var(--fs-sm); }
     .pf-archive-arr { color: var(--ink-faint); font-size: 1.2rem; flex: none; }
 
+    /* How Blak sees you (mirror) */
+    .pf-mirror { padding: 1.2rem 1.3rem; background: linear-gradient(180deg, rgba(255,107,157,.06), transparent 70%); }
+    .pf-mirror-head { font-family: var(--font-mono); font-size: var(--fs-2xs); letter-spacing: .08em; text-transform: uppercase; color: var(--coral); margin-bottom: .55rem; }
+    .pf-mirror-text { font-family: var(--font-display); font-size: var(--fs-lg); line-height: 1.5; color: var(--ink); margin: 0 0 .7rem; }
+    .pf-mirror-empty { color: var(--ink-faint); font-size: var(--fs-md); margin: 0 0 .8rem; }
+    .pf-mirror-foot { display: flex; align-items: center; justify-content: space-between; gap: .6rem; font-family: var(--font-mono); font-size: var(--fs-2xs); color: var(--ink-faint); }
+
+    /* Energy map */
+    .pf-energy-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .7rem; }
+    .pf-energy-col { padding: .7rem .8rem; border-radius: var(--r-sm); border: 1px solid var(--line); }
+    .pf-energy-col.up { background: rgba(120,220,180,.06); }
+    .pf-energy-col.down { background: rgba(255,210,122,.06); }
+    .pf-energy-label { font-family: var(--font-mono); font-size: var(--fs-2xs); letter-spacing: .04em; margin: 0 0 .3rem; color: var(--ink-soft); }
+    .pf-energy-val { font-size: var(--fs-sm); color: var(--ink); margin: 0; }
+
     .pf-area { padding: 1.1rem 1.2rem 1.25rem; }
     .pf-area-head { display: flex; align-items: baseline; gap: .6rem; margin-bottom: .35rem; }
     .pf-area-title { font-family: var(--font-display); font-weight: 600; font-size: var(--fs-xl); margin: 0; color: var(--ink); }
@@ -58,284 +78,95 @@ import AppLayout from '../../layouts/AppLayout.astro';
 
     .pf-row { display: flex; align-items: flex-start; gap: .75rem; padding: .6rem 0; border-top: 1px solid var(--line); }
     .pf-row:first-of-type { border-top: 0; }
+    .pf-row.ev.soon .pf-row-val { color: var(--coral); }
     .pf-row-main { min-width: 0; flex: 1; }
     .pf-row-label { font-size: var(--fs-xs); color: var(--ink-faint); margin: 0 0 .15rem; }
     .pf-row-val { font-size: var(--fs-md); color: var(--ink); margin: 0; word-wrap: break-word; }
     .pf-row.is-empty .pf-row-val { color: var(--ink-faint); font-style: italic; }
+
     .pf-chips { display: flex; flex-wrap: wrap; gap: .35rem; margin-top: .35rem; }
     .pf-chip { font-family: var(--font-mono); font-size: 9px; letter-spacing: .04em; text-transform: uppercase; padding: 2px 7px; border-radius: 999px; color: var(--ink-soft); background: var(--surface); border: 1px solid var(--line); }
     .pf-chip.you { color: var(--mint); border-color: rgba(120,220,180,.3); }
     .pf-chip.hunch { color: var(--gold); border-color: rgba(255,210,122,.3); }
-    .pf-chip.nexus { color: var(--aqua); border-color: rgba(91,192,255,.3); }
-    .pf-chip.minit { color: var(--mint); border-color: rgba(106,211,184,.3); }
-    .pf-chip.multi { color: var(--coral); border-color: rgba(255,107,157,.3); }
-    .pf-forget { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; margin: 1.3rem 0 .3rem; }
-    .pf-forget > span { font-size: var(--fs-sm); color: var(--ink-faint); }
-    .pf-forget button { font: inherit; font-size: var(--fs-xs); color: var(--ink-soft); background: var(--surface); border: 1px solid var(--line-strong); border-radius: 999px; padding: .4rem .85rem; min-height: 44px; cursor: pointer; }
-    .pf-forget button:hover { border-color: rgba(255,107,157,.4); color: var(--coral); }
+    .pf-chip.lock { color: var(--ink-soft); }
+    .pf-chip.stale { color: var(--gold); border-color: rgba(255,210,122,.3); }
+
+    /* micro action bar under a fact */
+    .pf-microbar { display: flex; flex-wrap: wrap; gap: .8rem; margin-top: .45rem; }
+    .pf-link { background: none; border: 0; padding: 0; cursor: pointer; font-family: var(--font-mono); font-size: var(--fs-2xs); letter-spacing: .03em; color: var(--ink-faint); }
+    .pf-link:hover { color: var(--coral); }
+    .pf-link.ok { color: var(--mint); }
+    .pf-why { margin-top: .4rem; font-size: var(--fs-sm); color: var(--ink-soft); background: var(--surface); border-left: 2px solid var(--coral); padding: .4rem .6rem; border-radius: 0 var(--r-sm) var(--r-sm) 0; }
+    .pf-hist { margin-top: .4rem; display: flex; flex-direction: column; gap: .25rem; }
+    .pf-hist-row { font-size: var(--fs-sm); color: var(--ink-soft); }
+    .pf-hist-row s { color: var(--ink-faint); }
 
     .pf-actions { display: flex; gap: .5rem; flex: none; }
     .pf-btn { background: none; border: 1px solid var(--line); color: var(--ink-faint); border-radius: var(--r-sm); cursor: pointer; font-family: inherit; font-size: var(--fs-xs); padding: .25rem .55rem; min-height: 44px; transition: color var(--t-fast) var(--ease-out), border-color var(--t-fast) var(--ease-out); }
     .pf-btn:hover { color: var(--ink); border-color: var(--line-strong); }
     .pf-btn.danger:hover { color: var(--coral); border-color: rgba(255,107,157,.4); }
     .pf-btn.add { color: var(--coral); border-color: rgba(255,107,157,.3); }
+    .pf-btn:disabled { opacity: .5; cursor: default; }
 
     .pf-form { display: flex; gap: .5rem; align-items: center; flex: 1; flex-wrap: wrap; }
+    .pf-form.col { flex-direction: column; align-items: stretch; }
     .pf-input { flex: 1 1 180px; min-width: 0; background: var(--bg); border: 1px solid var(--line-strong); border-radius: var(--r-sm); color: var(--ink); font-family: inherit; font-size: 16px; padding: .45rem .6rem; }
     .pf-input:focus { outline: none; border-color: var(--coral); }
     .pf-input.key { flex: 0 1 150px; }
+    select.pf-input { -webkit-appearance: none; appearance: none; }
+    .pf-mini { display: inline-flex; align-items: center; gap: .3rem; font-size: var(--fs-xs); color: var(--ink-faint); white-space: nowrap; }
 
-    .pf-empty-note { color: var(--ink-faint); font-size: var(--fs-sm); padding: .4rem 0 0; }
+    /* entities (people & pets) */
+    .pf-ent { display: flex; align-items: center; gap: .7rem; padding: .55rem 0; border-top: 1px solid var(--line); }
+    .pf-ent:first-of-type { border-top: 0; }
+    .pf-ent.editing { align-items: stretch; }
+    .pf-ent-ava { width: 34px; height: 34px; flex: none; display: grid; place-items: center; border-radius: 50%; background: var(--surface); border: 1px solid var(--line); font-size: 16px; }
+    .pf-ent-main { min-width: 0; flex: 1; display: flex; flex-direction: column; }
+    .pf-ent-main b { font-size: var(--fs-md); color: var(--ink); }
+    .pf-ent-sub { font-size: var(--fs-sm); color: var(--ink-faint); }
+    .pf-ent-add { margin-top: .5rem; }
+    img.pf-ent-ava { object-fit: cover; }
+    .pf-ent-photo-row { display: flex; align-items: center; gap: .6rem; }
+    .pf-dupe { border-left: 2px solid var(--gold); padding-left: .6rem; margin-bottom: .5rem; }
+
+    /* privacy & control */
+    .pf-toggle { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: .7rem 0; border-top: 1px solid var(--line); }
+    .pf-toggle:first-of-type { border-top: 0; }
+    .pf-toggle b { font-size: var(--fs-md); display: block; }
+    .pf-switch { position: relative; width: 46px; height: 28px; border-radius: 999px; border: 1px solid var(--line-strong); background: var(--surface); cursor: pointer; flex: none; transition: background .2s; }
+    .pf-switch span { position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: var(--ink-faint); transition: transform .2s, background .2s; }
+    .pf-switch.on { background: var(--cta-grad); border-color: transparent; }
+    .pf-switch.on span { transform: translateX(18px); background: #fff; }
+
+    /* recently picked up */
+    .pf-recent-row { display: flex; align-items: center; gap: .5rem; padding: .4rem 0; border-top: 1px solid var(--line); }
+    .pf-recent-row:first-of-type { border-top: 0; }
+    .pf-recent-tx { flex: 1; min-width: 0; font-size: var(--fs-sm); color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    /* search */
+    .pf-search { position: relative; display: flex; align-items: center; gap: .6rem; }
+    .pf-search .pf-input { flex: 1; }
+
+    /* goals */
+    .pf-row.goal-done .pf-row-val { color: var(--ink-faint); }
+    .pf-wins { margin-top: .4rem; }
+    .pf-wins-h { margin: .6rem 0 .3rem; color: var(--mint); }
+    .pf-link:disabled { opacity: .55; cursor: default; }
+
+    /* curiosity */
+    .pf-curio { padding: 1rem 1.15rem; border-color: rgba(255,107,157,.25); }
+    .pf-curio-head { display: flex; justify-content: space-between; align-items: center; font-family: var(--font-display); font-weight: 600; font-size: var(--fs-md); color: var(--ink); margin-bottom: .2rem; }
+    .pf-curio-chips { display: flex; flex-wrap: wrap; gap: .4rem; }
+
+    /* sharing & minit brief */
+    .pf-sub-h { font-family: var(--font-mono); font-size: var(--fs-2xs); letter-spacing: .06em; text-transform: uppercase; color: var(--ink-faint); margin: 1.1rem 0 .1rem; }
+    .pf-brief { margin: .5rem 0 .2rem; padding: .7rem .85rem; border: 1px dashed var(--line-strong); border-radius: var(--r-sm); background: var(--surface); }
+    .pf-brief-h { font-family: var(--font-mono); font-size: var(--fs-2xs); letter-spacing: .04em; color: var(--coral); margin-bottom: .45rem; }
+    .pf-brief-row { font-size: var(--fs-sm); color: var(--ink); padding: .16rem 0; }
+    .pf-brief-foot { font-size: var(--fs-xs); color: var(--ink-faint); margin-top: .45rem; }
   </style>
 
   <script>
-    import { supabase } from '../../lib/supabaseClient';
-    import {
-      KNOWLEDGE_AREAS, OPEN_AREA, OPEN_AREA_ID, computeCompleteness,
-    } from '../../../symp-core/lib/knowledge-schema.mjs';
-
-    const root = document.getElementById('pf-root');
-    const fillEl = document.getElementById('pf-fill');
-    const pctEl = document.getElementById('pf-pct');
-
-    let user = null;
-    let facts = [];
-    let editing = null; // "area:key" while an inline editor is open
-
-    const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-    const slug = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 40);
-    const relTime = (iso) => {
-      try {
-        const diff = Date.now() - new Date(iso).getTime();
-        const m = Math.floor(diff / 60000), h = Math.floor(m / 60), d = Math.floor(h / 24);
-        if (d > 30) return new Date(iso).toLocaleDateString(undefined, { month: 'short', year: 'numeric' });
-        if (d >= 1) return d + (d === 1 ? ' day ago' : ' days ago');
-        if (h >= 1) return h + (h === 1 ? ' hr ago' : ' hrs ago');
-        if (m >= 1) return m + ' min ago';
-        return 'just now';
-      } catch (e) { return ''; }
-    };
-
-    const factFor = (area, key) => facts.find((f) => f.area === area && f.key === key) || null;
-
-    function chipsFor(f) {
-      const chips = [];
-      const s = f.source;
-      if (s === 'user') chips.push('<span class="pf-chip you">you said</span>');
-      else if (s === 'nexus') chips.push('<span class="pf-chip nexus">from Nexus</span>');
-      else if (s === 'minit') chips.push('<span class="pf-chip minit">from Minit</span>');
-      else if (s === 'multi') chips.push('<span class="pf-chip multi">across Blaksyd</span>');
-      else if ((f.confidence ?? 1) < 0.5) chips.push('<span class="pf-chip hunch">a hunch</span>');
-      else chips.push('<span class="pf-chip">from Blak</span>');
-      chips.push('<span class="pf-chip">' + esc(relTime(f.updated_at || f.last_seen_at)) + '</span>');
-      return '<div class="pf-chips">' + chips.join('') + '</div>';
-    }
-
-    function rowFilled(f, label) {
-      const id = f.area + ':' + f.key;
-      if (editing === id) return editorRow(f.area, f.key, label, f.value);
-      return (
-        '<div class="pf-row">' +
-          '<div class="pf-row-main">' +
-            '<p class="pf-row-label">' + esc(label) + '</p>' +
-            '<p class="pf-row-val">' + esc(f.value) + '</p>' +
-            chipsFor(f) +
-          '</div>' +
-          '<div class="pf-actions">' +
-            '<button class="pf-btn" data-act="edit" data-area="' + esc(f.area) + '" data-key="' + esc(f.key) + '">Edit</button>' +
-            (f.source && f.source !== 'user' ? '<button class="pf-btn" data-act="notme" data-id="' + esc(f.id) + '">Not me</button>' : '') +
-            '<button class="pf-btn danger" data-act="delete" data-id="' + esc(f.id) + '">Delete</button>' +
-          '</div>' +
-        '</div>'
-      );
-    }
-
-    function rowEmpty(area, key, label) {
-      const id = area + ':' + key;
-      if (editing === id) return editorRow(area, key, label, '');
-      return (
-        '<div class="pf-row is-empty">' +
-          '<div class="pf-row-main">' +
-            '<p class="pf-row-label">' + esc(label) + '</p>' +
-            '<p class="pf-row-val">Blak hasn’t picked this up yet</p>' +
-          '</div>' +
-          '<div class="pf-actions">' +
-            '<button class="pf-btn add" data-act="edit" data-area="' + esc(area) + '" data-key="' + esc(key) + '">+ Add</button>' +
-          '</div>' +
-        '</div>'
-      );
-    }
-
-    function editorRow(area, key, label, value) {
-      return (
-        '<div class="pf-row">' +
-          '<div class="pf-form">' +
-            '<input class="pf-input" id="pf-edit-input" value="' + esc(value) + '" placeholder="' + esc(label) + '" />' +
-            '<div class="pf-actions">' +
-              '<button class="pf-btn add" data-act="save" data-area="' + esc(area) + '" data-key="' + esc(key) + '" data-label="' + esc(label) + '">Save</button>' +
-              '<button class="pf-btn" data-act="cancel">Cancel</button>' +
-            '</div>' +
-          '</div>' +
-        '</div>'
-      );
-    }
-
-    function openAddRow() {
-      if (editing !== 'open:__new__') {
-        return '<div class="pf-row"><div class="pf-actions"><button class="pf-btn add" data-act="open-new">+ Add something Blak should know</button></div></div>';
-      }
-      return (
-        '<div class="pf-row">' +
-          '<div class="pf-form">' +
-            '<input class="pf-input key" id="pf-open-label" placeholder="What is it? (e.g. Favourite team)" />' +
-            '<input class="pf-input" id="pf-open-value" placeholder="The detail" />' +
-            '<div class="pf-actions">' +
-              '<button class="pf-btn add" data-act="open-save">Save</button>' +
-              '<button class="pf-btn" data-act="cancel">Cancel</button>' +
-            '</div>' +
-          '</div>' +
-        '</div>'
-      );
-    }
-
-    const STRUCT_IDS = new Set(KNOWLEDGE_AREAS.map((a) => a.id));
-    const niceLabel = (f) => f.label || String(f.key).replace(/^[a-z]+:/, '').replace(/[_-]/g, ' ');
-    function renderArea(area) {
-      let rows, count;
-      if (area.id === OPEN_AREA_ID) {
-        // Catch-all: facts explicitly in 'other', plus any learned fact whose area isn't a structured group.
-        const mine = facts.filter((f) => f.area === OPEN_AREA_ID || !STRUCT_IDS.has(f.area));
-        count = mine.length;
-        rows = mine.map((f) => rowFilled(f, niceLabel(f))).join('') + openAddRow();
-      } else {
-        const fieldKeys = new Set(area.fields.map((fl) => fl.key));
-        // Learned facts (Nexus/Minit) have free-form keys — render them under their area too.
-        const extra = facts.filter((f) => f.area === area.id && !fieldKeys.has(f.key));
-        const filled = area.fields.filter((fl) => factFor(area.id, fl.key)).length;
-        count = filled + '/' + area.fields.length + (extra.length ? ' · +' + extra.length + ' learned' : '');
-        rows = area.fields.map((fl) => {
-          const f = factFor(area.id, fl.key);
-          return f ? rowFilled(f, fl.label) : rowEmpty(area.id, fl.key, fl.label);
-        }).join('') + extra.map((f) => rowFilled(f, niceLabel(f))).join('');
-      }
-      return (
-        '<section class="ap-card pf-area">' +
-          '<div class="pf-area-head">' +
-            '<h2 class="pf-area-title">' + esc(area.label) + '</h2>' +
-            '<span class="pf-area-count">' + esc(count) + '</span>' +
-          '</div>' +
-          (area.blurb ? '<p class="pf-area-blurb">' + esc(area.blurb) + '</p>' : '') +
-          rows +
-        '</section>'
-      );
-    }
-
-    function render() {
-      // No "completeness %": a couple of answers should never read as "33% done".
-      // An honest count of what Blaksyd has genuinely picked up instead.
-      const n = facts.filter(f => f && f.value).length;
-      if (pctEl) pctEl.textContent = n ? ('Blaksyd has picked up ' + n + ' thing' + (n > 1 ? 's' : '') + ' about you') : 'Blaksyd is just getting to know you';
-      const areas = KNOWLEDGE_AREAS.concat([OPEN_AREA]);
-      const bySrc = (s) => facts.some((f) => f.source === s);
-      const footer = (bySrc('nexus') || bySrc('minit') || bySrc('blak'))
-        ? '<div class="pf-forget"><span>Forget what Blaksyd learned from:</span>'
-          + (bySrc('nexus') ? '<button data-act="forget" data-source="nexus">Nexus</button>' : '')
-          + (bySrc('minit') ? '<button data-act="forget" data-source="minit">Minit</button>' : '')
-          + (bySrc('blak') ? '<button data-act="forget" data-source="blak">Blak chats</button>' : '')
-          + '</div>'
-        : '';
-      root.innerHTML = areas.map(renderArea).join('') + footer;
-      const input = document.getElementById('pf-edit-input') || document.getElementById('pf-open-label');
-      if (input) input.focus();
-    }
-
-    async function reload() {
-      const { data, error } = await supabase
-        .from('symp_knowledge_facts')
-        .select('id,area,key,label,value,source,confidence,status,updated_at,last_seen_at')
-        .eq('user_id', user.id)
-        .order('updated_at', { ascending: false });
-      facts = error ? [] : (data || []).filter((f) => f.status !== 'suppressed');
-      render();
-    }
-
-    async function saveFact(area, key, label, value) {
-      const v = String(value || '').trim();
-      if (!v) { editing = null; render(); return; }
-      const row = {
-        user_id: user.id, area, key,
-        label: label || null, value: v,
-        source: 'user', status: 'user_edited', confidence: 1,
-        last_seen_at: new Date().toISOString(),
-      };
-      const { error } = await supabase.from('symp_knowledge_facts').upsert(row, { onConflict: 'user_id,area,key' });
-      if (error) { alert('Could not save: ' + error.message); return; }
-      editing = null;
-      await reload();
-    }
-
-    async function deleteFact(id) {
-      if (!confirm('Delete this? Blak will forget it.')) return;
-      const { error } = await supabase.from('symp_knowledge_facts').delete().eq('id', id);
-      if (error) { alert('Could not delete: ' + error.message); return; }
-      await reload();
-    }
-
-    async function notMe(id) {
-      // Suppress: hide it AND stop it being re-learned (the upsert skips 'suppressed').
-      const { error } = await supabase.from('symp_knowledge_facts').update({ status: 'suppressed' }).eq('id', id);
-      if (error) { alert('Could not update: ' + error.message); return; }
-      await reload();
-    }
-
-    async function forgetSource(src) {
-      const names = { nexus: 'Nexus', minit: 'Minit', blak: 'your Blak chats' };
-      if (!confirm('Forget everything Blaksyd learned from ' + (names[src] || src) + '? Things you typed yourself stay.')) return;
-      const { error } = await supabase.from('symp_knowledge_facts').delete().eq('user_id', user.id).eq('source', src);
-      if (error) { alert('Could not clear: ' + error.message); return; }
-      await reload();
-    }
-
-    root.addEventListener('click', (e) => {
-      const btn = e.target.closest('button[data-act]');
-      if (!btn) return;
-      const act = btn.dataset.act;
-      if (act === 'edit') { editing = btn.dataset.area + ':' + btn.dataset.key; render(); }
-      else if (act === 'cancel') { editing = null; render(); }
-      else if (act === 'delete') { deleteFact(btn.dataset.id); }
-      else if (act === 'notme') { notMe(btn.dataset.id); }
-      else if (act === 'forget') { forgetSource(btn.dataset.source); }
-      else if (act === 'open-new') { editing = 'open:__new__'; render(); }
-      else if (act === 'save') {
-        const input = document.getElementById('pf-edit-input');
-        saveFact(btn.dataset.area, btn.dataset.key, btn.dataset.label || null, input ? input.value : '');
-      } else if (act === 'open-save') {
-        const labEl = document.getElementById('pf-open-label');
-        const valEl = document.getElementById('pf-open-value');
-        const label = labEl ? labEl.value.trim() : '';
-        const value = valEl ? valEl.value.trim() : '';
-        if (!label || !value) { editing = null; render(); return; }
-        const key = slug(label) || ('note_' + Date.now());
-        saveFact(OPEN_AREA_ID, key, label, value);
-      }
-    });
-
-    root.addEventListener('keydown', (e) => {
-      if (e.key !== 'Enter') return;
-      const saveBtn = root.querySelector('button[data-act="save"], button[data-act="open-save"]');
-      if (saveBtn && (e.target.id === 'pf-edit-input' || e.target.id === 'pf-open-value' || e.target.id === 'pf-open-label')) {
-        e.preventDefault(); saveBtn.click();
-      }
-    });
-
-    (async () => {
-      if (!supabase) { root.innerHTML = '<div class="pf-loading">Sign-in isn’t configured in this environment yet.</div>'; return; }
-      try {
-        const { data } = await supabase.auth.getSession();
-        user = data?.session?.user || null;
-      } catch (e) { user = null; }
-      if (!user) { return; } // AppLayout's auth gate will bounce to sign-in
-      await reload();
-    })();
+    import '../../lib/profile/profile-app.js';
   </script>
 </AppLayout>
