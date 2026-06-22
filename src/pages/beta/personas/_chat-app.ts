@@ -222,6 +222,47 @@ input.addEventListener('keydown', (e: any) => { if (e.key === 'Enter' && !e.shif
 form.addEventListener('submit', (e: any) => { e.preventDefault(); const v = input.value; input.value = ''; autogrow(); send(v); });
 stopBtn.addEventListener('click', () => { if (controller) controller.abort(); });
 
+// ── Voice note: record → /transcribe → send as a normal message ──────────────
+// (uses its own vn* recorder so it never collides with the voice-CALL micStream below)
+const voiceBtn = $('pc-voice');
+let vnRec: MediaRecorder | null = null, vnChunks: Blob[] = [], vnStream: MediaStream | null = null, vnRecording = false;
+function vnBlobB64(blob: Blob): Promise<string> { return new Promise(r => { const fr = new FileReader(); fr.onloadend = () => r(String(fr.result).split(',')[1] || ''); fr.readAsDataURL(blob); }); }
+async function vnStart() {
+  if (vnRecording || sending) return;
+  try { vnStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } }); }
+  catch (e) { return; }
+  vnChunks = [];
+  const mime = (window.MediaRecorder && MediaRecorder.isTypeSupported('audio/webm')) ? 'audio/webm' : '';
+  vnRec = new MediaRecorder(vnStream, mime ? { mimeType: mime } : undefined);
+  vnRec.ondataavailable = (e: any) => { if (e.data && e.data.size) vnChunks.push(e.data); };
+  vnRec.onstop = vnFinish;
+  vnRec.start(); vnRecording = true; if (voiceBtn) voiceBtn.classList.add('rec');
+}
+function vnStop() {
+  if (!vnRecording) return;
+  vnRecording = false; if (voiceBtn) voiceBtn.classList.remove('rec');
+  try { if (vnRec && vnRec.state !== 'inactive') vnRec.stop(); } catch (e) { vnFinish(); }
+}
+async function vnFinish() {
+  try { if (vnStream) vnStream.getTracks().forEach((t: any) => t.stop()); } catch (e) {}
+  const mime = vnRec ? (vnRec.mimeType || 'audio/webm') : 'audio/webm';
+  vnStream = null; vnRec = null;
+  if (!vnChunks.length) return;
+  const blob = new Blob(vnChunks, { type: mime }); vnChunks = [];
+  if (blob.size < 1200) return;  // too short to transcribe
+  if (voiceBtn) voiceBtn.classList.add('busy');
+  try {
+    const audio = await vnBlobB64(blob);
+    const jwt = await getToken();
+    const r = await fetch('/api/blaksyd/symp/transcribe', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + (jwt || '') }, body: JSON.stringify({ audioBase64: audio, mimeType: mime }) });
+    const j = await r.json().catch(() => null);
+    const text = String((j && (j.data ? j.data.text : j.text)) || '').trim();
+    if (text) send(text);
+  } catch (e) { /* transcription failed — silent no-op */ }
+  finally { if (voiceBtn) voiceBtn.classList.remove('busy'); }
+}
+if (voiceBtn) voiceBtn.onclick = () => { if (vnRecording) vnStop(); else vnStart(); };
+
 // ── Voice call (realtime Gemini Live with the persona's voice) ───────────────
 const callOv = $('pc-call-overlay'), callStatus = $('pc-call-status'), callCap = $('pc-call-caption'), callMic = $('pc-call-mic');
 let gws: WebSocket | null = null, gproc: any = null, actx: any = null, micStream: MediaStream | null = null;
