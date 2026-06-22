@@ -9,6 +9,7 @@
 
 import { buildVaultContextMessage } from './vault-context.mjs';
 import { buildKnowledgeBlock }      from './knowledge-context.mjs';
+import { buildCommitmentsBlock }    from './commitments-context.mjs';
 import { getPersonaCard, renderPersonaCard } from './persona-engine.mjs';
 import { getVibe, renderVibeSnapshot } from './vibe-tracker.mjs';
 import { fetchPersonaState, fetchPersonaFacts, fetchBlaksydProfile, fetchPersonaMemory } from './supabase.mjs';
@@ -319,6 +320,10 @@ export async function buildChatSystemStack(userId, opts = {}) {
             const knowledge = await buildKnowledgeBlock(userId, { latestUserText: opts.latestUserText });
             if (knowledge) stack.push({ role: 'system', content: knowledge });
         } catch (_) { /* ignore */ }
+        try {
+            const commitments = await buildCommitmentsBlock(userId);
+            if (commitments) stack.push({ role: 'system', content: commitments });
+        } catch (_) { /* ignore */ }
     }
 
     // Texting framing — text-specific expressiveness so chat matches the warmth
@@ -398,6 +403,10 @@ export async function buildInstructionsText(userId, opts = {}) {
         try {
             const knowledge = await buildKnowledgeBlock(userId, {});
             if (knowledge) parts.push(knowledge);
+        } catch (_) { /* ignore */ }
+        try {
+            const commitments = await buildCommitmentsBlock(userId);
+            if (commitments) parts.push(commitments);
         } catch (_) { /* ignore */ }
     }
 
