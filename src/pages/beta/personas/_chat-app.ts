@@ -501,23 +501,56 @@ function toast(msg: string) {
   document.body.appendChild(t);
   setTimeout(() => { t.style.transition = 'opacity .4s'; t.style.opacity = '0'; setTimeout(() => t.remove(), 400); }, 2800);
 }
-async function onShare() {
-  if (!userId || !personaId || !supabase) return;
+// Reuse an active share code for this persona, or mint one. '' on failure.
+async function ensureShareCode(): Promise<string> {
   let code = '';
   try {
-    const { data } = await supabase.from('persona_shares').select('code')
+    const { data } = await supabase!.from('persona_shares').select('code')
       .eq('persona_id', personaId).eq('owner_id', userId).eq('revoked', false)
       .order('created_at', { ascending: false }).limit(1);
     if (data && data[0]) code = data[0].code;
   } catch (e) {}
   if (!code) {
     code = (window.crypto && (crypto as any).randomUUID) ? (crypto as any).randomUUID().replace(/-/g, '').slice(0, 18) : (Date.now().toString(36) + Math.random().toString(36).slice(2, 12));
-    const { error } = await supabase.from('persona_shares').insert({ persona_id: personaId, owner_id: userId, code });
-    if (error) { toast('Could not create a share link.'); return; }
+    const { error } = await supabase!.from('persona_shares').insert({ persona_id: personaId, owner_id: userId, code });
+    if (error) return '';
   }
+  return code;
+}
+async function stopSharing() {
+  try { await supabase!.from('persona_shares').update({ revoked: true }).eq('persona_id', personaId).eq('owner_id', userId).eq('revoked', false); } catch (e) {}
+}
+let shareSheet: HTMLElement | null = null;
+function closeShareSheet() { if (shareSheet) shareSheet.remove(); shareSheet = null; }
+async function openShareSheet() {
+  if (!userId || !personaId || !supabase) return;
+  const code = await ensureShareCode();
+  if (!code) { toast('Could not create a share link.'); return; }
   const link = location.origin + '/beta/personas/chat/?id=' + encodeURIComponent(personaId) + '&s=' + encodeURIComponent(code);
-  try { await navigator.clipboard.writeText(link); toast('Link copied — anyone you send it to can chat with ' + (persona?.name || 'your persona')); }
-  catch (e) { window.prompt('Copy this link to share your persona:', link); }
+  const nm = esc(persona?.name || 'this persona');
+  shareSheet = document.createElement('div');
+  shareSheet.style.cssText = 'position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center;background:rgba(10,4,24,.55);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);padding:18px;';
+  shareSheet.innerHTML =
+    '<div style="width:min(420px,100%);box-sizing:border-box;background:var(--surface,#1a1130);border:1px solid var(--line,rgba(255,255,255,.12));border-radius:18px;padding:1.1rem 1.1rem 1rem;box-shadow:0 24px 70px rgba(0,0,0,.5);color:var(--ink,#fff);">' +
+      '<div style="font-weight:700;font-size:1.05rem;margin-bottom:.25rem;">Share ' + nm + '</div>' +
+      '<div style="font-size:.86rem;opacity:.72;line-height:1.45;margin-bottom:.85rem;">Anyone with this link can chat with ' + nm + '. They won\'t see your profile or your private history with ' + nm + ', and they can\'t edit it. Stop sharing any time — the link stops working instantly.</div>' +
+      '<input id="ss-link" readonly value="' + esc(link) + '" style="width:100%;box-sizing:border-box;font-size:13px;padding:.6rem .7rem;border-radius:10px;border:1px solid var(--line,rgba(255,255,255,.14));background:rgba(255,255,255,.06);color:inherit;margin-bottom:.7rem;" />' +
+      '<div style="display:flex;gap:.5rem;flex-wrap:wrap;">' +
+        '<button type="button" id="ss-copy" style="flex:1;min-width:120px;padding:.62rem;border-radius:11px;border:none;font-weight:600;font-size:14px;cursor:pointer;background:linear-gradient(135deg,#c9a24b,#e0746a);color:#1a1020;">Copy link</button>' +
+        '<button type="button" id="ss-stop" style="flex:1;min-width:120px;padding:.62rem;border-radius:11px;border:1px solid rgba(224,116,106,.6);background:transparent;color:#e0746a;font-weight:600;font-size:14px;cursor:pointer;">Stop sharing</button>' +
+      '</div>' +
+      '<button type="button" id="ss-done" style="width:100%;margin-top:.55rem;padding:.5rem;border-radius:11px;border:none;background:transparent;color:inherit;opacity:.6;font-size:14px;cursor:pointer;">Done</button>' +
+    '</div>';
+  document.body.appendChild(shareSheet);
+  shareSheet.onclick = (e: any) => { if (e.target === shareSheet) closeShareSheet(); };
+  const linkEl = document.getElementById('ss-link') as HTMLInputElement | null;
+  if (linkEl) linkEl.onclick = () => linkEl.select();
+  const copyBtn = document.getElementById('ss-copy');
+  if (copyBtn) copyBtn.onclick = async () => { try { await navigator.clipboard.writeText(link); copyBtn.textContent = 'Copied ✓'; setTimeout(() => { copyBtn.textContent = 'Copy link'; }, 1600); } catch (e) { if (linkEl) linkEl.select(); } };
+  const stopBtn = document.getElementById('ss-stop') as HTMLButtonElement | null;
+  if (stopBtn) stopBtn.onclick = async () => { stopBtn.disabled = true; stopBtn.textContent = 'Stopping…'; await stopSharing(); closeShareSheet(); toast('Sharing stopped — that link no longer works.'); };
+  const doneBtn = document.getElementById('ss-done');
+  if (doneBtn) doneBtn.onclick = closeShareSheet;
 }
 
 async function boot() {
@@ -544,7 +577,7 @@ async function boot() {
   if (isGuest) {
     ['pc-share', 'pc-threads', 'pc-call'].forEach((id) => { const el = $(id); if (el) el.style.display = 'none'; });
   } else {
-    const sb = $('pc-share'); if (sb) sb.onclick = onShare;
+    const sb = $('pc-share'); if (sb) sb.onclick = openShareSheet;
   }
   activeChatId = await dbFindChat();
   if (activeChatId) history = await dbLoadMessages(activeChatId);
