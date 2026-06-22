@@ -5,6 +5,8 @@
     // / nexus_posts. Works for anonymous beta visitors (anon key, RLS-safe) and
     // uses your real identity if signed in.
     import { supabase, supabaseConfigured } from '../../lib/supabaseClient';
+    import * as NexusData from './_nexus-data';
+    const NX_PROXY = NexusData.NEXUS_PROXY;
 
     const grad = [
       'linear-gradient(135deg,#5BC0FF,#1872B0)','linear-gradient(135deg,#6AD3B8,#1E7D62)',
@@ -49,7 +51,12 @@
       const path = ((window.crypto && crypto.randomUUID) ? crypto.randomUUID() : (Date.now() + '-' + Math.round(Math.random() * 1e9))) + '.jpg';
       const { error } = await supabase.storage.from('nexus-img').upload(path, blob, { contentType: 'image/jpeg', upsert: false });
       if (error) { toast('Image upload failed — try again.'); return null; }
-      return supabase.storage.from('nexus-img').getPublicUrl(path).data.publicUrl;
+      const publicUrl = supabase.storage.from('nexus-img').getPublicUrl(path).data.publicUrl;
+      if (NX_PROXY) {
+        let ok = true; try { ok = await NexusData.moderateImage(publicUrl); } catch (e) {}
+        if (!ok) { try { await supabase.storage.from('nexus-img').remove([path]); } catch (e) {} toast('That image didn’t pass our safety check.'); return null; }
+      }
+      return publicUrl;
     }
 
     // ── identity: anonymous ALWAYS — never the person's email ──
@@ -145,7 +152,7 @@
       }
       function tilePostRow(p, commId) {
         const txt = (p.image_url && !(p.body || '').trim()) ? '📷 shared an image' : esc((p.body || '').slice(0, 100));
-        return '<button type="button" class="nx-tile-post" data-open-tribe="' + esc(commId) + '">' + (isBlak(p) ? '<span class="nx-tile-av nx-av-blak"></span>' : '<span class="nx-tile-av" style="background:' + g(hashIdx(p.author_user_id || p.id)) + '"></span>') + '<span class="nx-tile-ptxt">' + txt + '</span><span class="nx-tile-when">' + rel(p.created_at) + '</span></button>';
+        return '<button type="button" class="nx-tile-post" data-open-tribe="' + esc(commId) + '">' + (p.is_ai_author ? '<span class="nx-tile-av nx-av-blak"></span>' : '<span class="nx-tile-av" style="background:' + g(hashIdx(p.author_token || p.id)) + '"></span>') + '<span class="nx-tile-ptxt">' + txt + '</span><span class="nx-tile-when">' + rel(p.created_at) + '</span></button>';
       }
       function tileFor(c) {
         const recent = MY_RECENT[c.id] || [];
@@ -167,6 +174,11 @@
           const list = TRIBES.filter((c) => (c.name || '').toLowerCase().includes(q) || (c.description || '').toLowerCase().includes(q));
           tribesEl.innerHTML = list.length ? list.map(tribeCard).join('') : '<p class="nx-pulse-explain">No tribes match “' + esc(q) + '”.</p>';
           if (ctrl) ctrl.hidden = true;
+          NexusData.searchPosts(q).then((posts) => {
+            const cur = ((el('nx-tribe-search') && el('nx-tribe-search').value) || '').trim().toLowerCase();
+            if (cur !== q || !posts.length) return;
+            tribesEl.insertAdjacentHTML('beforeend', '<p class="nx-tile-k">Posts</p>' + posts.map(feedCard).join(''));
+          }).catch(() => {});
           return;
         }
         tribesEl.className = 'nx-tiles';
@@ -191,7 +203,7 @@
       async function loadTribes() {
         const { data: comms } = await supabase.from('nexus_communities').select('id,slug,name,description,visibility').eq('visibility', 'public').order('created_at');
         TRIBE_COUNTS = {};
-        const { data: posts } = await supabase.from('nexus_posts').select('community_id').eq('is_soft_hidden', false);
+        const { data: posts } = await supabase.from('nexus_posts').select('community_id').eq('is_soft_hidden', false).order('created_at', { ascending: false }).limit(2000);
         if (posts) posts.forEach((p) => { TRIBE_COUNTS[p.community_id] = (TRIBE_COUNTS[p.community_id] || 0) + 1; });
         TRIBES = comms || [];
       }
@@ -202,9 +214,7 @@
         if (!ids.length) { MY_TRIBES = []; renderTribes(''); return; }
         const { data: comms } = await supabase.from('nexus_communities').select('id,slug,name,description,visibility').in('id', ids);
         MY_TRIBES = comms || [];
-        MY_RECENT = {};
-        const { data: posts } = await supabase.from('nexus_posts').select('id,body,image_url,created_at,author_user_id,community_id,is_ai_author').in('community_id', ids).eq('is_soft_hidden', false).order('created_at', { ascending: false }).limit(60);
-        (posts || []).forEach((p) => { MY_RECENT[p.community_id] = MY_RECENT[p.community_id] || []; if (MY_RECENT[p.community_id].length < 3) MY_RECENT[p.community_id].push(p); });
+        MY_RECENT = await NexusData.loadRecentPosts(ids, SESSION.user.id).catch(() => ({}));
         renderTribes('');
       }
       el('nx-tribe-search') && el('nx-tribe-search').addEventListener('input', (e) => renderTribes(e.target.value));
@@ -237,9 +247,10 @@
         if (!(await ensureSession())) { toast('Sign in to post.'); return; }
         const btn = form.querySelector('button[type="submit"]'); if (btn) btn.disabled = true;
         let imgUrl = null; if (file) { imgUrl = await uploadImage(file); if (!imgUrl) { if (btn) btn.disabled = false; return; } }
-        const { data, error } = await supabase.from('nexus_posts').insert({ community_id: id, author_user_id: SESSION.user.id, body: v || '', image_url: imgUrl }).select('id,body,image_url,created_at,author_user_id,community_id').single();
+        let data;
+        try { data = await NexusData.createPost(id, null, v || '', imgUrl, SESSION.user.id); }
+        catch (e) { if (btn) btn.disabled = false; toast('Could not post — try again.'); return; }
         if (btn) btn.disabled = false;
-        if (error || !data) { toast('Could not post — try again.'); return; }
         input.value = ''; if (fileEl) fileEl.value = '';
         const tile = form.closest('.nx-tile'); const pv = tile && tile.querySelector('[data-tile-prev]'); if (pv) { pv.hidden = true; pv.innerHTML = ''; }
         MY_RECENT[id] = [data].concat(MY_RECENT[id] || []).slice(0, 3);
@@ -282,6 +293,7 @@
       function openRoom(r) {
         curRoom = r;
         el('nx-room-title').textContent = r.title;
+        { const cb = el('nx-room-close'); if (cb) cb.hidden = !(SESSION && SESSION.user && r.host_id && r.host_id === SESSION.user.id); }
         el('nx-stat-day').textContent = 'day ' + dayOf(r.created_at);
         setPulse(r.pulse); el('nx-stat-here').textContent = 1; el('nx-stat-time').textContent = '0m';
         el('nx-heat-fill').style.width = '20%';
@@ -324,6 +336,7 @@
         appendMsg({ text: v }, true); heartbeat(here, 1);
       });
       el('nx-room-input').addEventListener('focus', () => setTimeout(() => el('nx-room-input').scrollIntoView({ block: 'center' }), 200));
+      el('nx-room-close') && el('nx-room-close').addEventListener('click', async () => { if (!curRoom) return; try { await supabase.rpc('nexus_close_room', { p_room_id: curRoom.id }); } catch (e) {} toast('Room closed.'); leaveRoom(); });
 
       // ── create room (modal) ───────────────────────────────────────────────
       const modal = el('nx-modal');
@@ -350,7 +363,7 @@
       el('nx-start') && el('nx-start').addEventListener('click', openCreate);
 
       // ── tribe view (real communities + posts) ─────────────────────────────
-      let curTribe = null;
+      let curTribe = null, curTribeIsMod = false, curTribeChan = null;
       async function openTribe(c) {
         curTribe = c;
         el('nx-tribe-name').textContent = c.name;
@@ -362,13 +375,18 @@
         show('tribe');
         refreshJoinState();
         loadDiscussions();
+        // #30 realtime: new posts in this tribe appear live (refetch on any change)
+        if (curTribeChan) { try { supabase.removeChannel(curTribeChan); } catch (e) {} curTribeChan = null; }
+        curTribeChan = supabase.channel('nx-tribe:' + c.id)
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'nexus_posts', filter: 'community_id=eq.' + c.id }, () => { loadDiscussions(); })
+          .subscribe();
       }
       async function refreshJoinState() {
-        const btn = el('nx-tribe-join'); btn.dataset.joined = ''; btn.textContent = 'Join';
+        const btn = el('nx-tribe-join'); btn.dataset.joined = ''; btn.textContent = 'Join'; curTribeIsMod = false;
         if (!curTribe || !(await ensureSession())) return;
         try {
-          const { data } = await supabase.from('nexus_community_members').select('community_id').eq('community_id', curTribe.id).eq('user_id', SESSION.user.id).maybeSingle();
-          if (data) { btn.dataset.joined = '1'; btn.textContent = 'Joined ✓'; }
+          const { data } = await supabase.from('nexus_community_members').select('community_id,role').eq('community_id', curTribe.id).eq('user_id', SESSION.user.id).maybeSingle();
+          if (data) { btn.dataset.joined = '1'; btn.textContent = 'Joined ✓'; curTribeIsMod = (data.role === 'moderator'); }
         } catch (e) {}
       }
       // Participating in a tribe makes you a member (so others can DM you). Quietly.
@@ -385,52 +403,79 @@
       const discHandle = (uid) => handleFor(uid, curTribe ? curTribe.id : '');
       const tribeName = (id) => { const t = TRIBES.find((x) => x.id === id); return t ? t.name : 'a tribe'; };
       function discCard(p, resonated) {
-        const uid = p.author_user_id || '';
-        const blak = isBlak(p);
-        const mine = SESSION && uid === SESSION.user.id;
+        const token = p.author_token || '';
+        const blak = !!p.is_ai_author;
+        const mine = !!p.is_mine;
+        const handle = p.author_handle || 'someone';
+        const reso = (resonated === undefined) ? !!p.my_resonated : resonated;
         const who = blak
           ? '<span class="nx-blak">✦ Blak</span>'
           : (mine
-            ? '@' + esc(discHandle(uid)) + ' (you)'
-            : '<span class="nx-dm-link" data-dm-user="' + esc(uid) + '">@' + esc(discHandle(uid)) + '</span>');
+            ? '@' + esc(handle) + ' (you)'
+            : '<span class="nx-dm-link" data-dm-token="' + esc(token) + '" data-dm-handle="' + esc(handle) + '">@' + esc(handle) + '</span>');
         const av = blak
           ? '<span class="nx-disc-av nx-av-blak"></span>'
-          : '<span class="nx-disc-av" style="background:' + g(hashIdx(uid || p.id)) + '"></span>';
+          : '<span class="nx-disc-av" style="background:' + g(hashIdx(token || p.id)) + '"></span>';
         return '<div class="nx-disc' + (blak ? ' nx-disc-blak' : '') + '" data-post="' + esc(p.id) + '">'
           + '<div class="nx-disc-top">' + av + who + ' · ' + rel(p.created_at) + '</div>'
           + (p.title ? '<div class="nx-disc-text" style="font-weight:650">' + esc(p.title) + '</div>' : '')
           + (p.body ? '<div class="nx-disc-text">' + esc(p.body) + '</div>' : '')
           + (p.image_url ? '<img class="nx-img" loading="lazy" src="' + esc(p.image_url) + '" alt="shared image" />' : '')
-          + '<div class="nx-disc-foot"><span class="nx-reso' + (resonated ? ' on' : '') + '" data-reso>◈ <b>' + (p.impact_count || 0) + '</b> resonate</span>'
-          + '<span class="nx-disc-replies" data-open>💬 <b>' + (p.comment_count || 0) + '</b> replies</span></div>'
+          + '<div class="nx-disc-foot"><span class="nx-reso' + (reso ? ' on' : '') + '" data-reso>◈ <b>' + (p.impact_count || 0) + '</b> resonate</span>'
+          + '<span class="nx-disc-replies" data-open>💬 <b>' + (p.comment_count || 0) + '</b> replies</span>'
+          + (mine ? '<button type="button" class="nx-del" data-del-post>delete</button>' : '')
+          + ((NX_PROXY && !blak && !mine) ? '<button type="button" class="nx-more-btn" data-safety="post" data-st-id="' + esc(p.id) + '" data-st-token="' + esc(token) + '" data-st-handle="' + esc(handle) + '" data-st-comm="' + esc(p.community_id) + '" aria-label="More options">⋯</button>' : '')
+          + '</div>'
           + '<div class="nx-comments" hidden></div></div>';
       }
       async function loadDiscussions() {
         const disc = el('nx-discussions');
-        const { data: posts } = await supabase.from('nexus_posts')
-          .select('id,title,body,image_url,impact_count,comment_count,created_at,author_user_id')
-          .eq('community_id', curTribe.id).eq('is_soft_hidden', false).order('created_at', { ascending: false });
-        if (!posts || !posts.length) { disc.innerHTML = '<p class="nx-pulse-explain">No discussions yet — be the first.</p>'; return; }
-        const mine = new Set();
-        if (await ensureSession()) {
-          try { const { data: imp } = await supabase.from('nexus_impacts').select('post_id').eq('user_id', SESSION.user.id).eq('impact_type', 'resonated').in('post_id', posts.map((p) => p.id)); (imp || []).forEach((r) => mine.add(r.post_id)); } catch (e) {}
-        }
-        disc.innerHTML = posts.map((p) => discCard(p, mine.has(p.id))).join('');
+        await ensureSession();
+        let posts = [];
+        try { posts = await NexusData.loadDiscussions(curTribe.id, SESSION ? SESSION.user.id : null); } catch (e) {}
+        if (!posts.length) { disc.innerHTML = '<p class="nx-pulse-explain">No discussions yet — be the first.</p>'; return; }
+        disc.innerHTML = posts.map((p) => discCard(p)).join('');
       }
       async function openComments(postId, box) {
         box.innerHTML = '<p class="nx-pulse-explain" style="margin:.2rem 0">Loading replies…</p>';
-        const { data: cs } = await supabase.from('nexus_comments').select('id,body,created_at,author_user_id,is_ai_author').eq('post_id', postId).eq('is_soft_hidden', false).order('created_at', { ascending: true });
-        box.innerHTML = '<div class="nx-cmt-list"></div><form class="nx-cmt-form" data-cform><input placeholder="Write a reply…" autocomplete="off" maxlength="600" /><button type="submit">Reply</button></form>';
+        await ensureSession();
+        let cs = [];
+        try { cs = await NexusData.loadComments(postId, curTribe ? curTribe.id : '', SESSION ? SESSION.user.id : null); } catch (e) {}
+        box.innerHTML = '<div class="nx-cmt-list"></div><div class="nx-reply-hint" data-reply-hint hidden></div><form class="nx-cmt-form" data-cform><input placeholder="Write a reply…" autocomplete="off" maxlength="600" /><button type="submit">Reply</button></form>';
         const listEl = box.querySelector('.nx-cmt-list');
-        if (!cs || !cs.length) listEl.innerHTML = '<p class="nx-pulse-explain" style="margin:.2rem 0">No replies yet — be the first.</p>';
-        else cs.forEach((c) => { const blak = isBlak(c); const d = document.createElement('div'); d.className = 'nx-cmt' + (blak ? ' nx-cmt-blak' : ''); const av = blak ? '<span class="nx-cmt-av nx-av-blak"></span>' : '<span class="nx-cmt-av" style="background:' + g(hashIdx(c.author_user_id || c.id)) + '"></span>'; const h = blak ? '<span class="nx-blak">✦ Blak</span> · ' + rel(c.created_at) : '@' + esc(discHandle(c.author_user_id)) + ' · ' + rel(c.created_at); d.innerHTML = av + '<div><span class="nx-cmt-h">' + h + '</span><p></p></div>'; d.querySelector('p').textContent = c.body; listEl.appendChild(d); });
+        const hintEl = box.querySelector('[data-reply-hint]');
+        let replyParent = null;
+        if (!cs.length) listEl.innerHTML = '<p class="nx-pulse-explain" style="margin:.2rem 0">No replies yet — be the first.</p>';
+        else {
+          const byParent = {};
+          cs.forEach((c) => { const k = c.parent_id || 'root'; (byParent[k] = byParent[k] || []).push(c); });
+          const cmtHTML = (c, depth) => {
+            const blak = !!c.is_ai_author;
+            const av = blak ? '<span class="nx-cmt-av nx-av-blak"></span>' : '<span class="nx-cmt-av" style="background:' + g(hashIdx(c.author_token || c.id)) + '"></span>';
+            const h = blak ? '<span class="nx-blak">✦ Blak</span> · ' + rel(c.created_at) : '@' + esc(c.author_handle || 'someone') + ' · ' + rel(c.created_at);
+            const more = (NX_PROXY && !blak && !c.is_mine) ? '<button type="button" class="nx-more-btn" data-safety="comment" data-st-id="' + esc(c.id) + '" data-st-token="' + esc(c.author_token) + '" data-st-handle="' + esc(c.author_handle || 'someone') + '" data-st-comm="' + esc(curTribe ? curTribe.id : '') + '" aria-label="More options">⋯</button>' : (c.is_mine ? '<button type="button" class="nx-del nx-cmt-del" data-del-comment="' + esc(c.id) + '">delete</button>' : '');
+            const reply = '<button type="button" class="nx-reply-btn" data-reply="' + esc(c.id) + '" data-reply-handle="' + esc(blak ? 'Blak' : (c.author_handle || 'someone')) + '">reply</button>';
+            let html = '<div class="nx-cmt' + (blak ? ' nx-cmt-blak' : '') + '"' + (depth > 0 ? ' style="margin-left:' + (Math.min(depth, 3) * 16) + 'px"' : '') + '>' + av + '<div class="nx-cmt-main"><span class="nx-cmt-h">' + h + '</span><p>' + esc(c.body || '') + '</p><div class="nx-cmt-acts">' + reply + more + '</div></div></div>';
+            (byParent[c.id] || []).forEach((ch) => { html += cmtHTML(ch, depth + 1); });
+            return html;
+          };
+          listEl.innerHTML = (byParent['root'] || []).map((c) => cmtHTML(c, 0)).join('');
+        }
+        listEl.addEventListener('click', (e) => {
+          const r = e.target.closest('[data-reply]'); if (!r) return;
+          replyParent = r.getAttribute('data-reply');
+          hintEl.hidden = false;
+          hintEl.innerHTML = '↳ Replying to @' + esc(r.getAttribute('data-reply-handle') || 'someone') + ' <button type="button" data-reply-cancel aria-label="Cancel reply">✕</button>';
+          const inp2 = box.querySelector('[data-cform] input'); if (inp2) inp2.focus();
+        });
+        hintEl.addEventListener('click', (e) => { if (e.target.closest('[data-reply-cancel]')) { replyParent = null; hintEl.hidden = true; hintEl.innerHTML = ''; } });
         box.querySelector('[data-cform]').addEventListener('submit', async (ev) => {
           ev.preventDefault();
           const inp = ev.currentTarget.querySelector('input'); const v = inp.value.trim(); if (!v) return;
           if (!(await ensureSession())) { toast('Sign in to reply.'); return; }
           inp.value = '';
-          const { error } = await supabase.from('nexus_comments').insert({ post_id: postId, author_user_id: SESSION.user.id, body: v });
-          if (error) { toast('Could not post your reply — try again.'); return; }
+          try { await NexusData.createComment(postId, curTribe ? curTribe.id : '', v, SESSION.user.id, replyParent); }
+          catch (e) { toast('Could not post your reply — try again.'); return; }
           joinTribeSilently();
           const card = box.closest('[data-post]'); const rb = card && card.querySelector('.nx-disc-replies b'); if (rb) rb.textContent = (+rb.textContent + 1);
           openComments(postId, box);
@@ -439,24 +484,30 @@
 
       el('nx-tribe-live').addEventListener('click', async (e) => {
         if (!e.target.closest('[data-tribe-room]') || !curTribe) return;
-        const existing = ROOMS.find((r) => isActive(r) && r.title === curTribe.name);
+        const existing = ROOMS.find((r) => isActive(r) && (r.community_id === curTribe.id || r.title === curTribe.name));
         if (existing) { openRoom(existing); return; }
-        const { data } = await supabase.rpc('nexus_create_room', { p_title: curTribe.name, p_topic: 'live room · ' + curTribe.name, p_emoji: null, p_host_handle: ME.handle });
+        const { data } = await supabase.rpc('nexus_create_room', { p_title: curTribe.name, p_topic: 'live room · ' + curTribe.name, p_emoji: null, p_host_handle: ME.handle, p_community: curTribe.id });
         if (data) openRoom(data); else toast('Could not open the room — try again.');
       });
 
       el('nx-discussions').addEventListener('click', async (e) => {
         const card = e.target.closest('[data-post]'); if (!card) return;
         const id = card.getAttribute('data-post');
-        const dm = e.target.closest('[data-dm-user]');
-        if (dm) { const uid = dm.getAttribute('data-dm-user'); openDM(curTribe.id, uid, discHandle(uid), 'tribe'); return; }
+        const safety = e.target.closest('[data-safety]');
+        if (safety) { openSafety(safety); return; }
+        const delP = e.target.closest('[data-del-post]');
+        if (delP) { if (confirm('Delete this post? This can’t be undone.')) NexusData.deletePost(id).then(() => loadDiscussions()).catch(() => toast('Could not delete — try again.')); return; }
+        const delC = e.target.closest('[data-del-comment]');
+        if (delC) { const cid = delC.getAttribute('data-del-comment'); if (confirm('Delete this reply?')) NexusData.deleteComment(cid).then(() => { const box = card.querySelector('.nx-comments'); if (box && !box.hidden) openComments(id, box); const rb = card.querySelector('.nx-disc-replies b'); if (rb) rb.textContent = Math.max(0, (+rb.textContent) - 1); }).catch(() => toast('Could not delete — try again.')); return; }
+        const dm = e.target.closest('[data-dm-token]');
+        if (dm) { openDM(curTribe.id, dm.getAttribute('data-dm-token'), dm.getAttribute('data-dm-handle'), 'tribe'); return; }
         const r = e.target.closest('[data-reso]');
         if (r) {
           if (!(await ensureSession())) { toast('Sign in to resonate.'); return; }
           const b = r.querySelector('b'); const on = r.classList.contains('on');
           r.classList.toggle('on'); b.textContent = Math.max(0, (+b.textContent) + (on ? -1 : 1));
-          if (on) { await supabase.from('nexus_impacts').delete().eq('post_id', id).eq('user_id', SESSION.user.id).eq('impact_type', 'resonated'); }
-          else { const { error } = await supabase.from('nexus_impacts').insert({ post_id: id, user_id: SESSION.user.id, impact_type: 'resonated' }); if (error && error.code !== '23505') { r.classList.remove('on'); b.textContent = Math.max(0, (+b.textContent) - 1); toast('Could not resonate — try again.'); } }
+          try { const c = await NexusData.setResonance(id, !on, SESSION.user.id); if (typeof c === 'number') b.textContent = c; }
+          catch (e2) { r.classList.toggle('on'); b.textContent = Math.max(0, (+b.textContent) + (on ? 1 : -1)); toast('Could not resonate — try again.'); }
           return;
         }
         if (e.target.closest('[data-open]') || e.target.closest('.nx-disc-text')) {
@@ -465,6 +516,56 @@
           box.hidden = false; openComments(id, box);
         }
       });
+
+      // ── safety sheet: report / block (Phase 1 #1/#2; proxy-era) ───────────
+      let safetyTarget = null;
+      const safetyModal = el('nx-safety');
+      function openSafety(btn) {
+        safetyTarget = { type: btn.getAttribute('data-safety'), id: btn.getAttribute('data-st-id'), token: btn.getAttribute('data-st-token'), handle: btn.getAttribute('data-st-handle'), comm: btn.getAttribute('data-st-comm') };
+        if (!safetyModal) return;
+        el('nx-safety-title').textContent = '@' + (safetyTarget.handle || 'someone');
+        el('nx-safety-main').hidden = false; el('nx-safety-reasons').hidden = true;
+        const modCan = curTribeIsMod && (safetyTarget.type === 'post' || safetyTarget.type === 'comment');
+        const rm = el('nx-safety-remove'); if (rm) rm.hidden = !modCan;
+        const bn = el('nx-safety-ban'); if (bn) bn.hidden = !modCan;
+        safetyModal.hidden = false;
+      }
+      function closeSafety() { if (safetyModal) safetyModal.hidden = true; safetyTarget = null; }
+      if (safetyModal) {
+        safetyModal.addEventListener('click', (e) => {
+          if (e.target === safetyModal || e.target.closest('[data-safety-cancel]')) { closeSafety(); return; }
+          if (e.target.closest('[data-safety-report]')) { el('nx-safety-main').hidden = true; el('nx-safety-reasons').hidden = false; return; }
+          if (e.target.closest('[data-safety-block]')) {
+            if (!safetyTarget) return;
+            const t = safetyTarget; closeSafety();
+            NexusData.blockUser(t.comm, t.token).then(() => {
+              if (t.type === 'user') { toast('Blocked. They can’t message you.'); dmOther = null; teardownDM(); show(curTribe ? 'tribe' : 'home'); }
+              else { toast('Blocked. You won’t see their posts.'); if (curTribe) loadDiscussions(); }
+            }).catch(() => toast('Could not block — try again.'));
+            return;
+          }
+          if (e.target.closest('[data-safety-remove]')) {
+            if (!safetyTarget) return;
+            const t = safetyTarget; closeSafety();
+            const p = t.type === 'comment' ? NexusData.modRemoveComment(t.id) : NexusData.modRemovePost(t.id);
+            p.then(() => { toast('Removed from the tribe.'); if (curTribe) loadDiscussions(); }).catch(() => toast('Could not remove — try again.'));
+            return;
+          }
+          if (e.target.closest('[data-safety-ban]')) {
+            if (!safetyTarget) return;
+            const t = safetyTarget; closeSafety();
+            NexusData.modBan(t.comm, t.token).then(() => { toast('Banned from the tribe.'); if (curTribe) loadDiscussions(); }).catch(() => toast('Could not ban — try again.'));
+            return;
+          }
+          const reason = e.target.closest('[data-reason]');
+          if (reason) {
+            if (!safetyTarget) return;
+            const t = safetyTarget; closeSafety();
+            NexusData.reportTarget(t.type, t.id, t.comm, reason.getAttribute('data-reason')).then(() => toast('Reported — thank you. Our team will review it.')).catch(() => toast('Could not report — try again.'));
+          }
+        });
+        document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && safetyModal && !safetyModal.hidden) closeSafety(); });
+      }
 
       let discImg = null;
       const discImgInput = el('nx-disc-img');
@@ -483,11 +584,10 @@
         const goBtn = el('nx-disc-form').querySelector('button[type="submit"]'); if (goBtn) goBtn.disabled = true;
         let imgUrl = null;
         if (discImg) { imgUrl = await uploadImage(discImg); if (!imgUrl) { if (goBtn) goBtn.disabled = false; return; } }
-        const { data, error } = await supabase.from('nexus_posts')
-          .insert({ community_id: curTribe.id, author_user_id: SESSION.user.id, title: t || null, body: v || '', image_url: imgUrl })
-          .select('id,title,body,image_url,impact_count,comment_count,created_at,author_user_id').single();
+        let data;
+        try { data = await NexusData.createPost(curTribe.id, t || null, v || '', imgUrl, SESSION.user.id); }
+        catch (e) { if (goBtn) goBtn.disabled = false; toast('Could not post — try again.'); return; }
         if (goBtn) goBtn.disabled = false;
-        if (error || !data) { toast('Could not post — try again.'); return; }
         joinTribeSilently();
         inp.value = ''; if (titleInp) titleInp.value = '';
         discImg = null; if (discImgInput) discImgInput.value = ''; el('nx-disc-preview').hidden = true;
@@ -518,11 +618,12 @@
 
       // ── DMs: tribe-scoped, anonymous 1:1 (handles only; never names) ──────
       let dmOther = null, dmChanSub = null, dmImg = null, dmThreadComm = null, dmBackView = 'tribe', dmInboxComm = null;
-      function dmAppend(m, mine) {
+      function dmAppend(m) {
         const feed = el('nx-dm-feed'); if (!feed) return;
+        const mine = !!m.is_mine;
         const d = document.createElement('div'); d.className = 'nx-rmsg' + (mine ? ' me' : '');
-        d.innerHTML = '<span class="nx-rav" style="background:' + g(hashIdx(mine ? ((SESSION && SESSION.user.id) || ME.id) : (m.sender_user_id || '0'))) + '"></span><div><span class="nx-rh"></span></div>';
-        d.querySelector('.nx-rh').textContent = mine ? 'you' : ('@' + handleFor(m.sender_user_id, dmThreadComm));
+        d.innerHTML = '<span class="nx-rav" style="background:' + g(hashIdx(mine ? ((SESSION && SESSION.user.id) || ME.id) : (m.other_token || '0'))) + '"></span><div><span class="nx-rh"></span></div>';
+        d.querySelector('.nx-rh').textContent = mine ? 'you' : ('@' + (m.other_handle || 'someone'));
         const body = d.querySelector('div');
         if (m.body) { const p = document.createElement('p'); p.textContent = m.body; body.appendChild(p); }
         if (m.image_url) { const im = document.createElement('img'); im.className = 'nx-img'; im.loading = 'lazy'; im.src = m.image_url; body.appendChild(im); }
@@ -531,56 +632,75 @@
       function teardownDM() { if (dmChanSub) { try { supabase.removeChannel(dmChanSub); } catch (e) {} dmChanSub = null; } }
       function subscribeGlobalDM() {
         if (dmChanSub || !SESSION) return;
+        // Filter is the user's OWN id (not a leak) — incoming events only signal a
+        // refresh; we never render the payload's raw uids, we refetch via the view.
         dmChanSub = supabase.channel('nx-dm:' + SESSION.user.id)
           .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'nexus_dm_messages', filter: 'recipient_user_id=eq.' + SESSION.user.id }, (p) => {
             const m = p.new; if (!m) return;
-            if (dmOther && m.sender_user_id === dmOther && m.community_id === dmThreadComm) dmAppend(m, false);
+            if (dmOther && m.community_id === dmThreadComm) renderDMThread();
             else toast('New private message');
           }).subscribe();
       }
-      async function openDM(communityId, otherId, otherHandle, from) {
+      async function renderDMThread() {
+        const feed = el('nx-dm-feed'); if (!feed) return;
+        feed.innerHTML = '<div class="nx-rmsg"><span class="nx-rav" style="background:' + g(2) + '"></span><div><span class="nx-rh">private</span><p>Anonymous & members-only — only the two of you can see this.</p></div></div>';
+        let msgs = [];
+        try { msgs = await NexusData.dmThread(dmThreadComm, dmOther, SESSION ? SESSION.user.id : null); } catch (e) {}
+        msgs.forEach((m) => dmAppend(m));
+      }
+      async function openDM(communityId, otherToken, otherHandle, from) {
         if (!(await ensureSession())) { toast('Sign in to message.'); return; }
-        if (!otherId || !communityId || otherId === SESSION.user.id) return;
-        dmOther = otherId; dmThreadComm = communityId; dmBackView = (from === 'inbox') ? 'inbox' : 'tribe';
-        el('nx-dm-title').textContent = '@' + (otherHandle || handleFor(otherId, communityId));
+        if (!otherToken || !communityId) return;
+        dmOther = otherToken; dmThreadComm = communityId; dmBackView = (from === 'inbox') ? 'inbox' : 'tribe';
+        el('nx-dm-title').textContent = '@' + (otherHandle || 'someone');
         el('nx-dm-sub').textContent = tribeName(communityId) + ' · anonymous';
         el('nx-dm-form').hidden = false;
-        el('nx-dm-feed').innerHTML = '<div class="nx-rmsg"><span class="nx-rav" style="background:' + g(2) + '"></span><div><span class="nx-rh">private</span><p>Anonymous & members-only — only the two of you can see this.</p></div></div>';
+        const dmMore = el('nx-dm-more');
+        if (dmMore) {
+          if (NX_PROXY) { dmMore.hidden = false; dmMore.setAttribute('data-safety', 'user'); dmMore.setAttribute('data-st-id', otherToken); dmMore.setAttribute('data-st-token', otherToken); dmMore.setAttribute('data-st-handle', otherHandle || 'someone'); dmMore.setAttribute('data-st-comm', communityId); }
+          else dmMore.hidden = true;
+        }
         show('dm');
-        const { data } = await supabase.from('nexus_dm_messages').select('*').eq('community_id', communityId)
-          .or('and(sender_user_id.eq.' + SESSION.user.id + ',recipient_user_id.eq.' + otherId + '),and(sender_user_id.eq.' + otherId + ',recipient_user_id.eq.' + SESSION.user.id + ')')
-          .order('created_at', { ascending: true });
-        (data || []).forEach((m) => dmAppend(m, m.sender_user_id === SESSION.user.id));
+        await renderDMThread();
         subscribeGlobalDM();
       }
       async function openMsgInbox(commId) {
         if (!(await ensureSession())) { toast('Sign in to see messages.'); return; }
         dmOther = null; dmInboxComm = commId || null;
+        { const dmMore = el('nx-dm-more'); if (dmMore) dmMore.hidden = true; }
         el('nx-dm-title').textContent = 'Messages';
         el('nx-dm-sub').textContent = (commId ? tribeName(commId) : 'all tribes') + ' · anonymous';
         el('nx-dm-form').hidden = true;
         const feed = el('nx-dm-feed'); feed.innerHTML = '<p class="nx-pulse-explain">Loading…</p>';
         show('dm'); subscribeGlobalDM();
-        const me = SESSION.user.id;
-        let q = supabase.from('nexus_dm_messages').select('community_id,sender_user_id,recipient_user_id,body,image_url,created_at').or('sender_user_id.eq.' + me + ',recipient_user_id.eq.' + me).order('created_at', { ascending: false }).limit(300);
-        if (commId) q = q.eq('community_id', commId);
-        const { data } = await q;
-        const seen = {}, convos = [];
-        (data || []).forEach((m) => { const other = m.sender_user_id === me ? m.recipient_user_id : m.sender_user_id; const key = m.community_id + ':' + other; if (seen[key]) return; seen[key] = 1; convos.push({ other, comm: m.community_id, last: m }); });
+        let convos = [];
+        try { convos = await NexusData.dmInbox(commId || null, SESSION.user.id); } catch (e) {}
         if (!convos.length) { feed.innerHTML = '<p class="nx-pulse-explain">No messages yet. Open a discussion and tap a member’s @handle to start a private, anonymous chat.</p>'; return; }
-        const row = (c) => '<button type="button" class="nx-inbox-row" data-dm-open="' + esc(c.other) + '" data-dm-comm="' + esc(c.comm) + '"><span class="nx-disc-av" style="background:' + g(hashIdx(c.other)) + '"></span><span class="nx-inbox-meta"><b>@' + esc(handleFor(c.other, c.comm)) + '</b><span>' + esc((commId ? '' : tribeName(c.comm) + ' · ') + (c.last.image_url && !c.last.body ? '📷 image' : (c.last.body || ''))) + '</span></span><span class="nx-inbox-when">' + rel(c.last.created_at) + '</span></button>';
-        feed.innerHTML = '<input type="text" class="nx-dm-search" id="nx-dm-search" placeholder="Search messages…" autocomplete="off" /><div id="nx-dm-rows"></div>';
-        const rowsEl = el('nx-dm-rows'); rowsEl.innerHTML = convos.map(row).join('');
+        const requests = convos.filter((c) => c.is_request);
+        const accepted = convos.filter((c) => !c.is_request);
+        const row = (c) => '<button type="button" class="nx-inbox-row" data-dm-open="' + esc(c.other_token) + '" data-dm-comm="' + esc(c.community_id) + '" data-dm-handle="' + esc(c.other_handle) + '"><span class="nx-disc-av" style="background:' + g(hashIdx(c.other_token)) + '"></span><span class="nx-inbox-meta"><b>@' + esc(c.other_handle) + '</b><span>' + esc((commId ? '' : tribeName(c.community_id) + ' · ') + (c.last_body || '')) + '</span></span><span class="nx-inbox-when">' + rel(c.last_at) + '</span></button>';
+        const reqRow = (c) => '<div class="nx-inbox-row nx-req-row"><button type="button" class="nx-req-open" data-dm-open="' + esc(c.other_token) + '" data-dm-comm="' + esc(c.community_id) + '" data-dm-handle="' + esc(c.other_handle) + '"><span class="nx-disc-av" style="background:' + g(hashIdx(c.other_token)) + '"></span><span class="nx-inbox-meta"><b>@' + esc(c.other_handle) + '</b><span>' + esc((commId ? '' : tribeName(c.community_id) + ' · ') + (c.last_body || '')) + '</span></span></button><span class="nx-req-actions"><button type="button" class="nx-req-accept" data-req-accept data-tk="' + esc(c.other_token) + '" data-cm="' + esc(c.community_id) + '" data-hn="' + esc(c.other_handle) + '">Accept</button><button type="button" class="nx-req-decline" data-req-decline data-tk="' + esc(c.other_token) + '" data-cm="' + esc(c.community_id) + '">Decline</button></span></div>';
+        const reqHtml = requests.length ? '<p class="nx-tile-k" style="margin-top:0">Requests</p>' + requests.map(reqRow).join('') + '<p class="nx-tile-k">Messages</p>' : '';
+        feed.innerHTML = '<input type="text" class="nx-dm-search" id="nx-dm-search" placeholder="Search messages…" autocomplete="off" />' + reqHtml + '<div id="nx-dm-rows"></div>';
+        const rowsEl = el('nx-dm-rows'); rowsEl.innerHTML = accepted.length ? accepted.map(row).join('') : '<p class="nx-pulse-explain">No conversations yet.</p>';
         const si = el('nx-dm-search');
-        if (si) si.addEventListener('input', () => { const qq = si.value.trim().toLowerCase(); const f = qq ? convos.filter((c) => handleFor(c.other, c.comm).toLowerCase().includes(qq) || (c.last.body || '').toLowerCase().includes(qq) || tribeName(c.comm).toLowerCase().includes(qq)) : convos; rowsEl.innerHTML = f.length ? f.map(row).join('') : '<p class="nx-pulse-explain">No matches.</p>'; });
+        if (si) si.addEventListener('input', () => { const qq = si.value.trim().toLowerCase(); const f = qq ? accepted.filter((c) => (c.other_handle || '').toLowerCase().includes(qq) || (c.last_body || '').toLowerCase().includes(qq) || tribeName(c.community_id).toLowerCase().includes(qq)) : accepted; rowsEl.innerHTML = f.length ? f.map(row).join('') : '<p class="nx-pulse-explain">No matches.</p>'; });
       }
-      el('nx-dm-feed').addEventListener('click', (e) => { const row = e.target.closest('[data-dm-open]'); if (!row) return; const other = row.getAttribute('data-dm-open'); const comm = row.getAttribute('data-dm-comm'); openDM(comm, other, handleFor(other, comm), 'inbox'); });
+      el('nx-dm-feed').addEventListener('click', (e) => {
+        const acc = e.target.closest('[data-req-accept]');
+        if (acc) { const cm = acc.getAttribute('data-cm'), tk = acc.getAttribute('data-tk'), hn = acc.getAttribute('data-hn'); NexusData.dmAccept(cm, tk).then(() => openDM(cm, tk, hn, 'inbox')).catch(() => toast('Could not accept — try again.')); return; }
+        const dec = e.target.closest('[data-req-decline]');
+        if (dec) { const cm = dec.getAttribute('data-cm'), tk = dec.getAttribute('data-tk'); NexusData.dmDecline(cm, tk).then(() => openMsgInbox(dmInboxComm)).catch(() => toast('Could not decline — try again.')); return; }
+        const row = e.target.closest('[data-dm-open]'); if (!row) return; openDM(row.getAttribute('data-dm-comm'), row.getAttribute('data-dm-open'), row.getAttribute('data-dm-handle'), 'inbox');
+      });
       el('nx-dm-back').addEventListener('click', () => {
         if (dmOther) { dmOther = null; if (dmBackView === 'inbox') { openMsgInbox(dmInboxComm); return; } teardownDM(); show(curTribe ? 'tribe' : 'home'); return; }
         teardownDM(); show(dmInboxComm ? 'tribe' : 'home');
       });
       el('nx-tribe-msgs') && el('nx-tribe-msgs').addEventListener('click', () => openMsgInbox(curTribe ? curTribe.id : null));
+      el('nx-dm-more') && el('nx-dm-more').addEventListener('click', () => { const b = el('nx-dm-more'); if (b) openSafety(b); });
       el('nx-home-msgs') && el('nx-home-msgs').addEventListener('click', () => openMsgInbox(null));
+      el('nx-tribe-share') && el('nx-tribe-share').addEventListener('click', async () => { if (!curTribe) return; const link = location.origin + '/beta/nexus/?tribe=' + curTribe.id; try { await navigator.clipboard.writeText(link); toast('Tribe link copied — share it with your people.'); } catch (e) { toast('Copy this link: ' + link); } });
       const dmImgInput = el('nx-dm-img');
       if (dmImgInput) dmImgInput.addEventListener('change', () => { const f = dmImgInput.files && dmImgInput.files[0]; if (!f) return; dmImg = f; el('nx-dm-preview-img').src = URL.createObjectURL(f); el('nx-dm-preview').hidden = false; });
       el('nx-dm-preview-x') && el('nx-dm-preview-x').addEventListener('click', () => { dmImg = null; if (dmImgInput) dmImgInput.value = ''; el('nx-dm-preview').hidden = true; });
@@ -591,10 +711,11 @@
         if (!v && !dmImg) return;
         let imgUrl = null; if (dmImg) { imgUrl = await uploadImage(dmImg); if (!imgUrl) return; }
         inp.value = '';
-        const { data, error } = await supabase.from('nexus_dm_messages').insert({ community_id: dmThreadComm, sender_user_id: SESSION.user.id, recipient_user_id: dmOther, body: v || null, image_url: imgUrl }).select('*').single();
-        if (error || !data) { toast(error && error.code === '42501' ? 'You both need to be in this tribe to message.' : 'Could not send — try again.'); return; }
+        let data;
+        try { data = await NexusData.sendDM(dmThreadComm, dmOther, v || null, imgUrl, SESSION.user.id); }
+        catch (err) { toast(err && err.code === '42501' ? 'You both need to be in this tribe to message.' : 'Could not send — try again.'); return; }
         dmImg = null; if (dmImgInput) dmImgInput.value = ''; el('nx-dm-preview').hidden = true;
-        dmAppend(data, true);
+        dmAppend(data);
       });
       el('nx-dm-input').addEventListener('focus', () => setTimeout(() => el('nx-dm-input').scrollIntoView({ block: 'center' }), 200));
 
@@ -607,6 +728,7 @@
       const closeTribeCreate = () => { tribeModal.hidden = true; el('nx-tribe-form').reset(); };
       el('nx-newtribe').addEventListener('click', openTribeCreate);
       el('nx-tribe-cancel').addEventListener('click', closeTribeCreate);
+      el('nx-tribe-vis') && el('nx-tribe-vis').addEventListener('click', (e) => { const b = e.target.closest('.nx-vis'); if (!b) return; el('nx-tribe-vis').querySelectorAll('.nx-vis').forEach((x) => x.classList.remove('on')); b.classList.add('on'); });
       tribeModal.addEventListener('click', (e) => { if (e.target === tribeModal) closeTribeCreate(); });
       document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !tribeModal.hidden) closeTribeCreate(); });
       el('nx-tribe-form').addEventListener('submit', async (e) => {
@@ -615,7 +737,9 @@
         const name = el('nx-tribe-name-in').value.trim(); if (!name) return;
         const desc = el('nx-tribe-desc-in').value.trim();
         const goBtn = el('nx-tribe-form').querySelector('.nx-modal-go'); if (goBtn) goBtn.disabled = true;
-        const { data, error } = await supabase.rpc('nexus_create_tribe', { p_name: name, p_description: desc || null });
+        const visBtn = el('nx-tribe-vis') && el('nx-tribe-vis').querySelector('.nx-vis.on');
+        const p_visibility = visBtn ? visBtn.getAttribute('data-vis') : 'public';
+        const { data, error } = await supabase.rpc('nexus_create_tribe', { p_name: name, p_description: desc || null, p_visibility });
         if (goBtn) goBtn.disabled = false;
         if (error || !data) { toast(error && error.code === '42501' ? 'Sign in to create a tribe.' : 'Could not create the tribe — try again.'); return; }
         closeTribeCreate();
@@ -626,7 +750,7 @@
       });
 
       // back buttons
-      document.querySelectorAll('[data-home]').forEach((b) => b.addEventListener('click', () => { if (chan) leaveRoom(); else show('home'); }));
+      document.querySelectorAll('[data-home]').forEach((b) => b.addEventListener('click', () => { if (curTribeChan) { try { supabase.removeChannel(curTribeChan); } catch (e) {} curTribeChan = null; } if (chan) leaveRoom(); else show('home'); }));
       // Real leave on tab close: keepalive heartbeat reporting here-1 so the room
       // decrements / archives instead of lingering as a ghost. (Belt-and-braces with
       // the server-side nexus-sweep-rooms cron.)
@@ -661,10 +785,101 @@
           .subscribe();
       }
 
+      // ── crisis support card (#5): private, author-only, runs in BOTH modes ─
+      const crisisModal = el('nx-crisis');
+      async function checkCrisisSupport() {
+        if (!crisisModal) return;
+        const ev = await NexusData.getCrisisSupport();
+        if (!ev) return;
+        crisisModal.dataset.eventId = ev.id;
+        crisisModal.hidden = false;
+      }
+      if (crisisModal) crisisModal.addEventListener('click', (e) => {
+        const ok = e.target.closest('#nx-crisis-ok');
+        const cta = e.target.closest('.nx-crisis-cta');
+        if (!ok && !cta) return;
+        const id = crisisModal.dataset.eventId; if (id) NexusData.ackCrisis(id);
+        if (ok) crisisModal.hidden = true; // the CTA navigates to Minit
+      });
+
+      // ── removal notices (#11): tell the author when their content was removed ─
+      async function checkRemovalNotices() {
+        const n = await NexusData.getRemovalNotices();
+        if (n > 0) { toast(n === 1 ? 'A moderator removed one of your posts.' : 'A moderator removed ' + n + ' of your posts.'); NexusData.ackRemovalNotices(); }
+      }
+
+      // ── recognition (#18/#19): gentle streak + earned badges ──────────────
+      async function renderStanding() {
+        const elS = el('nx-standing'); if (!elS) return;
+        const st = await NexusData.getStanding(); if (!st) { elS.hidden = true; return; }
+        const parts = [];
+        if (st.streak && st.streak.current > 0) parts.push('<span class="nx-streak-chip">🔥 ' + st.streak.current + '-day streak</span>');
+        (st.badges || []).slice(0, 10).forEach((b) => parts.push('<span class="nx-badge" title="' + esc(b.label) + '">' + b.emoji + '</span>'));
+        if (!parts.length) { elS.hidden = true; return; }
+        elS.innerHTML = parts.join(''); elS.hidden = false;
+      }
+
+      // ── #17 "For you" feed (resonance-ranked) ─────────────────────────────
+      const feedEl = el('nx-feed');
+      function feedCard(p) {
+        const blak = !!p.is_ai_author;
+        const who = blak ? '<span class="nx-blak">✦ Blak</span>' : '@' + esc(p.author_handle || 'someone');
+        const av = blak ? '<span class="nx-disc-av nx-av-blak"></span>' : '<span class="nx-disc-av" style="background:' + g(hashIdx(p.author_token || p.id)) + '"></span>';
+        const txt = (p.image_url && !(p.body || '').trim()) ? '📷 shared an image' : esc((p.title ? p.title + ' — ' : '') + (p.body || '').slice(0, 140));
+        return '<button type="button" class="nx-feed-card" data-open-tribe="' + esc(p.community_id) + '" data-tribe-name="' + esc(p.community_name || 'a tribe') + '">'
+          + '<div class="nx-feed-top">' + av + '<span class="nx-feed-who">' + who + '</span><span>·</span><span class="nx-feed-tribe">' + esc(p.community_name || '') + '</span>' + (p.resonance != null ? '<span class="nx-feed-reso">◈ ' + p.resonance + '%</span>' : '') + '</div>'
+          + '<div class="nx-feed-body">' + txt + '</div>'
+          + '<div class="nx-feed-foot">◈ ' + (p.impact_count || 0) + ' · 💬 ' + (p.comment_count || 0) + ' · ' + rel(p.created_at) + '</div></button>';
+      }
+      async function loadFeed() {
+        if (!feedEl) return;
+        let posts = [];
+        try { posts = await NexusData.getFeed(24); } catch (e) {}
+        if (!posts.length) { feedEl.innerHTML = '<p class="nx-pulse-explain" style="margin:0">Nothing here yet — join a tribe or post something, and your feed fills in.</p>'; return; }
+        feedEl.innerHTML = posts.map(feedCard).join('');
+      }
+      feedEl && feedEl.addEventListener('click', (e) => {
+        const c = e.target.closest('[data-open-tribe]'); if (!c) return;
+        const id = c.getAttribute('data-open-tribe'), name = c.getAttribute('data-tribe-name');
+        const t = MY_TRIBES.find((x) => x.id === id) || TRIBES.find((x) => x.id === id) || { id, name, description: '' };
+        openTribe(t);
+      });
+
+      // ── #32 discover (trending public tribes) ─────────────────────────────
+      const discoverEl = el('nx-discover');
+      async function loadTrending() {
+        if (!discoverEl) return;
+        let list = [];
+        try { list = await NexusData.getTrending(); } catch (e) {}
+        if (!list.length) { discoverEl.innerHTML = '<p class="nx-pulse-explain" style="margin:0">No public tribes yet — be the first to start one.</p>'; return; }
+        discoverEl.innerHTML = list.map((t) => '<button type="button" class="nx-tribe-card" data-open-tribe="' + esc(t.id) + '" data-tribe-name="' + esc(t.name) + '"><span class="nx-tc-mark" style="background:' + g(hashIdx(t.id)) + '"></span><span class="nx-tc-who"><b>' + esc(t.name) + '</b><span>' + (t.members || 0) + ' member' + (t.members === 1 ? '' : 's') + ' · ' + (t.recent_posts || 0) + ' recent</span></span></button>').join('');
+      }
+      discoverEl && discoverEl.addEventListener('click', (e) => { const c = e.target.closest('[data-open-tribe]'); if (!c) return; const id = c.getAttribute('data-open-tribe'), name = c.getAttribute('data-tribe-name'); const t = TRIBES.find((x) => x.id === id) || { id, name, description: '' }; openTribe(t); });
+
+      // ── #36 onboarding (one-time, anti-FOMO, dismissible) ─────────────────
+      (function onboard() {
+        const o = el('nx-onboard'); if (!o) return;
+        let seen = false; try { seen = localStorage.getItem('nx_onboarded') === '1'; } catch (e) {}
+        if (seen) return;
+        o.hidden = false;
+        const ok = el('nx-onboard-ok'); if (ok) ok.addEventListener('click', () => { o.hidden = true; try { localStorage.setItem('nx_onboarded', '1'); } catch (e) {} });
+      })();
+
       // ── go ── (resilient: render first, never block the home on auth) ──
       setGreeting();                  // immediate anonymous greeting
       loadRooms().catch(() => {});    // live rooms — independent of auth
       loadTribes().catch(() => {});   // public tribes — for discovery + name lookup
+      loadFeed().catch(() => {});     // "For you" resonance-ranked feed (anon-safe)
+      loadTrending().catch(() => {}); // #32 discover trending public tribes
+      // #33 deep link: ?tribe=<id> opens that tribe (RLS gates private/anon to members)
+      (async () => {
+        try {
+          const tid = new URLSearchParams(location.search).get('tribe'); if (!tid) return;
+          let t = TRIBES.find((x) => x.id === tid);
+          if (!t) { const { data } = await supabase.from('nexus_communities').select('id,slug,name,description,visibility').eq('id', tid).maybeSingle(); if (data) t = data; }
+          if (t) openTribe(t);
+        } catch (e) {}
+      })();
       (async () => {
         // Stay ANONYMOUS even when signed in: derive a stable handle from the account
         // id instead of leaking the email. getSession is raced with a timeout so a
@@ -679,5 +894,6 @@
         } catch (e) {}
         loadMyTribes().catch(() => {});
         subscribeMyTribes(); // live updates for join/leave on this account
+        if (SESSION && SESSION.user) { checkCrisisSupport(); checkRemovalNotices(); renderStanding(); }
       })();
     }

@@ -100,7 +100,8 @@ import AppLayout from '../../layouts/AppLayout.astro';
               <button type="submit">Provision listener</button>
               <div class="adm-toast full" id="pv-toast"></div>
             </form>
-          </div>`;
+          </div>
+          <div class="adm-sec" id="adm-nexus"></div>`;
 
         root.querySelectorAll('[data-ban]').forEach((b) => b.addEventListener('click', async () => {
           const uid = b.getAttribute('data-ban');
@@ -139,6 +140,20 @@ import AppLayout from '../../layouts/AppLayout.astro';
           toast.style.color = 'var(--mint-deep)'; toast.textContent = 'Done — ' + esc(email) + ' is now a listener.';
           load();
         });
+        renderNexus();
+      }
+
+      async function renderNexus() {
+        const box = document.getElementById('adm-nexus'); if (!box) return;
+        const { data, error } = await supabase.rpc('nexus_admin_reports');
+        if (error) { box.innerHTML = ''; return; }
+        const reports = data || [];
+        const rRow = (r) => `<div class="adm-row flag"><div class="adm-row-main"><b>Nexus ${esc(r.target_type)} report</b> <span class="mono">@${esc(r.reported_handle)} · ${fmt(r.created_at)}</span><i>reason: ${esc(r.reason)}${r.details ? ' · ' + esc(r.details) : ''}</i></div><button type="button" class="adm-btn danger" data-nx-hide="${r.id}">Hide content</button><button type="button" class="adm-btn" data-nx-dismiss="${r.id}">Dismiss</button></div>`;
+        let m = {}; try { const rr = await supabase.rpc('nexus_admin_metrics'); m = rr.data || {}; } catch (e) {}
+        const nstat = (n, l) => `<div class="adm-stat"><b>${n ?? 0}</b><span>${l}</span></div>`;
+        box.innerHTML = `<h2>Nexus</h2><div class="adm-stats">${nstat(m.tribes, 'tribes')}${nstat(m.posts, 'posts')}${nstat(m.comments, 'comments')}${nstat(m.rooms_live, 'rooms live')}${nstat(m.active_7d, 'active 7d')}${nstat(m.crisis_30d, 'crisis 30d')}</div><h2>Nexus reports <span class="adm-count">${reports.length}</span></h2>${reports.length ? reports.map(rRow).join('') : '<div class="adm-empty">No open Nexus reports.</div>'}`;
+        box.querySelectorAll('[data-nx-hide]').forEach((b) => b.addEventListener('click', async () => { b.disabled = true; const { error } = await supabase.rpc('nexus_admin_resolve', { p_id: b.getAttribute('data-nx-hide'), p_action: 'hide' }); if (error) { b.disabled = false; alert('Failed: ' + error.message); return; } renderNexus(); }));
+        box.querySelectorAll('[data-nx-dismiss]').forEach((b) => b.addEventListener('click', async () => { b.disabled = true; const { error } = await supabase.rpc('nexus_admin_resolve', { p_id: b.getAttribute('data-nx-dismiss'), p_action: 'dismiss' }); if (error) { b.disabled = false; alert('Failed: ' + error.message); return; } renderNexus(); }));
       }
 
       load();

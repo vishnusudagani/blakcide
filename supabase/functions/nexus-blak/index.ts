@@ -14,8 +14,8 @@
 import { createClient, type SupabaseClient } from "npm:@supabase/supabase-js@2";
 
 const BLAK_UID = "b1ab1ab1-aaaa-4aaa-8aaa-b1ab1ab1b1ab";
-const DAILY_CAP = 6;            // max Blak posts+comments / 24h across all tribes
-const TRIBE_COOLDOWN_H = 5;     // min hours between Blak actions in one tribe
+const DAILY_CAP = 15;           // max PROACTIVE Blak posts+comments / 24h (mentions bypass this)
+const TRIBE_COOLDOWN_H = 2;     // min hours between PROACTIVE Blak actions in one tribe
 const FRESH_POST_H = 36;        // only reply to posts newer than this
 const QUIET_TRIBE_H = 24;       // a tribe silent this long may get a gentle starter
 
@@ -166,14 +166,47 @@ async function tribeMove() {
   return json({ ok: true, skipped: "nothing_to_do" });
 }
 
+// ── @blak summon: reply directly when mentioned (bypasses the proactive cap) ─
+async function onMention(body: { post_id?: string; comment_id?: string }) {
+  if (await aiKilled()) return json({ ok: true, skipped: "ai_killed" });
+  const db = admin();
+  let postId: string | null = body.post_id || null;
+  let text = "";
+  const parentId: string | null = body.comment_id || null;
+  if (body.comment_id) {
+    const { data: c } = await db.from("nexus_comments").select("post_id,body,is_ai_author").eq("id", body.comment_id).maybeSingle();
+    if (!c || c.is_ai_author) return json({ ok: true, skipped: "no_comment" });
+    postId = c.post_id; text = c.body || "";
+  } else if (postId) {
+    const { data: p } = await db.from("nexus_posts").select("title,body,is_ai_author").eq("id", postId).maybeSingle();
+    if (!p || p.is_ai_author) return json({ ok: true, skipped: "no_post" });
+    text = (p.title ? p.title + " — " : "") + (p.body || "");
+  }
+  if (!postId) return json({ ok: true, skipped: "no_target" });
+  let tribeName = "community";
+  const { data: post } = await db.from("nexus_posts").select("community_id").eq("id", postId).maybeSingle();
+  if (post?.community_id) {
+    const { data: t } = await db.from("nexus_communities").select("name").eq("id", post.community_id).maybeSingle();
+    tribeName = t?.name || tribeName;
+  }
+  let reply = "";
+  try {
+    reply = await llm(`In the "${tribeName}" tribe, someone mentioned you (@blak) and wrote:\n"${String(text).slice(0, 600)}"\n\nReply to them directly and warmly as a fellow member — address what they actually said.`);
+  } catch (e) { return json({ ok: false, error: String(e) }, 502); }
+  if (!reply) return json({ ok: true, skipped: "empty_gen" });
+  await db.from("nexus_comments").insert({ post_id: postId, author_user_id: BLAK_UID, is_ai_author: true, body: reply, parent_id: parentId });
+  return json({ ok: true, mode: "mention", text: reply });
+}
+
 Deno.serve(async (req) => {
   const secret = Deno.env.get("NEXUS_BLAK_CRON_SECRET");
   if (!secret || req.headers.get("x-cron-secret") !== secret) {
     return json({ ok: false, error: "forbidden" }, 403);
   }
-  let body: { mode?: string; room_id?: string } = {};
+  let body: { mode?: string; room_id?: string; post_id?: string; comment_id?: string } = {};
   try { body = await req.json(); } catch { /* empty body = cron tribe move */ }
   try {
+    if (body.mode === "mention") return await onMention(body);
     if (body.mode === "room_opener" && body.room_id) return await roomOpener(body.room_id);
     return await tribeMove();
   } catch (e) {

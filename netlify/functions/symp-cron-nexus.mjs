@@ -43,6 +43,11 @@ export default async (_req) => {
     }
 };
 
-export const config = {
-    schedule: '0 * * * *',
-};
+// RETIRED — NEXUS-GAPS.md Phase 5, #44. The old "Echo" AI participant (gpt-4o-mini
+// via ai-participant.mjs + the resonance/escalation/trend libs) is superseded by the
+// Gemini `nexus-blak` edge function. The schedule is removed so this cron NO LONGER
+// RUNS (no more double-posting / inconsistent voice). Kept for reference only.
+// TODO(#44): delete symp-cron-nexus.mjs + symp-v1-nexus.mjs + symp-core/lib/nexus/*
+// once the TL;DR-summary feature is ported into nexus-blak.
+//
+// export const config = { schedule: '0 * * * *' };   // ← intentionally disabled
