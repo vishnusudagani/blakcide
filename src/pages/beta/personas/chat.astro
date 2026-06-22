@@ -24,6 +24,9 @@ import AppLayout from '../../../layouts/AppLayout.astro';
     <!-- Composer -->
     <form class="pc-form" id="pc-form" autocomplete="off">
       <textarea id="pc-input" class="pc-input" rows="1" placeholder="Message…" maxlength="4000"></textarea>
+      <button type="button" class="pc-voice" id="pc-voice" aria-label="Voice note">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v4"/></svg>
+      </button>
       <button type="submit" class="pc-send" id="pc-send" aria-label="Send">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
       </button>
@@ -102,6 +105,12 @@ import AppLayout from '../../../layouts/AppLayout.astro';
   .pc-stop { background: var(--surface-strong); color: var(--ink); }
   /* [hidden] must beat display:grid (same gotcha as overlays) */
   .pc-send[hidden], .pc-stop[hidden] { display: none; }
+  .pc-voice { flex: none; width: 42px; height: 42px; border-radius: 50%; display: grid; place-items: center; border: 1px solid var(--line); background: var(--surface); color: var(--coral); cursor: pointer; transition: transform .15s var(--ease-spring, ease), border-color .15s, background .15s; }
+  .pc-voice svg { width: 19px; height: 19px; }
+  .pc-voice:active { transform: scale(.92); }
+  .pc-voice.rec { background: #ff5a5f; border-color: #ff5a5f; color: #fff; animation: pcPulse 1.1s ease-in-out infinite; }
+  .pc-voice.busy { opacity: .5; pointer-events: none; }
+  @keyframes pcPulse { 0%,100% { box-shadow: 0 0 0 0 rgba(255,90,95,.5); } 50% { box-shadow: 0 0 0 6px rgba(255,90,95,0); } }
 
   /* Call overlay */
   .pc-call-ov { position: fixed; inset: 0; z-index: 60; display: grid; place-items: center; background: color-mix(in srgb, var(--bg) 86%, transparent); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
