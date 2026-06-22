@@ -96,15 +96,16 @@ async function dbCreateChat() {
 }
 async function dbLoadMessages(chatId: string) {
   try {
-    const { data } = await supabase!.from('messages').select('id,role,content,created_at')
+    const { data } = await supabase!.from('messages').select('id,role,content,created_at,media_url,media_type,media_description')
       .eq('chat_id', chatId).order('created_at', { ascending: true }).limit(500);
-    return (data || []).map((m: any) => ({ id: m.id, role: m.role === 'user' ? 'user' : 'assistant', content: m.content || '', ts: m.created_at ? new Date(m.created_at).getTime() : Date.now() }));
+    return (data || []).map((m: any) => ({ id: m.id, role: m.role === 'user' ? 'user' : 'assistant', content: m.content || '', ts: m.created_at ? new Date(m.created_at).getTime() : Date.now(), media_url: m.media_url || null, vision: m.media_description || null }));
   } catch { return []; }
 }
-async function dbInsertMessage(role: string, content: string) {
+async function dbInsertMessage(role: string, content: string, media?: any) {
   if (!activeChatId) return null;
   const row: any = { chat_id: activeChatId, role, content: content || '' };
   if (role === 'user') row.sender_id = userId;
+  if (media && media.url) { row.media_url = media.url; row.media_type = 'image'; if (media.vision) row.media_description = media.vision; }
   try { const { data } = await supabase!.from('messages').insert(row).select('id').single(); return data ? data.id : null; }
   catch { return null; }
 }
@@ -121,7 +122,11 @@ function addRow(side: 'me' | 'them', text: string, opts: any = {}) {
   const col = document.createElement('div'); col.className = 'pc-col';
   const bub = document.createElement('div'); bub.className = 'pc-bub'; col.appendChild(bub); row.appendChild(col);
   if (opts.typing) { bub.innerHTML = '<span class="pc-typing"><i></i><i></i><i></i></span>'; }
-  else { const tx = document.createElement('span'); tx.textContent = text; bub.appendChild(tx); const tm = document.createElement('time'); tm.className = 'pc-time'; tm.textContent = fmtTime(ts); col.appendChild(tm); }
+  else {
+    if (opts.media_url) { const im = document.createElement('img'); im.className = 'pc-img'; im.src = opts.media_url; im.alt = 'shared image'; im.loading = 'lazy'; im.style.cssText = 'max-width:220px;max-height:240px;border-radius:12px;display:block;'; bub.appendChild(im); }
+    if (text) { const tx = document.createElement('span'); tx.textContent = text; bub.appendChild(tx); }
+    const tm = document.createElement('time'); tm.className = 'pc-time'; tm.textContent = fmtTime(ts); col.appendChild(tm);
+  }
   const empty = $('pc-empty'); if (empty) empty.remove();
   stream.appendChild(row); scrollBottom(side === 'me');
   const h = { row, col, bub, ts };
@@ -132,7 +137,7 @@ function stamp(h: any) { if (h.col.querySelector('.pc-time')) return; const t = 
 function render() {
   stream.innerHTML = '';
   if (!history.length) { renderEmpty(); return; }
-  for (const m of history) { if (!m.content) continue; addRow(m.role === 'user' ? 'me' : 'them', m.content, { ts: m.ts }); }
+  for (const m of history) { if (!m.content && !m.media_url) continue; addRow(m.role === 'user' ? 'me' : 'them', m.content, { ts: m.ts, media_url: m.media_url }); }
   scrollBottom(true);
 }
 function renderEmpty() {
@@ -141,7 +146,50 @@ function renderEmpty() {
 
 // ── Send / stream one turn ───────────────────────────────────────────────────
 function setBusy(b: boolean) { sending = b; sendBtn.hidden = b; stopBtn.hidden = !b; }
-function payload() { return history.filter(m => m.role === 'user' || m.role === 'assistant').slice(-MAX_TURNS).map(m => ({ role: m.role, content: m.content || '' })); }
+function payload() {
+  return history.filter(m => m.role === 'user' || m.role === 'assistant').slice(-MAX_TURNS).map(m => {
+    let c = m.content || '';
+    if (m.vision) c = (c ? c + '\n\n' : '') + '[I shared a photo with you. It shows: ' + m.vision + ']';
+    return { role: m.role, content: c };
+  });
+}
+
+// ── Image: upload → /vision describe → react (the persona "sees" the photo) ───
+const addBtn = $('pc-add'), fileInput = $('pc-file');
+async function uploadChatImage(file: File): Promise<string | null> {
+  if (!userId || !file || !supabase) return null;
+  const ext = (file.type && file.type.indexOf('png') >= 0) ? 'png' : 'jpg';
+  const rid = (window.crypto && (crypto as any).randomUUID) ? (crypto as any).randomUUID() : (Date.now() + '-' + Math.round(Math.random() * 1e9));
+  const path = userId + '/persona-chat/' + rid + '.' + ext;
+  const { error } = await supabase.storage.from('chat_images').upload(path, file, { contentType: file.type || 'image/jpeg', upsert: false });
+  if (error) return null;
+  return supabase.storage.from('chat_images').getPublicUrl(path).data.publicUrl;
+}
+async function sendImage(file: File) {
+  if (sending) return;
+  setBusy(true);
+  try {
+    if (!activeChatId) activeChatId = await dbCreateChat();
+    const url = await uploadChatImage(file);
+    if (!url) { setBusy(false); return; }
+    const um: any = { role: 'user', content: '', media_url: url, ts: Date.now() };
+    history.push(um); addRow('me', '', { media_url: url });
+    let vision = '';
+    try {
+      const jwt = await getToken();
+      const r = await fetch('/api/blaksyd/symp/vision', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + (jwt || '') }, body: JSON.stringify({ imageUrl: url }) });
+      const j = await r.json().catch(() => null);
+      vision = String((j && (j.data ? j.data.description : j.description)) || '').trim();
+    } catch (e) { /* vision soft-fails → persona still reacts to the photo */ }
+    um.vision = vision;
+    dbInsertMessage('user', '', { url, vision }).then((id: any) => { if (id) um.id = id; });
+    await runTurn('');
+  } catch { setBusy(false); }
+}
+if (addBtn && fileInput) {
+  addBtn.onclick = () => fileInput.click();
+  fileInput.addEventListener('change', (e: any) => { const f = e.target.files && e.target.files[0]; e.target.value = ''; if (f) sendImage(f); });
+}
 
 async function attempt(typing: any) {
   controller = new AbortController();
