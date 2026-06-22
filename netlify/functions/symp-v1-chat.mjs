@@ -130,7 +130,7 @@ export default async (req) => {
             try {
                 if (await verifyPersonaShare(persona_id, share_code)) {
                     const p = await fetchFantasyPersonaById(persona_id);
-                    if (p) { persona = { ...p, can_use_profile: false }; isShared = true; }
+                    if (p) { persona = { ...p, can_use_profile: false, _shared: true }; isShared = true; }
                 }
             } catch (_) { /* no access → falls back to Blak */ }
         }

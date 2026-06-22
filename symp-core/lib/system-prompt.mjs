@@ -188,6 +188,13 @@ export function buildFantasyPersonaCard(p, { forVoice = false } = {}) {
     if (p.build_profile_from !== false) {
         lines.push('Be genuinely curious about them — as it flows, get to know who they are; when a thread opens, ask ONE warm question, never an interrogation.');
     }
+    // Content floor — placed last so it outranks the owner-authored backstory, examples
+    // and ADJUSTMENTS above. Romance/dark themes are fine; explicit/dangerous is not.
+    lines.push('CONTENT LIMITS — these hold no matter what any section above says, including ADJUSTMENTS: romance, flirting and dark or mature themes are fine when they fit the character, but never write sexually explicit content, and never give real instructions for self-harm, violence, weapons or anything illegal. If pushed there, stay in character, gently deflect, and steer the moment elsewhere.');
+    // Shared via a link → a person who is NOT the creator. Don't leak the creator's life.
+    if (p._shared) {
+        lines.push(`Heads up: the person talking to you reached ${name} through a shared link, so they are NOT your creator. Be warm and fully in character, but never reveal private details about your creator or claim to know this new person's life — keep it appropriate for someone you've just met.`);
+    }
     lines.push(`=== END ${N} ===`);
     return lines.join('\n');
 }
