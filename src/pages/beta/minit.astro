@@ -502,27 +502,29 @@ import AppLayout from '../../layouts/AppLayout.astro';
         pc = new RTCPeerConnection(await getRtcConfig());
         pc.onicecandidate = (e) => { if (e.candidate) callSend('ice', e.candidate); };
         pc.ontrack = (e) => { const a = document.getElementById('mnx-rtc-audio'); if (a) a.srcObject = e.streams[0]; };
-        pc.onconnectionstatechange = () => { if (!pc) return; const st = pc.connectionState; if (st === 'connected') onCallConnected(); else if (st === 'failed' || st === 'disconnected' || st === 'closed') endCall(false); };
+        pc.onconnectionstatechange = () => { if (!pc) return; const st = pc.connectionState; if (st === 'connected') onCallConnected(); else if (st === 'failed' || st === 'disconnected' || st === 'closed') { callNote(callStart ? 'The call dropped — we’re back in text. Tap the phone to try again.' : 'Couldn’t connect by voice just now — let’s keep going here in text. (Voice can struggle on some mobile networks.)'); endCall(false); } };
       }
       function onCallConnected() {
         if (callState === 'connected') return; callState = 'connected'; callStart = Date.now();
         if (callTimeout) { clearTimeout(callTimeout); callTimeout = 0; }
         renderCallBar('connected'); logEvent('call_connected');
+        callNote('🔒 You’re on a private voice call — it’s never recorded.');
         // No call count-up — the header shows the daily budget counting down instead.
       }
       const getMic = () => navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+      function callNote(t) { const f = document.getElementById('mnx-feed'); if (!f) return; const d = document.createElement('div'); d.className = 'mnx-sys'; d.textContent = t; f.appendChild(d); f.scrollTop = f.scrollHeight; }
       async function startCall() {
         if (callState !== 'idle' || !activeSessionId) return;
         // Wait for our channel AND the peer to be present. The auto-call fires the
         // instant the chat opens — before the other side may have subscribed — so the
         // first SDP offer would otherwise broadcast into the void (~6s fallback).
         for (let i = 0; i < 40 && (!chatReady || !peerReady); i++) await wait(150);
-        try { localStream = await getMic(); } catch (e) { alert('Microphone access is needed for a voice call.'); return; }
+        try { localStream = await getMic(); } catch (e) { callNote('We couldn’t reach your mic — check the browser’s microphone permission. You can keep going here in text.'); return; }
         callState = 'calling'; renderCallBar('calling'); logEvent('call_started');
         await createPC(); localStream.getTracks().forEach((t) => pc.addTrack(t, localStream));
         try { const offer = await pc.createOffer({ offerToReceiveAudio: true }); await pc.setLocalDescription(offer); callSend('offer', offer); } catch (e) { endCall(true); return; }
         if (callTimeout) clearTimeout(callTimeout);
-        callTimeout = setTimeout(() => { if (callState === 'calling') endCall(true); }, 45000);
+        callTimeout = setTimeout(() => { if (callState === 'calling') { callNote('No answer by voice — staying in text. You can try the call again anytime.'); endCall(true); } }, 45000);
       }
       async function handleCallSignal(p) {
         const kind = p?.kind, data = p?.data, from = p?.from;
