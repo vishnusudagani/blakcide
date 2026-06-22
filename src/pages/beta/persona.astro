@@ -44,7 +44,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
           <p class="px-enrolled-label" id="px-enrolled-label"></p>
           <div class="px-train" id="px-train" hidden>
             <button type="button" class="px-btn px-btn-go" id="px-train-btn">Make it sound exactly like me</button>
-            <p class="px-train-hint">Trains a private model on your recordings so your Persona speaks Telugu, Hindi &amp; English natively — in your own voice. ~10–20 min, one time.</p>
+            <p class="px-train-hint"><b>Recommended.</b> Trains a private model on your recordings so your Persona replies <b>instantly</b> in your own voice — and speaks Telugu, Hindi &amp; English natively. ~10–20 min, one time.</p>
             <p class="px-train-msg" id="px-train-msg" role="status"></p>
           </div>
           <button type="button" class="px-btn px-btn-danger" id="px-delete">Delete my voice</button>
@@ -199,6 +199,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
     let recBlob = null;          // last recorded WAV blob
     let personaTrained = false;  // user has a fine-tuned Svara voice (talk uses it)
     let trainPoll = null;        // train-status polling timer
+    let trainNudged = false;     // showed the "train for instant replies" nudge once
     const history = [];          // chat history for /api/chat
 
     // ── auth ──────────────────────────────────────────────────────────────
@@ -421,6 +422,26 @@ import AppLayout from '../../layouts/AppLayout.astro';
         }
       } catch { setMsg($('px-train-msg'), 'err', 'Network error starting training. Try again.'); btn.disabled = false; }
     }
+    // Promote the trained voice: after a reply that used the slower zero-shot path,
+    // nudge the user ONCE to train — the trained voice is instant (no per-sentence
+    // reference cost) AND higher quality. Only when they have enough clips to train.
+    function maybeNudgeTrain() {
+      if (personaTrained || trainNudged) return;
+      if ($('px-train').hidden) return;            // not enough recordings to train yet
+      trainNudged = true;
+      const note = document.createElement('div');
+      note.className = 'px-bubble px-bubble-ai';
+      note.style.borderStyle = 'dashed';
+      note.textContent = 'That was in your voice, but a little slow. Train your voice once (~15 min) and your Persona replies instantly — and sounds even more like you.';
+      const go = document.createElement('button');
+      go.type = 'button'; go.className = 'px-btn px-btn-go';
+      go.textContent = 'Train my voice →';
+      go.style.cssText = 'display:block; margin-top:.7rem; font-size:.9em;';
+      go.onclick = () => { note.remove(); $('px-train').scrollIntoView({ behavior: 'smooth', block: 'center' }); onTrain(); };
+      note.appendChild(go);
+      $('px-thread').appendChild(note);
+      $('px-thread').scrollTop = $('px-thread').scrollHeight;
+    }
     async function updateTrainUI(total) {
       const enough = total >= 3;
       $('px-train').hidden = !enough;
@@ -570,6 +591,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
         reply = (reply.trim()) || 'Sorry, I could not reply just now.';
         thinking.textContent = reply;
         history.push({ role: 'assistant', content: reply });
+        maybeNudgeTrain();   // promote the faster, higher-quality trained voice
       } catch (e) {
         if (myTurn === turnSeq) { thinking.classList.remove('is-thinking', 'is-speaking'); thinking.textContent = 'Network error — is the backend reachable?'; }
       }
