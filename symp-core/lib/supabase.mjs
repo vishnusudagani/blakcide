@@ -561,6 +561,24 @@ export async function fetchFantasyPersona(userId, personaId) {
     return (ok && Array.isArray(data) && data[0]) ? data[0] : null;
 }
 
+// By id only (NO owner scope) — for GUEST access to a SHARED persona. NEVER call
+// this without first confirming ownership or a valid share (verifyPersonaShare).
+export async function fetchFantasyPersonaById(personaId) {
+    if (!personaId) return null;
+    const p = encodeURIComponent(personaId);
+    const { ok, data } = await sbFetch(`fantasy_personas?id=eq.${p}&select=*`);
+    return (ok && Array.isArray(data) && data[0]) ? data[0] : null;
+}
+
+// True iff a non-revoked share with this code exists for this persona (service role).
+export async function verifyPersonaShare(personaId, code) {
+    if (!personaId || !code) return false;
+    const p = encodeURIComponent(personaId);
+    const c = encodeURIComponent(code);
+    const { ok, data } = await sbFetch(`persona_shares?persona_id=eq.${p}&code=eq.${c}&revoked=eq.false&select=id&limit=1`);
+    return ok && Array.isArray(data) && data.length > 0;
+}
+
 // ── Persona-scoped facts (DOB for astrologer, religion for spiritual, …) ──
 
 /**
