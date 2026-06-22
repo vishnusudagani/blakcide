@@ -84,16 +84,10 @@ function summariseEvidenceForBrief({ profile, vault, journals, vibe }) {
  * Build (or fetch cached) Listener brief.
  * Returns the brief JSON. Throws on hard failures.
  */
-export async function buildBrief({ userId, listenerId, connectSessionId, force = false }) {
-    if (!userId || !listenerId || !connectSessionId) {
-        throw new Error('buildBrief: userId, listenerId, connectSessionId required');
-    }
-
-    if (!force) {
-        const cached = await fetchListenerBrief(connectSessionId).catch(() => null);
-        if (cached?.brief) return cached.brief;
-    }
-
+// Synthesize the brief JSON from the user's Vault/profile (no listener/session,
+// no persistence). Shared by buildBrief (listener-side, cached) and previewBrief
+// (the user-side "see what Blak would share before you connect").
+async function synthBrief(userId) {
     const [profile, vault, journals, vibe] = await Promise.all([
         fetchBlaksydProfile(userId).catch(() => null),
         fetchVaultProfile(userId).catch(() => null),
@@ -129,7 +123,7 @@ export async function buildBrief({ userId, listenerId, connectSessionId, force =
     catch (_) { brief = {}; }
 
     // Normalise / backstop.
-    brief = {
+    return {
         summary:       String(brief.summary || 'A user reaching out for support.').slice(0, 220),
         current_vibe:  String(brief.current_vibe || 'unknown').slice(0, 100),
         themes:        Array.isArray(brief.themes) ? brief.themes.slice(0, 5).map(t => String(t).slice(0, 30)) : [],
@@ -139,15 +133,27 @@ export async function buildBrief({ userId, listenerId, connectSessionId, force =
         language_hint: ['te','hi','en','romanized-te','romanized-hi'].includes(brief.language_hint) ? brief.language_hint : (vibe?.language_lane || 'en'),
         risk_flags:    Array.isArray(brief.risk_flags) ? brief.risk_flags.slice(0, 6).map(t => String(t).slice(0, 40)) : [],
     };
+}
 
-    await insertListenerBrief({
-        connectSessionId,
-        userId,
-        listenerId,
-        brief,
-    }).catch(e => console.warn(`[whisperer] insertListenerBrief failed: ${e.message}`));
-
+export async function buildBrief({ userId, listenerId, connectSessionId, force = false }) {
+    if (!userId || !listenerId || !connectSessionId) {
+        throw new Error('buildBrief: userId, listenerId, connectSessionId required');
+    }
+    if (!force) {
+        const cached = await fetchListenerBrief(connectSessionId).catch(() => null);
+        if (cached?.brief) return cached.brief;
+    }
+    const brief = await synthBrief(userId);
+    await insertListenerBrief({ connectSessionId, userId, listenerId, brief })
+        .catch(e => console.warn(`[whisperer] insertListenerBrief failed: ${e.message}`));
     return brief;
+}
+
+// User-side preview: what Blak would brief a listener with, BEFORE connecting.
+// No listener/session, nothing persisted — pure transparency ("context, not content").
+export async function previewBrief(userId) {
+    if (!userId) throw new Error('previewBrief: userId required');
+    return synthBrief(userId);
 }
 
 // ── Vibe-check generator (mid-session) ────────────────────────────────────

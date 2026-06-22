@@ -14,7 +14,8 @@
 import {
     corsPreflight, getRequestId, validateApiKey, jsonError, jsonSuccess, readJson, logAccess,
 } from '../../symp-core/lib/middleware.mjs';
-import { buildBrief, buildVibeCheck } from '../../symp-core/lib/whisperer.mjs';
+import { buildBrief, buildVibeCheck, previewBrief } from '../../symp-core/lib/whisperer.mjs';
+import { fetchProfileSettings } from '../../symp-core/lib/supabase.mjs';
 import SympContract from '../../symp-core/contract/endpoints.js';
 
 const { ERROR_CODES } = SympContract;
@@ -52,6 +53,26 @@ export default async (req) => {
         }
     }
 
+    // User-side: preview what Blak would brief a listener with, BEFORE connecting.
+    // user_id is injected by the proxy from the JWT. Gated on the share_minit consent.
+    if (url.pathname.endsWith('/listener/brief-preview')) {
+        const { user_id } = body;
+        if (!user_id) return jsonError(ERROR_CODES.MISSING_USER_ID, 'user_id required', 400, requestId);
+        try {
+            const settings = await fetchProfileSettings(user_id).catch(() => null);
+            if (settings && settings.share_minit === false) {
+                logAccess({ requestId, endpoint: url.pathname, userId: user_id, statusCode: 200, latencyMs: Date.now() - t0 });
+                return jsonSuccess({ shared: false }, requestId);
+            }
+            const brief = await previewBrief(user_id);
+            logAccess({ requestId, endpoint: url.pathname, userId: user_id, statusCode: 200, latencyMs: Date.now() - t0 });
+            return jsonSuccess({ shared: true, brief }, requestId);
+        } catch (e) {
+            logAccess({ requestId, endpoint: url.pathname, userId: user_id, statusCode: 502, latencyMs: Date.now() - t0, errorCode: 'UPSTREAM_FAILED' });
+            return jsonError(ERROR_CODES.UPSTREAM_FAILED, String(e.message || e), 502, requestId);
+        }
+    }
+
     if (url.pathname.endsWith('/listener/vibe-check')) {
         const { user_id, recent_turns } = body;
         if (!user_id) return jsonError(ERROR_CODES.MISSING_USER_ID, 'user_id required', 400, requestId);
@@ -66,4 +87,4 @@ export default async (req) => {
     return new Response('Not Found', { status: 404 });
 };
 
-export const config = { path: ['/api/symp/v1/listener/brief', '/api/symp/v1/listener/vibe-check'] };
+export const config = { path: ['/api/symp/v1/listener/brief', '/api/symp/v1/listener/brief-preview', '/api/symp/v1/listener/vibe-check'] };

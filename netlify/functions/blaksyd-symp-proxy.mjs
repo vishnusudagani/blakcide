@@ -95,7 +95,7 @@ export default async (req) => {
         // Unified Soul:
         'vibe', 'vibe/event',
         'personas', 'persona/state', 'persona/swap',
-        'listener/brief', 'listener/vibe-check',
+        'listener/brief', 'listener/brief-preview', 'listener/vibe-check',
         'diagnostic/turn', 'diagnostic/peek',
         // Nexus (community module):
         'nexus/communities', 'nexus/communities/by-slug',
