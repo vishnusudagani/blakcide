@@ -580,6 +580,14 @@ async function setReveal(reveal: string) {
 async function stopSharing() {
   try { await supabase!.from('persona_shares').update({ revoked: true }).eq('persona_id', personaId).eq('owner_id', userId).eq('revoked', false); } catch (e) {}
 }
+// Hand the conversation off to Blak (the action hub — Blak is the one that can act
+// across the user's apps). Carries the last thing the user said into Blak's composer
+// via ?q= (Blak prefills, doesn't auto-send).
+function askBlak() {
+  let q = '';
+  try { for (let i = history.length - 1; i >= 0; i--) { const m: any = history[i]; if (m && m.role === 'user' && m.content) { q = String(m.content).trim(); break; } } } catch (e) {}
+  location.href = '/beta/blak/' + (q ? '?q=' + encodeURIComponent(q.slice(0, 500)) : '');
+}
 let shareSheet: HTMLElement | null = null;
 function closeShareSheet() { if (shareSheet) shareSheet.remove(); shareSheet = null; }
 async function openShareSheet() {
@@ -649,11 +657,12 @@ async function boot() {
   const url = avatarUrl(persona.avatar);
   $('pc-av').src = url; $('pc-call-av').src = url; $('pc-call-name').textContent = persona.name || '';
   document.title = (persona.name || 'Persona') + ' · chat';
-  // Owner-only controls: share, conversation history, and calls (not share-aware) are hidden for guests.
+  // Owner-only controls: share, conversation history, calls, and the Blak handoff are hidden for guests.
   if (isGuest) {
-    ['pc-share', 'pc-threads', 'pc-call'].forEach((id) => { const el = $(id); if (el) el.style.display = 'none'; });
+    ['pc-share', 'pc-threads', 'pc-call', 'pc-blak'].forEach((id) => { const el = $(id); if (el) el.style.display = 'none'; });
   } else {
     const sb = $('pc-share'); if (sb) sb.onclick = openShareSheet;
+    const bk = $('pc-blak'); if (bk) bk.onclick = askBlak;
   }
   activeChatId = await dbFindChat();
   if (activeChatId) history = await dbLoadMessages(activeChatId);
