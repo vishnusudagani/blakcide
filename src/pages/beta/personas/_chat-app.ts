@@ -558,21 +558,24 @@ function toast(msg: string) {
   document.body.appendChild(t);
   setTimeout(() => { t.style.transition = 'opacity .4s'; t.style.opacity = '0'; setTimeout(() => t.remove(), 400); }, 2800);
 }
-// Reuse an active share code for this persona, or mint one. '' on failure.
-async function ensureShareCode(): Promise<string> {
-  let code = '';
+// Reuse an active share for this persona, or mint one. Returns { code, reveal }; code '' on failure.
+async function ensureShareCode(): Promise<{ code: string; reveal: string }> {
+  let code = '', reveal = 'persona_only';
   try {
-    const { data } = await supabase!.from('persona_shares').select('code')
+    const { data } = await supabase!.from('persona_shares').select('code,reveal')
       .eq('persona_id', personaId).eq('owner_id', userId).eq('revoked', false)
       .order('created_at', { ascending: false }).limit(1);
-    if (data && data[0]) code = data[0].code;
+    if (data && data[0]) { code = data[0].code; reveal = data[0].reveal || 'persona_only'; }
   } catch (e) {}
   if (!code) {
     code = (window.crypto && (crypto as any).randomUUID) ? (crypto as any).randomUUID().replace(/-/g, '').slice(0, 18) : (Date.now().toString(36) + Math.random().toString(36).slice(2, 12));
     const { error } = await supabase!.from('persona_shares').insert({ persona_id: personaId, owner_id: userId, code });
-    if (error) return '';
+    if (error) return { code: '', reveal };
   }
-  return code;
+  return { code, reveal };
+}
+async function setReveal(reveal: string) {
+  try { await supabase!.from('persona_shares').update({ reveal }).eq('persona_id', personaId).eq('owner_id', userId).eq('revoked', false); } catch (e) {}
 }
 async function stopSharing() {
   try { await supabase!.from('persona_shares').update({ revoked: true }).eq('persona_id', personaId).eq('owner_id', userId).eq('revoked', false); } catch (e) {}
@@ -581,16 +584,26 @@ let shareSheet: HTMLElement | null = null;
 function closeShareSheet() { if (shareSheet) shareSheet.remove(); shareSheet = null; }
 async function openShareSheet() {
   if (!userId || !personaId || !supabase) return;
-  const code = await ensureShareCode();
+  const { code, reveal } = await ensureShareCode();
   if (!code) { toast('Could not create a share link.'); return; }
   const link = location.origin + '/beta/personas/chat/?id=' + encodeURIComponent(personaId) + '&s=' + encodeURIComponent(code);
   const nm = esc(persona?.name || 'this persona');
+  const revBase = 'display:block;width:100%;text-align:left;box-sizing:border-box;padding:.55rem .7rem;border-radius:11px;margin-bottom:.4rem;cursor:pointer;color:inherit;font:inherit;';
   shareSheet = document.createElement('div');
   shareSheet.style.cssText = 'position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center;background:rgba(10,4,24,.55);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);padding:18px;';
   shareSheet.innerHTML =
-    '<div style="width:min(420px,100%);box-sizing:border-box;background:var(--surface,#1a1130);border:1px solid var(--line,rgba(255,255,255,.12));border-radius:18px;padding:1.1rem 1.1rem 1rem;box-shadow:0 24px 70px rgba(0,0,0,.5);color:var(--ink,#fff);">' +
+    '<div style="width:min(420px,100%);max-height:88vh;overflow:auto;box-sizing:border-box;background:var(--surface,#1a1130);border:1px solid var(--line,rgba(255,255,255,.12));border-radius:18px;padding:1.1rem 1.1rem 1rem;box-shadow:0 24px 70px rgba(0,0,0,.5);color:var(--ink,#fff);">' +
       '<div style="font-weight:700;font-size:1.05rem;margin-bottom:.25rem;">Share ' + nm + '</div>' +
-      '<div style="font-size:.86rem;opacity:.72;line-height:1.45;margin-bottom:.85rem;">Anyone with this link can chat with ' + nm + '. They won\'t see your profile or your private history with ' + nm + ', and they can\'t edit it. Stop sharing any time — the link stops working instantly.</div>' +
+      '<div style="font-size:.86rem;opacity:.72;line-height:1.45;margin-bottom:.7rem;">Anyone with this link can chat with ' + nm + ' — they can\'t edit it, and you can stop sharing any time (the link dies instantly).</div>' +
+      '<div style="font-size:.7rem;letter-spacing:.04em;text-transform:uppercase;opacity:.55;margin:.1rem 0 .4rem;">What they can see</div>' +
+      '<button type="button" class="ss-rev" data-rev="persona_only" style="' + revBase + '">' +
+        '<div style="font-weight:600;font-size:13.5px;">Just the character</div>' +
+        '<div style="font-size:12px;opacity:.65;line-height:1.35;">They meet ' + nm + ' fresh — nothing about you.</div>' +
+      '</button>' +
+      '<button type="button" class="ss-rev" data-rev="knows_me" style="' + revBase + 'margin-bottom:.7rem;">' +
+        '<div style="font-weight:600;font-size:13.5px;">Let them know me</div>' +
+        '<div style="font-size:12px;opacity:.65;line-height:1.35;">' + nm + ' can mention what it remembers about you from your chats — never your journals or profile.</div>' +
+      '</button>' +
       '<input id="ss-link" readonly value="' + esc(link) + '" style="width:100%;box-sizing:border-box;font-size:13px;padding:.6rem .7rem;border-radius:10px;border:1px solid var(--line,rgba(255,255,255,.14));background:rgba(255,255,255,.06);color:inherit;margin-bottom:.7rem;" />' +
       '<div style="display:flex;gap:.5rem;flex-wrap:wrap;">' +
         '<button type="button" id="ss-copy" style="flex:1;min-width:120px;padding:.62rem;border-radius:11px;border:none;font-weight:600;font-size:14px;cursor:pointer;background:linear-gradient(135deg,#c9a24b,#e0746a);color:#1a1020;">Copy link</button>' +
@@ -600,6 +613,12 @@ async function openShareSheet() {
     '</div>';
   document.body.appendChild(shareSheet);
   shareSheet.onclick = (e: any) => { if (e.target === shareSheet) closeShareSheet(); };
+  // Reveal selector
+  let curReveal = reveal;
+  const revBtns = Array.from(shareSheet.querySelectorAll('.ss-rev')) as HTMLElement[];
+  const paintReveal = () => revBtns.forEach((b) => { const on = b.dataset.rev === curReveal; b.style.border = on ? '1.5px solid #e0746a' : '1px solid var(--line,rgba(255,255,255,.14))'; b.style.background = on ? 'rgba(224,116,106,.12)' : 'rgba(255,255,255,.04)'; });
+  revBtns.forEach((b) => { b.onclick = () => { curReveal = b.dataset.rev || 'persona_only'; paintReveal(); setReveal(curReveal); }; });
+  paintReveal();
   const linkEl = document.getElementById('ss-link') as HTMLInputElement | null;
   if (linkEl) linkEl.onclick = () => linkEl.select();
   const copyBtn = document.getElementById('ss-copy');

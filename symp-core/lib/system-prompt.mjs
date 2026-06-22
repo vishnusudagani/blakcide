@@ -274,10 +274,22 @@ export async function buildChatSystemStack(userId, opts = {}) {
             { role: 'system', content: CRITICAL_OVERRIDE_TEXT },
             { role: 'system', content: REAL_TIME_DATA_TEXT },
         ];
-        // The persona's OWN memory of this user + history — always on (the character
-        // remembering you; separate from the consent-gated global profile below).
+        // Memory. Owner chat → the persona's memory of THIS user (the character
+        // remembering you). Shared chat → nothing, UNLESS the owner set reveal to
+        // 'knows_me', in which case the persona may draw on what it remembers about
+        // its CREATOR (a curated relationship summary — never the raw profile/vault).
         if (userId && p.id) {
-            try { const pmem = await fetchPersonaMemory(userId, p.id); if (pmem) pstack.push({ role: 'system', content: `=== WHAT YOU REMEMBER ===\nYour private memory of this person and your history together (you are ${p.name}). Weave it in naturally like someone who remembers — never recite or read it back.\n${pmem}\n=== END MEMORY ===` }); } catch (_) { /* ignore */ }
+            try {
+                if (p._shared) {
+                    if (p._reveal === 'knows_me' && p.user_id) {
+                        const cmem = await fetchPersonaMemory(p.user_id, p.id);
+                        if (cmem) pstack.push({ role: 'system', content: `=== ABOUT YOUR CREATOR ===\nThings you've come to know about the person who made you. The one talking to you now is SOMEONE NEW (not your creator) — they were given a link to meet you. You can reference what you know about your creator naturally when it fits, but never dump it, and never pretend this new person is them.\n${cmem}\n=== END ===` });
+                    }
+                } else {
+                    const pmem = await fetchPersonaMemory(userId, p.id);
+                    if (pmem) pstack.push({ role: 'system', content: `=== WHAT YOU REMEMBER ===\nYour private memory of this person and your history together (you are ${p.name}). Weave it in naturally like someone who remembers — never recite or read it back.\n${pmem}\n=== END MEMORY ===` });
+                }
+            } catch (_) { /* ignore */ }
         }
         if (userId && p.can_use_profile === true) {
             try { const vibe = await getVibe(userId); const snap = renderVibeSnapshot(vibe); if (snap) pstack.push({ role: 'system', content: snap }); } catch (_) { /* ignore */ }
