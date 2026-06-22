@@ -128,9 +128,12 @@ export default async (req) => {
         // nobody's profile/memory). The share code is verified service-side.
         if (!persona && persona_id && share_code) {
             try {
-                if (await verifyPersonaShare(persona_id, share_code)) {
+                const share = await verifyPersonaShare(persona_id, share_code);
+                if (share) {
                     const p = await fetchFantasyPersonaById(persona_id);
-                    if (p) { persona = { ...p, can_use_profile: false, _shared: true }; isShared = true; }
+                    // _reveal: 'persona_only' (just the character) or 'knows_me' (may also
+                    // draw on what it remembers about its creator — never the raw profile).
+                    if (p) { persona = { ...p, can_use_profile: false, _shared: true, _reveal: share.reveal || 'persona_only' }; isShared = true; }
                 }
             } catch (_) { /* no access → falls back to Blak */ }
         }

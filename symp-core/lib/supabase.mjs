@@ -570,13 +570,14 @@ export async function fetchFantasyPersonaById(personaId) {
     return (ok && Array.isArray(data) && data[0]) ? data[0] : null;
 }
 
-// True iff a non-revoked share with this code exists for this persona (service role).
+// Returns the non-revoked share row { id, reveal } for this persona+code, else null
+// (service role). Truthy iff access is granted; `reveal` says how much to expose.
 export async function verifyPersonaShare(personaId, code) {
-    if (!personaId || !code) return false;
+    if (!personaId || !code) return null;
     const p = encodeURIComponent(personaId);
     const c = encodeURIComponent(code);
-    const { ok, data } = await sbFetch(`persona_shares?persona_id=eq.${p}&code=eq.${c}&revoked=eq.false&select=id&limit=1`);
-    return ok && Array.isArray(data) && data.length > 0;
+    const { ok, data } = await sbFetch(`persona_shares?persona_id=eq.${p}&code=eq.${c}&revoked=eq.false&select=id,reveal&limit=1`);
+    return (ok && Array.isArray(data) && data[0]) ? data[0] : null;
 }
 
 // ── Persona-scoped facts (DOB for astrologer, religion for spiritual, …) ──
