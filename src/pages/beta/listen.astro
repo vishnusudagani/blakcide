@@ -308,12 +308,13 @@ import AppLayout from '../../layouts/AppLayout.astro';
         pc = new RTCPeerConnection(await getRtcConfig());
         pc.onicecandidate = (e) => { if (e.candidate) callSend('ice', e.candidate); };
         pc.ontrack = (e) => { const a = document.getElementById('lsn-rtc-audio'); if (a) a.srcObject = e.streams[0]; };
-        pc.onconnectionstatechange = () => { if (!pc) return; const st = pc.connectionState; if (st === 'connected') onCallConnected(); else if (st === 'failed' || st === 'disconnected' || st === 'closed') endCall(false); };
+        pc.onconnectionstatechange = () => { if (!pc) return; const st = pc.connectionState; if (st === 'connected') onCallConnected(); else if (st === 'failed' || st === 'disconnected' || st === 'closed') { lsnSysNote(callStart ? 'The call dropped — back to text. Tap the phone to try again.' : 'Couldn’t connect by voice just now — keep going here in text.'); endCall(false); } };
       }
       function onCallConnected() {
         if (callState === 'connected') return; callState = 'connected'; callStart = Date.now();
         if (callTimeout) { clearTimeout(callTimeout); callTimeout = 0; }
         renderCallBar('connected'); logEvent('call_connected');
+        lsnSysNote('🔒 You’re on a private voice call — it’s never recorded.');
         // No call count-up — the header mirrors the seeker's daily budget countdown.
       }
       const getMic = () => navigator.mediaDevices.getUserMedia({ audio: true, video: false });
@@ -321,12 +322,12 @@ import AppLayout from '../../layouts/AppLayout.astro';
         if (callState !== 'idle' || !activeSessionId) return;
         // Wait for our channel AND the peer to be present (mirrors the seeker side).
         for (let i = 0; i < 40 && (!chatReady || !peerReady); i++) await wait(150);
-        try { localStream = await getMic(); } catch (e) { alert('Microphone access is needed for a voice call.'); return; }
+        try { localStream = await getMic(); } catch (e) { lsnSysNote('Couldn’t reach your mic — check the browser’s microphone permission. You can keep going in text.'); return; }
         callState = 'calling'; renderCallBar('calling'); logEvent('call_started');
         await createPC(); localStream.getTracks().forEach((t) => pc.addTrack(t, localStream));
         try { const offer = await pc.createOffer({ offerToReceiveAudio: true }); await pc.setLocalDescription(offer); callSend('offer', offer); } catch (e) { endCall(true); return; }
         if (callTimeout) clearTimeout(callTimeout);
-        callTimeout = setTimeout(() => { if (callState === 'calling') endCall(true); }, 45000);
+        callTimeout = setTimeout(() => { if (callState === 'calling') { lsnSysNote('No answer by voice — staying in text. You can try again anytime.'); endCall(true); } }, 45000);
       }
       async function handleCallSignal(p) {
         const kind = p?.kind, data = p?.data, from = p?.from;
