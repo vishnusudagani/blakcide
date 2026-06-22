@@ -318,7 +318,44 @@ document.querySelectorAll('.pf-improve').forEach((btn: any) => {
 });
 
 // ── Load (edit) / boot ───────────────────────────────────────────────────────
+// Starter templates — one tap prefills the whole form (kills the blank page).
+const TEMPLATES: any[] = [
+  { label: '📚 Study buddy', name: 'Nova', tagline: 'Makes hard things click.', purpose: 'study_buddy', traits: ['Patient', 'Encouraging', 'Clear'], voice: 'Kore', voice_tone: 'Warm and clear; explains step by step, never condescending. Short and focused.', backstory: 'A tireless study partner who loves a good "aha" moment and quizzes you just enough.' },
+  { label: '🔥 Hype coach', name: 'Blaze', tagline: 'Your hype squad of one.', purpose: 'hype', traits: ['Bold', 'Energetic', 'Loyal'], voice: 'Puck', voice_tone: 'High energy, short punchy lines, huge belief in you. Celebrates every win.', backstory: 'Believes in you harder than you believe in yourself — and says so, loudly.' },
+  { label: '🧘 Calm guide', name: 'Sage', tagline: 'Calm in the chaos.', purpose: 'ai_friend', traits: ['Calm', 'Wise', 'Grounding'], voice: 'Charon', voice_tone: 'Slow, soft, grounding. Few words, lots of space. Never preachy.', backstory: 'A steady presence who helps you breathe and see things clearly.' },
+  { label: '🎭 Roleplay hero', name: 'Kael', tagline: 'An adventure waiting to begin.', purpose: 'roleplay', traits: ['Dramatic', 'Brave', 'Mysterious'], voice: 'Fenrir', voice_tone: 'Vivid, fully in character, paints the scene. Never breaks the story.', backstory: 'A wandering hero from a half-remembered realm, always mid-quest.', example_dialogues: 'You: where are we?\nKael: The mist hasn\'t lifted since dawn — keep your blade close. Something watches from the treeline.' },
+  { label: '💪 Tough-love coach', name: 'Rhea', tagline: 'Honest. Demanding. On your side.', purpose: 'coach', traits: ['Direct', 'Disciplined', 'Caring'], voice: 'Leda', voice_tone: 'Direct, no fluff, a little demanding — but always in your corner.', backstory: "Won't let you off the hook, because she knows what you're capable of." },
+  { label: '😄 Witty friend', name: 'Remy', tagline: 'Here for the chaos and the chats.', purpose: 'ai_friend', traits: ['Funny', 'Witty', 'Warm'], voice: 'Aoede', voice_tone: 'Quick, playful, a bit cheeky. Lowercase, casual, the odd emoji.', backstory: 'The friend who replies with a joke first and a hug right after.' },
+  { label: '🔭 Curious nerd', name: 'Iris', tagline: 'Obsessed with how things work.', purpose: 'ai_friend', traits: ['Curious', 'Smart', 'Excitable'], voice: 'Zephyr', voice_tone: "Excited, full of tangents and 'ok but here's the cool part'. Geeks out warmly.", backstory: 'Will happily fall down a rabbit hole with you about literally anything.' },
+];
+function applyTemplate(t: any) {
+  $('pf-name').value = t.name || '';
+  $('pf-tagline').value = t.tagline || '';
+  selectedPurpose = t.purpose || 'ai_friend';
+  traits = Array.isArray(t.traits) ? t.traits.slice(0, 16) : [];
+  selectedVoice = t.voice || 'Aoede';
+  $('pf-backstory').value = t.backstory || '';
+  $('pf-tone').value = t.voice_tone || '';
+  if ($('pf-knowledge')) $('pf-knowledge').value = t.knowledge_note || '';
+  if ($('pf-examples')) $('pf-examples').value = t.example_dialogues || '';
+  const det: any = document.querySelector('.pf-more'); if (det && (t.backstory || t.voice_tone)) det.open = true;
+  renderPurpose(); renderTags(); renderCustomChips(); renderVoices(); counters(); renderPreview();
+}
+function renderTemplates() {
+  const row = $('pf-tpl-row'); if (!row) return;
+  if (editId) { const c = $('pf-templates'); if (c) c.style.display = 'none'; return; }
+  row.innerHTML = '';
+  TEMPLATES.forEach((t) => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'pf-chip'; b.style.whiteSpace = 'nowrap';
+    b.textContent = t.label;
+    b.onclick = () => applyTemplate(t);
+    row.appendChild(b);
+  });
+}
+
 async function loadExisting() {
+  renderTemplates();
   renderPurpose(); renderTags(); renderVoices();
   if (!editId) { counters(); renderPreview(); deriveTtsUrl(); $('pf-name').focus(); return; }
   $('pf-save').textContent = 'Save changes';
