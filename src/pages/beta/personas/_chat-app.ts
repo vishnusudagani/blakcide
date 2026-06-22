@@ -9,6 +9,8 @@ import { supabase } from '../../../lib/supabaseClient';
 
 const $ = (id: string) => document.getElementById(id) as any;
 const personaId = new URLSearchParams(location.search).get('id');
+const shareCode = new URLSearchParams(location.search).get('s');  // present → guest, gated by this code
+let isGuest = false;
 const MAX_TURNS = 24;
 
 let persona: any = null;
@@ -92,13 +94,16 @@ function addSpeakBtn(h: any) {
   b.innerHTML = SPK_ICON;
   b.onclick = () => speakReply(h.bub.textContent || '', b);
   h.col.appendChild(b);
-  const tb = document.createElement('button');
-  tb.type = 'button'; tb.className = 'pc-tune';
-  tb.setAttribute('aria-label', 'Tune ' + (persona?.name || 'this persona'));
-  tb.style.cssText = b.style.cssText;
-  tb.innerHTML = TUNE_ICON;
-  tb.onclick = () => tuneReply(tb);
-  h.col.appendChild(tb);
+  // Tuning edits the OWNER's persona — guests can't (and RLS would block it anyway).
+  if (!isGuest) {
+    const tb = document.createElement('button');
+    tb.type = 'button'; tb.className = 'pc-tune';
+    tb.setAttribute('aria-label', 'Tune ' + (persona?.name || 'this persona'));
+    tb.style.cssText = b.style.cssText;
+    tb.innerHTML = TUNE_ICON;
+    tb.onclick = () => tuneReply(tb);
+    h.col.appendChild(tb);
+  }
 }
 
 // ── DB (owner RLS) ───────────────────────────────────────────────────────────
@@ -221,7 +226,7 @@ async function attempt(typing: any) {
   if (!jwt) { const e: any = new Error('no_auth'); e.code = 'no_auth'; throw e; }
   const res = await fetch('/api/blaksyd/symp/chat', {
     method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + jwt },
-    body: JSON.stringify({ messages: payload(), persona_id: personaId, stream: true }), signal: controller.signal,
+    body: JSON.stringify({ messages: payload(), persona_id: personaId, stream: true, ...(isGuest && shareCode ? { share_code: shareCode } : {}) }), signal: controller.signal,
   });
   if (!res.ok || !res.body) throw new Error('http_' + res.status);
   const reader = res.body.getReader(); const dec = new TextDecoder();
@@ -488,17 +493,59 @@ if (threadsBtn) threadsBtn.onclick = async () => { if (!threadPanel) return; con
 if (threadNewBtn) threadNewBtn.onclick = newThread;
 document.addEventListener('click', (e: any) => { if (threadPanel && !threadPanel.hidden && !threadPanel.contains(e.target) && !(threadsBtn && threadsBtn.contains(e.target))) closeThreads(); });
 
+// ── Share (owner): mint/reuse an invite link a friend can open to chat as a guest ──
+function toast(msg: string) {
+  const t = document.createElement('div');
+  t.textContent = msg;
+  t.style.cssText = 'position:fixed;left:50%;bottom:84px;transform:translateX(-50%);background:#1b1030;color:#fff;padding:.6rem 1rem;border-radius:10px;font-size:14px;z-index:9999;box-shadow:0 8px 30px rgba(0,0,0,.4);max-width:90%;text-align:center;';
+  document.body.appendChild(t);
+  setTimeout(() => { t.style.transition = 'opacity .4s'; t.style.opacity = '0'; setTimeout(() => t.remove(), 400); }, 2800);
+}
+async function onShare() {
+  if (!userId || !personaId || !supabase) return;
+  let code = '';
+  try {
+    const { data } = await supabase.from('persona_shares').select('code')
+      .eq('persona_id', personaId).eq('owner_id', userId).eq('revoked', false)
+      .order('created_at', { ascending: false }).limit(1);
+    if (data && data[0]) code = data[0].code;
+  } catch (e) {}
+  if (!code) {
+    code = (window.crypto && (crypto as any).randomUUID) ? (crypto as any).randomUUID().replace(/-/g, '').slice(0, 18) : (Date.now().toString(36) + Math.random().toString(36).slice(2, 12));
+    const { error } = await supabase.from('persona_shares').insert({ persona_id: personaId, owner_id: userId, code });
+    if (error) { toast('Could not create a share link.'); return; }
+  }
+  const link = location.origin + '/beta/personas/chat/?id=' + encodeURIComponent(personaId) + '&s=' + encodeURIComponent(code);
+  try { await navigator.clipboard.writeText(link); toast('Link copied — anyone you send it to can chat with ' + (persona?.name || 'your persona')); }
+  catch (e) { window.prompt('Copy this link to share your persona:', link); }
+}
+
 async function boot() {
   if (!personaId) { location.href = '/beta/personas/'; return; }
   try { userId = (await supabase!.auth.getSession()).data?.session?.user?.id || null; } catch {}
   if (!userId) { location.href = '/beta/personas/'; return; }
   try { const { data } = await supabase!.from('fantasy_personas').select('*').eq('id', personaId).single(); persona = data; } catch {}
+  // Not the owner but arrived with a share code → load just the public meta via the share-gated endpoint.
+  if (!persona && shareCode) {
+    try {
+      const jwt = (await supabase!.auth.getSession()).data?.session?.access_token || '';
+      const r = await fetch('/api/blaksyd/symp/persona-share-meta', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + jwt }, body: JSON.stringify({ persona_id: personaId, share_code: shareCode }) });
+      const m = ((await r.json().catch(() => null)) || {}).data;
+      if (m && m.id) { persona = { id: m.id, name: m.name, avatar: m.avatar, tagline: m.tagline }; isGuest = true; }
+    } catch {}
+  }
   if (!persona) { location.href = '/beta/personas/'; return; }
   $('pc-name').textContent = persona.name || 'Persona';
-  $('pc-sub').textContent = persona.tagline || (Array.isArray(persona.traits) ? persona.traits.slice(0, 3).join(' · ') : '') || '';
+  $('pc-sub').textContent = persona.tagline || (isGuest ? 'shared with you' : (Array.isArray(persona.traits) ? persona.traits.slice(0, 3).join(' · ') : '')) || '';
   const url = avatarUrl(persona.avatar);
   $('pc-av').src = url; $('pc-call-av').src = url; $('pc-call-name').textContent = persona.name || '';
   document.title = (persona.name || 'Persona') + ' · chat';
+  // Owner-only controls: share, conversation history, and calls (not share-aware) are hidden for guests.
+  if (isGuest) {
+    ['pc-share', 'pc-threads', 'pc-call'].forEach((id) => { const el = $(id); if (el) el.style.display = 'none'; });
+  } else {
+    const sb = $('pc-share'); if (sb) sb.onclick = onShare;
+  }
   activeChatId = await dbFindChat();
   if (activeChatId) history = await dbLoadMessages(activeChatId);
   render();
