@@ -1168,16 +1168,16 @@ import AppLayout from '../../layouts/AppLayout.astro';
         let stars = 0, feel = null; const helped = new Set();
         const modal = document.createElement('div'); modal.className = 'mnx-modal';
         modal.innerHTML = `<div class="mnx-modal-card"><div style="font-size:1.6rem">✨</div><h3>How do you feel now?</h3><p>Compared to when you came in.</p>
-          <div class="mnx-feel" id="mnx-feel"><button data-f="lighter" title="Lighter">🙂</button><button data-f="same" title="About the same">😐</button><button data-f="heavy" title="Still heavy">😔</button></div>
+          <div class="mnx-feel" id="mnx-feel" role="group" aria-label="How you feel now"><button data-f="lighter" title="Lighter" aria-label="Lighter">🙂</button><button data-f="same" title="About the same" aria-label="About the same">😐</button><button data-f="heavy" title="Still heavy" aria-label="Still heavy">😔</button></div>
           <p style="margin-top:.8rem">And your listener?</p>
-          <div class="mnx-stars" id="mnx-stars">${[1,2,3,4,5].map((n) => `<span data-n="${n}">★</span>`).join('')}</div>
+          <div class="mnx-stars" id="mnx-stars" role="group" aria-label="Rate your listener, 1 to 5 stars">${[1,2,3,4,5].map((n) => `<span data-n="${n}" role="button" tabindex="0" aria-label="${n} star${n > 1 ? 's' : ''}">★</span>`).join('')}</div>
           <p class="mnx-helped-q">What helped? <span class="mnx-helped-opt">(optional)</span></p>
           <div class="mnx-helped" id="mnx-helped">${['Felt heard', 'Gave me space', 'Really listened', 'Gentle', 'Helped me think'].map((t) => `<button type="button" class="mnx-help-tag" data-t="${t}">${t}</button>`).join('')}</div>
           <input id="mnx-reflect-note" type="text" maxlength="200" placeholder="A word on what this was about? (optional — just for you)" style="width:100%;box-sizing:border-box;margin-top:1rem;background:var(--surface);border:1px solid var(--line-strong);border-radius:var(--r-pill);padding:.65rem 1rem;color:var(--ink);font:inherit;font-size:16px;outline:none" />
           <div class="mnx-modal-actions"><button type="button" class="mnx-btn-ghost" id="mnx-skip">Skip</button><button type="button" class="mnx-btn-go" id="mnx-submit">Done</button></div></div>`;
         document.body.appendChild(modal);
         modal.querySelectorAll('#mnx-feel button').forEach((bn) => bn.addEventListener('click', () => { feel = bn.getAttribute('data-f'); modal.querySelectorAll('#mnx-feel button').forEach((x) => x.classList.toggle('on', x === bn)); }));
-        modal.querySelectorAll('#mnx-stars span').forEach((s) => s.addEventListener('click', () => { stars = Number(s.getAttribute('data-n')); modal.querySelectorAll('#mnx-stars span').forEach((x) => x.classList.toggle('on', Number(x.getAttribute('data-n')) <= stars)); }));
+        modal.querySelectorAll('#mnx-stars span').forEach((s) => { const setStars = () => { stars = Number(s.getAttribute('data-n')); modal.querySelectorAll('#mnx-stars span').forEach((x) => { const on = Number(x.getAttribute('data-n')) <= stars; x.classList.toggle('on', on); x.setAttribute('aria-pressed', String(on)); }); }; s.addEventListener('click', setStars); s.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setStars(); } }); });
         modal.querySelectorAll('#mnx-helped .mnx-help-tag').forEach((b) => b.addEventListener('click', () => { const t = b.getAttribute('data-t'); if (helped.has(t)) { helped.delete(t); b.classList.remove('on'); } else { helped.add(t); b.classList.add('on'); } }));
         const finish = () => { modal.remove(); showClosure(); };
         modal.querySelector('#mnx-skip').addEventListener('click', finish);
