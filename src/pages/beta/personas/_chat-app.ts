@@ -67,15 +67,38 @@ async function speakReply(text: string, btn: any) {
     } else { reset(); }
   } catch (e) { reset(); }
 }
+// In-chat tuning: a quick note → appended to the persona's `corrections`, which the
+// system prompt always honors. Persona is re-fetched server-side each turn, so the
+// very next reply obeys it.
+const TUNE_ICON = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>';
+async function tuneReply(btn: any) {
+  const note = (window.prompt('Tune ' + (persona?.name || 'this persona') + ' — how should they be? A short note sticks for next time.\n(e.g. "shorter replies", "more sarcastic", "less formal", "use more Telugu")') || '').trim();
+  if (!note || !personaId || !supabase) return;
+  const prev = (persona && persona.corrections) ? String(persona.corrections) : '';
+  const next = ((prev ? prev + '\n' : '') + '- ' + note).slice(0, 4000);
+  btn.style.opacity = '1';
+  try {
+    const { error } = await supabase.from('fantasy_personas').update({ corrections: next }).eq('id', personaId);
+    if (!error) { if (persona) persona.corrections = next; btn.innerHTML = '✓'; setTimeout(() => { btn.innerHTML = TUNE_ICON; btn.style.opacity = '.6'; }, 1600); }
+    else btn.style.opacity = '.6';
+  } catch (e) { btn.style.opacity = '.6'; }
+}
 function addSpeakBtn(h: any) {
   if (!h || !h.col || h.col.querySelector('.pc-speak')) return;
   const b = document.createElement('button');
   b.type = 'button'; b.className = 'pc-speak';
   b.setAttribute('aria-label', 'Hear it in ' + (persona?.name || 'their') + ' voice');
-  b.style.cssText = 'display:inline-flex;align-items:center;margin-top:.25rem;padding:.1rem .3rem;border:none;background:transparent;color:inherit;opacity:.6;cursor:pointer;border-radius:6px;';
+  b.style.cssText = 'display:inline-flex;align-items:center;margin-top:.25rem;margin-right:.15rem;padding:.1rem .3rem;border:none;background:transparent;color:inherit;opacity:.6;cursor:pointer;border-radius:6px;';
   b.innerHTML = SPK_ICON;
   b.onclick = () => speakReply(h.bub.textContent || '', b);
   h.col.appendChild(b);
+  const tb = document.createElement('button');
+  tb.type = 'button'; tb.className = 'pc-tune';
+  tb.setAttribute('aria-label', 'Tune ' + (persona?.name || 'this persona'));
+  tb.style.cssText = b.style.cssText;
+  tb.innerHTML = TUNE_ICON;
+  tb.onclick = () => tuneReply(tb);
+  h.col.appendChild(tb);
 }
 
 // ── DB (owner RLS) ───────────────────────────────────────────────────────────
