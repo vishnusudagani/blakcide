@@ -179,6 +179,28 @@ function resolveLlmConfig() {
 
 function resolveEmbedConfig() {
     const provider = (process.env.SYMP_EMBED_PROVIDER || 'openai').toLowerCase();
+
+    // Azure OpenAI embeddings: the deployment lives in the URL and auth is the
+    // `api-key` header (not Bearer). Reuses the chat resource's endpoint/key; the
+    // embeddings model is a SEPARATE Azure deployment (AZURE_OPENAI_EMBED_DEPLOYMENT).
+    if (provider === 'azure') {
+        const endpoint   = (process.env.AZURE_OPENAI_EMBED_ENDPOINT || process.env.AZURE_OPENAI_ENDPOINT || '').replace(/\/+$/, '');
+        const deployment = process.env.AZURE_OPENAI_EMBED_DEPLOYMENT;
+        const apiKey     = process.env.AZURE_OPENAI_EMBED_API_KEY || process.env.AZURE_OPENAI_API_KEY;
+        const apiVersion = process.env.AZURE_OPENAI_EMBED_API_VERSION || process.env.AZURE_OPENAI_API_VERSION || '2024-10-21';
+        if (!endpoint || !deployment || !apiKey) {
+            throw new InferenceError('azure embed needs AZURE_OPENAI_ENDPOINT + AZURE_OPENAI_EMBED_DEPLOYMENT + AZURE_OPENAI_API_KEY', { provider });
+        }
+        return {
+            provider,
+            azure:        true,
+            url:          `${endpoint}/openai/deployments/${deployment}/embeddings?api-version=${apiVersion}`,
+            apiKey,
+            defaultModel: deployment,   // for Azure the deployment name stands in for the model
+            defaultDim:   1536,
+        };
+    }
+
     const cfg = EMBED_PROVIDERS[provider];
     if (!cfg) {
         throw new InferenceError(`Unknown SYMP_EMBED_PROVIDER: ${provider}`, { provider });
@@ -309,7 +331,7 @@ export async function embed({
     }
 
     const t0 = Date.now();
-    const { provider, baseUrl, apiKey, defaultModel, defaultDim } = resolveEmbedConfig();
+    const { provider, azure, baseUrl, url, apiKey, defaultModel, defaultDim } = resolveEmbedConfig();
     const model = model_override || process.env.SYMP_EMBED_MODEL || defaultModel;
     if (!model) {
         throw new InferenceError(
@@ -323,17 +345,21 @@ export async function embed({
     // providers ignore it gracefully (or 400 if unsupported — we surface that).
     if (dimensions) body.dimensions = dimensions;
 
+    // Azure auths with `api-key` and bakes the deployment into the URL; everyone
+    // else is OpenAI-compatible (Bearer + {baseUrl}/embeddings).
+    const embedUrl = azure ? url : `${baseUrl}/embeddings`;
+    const embedHeaders = azure
+        ? { 'api-key': apiKey, 'Content-Type': 'application/json' }
+        : { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' };
+
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(new Error('inference timeout')), timeoutMs);
 
     let res;
     try {
-        res = await fetch(`${baseUrl}/embeddings`, {
+        res = await fetch(embedUrl, {
             method:  'POST',
-            headers: {
-                'Authorization': `Bearer ${apiKey}`,
-                'Content-Type':  'application/json',
-            },
+            headers: embedHeaders,
             body:    JSON.stringify(body),
             signal:  ctrl.signal,
         });
