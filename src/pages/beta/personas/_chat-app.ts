@@ -109,10 +109,11 @@ async function dbFindChat() {
     return data && data[0] ? data[0].id : null;
   } catch { return null; }
 }
-async function dbCreateChat() {
+async function dbCreateChat(titleHint?: string) {
+  const title = (titleHint && titleHint.trim()) ? titleHint.trim().slice(0, 42) : (persona?.name || 'Conversation');
   try {
     const { data } = await supabase!.from('chats')
-      .insert({ user_id: userId, persona_id: personaId, title: persona?.name || 'Persona', channel: 'web' })
+      .insert({ user_id: userId, persona_id: personaId, title, channel: 'web' })
       .select('id').single();
     return data ? data.id : null;
   } catch { return null; }
@@ -278,7 +279,7 @@ async function send(text: string) {
   if (!text || sending) return;
   setBusy(true);
   try {
-    if (!activeChatId) activeChatId = await dbCreateChat();
+    if (!activeChatId) activeChatId = await dbCreateChat(text);
     const um: any = { role: 'user', content: text, ts: Date.now() };
     history.push(um); addRow('me', text);
     dbInsertMessage('user', text).then(id => { if (id) um.id = id; });
@@ -440,6 +441,53 @@ $('pc-call-end').addEventListener('click', endCall);
 callMic.addEventListener('click', () => { muted = !muted; callMic.classList.toggle('muted', muted); setStatus(muted ? 'muted — tap to resume' : 'listening…'); });
 
 // ── Boot ─────────────────────────────────────────────────────────────────────
+// ── Conversations: multiple threads per persona ──────────────────────────────
+const threadPanel = $('pc-thread-panel'), threadList = $('pc-thread-list'), threadsBtn = $('pc-threads'), threadNewBtn = $('pc-thread-new');
+async function dbListChats() {
+  try {
+    const { data } = await supabase!.from('chats').select('id,title,created_at')
+      .eq('user_id', userId).eq('persona_id', personaId).order('created_at', { ascending: false }).limit(50);
+    return data || [];
+  } catch { return []; }
+}
+function relTime(iso: string) {
+  try { const ms = Date.now() - new Date(iso).getTime(); const m = Math.floor(ms / 60000); if (m < 1) return 'just now'; if (m < 60) return m + 'm ago'; const h = Math.floor(m / 60); if (h < 24) return h + 'h ago'; const d = Math.floor(h / 24); return d + 'd ago'; } catch { return ''; }
+}
+function closeThreads() { if (threadPanel) threadPanel.hidden = true; }
+async function renderThreads() {
+  if (!threadList) return;
+  threadList.innerHTML = '<div style="padding:.6rem .7rem;color:var(--ink-faint,#999);font-size:var(--fs-sm);">Loading…</div>';
+  const rows = await dbListChats();
+  threadList.innerHTML = '';
+  if (!rows.length) { threadList.innerHTML = '<div style="padding:.6rem .7rem;color:var(--ink-faint,#999);font-size:var(--fs-sm);">No conversations yet.</div>'; return; }
+  for (const c of rows) {
+    const active = c.id === activeChatId;
+    const it = document.createElement('button');
+    it.type = 'button';
+    it.style.cssText = 'width:100%;text-align:left;padding:.55rem .7rem;border:none;background:' + (active ? 'rgba(255,255,255,.06)' : 'transparent') + ';color:var(--ink);font:inherit;cursor:pointer;border-radius:10px;display:block;';
+    const title = (c.title && c.title !== (persona && persona.name)) ? c.title : 'Conversation';
+    it.innerHTML = '<div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:var(--fs-sm);">' + esc(title) + (active ? ' · now open' : '') + '</div><div style="font-size:.72rem;color:var(--ink-faint,#999);">' + esc(relTime(c.created_at)) + '</div>';
+    it.onclick = () => switchThread(c.id);
+    threadList.appendChild(it);
+  }
+}
+async function switchThread(id: string) {
+  if (sending || id === activeChatId) { closeThreads(); return; }
+  closeThreads();
+  activeChatId = id;
+  history = await dbLoadMessages(id);
+  render();
+}
+function newThread() {
+  if (sending) return;
+  closeThreads();
+  activeChatId = null; history = []; render();
+  try { input.focus(); } catch (e) {}
+}
+if (threadsBtn) threadsBtn.onclick = async () => { if (!threadPanel) return; const willOpen = threadPanel.hidden; threadPanel.hidden = !willOpen; if (willOpen) await renderThreads(); };
+if (threadNewBtn) threadNewBtn.onclick = newThread;
+document.addEventListener('click', (e: any) => { if (threadPanel && !threadPanel.hidden && !threadPanel.contains(e.target) && !(threadsBtn && threadsBtn.contains(e.target))) closeThreads(); });
+
 async function boot() {
   if (!personaId) { location.href = '/beta/personas/'; return; }
   try { userId = (await supabase!.auth.getSession()).data?.session?.user?.id || null; } catch {}

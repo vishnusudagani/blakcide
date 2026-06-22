@@ -13,10 +13,18 @@ import AppLayout from '../../../layouts/AppLayout.astro';
         <div class="pc-name" id="pc-name">…</div>
         <div class="pc-sub" id="pc-sub"></div>
       </div>
+      <button type="button" class="pc-call-btn" id="pc-threads" aria-label="Conversations">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      </button>
       <button type="button" class="pc-call-btn" id="pc-call" aria-label="Call">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.9.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
       </button>
     </header>
+
+    <div class="pc-threads-panel" id="pc-thread-panel" hidden style="position:absolute;top:54px;right:8px;width:min(360px,calc(100% - 16px));background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:0 12px 40px rgba(0,0,0,.28);z-index:40;max-height:62vh;overflow-y:auto;padding:.4rem;">
+      <button type="button" class="pc-thread-new" id="pc-thread-new" style="width:100%;text-align:left;padding:.6rem .7rem;border:none;background:transparent;color:var(--coral);font:inherit;font-weight:600;cursor:pointer;border-radius:10px;">+ New conversation</button>
+      <div class="pc-thread-list" id="pc-thread-list"></div>
+    </div>
 
     <!-- Conversation -->
     <div class="pc-stream" id="pc-stream"></div>
