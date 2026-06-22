@@ -26,7 +26,7 @@ import {
     logAccess, CORS_HEADERS,
 } from '../../symp-core/lib/middleware.mjs';
 import { buildChatSystemStack } from '../../symp-core/lib/system-prompt.mjs';
-import { fetchFantasyPersona } from '../../symp-core/lib/supabase.mjs';
+import { fetchFantasyPersona, fetchFantasyPersonaById, verifyPersonaShare } from '../../symp-core/lib/supabase.mjs';
 import { TOOL_DEFS, executeTool } from '../../symp-core/lib/tools.mjs';
 import { runStreamingChatWithTools } from '../../symp-core/lib/chat-runner.mjs';
 import { chatProviders } from '../../symp-core/lib/llm-providers.mjs';
@@ -86,7 +86,7 @@ export default async (req) => {
         return jsonError(ERROR_CODES.BAD_REQUEST, 'Invalid JSON body', 400, requestId);
     }
 
-    const { user_id, messages, stream = true, source_session_id = null, persona_id = null, mode = 'normal', no_learn = false } = parsed.data || {};
+    const { user_id, messages, stream = true, source_session_id = null, persona_id = null, mode = 'normal', no_learn = false, share_code = null } = parsed.data || {};
 
     if (!user_id) {
         logAccess({ requestId, endpoint: ENDPOINTS.CHAT, statusCode: 400, latencyMs: Date.now() - t0, errorCode: 'MISSING_USER_ID' });
@@ -120,9 +120,23 @@ export default async (req) => {
     // Fantasy persona chat? Load it (service role, scoped to this user) so the
     // prompt becomes the persona — and learning respects its consent toggle.
     let persona = null;
-    if (persona_id) { try { persona = await fetchFantasyPersona(user_id, persona_id); } catch (_) { /* fall back to Blak */ } }
-    // Incognito chats (no_learn) skip ALL learning + memory, like a private window.
-    const mayLearn = (!persona || persona.build_profile_from !== false) && no_learn !== true;
+    let isShared = false;
+    if (persona_id) {
+        try { persona = await fetchFantasyPersona(user_id, persona_id); } catch (_) { /* fall back to Blak */ }
+        // Not the owner? A valid, non-revoked share grants GUEST access: persona-only
+        // (never inject the owner's profile) and NO learning (a guest chat writes to
+        // nobody's profile/memory). The share code is verified service-side.
+        if (!persona && persona_id && share_code) {
+            try {
+                if (await verifyPersonaShare(persona_id, share_code)) {
+                    const p = await fetchFantasyPersonaById(persona_id);
+                    if (p) { persona = { ...p, can_use_profile: false }; isShared = true; }
+                }
+            } catch (_) { /* no access → falls back to Blak */ }
+        }
+    }
+    // Incognito (no_learn) AND guest/shared chats skip ALL learning + memory.
+    const mayLearn = (!persona || persona.build_profile_from !== false) && no_learn !== true && !isShared;
     let systemStack = [];
     try {
         systemStack = await buildChatSystemStack(user_id, { latestUserText, persona, mode });
@@ -181,7 +195,7 @@ export default async (req) => {
         // Fantasy persona: its OWN memory of you always updates (that's how the
         // character remembers your history); the global profile/vibe stay gated by
         // the build_profile_from consent toggle. Blak/clone path is unchanged.
-        if (persona) {
+        if (persona && !isShared) {
             await fireLearn(req, user_id, lastUser, learnAssistant, { persona_id, persona_name: persona.name, skip_global: !mayLearn });
             if (mayLearn) {
                 recordEventAsync(user_id, { source: 'ai_chat', sourceSessionId: source_session_id, evidence: learnAssistant ? `User: ${lastUser}\n\nAssistant: ${learnAssistant}` : `User: ${lastUser}` });
@@ -255,7 +269,7 @@ export default async (req) => {
             const learnAssistant = mode === 'clone' ? '' : assembledForVibe;
             // Persona's own memory always updates; global profile/vibe gated by consent
             // (see non-stream path above). Blak/clone path unchanged.
-            if (persona) {
+            if (persona && !isShared) {
                 await fireLearn(req, user_id, lastUser, learnAssistant, { persona_id, persona_name: persona.name, skip_global: !mayLearn });
                 if (mayLearn) {
                     recordEventAsync(user_id, { source: 'ai_chat', sourceSessionId: source_session_id, evidence: learnAssistant ? `User: ${lastUser}\n\nAssistant: ${learnAssistant}` : `User: ${lastUser}` });
