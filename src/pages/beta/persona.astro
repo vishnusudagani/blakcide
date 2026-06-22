@@ -576,8 +576,8 @@ import AppLayout from '../../layouts/AppLayout.astro';
     }
 
     // ── Voice: the self-hosted OmniVoice engine (Modal GPU), called directly from the
-    // browser. OmniVoice is multilingual and speaks whatever language the text is in —
-    // no language param needed; it clones from the user's saved reference. ──
+    // browser. OmniVoice is multilingual and clones the user's voice cross-lingually,
+    // but the engine REQUIRES a `language` field per request (see detectLang below). ──
     const SVARA_URL = 'https://ceo-91462--voice-infer-fastapi-app.modal.run';
     let svaraWarm = false;
     let audioUnlocked = false;
@@ -609,7 +609,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
       return false;
     }
     // Fetch the user's best saved reference clip (base64) so the engine speaks in THEIR
-    // voice. No language needed — the engine clones cross-lingually and speaks the text.
+    // voice. The engine clones cross-lingually; synthSentence supplies the language code.
     const refCache = {};
     async function getUserRef() {
       if (refCache.best !== undefined) return refCache.best;
@@ -625,6 +625,23 @@ import AppLayout from '../../layouts/AppLayout.astro';
       } catch (e) { ref = null; }
       refCache.best = ref;
       return ref;
+    }
+    // Detect a sentence's language by script. OmniVoice clones the user's timbre
+    // cross-lingually, but the engine REQUIRES a `language` field — omit it and every
+    // /synthesize returns HTTP 422, so no audio plays (the persona "just texts").
+    // Mirrors detectLane() in symp-core/lib/voice.mjs; codes match the engine's set.
+    function detectLang(text) {
+      const s = String(text || '');
+      if (/[ఀ-౿]/.test(s)) return 'te'; // Telugu
+      if (/[ऀ-ॿ]/.test(s)) return 'hi'; // Devanagari (Hindi/Marathi)
+      if (/[஀-௿]/.test(s)) return 'ta'; // Tamil
+      if (/[ಀ-೿]/.test(s)) return 'kn'; // Kannada
+      if (/[ഀ-ൿ]/.test(s)) return 'ml'; // Malayalam
+      if (/[ঀ-৿]/.test(s)) return 'bn'; // Bengali (also Assamese)
+      if (/[઀-૿]/.test(s)) return 'gu'; // Gujarati
+      if (/[਀-੿]/.test(s)) return 'pa'; // Gurmukhi (Punjabi)
+      if (/[଀-୿]/.test(s)) return 'or'; // Odia
+      return 'en';
     }
     // Synthesize ONE sentence in the user's cloned voice → audio Blob (or null).
     async function synthSentence(text) {
@@ -644,11 +661,12 @@ import AppLayout from '../../layouts/AppLayout.astro';
         } catch { /* fall through */ }
       }
       const ref = await getUserRef().catch(() => null);
-      const body = { text, mode: (ref && ref.b64) ? 'clone' : 'preset', format: 'mp3' };
+      const language = detectLang(text);
+      const body = { text, language, mode: (ref && ref.b64) ? 'clone' : 'preset', format: 'mp3' };
       if (ref && ref.b64) { body.reference_base64 = ref.b64; body.reference_transcript = ref.transcript; }
       const synth = (b) => fetch(SVARA_URL + '/synthesize', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(b) });
       let res = await synth(body).catch(() => null);
-      if ((!res || !res.ok) && body.mode === 'clone') res = await synth({ text, mode: 'preset', format: 'mp3' }).catch(() => null);
+      if ((!res || !res.ok) && body.mode === 'clone') res = await synth({ text, language, mode: 'preset', format: 'mp3' }).catch(() => null);
       if (!res || !res.ok) return null;
       return await res.blob();
     }
