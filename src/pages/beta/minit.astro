@@ -313,6 +313,10 @@ import AppLayout from '../../layouts/AppLayout.astro';
     .mnx-history-btn:hover { color: var(--mint-deep); }
     .mnx-history-btn span { transition: transform var(--t-fast) var(--ease-out); }
     .mnx-history-btn:hover span { transform: translateX(3px); }
+    .mnx-upsell { font-size: var(--fs-sm); color: var(--ink-soft); margin: .2rem 0 1rem; line-height: 1.5; }
+    .mnx-upsell b { color: var(--ink); font-weight: 650; }
+    .mnx-upsell-link { font: inherit; font-size: var(--fs-sm); color: var(--coral); background: none; border: 0; cursor: pointer; padding: 0; min-height: 44px; }
+    .mnx-upsell-link[disabled] { color: var(--mint-deep); cursor: default; }
     /* Phase 7 — closure + look-back */
     .mnx-close { max-width: 420px; margin: 0 auto; padding: clamp(1rem,6vh,3rem) 1.1rem; text-align: center; display: flex; flex-direction: column; align-items: center; }
     .mnx-close-orb { width: 80px; height: 80px; border-radius: 50%; margin-bottom: 1.3rem; background: radial-gradient(circle at 50% 38%, rgba(106,211,184,.55), rgba(91,192,255,.18) 60%, transparent 74%); box-shadow: 0 0 40px rgba(106,211,184,.3); animation: mnx-breathe 5s var(--ease-soft) infinite; }
@@ -455,8 +459,9 @@ import AppLayout from '../../layouts/AppLayout.astro';
       }
       function showCapped() {
         immersive(false); logEvent('cap_blocked');
-        root.innerHTML = `<div class="mnx-schedule"><div class="mnx-empty-orb"></div><h3>You’ve used your minits</h3><p>Everyone gets 10 minits a day and 30 a week, so there’s always room for others. Your minits reset at midnight.</p><div class="mnx-ring-actions"><a class="mnx-go" href="/beta/blak/" style="width:auto;padding:.7rem 1.4rem;text-decoration:none">Text with Blak</a><button type="button" class="mnx-cancel" id="mnx-capback">Back</button></div></div>`;
+        root.innerHTML = `<div class="mnx-schedule"><div class="mnx-empty-orb"></div><h3>You’ve used your minits</h3><p>Everyone gets 10 minits a day and 30 a week, so there’s always room for others. Your minits reset at midnight.</p><p class="mnx-upsell">Need more time some days? <b>More minits are on the way.</b> <button type="button" class="mnx-upsell-link" id="mnx-upsell">Tell me when →</button></p><div class="mnx-ring-actions"><a class="mnx-go" href="/beta/blak/" style="width:auto;padding:.7rem 1.4rem;text-decoration:none">Text with Blak</a><button type="button" class="mnx-cancel" id="mnx-capback">Back</button></div></div>`;
         document.getElementById('mnx-capback')?.addEventListener('click', showEntry);
+        document.getElementById('mnx-upsell')?.addEventListener('click', (e) => { try { logEvent('upsell_interest'); } catch (er) {} e.currentTarget.textContent = 'We’ll let you know ✓'; e.currentTarget.disabled = true; });
       }
 
       // ---- voice calling (WebRTC over Supabase Realtime signalling) ----
