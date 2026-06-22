@@ -257,7 +257,7 @@ $('pf-name').addEventListener('input', () => { counters(); renderPreview(); });
 $('pf-tagline').addEventListener('input', () => { counters(); renderPreview(); });
 
 function wireToggle(id: string) { const b = $(id); b.addEventListener('click', () => { const on = !b.classList.contains('on'); b.classList.toggle('on', on); b.setAttribute('aria-checked', String(on)); }); }
-wireToggle('pf-build'); wireToggle('pf-use');
+wireToggle('pf-build'); wireToggle('pf-use'); wireToggle('pf-proactive');
 $('pf-build').classList.add('on'); $('pf-build').setAttribute('aria-checked', 'true');
 
 // ── Surprise me ──────────────────────────────────────────────────────────────
@@ -378,6 +378,7 @@ async function loadExisting() {
       (data.languages || []).forEach((l: string) => { const b = $('pf-langs').querySelector('.pf-chip[data-l="' + l + '"]'); if (b) b.classList.add('sel'); });
       $('pf-build').classList.toggle('on', data.build_profile_from !== false); $('pf-build').setAttribute('aria-checked', String(data.build_profile_from !== false));
       $('pf-use').classList.toggle('on', !!data.can_use_profile); $('pf-use').setAttribute('aria-checked', String(!!data.can_use_profile));
+      $('pf-proactive').classList.toggle('on', !!data.proactive); $('pf-proactive').setAttribute('aria-checked', String(!!data.proactive));
     }
   } catch (e) { /* blank */ }
   counters(); renderPreview(); deriveTtsUrl();
@@ -409,6 +410,7 @@ $('pf-save').addEventListener('click', async () => {
     languages: [...$('pf-langs').querySelectorAll('.pf-chip.sel')].map((b: any) => b.dataset.l),
     build_profile_from: $('pf-build').classList.contains('on'),
     can_use_profile: $('pf-use').classList.contains('on'),
+    proactive: $('pf-proactive').classList.contains('on'),
   };
   try {
     if (editId) { row.updated_at = new Date().toISOString(); await supabase!.from('fantasy_personas').update(row).eq('id', editId); }

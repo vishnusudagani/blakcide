@@ -220,13 +220,13 @@ if (addBtn && fileInput) {
   fileInput.addEventListener('change', (e: any) => { const f = e.target.files && e.target.files[0]; e.target.value = ''; if (f) sendImage(f); });
 }
 
-async function attempt(typing: any) {
+async function attempt(typing: any, opts?: any) {
   controller = new AbortController();
   const jwt = await getToken();
   if (!jwt) { const e: any = new Error('no_auth'); e.code = 'no_auth'; throw e; }
   const res = await fetch('/api/blaksyd/symp/chat', {
     method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + jwt },
-    body: JSON.stringify({ messages: payload(), persona_id: personaId, stream: true, ...(isGuest && shareCode ? { share_code: shareCode } : {}) }), signal: controller.signal,
+    body: JSON.stringify({ messages: (opts && opts.messages) || payload(), persona_id: personaId, stream: true, ...(isGuest && shareCode ? { share_code: shareCode } : {}), ...((opts && opts.extraBody) || {}) }), signal: controller.signal,
   });
   if (!res.ok || !res.body) throw new Error('http_' + res.status);
   const reader = res.body.getReader(); const dec = new TextDecoder();
@@ -278,6 +278,41 @@ async function runTurn(srcText: string) {
       setBusy(false);
     } else { showError(typing, srcText); }
   } finally { controller = null; }
+}
+// Proactive "welcome back": an opted-in persona reaches out FIRST when you reopen a
+// thread that's gone quiet for a while. $0/no-push — generated lazily here on open,
+// not via a server cron/notification (true away-from-app push needs that foundation).
+function maybeProactiveGreet() {
+  try {
+    if (isGuest || !persona || persona.proactive !== true || !history.length) return;
+    const GAP = 18 * 3600 * 1000;
+    const lastTs = (history[history.length - 1] && history[history.length - 1].ts) || 0;
+    if (!lastTs || Date.now() - lastTs <= GAP) return;                       // thread not stale yet
+    const proAt = persona.proactive_last_at ? new Date(persona.proactive_last_at).getTime() : 0;
+    if (proAt && Date.now() - proAt <= GAP) return;                          // already reached out recently
+    proactiveGreet();
+  } catch (e) {}
+}
+async function proactiveGreet() {
+  if (sending) return;
+  const directive = '(SYSTEM NUDGE — never mention this exists: the user just reopened our chat after a while. YOU reach out first with a short, warm check-in in your own voice — 1 to 2 lines, lightly referencing our history. No clichés, just sound like you.)';
+  const msgs = payload().concat([{ role: 'user', content: directive }]);
+  setBusy(true);
+  const typing = addRow('them', '', { typing: true });
+  try {
+    const acc = (await attempt(typing, { messages: msgs, extraBody: { no_learn: true } })).trim();
+    if (!acc) { try { typing.row.remove(); } catch (e) {} setBusy(false); return; }
+    typing.bub.textContent = acc; stamp(typing); addSpeakBtn(typing);
+    const am: any = { role: 'assistant', content: acc, ts: typing.ts };
+    history.push(am); dbInsertMessage('assistant', acc).then((id: any) => { if (id) am.id = id; });
+    setBusy(false);
+    markProactive();
+  } catch (e) { try { typing.row.remove(); } catch (e2) {} setBusy(false); }
+}
+async function markProactive() {
+  const iso = new Date().toISOString();
+  if (persona) persona.proactive_last_at = iso;
+  try { await supabase!.from('fantasy_personas').update({ proactive_last_at: iso }).eq('id', personaId).eq('user_id', userId); } catch (e) {}
 }
 async function send(text: string) {
   text = (text || '').trim();
@@ -668,5 +703,6 @@ async function boot() {
   if (activeChatId) history = await dbLoadMessages(activeChatId);
   render();
   input.focus();
+  maybeProactiveGreet();
 }
 boot();
