@@ -157,9 +157,21 @@ export async function maybeGenerateNudge(userId) {
     } catch (e) { return null; }
 }
 
-// Deliver due, un-pushed nudges as web pushes (payloadless — the SW shows a warm
-// generic line and tapping opens Blak, where the nudge already waits). Coalesces
-// to one push per device per user, marks pushed_at, and prunes dead (404/410)
+// One push per device for a user, with a prune of dead subscriptions. payload =
+// { title, body, url, tag } (encrypted so the real line shows on the lock screen).
+async function pushToUser(uid, payload) {
+    const subs = await sbGet(`push_subscriptions?user_id=eq.${uid}&select=endpoint,p256dh,auth`);
+    let sent = 0;
+    for (const s of (subs || [])) {
+        const res = await sendWebPush(s, payload);
+        if (res.ok) sent++;
+        else if (res.status === 404 || res.status === 410) await sbDelete(`push_subscriptions?endpoint=eq.${encodeURIComponent(s.endpoint)}`);
+    }
+    return sent;
+}
+
+// Deliver due, un-pushed nudges as web pushes. Coalesces to one push per device
+// per user (showing the most recent nudge line), marks pushed_at, and prunes dead
 // subscriptions. A 12h window keeps a first-deploy backlog from blasting at once.
 //   - immediate nudges (due_at NULL): pushed if created in the last 12h
 //   - followthrough nudges (due_at set): pushed once due_at has passed (within 12h)
@@ -169,7 +181,7 @@ export async function pushDueNudges() {
     const nowIso = new Date(now).toISOString();
     const floorIso = new Date(now - 12 * 3600 * 1000).toISOString();
     const fl = encodeURIComponent(floorIso), nw = encodeURIComponent(nowIso);
-    const sel = 'select=id,user_id&order=created_at.asc&limit=300';
+    const sel = 'select=id,user_id,text&order=created_at.asc&limit=300';
     const [immediate, due] = await Promise.all([
         sbGet(`blak_nudges?pushed_at=is.null&due_at=is.null&created_at=gte.${fl}&${sel}`),
         sbGet(`blak_nudges?pushed_at=is.null&due_at=lte.${nw}&due_at=gte.${fl}&${sel}`),
@@ -177,21 +189,38 @@ export async function pushDueNudges() {
     const all = [...(immediate || []), ...(due || [])];
     if (!all.length) return 0;
 
+    // Group per user; keep all ids (to mark pushed) + the latest line (to show).
     const byUser = new Map();
     for (const n of all) {
-        if (!byUser.has(n.user_id)) byUser.set(n.user_id, []);
-        byUser.get(n.user_id).push(n.id);
+        const e = byUser.get(n.user_id) || { ids: [], text: '' };
+        e.ids.push(n.id);
+        if (n.text) e.text = n.text;     // ordered asc → last wins = most recent
+        byUser.set(n.user_id, e);
     }
     let sent = 0;
-    for (const [uid, ids] of byUser) {
-        const subs = await sbGet(`push_subscriptions?user_id=eq.${uid}&select=endpoint`);
-        for (const s of (subs || [])) {
-            const res = await sendWebPush(s);
-            if (res.ok) sent++;
-            else if (res.status === 404 || res.status === 410) await sbDelete(`push_subscriptions?endpoint=eq.${encodeURIComponent(s.endpoint)}`);
-        }
+    for (const [uid, { ids, text }] of byUser) {
+        sent += await pushToUser(uid, { title: 'Blak', body: text || 'thinking of you — tap to see', url: '/beta/blak/', tag: 'blak-nudge' });
         // Mark pushed regardless of whether a live device existed — avoids retry storms.
         await sbPatch(`blak_nudges?id=in.(${ids.join(',')})`, { pushed_at: nowIso });
+    }
+    return sent;
+}
+
+// Deliver due, un-pushed reminders as web pushes — so "remind me at 6" actually
+// fires even when the app is closed. One push per reminder (each is a distinct
+// task), marks pushed_at, prunes dead subscriptions. 12h catch-up window.
+export async function pushDueReminders() {
+    if (!SUPABASE_URL || !SERVICE_KEY || !webPushConfigured()) return 0;
+    const now = Date.now();
+    const nowIso = new Date(now).toISOString();
+    const floorIso = new Date(now - 12 * 3600 * 1000).toISOString();
+    const fl = encodeURIComponent(floorIso), nw = encodeURIComponent(nowIso);
+    const due = await sbGet(`blak_reminders?pushed_at=is.null&done=eq.false&remind_at=lte.${nw}&remind_at=gte.${fl}&select=id,user_id,text&order=remind_at.asc&limit=300`);
+    if (!Array.isArray(due) || !due.length) return 0;
+    let sent = 0;
+    for (const r of due) {
+        sent += await pushToUser(r.user_id, { title: '⏰ Reminder', body: r.text || 'you asked me to remind you', url: '/beta/blak/', tag: `rem-${r.id}` });
+        await sbPatch(`blak_reminders?id=eq.${r.id}`, { pushed_at: nowIso });
     }
     return sent;
 }
