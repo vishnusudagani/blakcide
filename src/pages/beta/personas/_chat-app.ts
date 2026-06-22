@@ -344,6 +344,7 @@ if (voiceBtn) voiceBtn.onclick = () => { if (vnRecording) vnStop(); else vnStart
 const callOv = $('pc-call-overlay'), callStatus = $('pc-call-status'), callCap = $('pc-call-caption'), callMic = $('pc-call-mic');
 let gws: WebSocket | null = null, gproc: any = null, actx: any = null, micStream: MediaStream | null = null;
 let gNextPlay = 0, gAiSpeaking = false, liveMode = false, gCap = '', gYou = '', gDuckTimer: any = null, muted = false, callOpen = false;
+let callTurns: { you: string; them: string }[] = [], callStartedAt = '';  // transcript of the live call
 const setStatus = (s: string) => { if (callStatus) callStatus.textContent = s; };
 const mayLearn = () => !persona || persona.build_profile_from !== false;
 // Keep the screen awake during a call so the device doesn't auto-lock (and drop it).
@@ -372,13 +373,20 @@ function flushCallLearn(u: string, a: string) {
   if (!u || !mayLearn()) return;   // respect the persona's "get to know me" toggle
   getToken().then(jwt => { if (!jwt) return; fetch('/api/blaksyd/symp/call-learn', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + jwt }, body: JSON.stringify({ userText: u, assistantText: a }) }).catch(() => {}); });
 }
+// Accumulate each finished turn so we can save the whole transcript on hang-up.
+// Separate from flushCallLearn (which is gated by the learn toggle) — the owner
+// always gets their own transcript regardless of whether the persona learns.
+function recordTurn(u: string, a: string) {
+  u = (u || '').trim(); a = (a || '').trim();
+  if (u || a) callTurns.push({ you: u, them: a });
+}
 function gHandle(o: any) {
   if (!o) return; const sc = o.serverContent; if (!sc) return;
-  if (sc.interrupted) { gNextPlay = actx ? actx.currentTime : 0; if (gDuckTimer) { clearTimeout(gDuckTimer); gDuckTimer = null; } flushCallLearn(gYou, gCap); gYou = ''; gCap = ''; gAiSpeaking = false; setStatus('listening…'); return; }
+  if (sc.interrupted) { gNextPlay = actx ? actx.currentTime : 0; if (gDuckTimer) { clearTimeout(gDuckTimer); gDuckTimer = null; } recordTurn(gYou, gCap); flushCallLearn(gYou, gCap); gYou = ''; gCap = ''; gAiSpeaking = false; setStatus('listening…'); return; }
   if (sc.modelTurn && sc.modelTurn.parts) sc.modelTurn.parts.forEach((p: any) => { if (p.inlineData && p.inlineData.data && String(p.inlineData.mimeType || '').indexOf('audio') === 0) gPlay(p.inlineData.data); });
   if (sc.outputTranscription && sc.outputTranscription.text) gCap += sc.outputTranscription.text;
   if (sc.inputTranscription && sc.inputTranscription.text) { gYou += sc.inputTranscription.text; if (callCap) callCap.innerHTML = '<p class="cc-you">' + esc(gYou) + '</p>' + (gCap ? '<p class="cc-them">' + esc(gCap) + '</p>' : ''); }
-  if (sc.turnComplete) { if (callCap && gCap.trim()) { const you = callCap.querySelector('.cc-you'); callCap.innerHTML = (you ? you.outerHTML : '') + '<p class="cc-them">' + esc(gCap.trim()) + '</p>'; } flushCallLearn(gYou, gCap); gYou = ''; gCap = ''; }
+  if (sc.turnComplete) { if (callCap && gCap.trim()) { const you = callCap.querySelector('.cc-you'); callCap.innerHTML = (you ? you.outerHTML : '') + '<p class="cc-them">' + esc(gCap.trim()) + '</p>'; } recordTurn(gYou, gCap); flushCallLearn(gYou, gCap); gYou = ''; gCap = ''; }
 }
 function gStartMic() {
   const sr = actx.sampleRate, srcN = actx.createMediaStreamSource(micStream);
@@ -397,6 +405,7 @@ function gStartMic() {
 async function openCall() {
   if (callOpen) return;
   callOv.hidden = false; callOpen = true; muted = false; callMic.classList.remove('muted'); liveMode = false; gCap = ''; gYou = '';
+  callTurns = []; callStartedAt = new Date().toISOString();
   if (callCap) callCap.innerHTML = '';
   setStatus('connecting…');
   try { micStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } }); }
@@ -435,6 +444,12 @@ function endCall() {
   if (gDuckTimer) { clearTimeout(gDuckTimer); gDuckTimer = null; }
   releaseWakeLock();
   callOv.hidden = true;
+  // Persist the transcript (owner only — guests can't call; RLS would block anyway).
+  if (!isGuest && callTurns.length && userId && personaId && supabase) {
+    const turns = callTurns.slice(); const startedAt = callStartedAt || new Date().toISOString();
+    callTurns = [];
+    supabase.from('persona_call_logs').insert({ user_id: userId, persona_id: personaId, transcript: turns, turn_count: turns.length, started_at: startedAt, ended_at: new Date().toISOString() }).then(() => {}, () => {});
+  }
 }
 document.addEventListener('visibilitychange', async () => {
   if (document.visibilityState !== 'visible' || !callOpen) return;
@@ -463,8 +478,10 @@ async function renderThreads() {
   if (!threadList) return;
   threadList.innerHTML = '<div style="padding:.6rem .7rem;color:var(--ink-faint,#999);font-size:var(--fs-sm);">Loading…</div>';
   const rows = await dbListChats();
+  let calls: any[] = [];
+  try { const { data } = await supabase!.from('persona_call_logs').select('id,transcript,turn_count,started_at,ended_at,created_at').eq('user_id', userId).eq('persona_id', personaId).order('created_at', { ascending: false }).limit(20); calls = data || []; } catch (e) {}
   threadList.innerHTML = '';
-  if (!rows.length) { threadList.innerHTML = '<div style="padding:.6rem .7rem;color:var(--ink-faint,#999);font-size:var(--fs-sm);">No conversations yet.</div>'; return; }
+  if (!rows.length && !calls.length) { threadList.innerHTML = '<div style="padding:.6rem .7rem;color:var(--ink-faint,#999);font-size:var(--fs-sm);">No conversations yet.</div>'; return; }
   for (const c of rows) {
     const active = c.id === activeChatId;
     const it = document.createElement('button');
@@ -475,6 +492,46 @@ async function renderThreads() {
     it.onclick = () => switchThread(c.id);
     threadList.appendChild(it);
   }
+  if (calls.length) {
+    const hdr = document.createElement('div');
+    hdr.textContent = 'Past calls';
+    hdr.style.cssText = 'padding:.7rem .7rem .25rem;font-size:.7rem;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-faint,#999);';
+    threadList.appendChild(hdr);
+    for (const cl of calls) {
+      const it = document.createElement('button');
+      it.type = 'button';
+      it.style.cssText = 'width:100%;text-align:left;padding:.55rem .7rem;border:none;background:transparent;color:var(--ink);font:inherit;cursor:pointer;border-radius:10px;display:block;';
+      const t0 = Array.isArray(cl.transcript) && cl.transcript[0] ? (cl.transcript[0].you || cl.transcript[0].them || '') : '';
+      const label = t0 ? t0.slice(0, 42) : ((cl.turn_count || 0) + ' turns');
+      it.innerHTML = '<div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:var(--fs-sm);">📞 ' + esc(label) + '</div><div style="font-size:.72rem;color:var(--ink-faint,#999);">' + esc(relTime(cl.created_at)) + ' · ' + esc(callDuration(cl)) + '</div>';
+      it.onclick = () => openTranscript(cl);
+      threadList.appendChild(it);
+    }
+  }
+}
+function callDuration(cl: any) {
+  try { const ms = new Date(cl.ended_at).getTime() - new Date(cl.started_at).getTime(); if (!(ms > 0)) return (cl.turn_count || 0) + ' turns'; const s = Math.round(ms / 1000); if (s < 60) return s + 's'; return Math.floor(s / 60) + 'm ' + (s % 60) + 's'; } catch (e) { return (cl.turn_count || 0) + ' turns'; }
+}
+let tsSheet: HTMLElement | null = null;
+function closeTranscript() { if (tsSheet) tsSheet.remove(); tsSheet = null; }
+function openTranscript(cl: any) {
+  closeThreads();
+  const turns = Array.isArray(cl.transcript) ? cl.transcript : [];
+  const body = turns.map((t: any) => {
+    const you = (t.you || '').trim(), them = (t.them || '').trim();
+    return (you ? '<p style="margin:.3rem 0;"><b style="opacity:.55;">You:</b> ' + esc(you) + '</p>' : '') + (them ? '<p style="margin:.3rem 0;"><b style="opacity:.55;">' + esc(persona?.name || 'Them') + ':</b> ' + esc(them) + '</p>' : '');
+  }).join('') || '<p style="opacity:.6;">No words were captured on this call.</p>';
+  tsSheet = document.createElement('div');
+  tsSheet.style.cssText = 'position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center;background:rgba(10,4,24,.55);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);padding:18px;';
+  tsSheet.innerHTML = '<div style="width:min(440px,100%);max-height:80vh;overflow:auto;box-sizing:border-box;background:var(--surface,#1a1130);border:1px solid var(--line,rgba(255,255,255,.12));border-radius:18px;padding:1.1rem;box-shadow:0 24px 70px rgba(0,0,0,.5);color:var(--ink,#fff);">' +
+    '<div style="font-weight:700;margin-bottom:.1rem;">📞 Call with ' + esc(persona?.name || 'persona') + '</div>' +
+    '<div style="font-size:.78rem;opacity:.6;margin-bottom:.7rem;">' + esc(relTime(cl.created_at)) + ' · ' + esc(callDuration(cl)) + '</div>' +
+    '<div style="font-size:.9rem;line-height:1.5;">' + body + '</div>' +
+    '<button type="button" id="ts-done" style="width:100%;margin-top:.8rem;padding:.55rem;border-radius:11px;border:none;background:linear-gradient(135deg,#c9a24b,#e0746a);color:#1a1020;font-weight:600;cursor:pointer;">Close</button>' +
+  '</div>';
+  document.body.appendChild(tsSheet);
+  tsSheet.onclick = (e: any) => { if (e.target === tsSheet) closeTranscript(); };
+  const d = document.getElementById('ts-done'); if (d) d.onclick = closeTranscript;
 }
 async function switchThread(id: string) {
   if (sending || id === activeChatId) { closeThreads(); return; }
