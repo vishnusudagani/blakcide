@@ -15,6 +15,17 @@ import AppLayout from '../../layouts/AppLayout.astro';
       </button>
     </div>
 
+    <div class="nx-onboard" id="nx-onboard" hidden>
+      <p><b>Welcome to Nexus.</b> Your tribes, live rooms, and a feed built around you — and you're always anonymous here. Resonate with what moves you; start a tribe for your people.</p>
+      <button type="button" id="nx-onboard-ok">Got it</button>
+    </div>
+
+    <div class="nx-standing" id="nx-standing" hidden></div>
+
+    <!-- ── FOR YOU (resonance-ranked feed) ── -->
+    <div class="nx-sec-head"><h2 class="nx-sec-title">For you <span class="nx-sec-sub">resonance</span></h2></div>
+    <div class="nx-feed" id="nx-feed" data-noswipe><div class="nx-pulse-explain" style="margin:0">Loading your feed…</div></div>
+
     <!-- ── LIVE ROOMS (horizontal strip; + Start leads) ── -->
     <div class="nx-sec-head">
       <h2 class="nx-sec-title"><span class="nx-livedot"></span>Live Rooms <span class="nx-sec-sub" id="nx-rooms-sub">real-time</span></h2>
@@ -37,6 +48,9 @@ import AppLayout from '../../layouts/AppLayout.astro';
       <div class="nx-dots" id="nx-tribes-dots"></div>
       <button type="button" class="nx-car-arrow" id="nx-tribes-next" aria-label="Next">›</button>
     </div>
+
+    <div class="nx-sec-head" style="margin-top:2rem"><h2 class="nx-sec-title">Discover</h2></div>
+    <div class="nx-discover" id="nx-discover" data-noswipe></div>
   </div>
 
   <!-- ════════ IN-ROOM ════════ -->
@@ -45,6 +59,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
       <button type="button" class="nx-back" data-home>← Leave</button>
       <div class="nx-room-id"><span class="nx-livedot"></span><b id="nx-room-title">—</b><i id="nx-room-here">— here</i></div>
       <div class="nx-room-pulse" id="nx-room-pulse" title="Room pulse"><span class="nx-flame"></span><b id="nx-pulse-n">0</b></div>
+      <button type="button" class="nx-room-close" id="nx-room-close" hidden title="Close this room for everyone">✕ Close</button>
     </header>
 
     <div class="nx-room-body">
@@ -88,6 +103,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
       </div>
       <button type="button" class="nx-joined" id="nx-tribe-join">Join</button>
       <button type="button" class="nx-msg-btn" id="nx-tribe-msgs" title="Messages" aria-label="Messages">✉</button>
+      <button type="button" class="nx-msg-btn" id="nx-tribe-share" title="Share this tribe" aria-label="Share">🔗</button>
     </div>
     <p class="nx-tribe-desc" id="nx-tribe-desc"></p>
 
@@ -97,7 +113,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
       <input type="text" id="nx-disc-title" placeholder="Title (optional)" autocomplete="off" maxlength="120" />
       <div class="nx-disc-row">
         <label class="nx-img-btn" title="Add image"><input type="file" accept="image/*" id="nx-disc-img" hidden /><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></label>
-        <input type="text" id="nx-disc-input" placeholder="Start a discussion…" autocomplete="off" />
+        <textarea id="nx-disc-input" placeholder="Start a discussion… (long-form welcome)" rows="1"></textarea>
         <button type="submit">Post</button>
       </div>
       <div class="nx-img-preview" id="nx-disc-preview" hidden><img id="nx-disc-preview-img" alt="" /><button type="button" id="nx-disc-preview-x" aria-label="Remove image">✕</button></div>
@@ -110,6 +126,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
     <header class="nx-room-top">
       <button type="button" class="nx-back" id="nx-dm-back">← Back</button>
       <div class="nx-room-id"><b id="nx-dm-title">Messages</b><i id="nx-dm-sub">anonymous · members only</i></div>
+      <button type="button" class="nx-more-btn" id="nx-dm-more" hidden aria-label="More options" style="margin-left:auto">⋯</button>
     </header>
     <div class="nx-room-body" style="grid-template-columns:1fr">
       <div class="nx-room-main">
@@ -149,12 +166,63 @@ import AppLayout from '../../layouts/AppLayout.astro';
       <form id="nx-tribe-form">
         <input id="nx-tribe-name-in" maxlength="60" placeholder="e.g. Founders Who Overthink" autocomplete="off" required />
         <input id="nx-tribe-desc-in" maxlength="160" placeholder="one line on what it's about (optional)" autocomplete="off" />
+        <div class="nx-vis-row" id="nx-tribe-vis">
+          <button type="button" class="nx-vis on" data-vis="public">🌐 Public</button>
+          <button type="button" class="nx-vis" data-vis="private">🔒 Private</button>
+          <button type="button" class="nx-vis" data-vis="anonymous">🕶️ Anonymous</button>
+        </div>
         <div class="nx-modal-actions">
           <button type="button" class="nx-modal-cancel" id="nx-tribe-cancel">Cancel</button>
           <button type="submit" class="nx-modal-go">Create tribe</button>
         </div>
         <p class="nx-modal-note">A persistent space others can join and post in — you'll be its first member.</p>
       </form>
+    </div>
+  </div>
+
+  <!-- ════════ CRISIS SUPPORT (private, author-only) ════════ -->
+  <div class="nx-modal" id="nx-crisis" hidden>
+    <div class="nx-modal-card ap-card nx-crisis-card">
+      <div class="nx-crisis-orb"></div>
+      <h3 class="nx-crisis-title">You don’t have to carry this alone.</h3>
+      <p class="nx-crisis-body">What you shared sounds really heavy — and reaching out takes courage. Someone who’s been there is ready to listen, any time.</p>
+      <a class="nx-crisis-cta" href="/beta/minit/">Talk to a Listener →</a>
+      <div class="nx-crisis-lines">
+        <p class="nx-crisis-k">Free, confidential helplines</p>
+        <a href="tel:18005990019">KIRAN (India) · 1800-599-0019</a>
+        <a href="tel:14416">Tele-MANAS · 14416</a>
+        <p class="nx-crisis-note">If you’re in immediate danger, call your local emergency number (112 in India).</p>
+      </div>
+      <button type="button" class="nx-modal-cancel" id="nx-crisis-ok" style="width:100%;margin-top:.7rem">I’m okay for now</button>
+    </div>
+  </div>
+
+  <!-- ════════ SAFETY SHEET (report / block) ════════ -->
+  <div class="nx-modal" id="nx-safety" hidden>
+    <div class="nx-modal-card ap-card nx-safety-card">
+      <p class="nx-pulse-k">Safety</p>
+      <h3 class="nx-modal-title" id="nx-safety-title">@someone</h3>
+      <div id="nx-safety-main">
+        <button type="button" class="nx-safety-act" data-safety-report>⚑ Report this</button>
+        <button type="button" class="nx-safety-act danger" data-safety-block>⊘ Block this person</button>
+        <button type="button" class="nx-safety-act" id="nx-safety-remove" data-safety-remove hidden>🗑 Remove from tribe (moderator)</button>
+        <button type="button" class="nx-safety-act danger" id="nx-safety-ban" data-safety-ban hidden>⛔ Ban from tribe (moderator)</button>
+        <button type="button" class="nx-modal-cancel" data-safety-cancel style="width:100%">Cancel</button>
+      </div>
+      <div id="nx-safety-reasons" hidden>
+        <p class="nx-modal-note" style="margin:0 0 .7rem">Why are you reporting this?</p>
+        <div class="nx-reason-grid">
+          <button type="button" class="nx-reason" data-reason="spam">Spam</button>
+          <button type="button" class="nx-reason" data-reason="harassment">Harassment</button>
+          <button type="button" class="nx-reason" data-reason="hate">Hate speech</button>
+          <button type="button" class="nx-reason" data-reason="sexual">Sexual</button>
+          <button type="button" class="nx-reason" data-reason="self_harm">Self-harm</button>
+          <button type="button" class="nx-reason" data-reason="violence">Violence</button>
+          <button type="button" class="nx-reason" data-reason="misinfo">Misinfo</button>
+          <button type="button" class="nx-reason" data-reason="other">Other</button>
+        </div>
+        <button type="button" class="nx-modal-cancel" data-safety-cancel style="width:100%;margin-top:.7rem">Cancel</button>
+      </div>
     </div>
   </div>
 
@@ -417,6 +485,93 @@ import AppLayout from '../../layouts/AppLayout.astro';
     html[data-theme="light"] .nx-blak { color: var(--coral-ink); }
     .nx-av-blak { background: linear-gradient(135deg, var(--coral), #ffb38a); box-shadow: 0 0 0 1px rgba(255,107,157,.35); }
     .nx-disc-blak, .nx-cmt-blak { border-color: rgba(255,107,157,.28); }
+
+    /* safety sheet (report / block) + the ⋯ trigger */
+    .nx-safety-card { width: min(420px, 100%); }
+    .nx-safety-act { display: block; width: 100%; text-align: left; font: inherit; font-size: var(--fs-md); color: var(--ink); background: var(--surface); border: 1px solid var(--line-strong); border-radius: var(--r-md); padding: .8rem 1rem; margin-bottom: .55rem; cursor: pointer; }
+    .nx-safety-act:hover { border-color: var(--aqua); }
+    .nx-safety-act.danger { color: var(--coral); }
+    html[data-theme="light"] .nx-safety-act.danger { color: var(--coral-ink); }
+    .nx-reason-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .5rem; }
+    .nx-reason { font: inherit; font-size: var(--fs-sm); color: var(--ink); background: var(--surface); border: 1px solid var(--line-strong); border-radius: var(--r-pill); padding: .6rem .8rem; cursor: pointer; }
+    .nx-reason:hover { border-color: var(--coral); color: var(--coral); }
+    html[data-theme="light"] .nx-reason:hover { color: var(--coral-ink); border-color: var(--coral-ink); }
+    .nx-more-btn { margin-left: auto; background: none; border: 0; color: var(--ink-faint); cursor: pointer; font-size: 1.15rem; line-height: 1; padding: 0 .3rem; letter-spacing: .05em; }
+    .nx-more-btn:hover { color: var(--ink); }
+
+    /* crisis support card (private, author-only) */
+    .nx-crisis-card { width: min(440px, 100%); text-align: center; }
+    .nx-crisis-orb { width: 56px; height: 56px; margin: 0 auto .8rem; border-radius: 50%; background: radial-gradient(circle at 50% 40%, rgba(106,211,184,.5), rgba(91,192,255,.18) 60%, transparent 72%); box-shadow: 0 0 32px rgba(106,211,184,.35); }
+    .nx-crisis-title { font-family: var(--font-display); font-weight: 650; font-size: var(--fs-xl); margin: 0 0 .5rem; }
+    .nx-crisis-body { color: var(--ink-soft); font-size: var(--fs-md); line-height: 1.5; margin: 0 0 1.1rem; }
+    .nx-crisis-cta { display: block; text-decoration: none; font-weight: 650; color: #06231C; background: linear-gradient(135deg, var(--mint), var(--aqua)); border-radius: var(--r-pill); padding: .8rem 1rem; margin-bottom: 1rem; }
+    .nx-crisis-cta:hover { transform: translateY(-1px); }
+    .nx-crisis-lines { text-align: left; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); padding: .9rem 1rem; }
+    .nx-crisis-k { font-family: var(--font-mono); font-size: var(--fs-2xs); letter-spacing: .1em; text-transform: uppercase; color: var(--ink-faint); margin: 0 0 .5rem; }
+    .nx-crisis-lines a { display: block; color: var(--aqua-ink); font-weight: 600; font-size: var(--fs-md); padding: .25rem 0; text-decoration: none; }
+    html[data-theme="dark"] .nx-crisis-lines a { color: #BFE9FF; }
+    .nx-crisis-note { font-size: var(--fs-xs); color: var(--ink-faint); margin: .5rem 0 0; line-height: 1.45; }
+
+    /* DM message-requests */
+    .nx-req-row { display: flex; align-items: center; gap: .5rem; }
+    .nx-req-row .nx-req-open { display: flex; align-items: center; gap: .7rem; flex: 1; min-width: 0; text-align: left; background: none; border: 0; cursor: pointer; font: inherit; color: inherit; padding: 0; }
+    .nx-req-actions { display: flex; gap: .4rem; flex: none; }
+    .nx-req-accept, .nx-req-decline { font: inherit; font-size: var(--fs-xs); font-weight: 600; border-radius: var(--r-pill); padding: .35rem .7rem; cursor: pointer; }
+    .nx-req-accept { color: #06231C; background: linear-gradient(135deg, var(--mint), var(--aqua)); border: 0; }
+    .nx-req-decline { color: var(--ink-soft); background: var(--surface); border: 1px solid var(--line-strong); }
+    .nx-req-decline:hover { color: var(--coral); border-color: var(--coral); }
+
+    /* recognition: gentle standing strip (streak + badges) */
+    .nx-standing { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; margin: -.2rem 0 1.2rem; }
+    .nx-standing[hidden] { display: none; }
+    .nx-streak-chip { display: inline-flex; align-items: center; gap: .35rem; font-size: var(--fs-sm); font-weight: 600; color: var(--gold-ink, #8a6410); background: rgba(255,210,122,.14); border: 1px solid rgba(255,210,122,.3); border-radius: var(--r-pill); padding: .25rem .75rem; }
+    html[data-theme="dark"] .nx-streak-chip { color: #ffd9a8; }
+    .nx-badge { font-size: 1.1rem; line-height: 1; cursor: default; }
+
+    /* "For you" feed */
+    .nx-feed { display: flex; flex-direction: column; gap: .6rem; }
+    .nx-feed-card { display: block; width: 100%; text-align: left; background: var(--glass-strong); border: 1px solid var(--line); border-radius: var(--r-md); padding: .85rem 1rem; cursor: pointer; font: inherit; color: inherit; transition: border-color .2s, transform .2s var(--ease-spring); }
+    .nx-feed-card:hover { border-color: rgba(91,192,255,.4); transform: translateY(-1px); }
+    .nx-feed-top { display: flex; align-items: center; gap: .4rem; font-size: var(--fs-sm); color: var(--ink-faint); margin-bottom: .4rem; }
+    .nx-feed-top .nx-disc-av { width: 22px; height: 22px; border-radius: 50%; flex: none; }
+    .nx-feed-who { color: var(--aqua-ink); font-weight: 600; }
+    html[data-theme="dark"] .nx-feed-who { color: #BFE9FF; }
+    .nx-feed-tribe { color: var(--ink-soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 40%; }
+    .nx-feed-reso { margin-left: auto; color: var(--gold-ink, #8a6410); font-weight: 600; flex: none; }
+    html[data-theme="dark"] .nx-feed-reso { color: #ffd9a8; }
+    .nx-feed-body { font-size: var(--fs-md); color: var(--ink); line-height: 1.45; }
+    .nx-feed-foot { font-size: var(--fs-xs); color: var(--ink-faint); margin-top: .5rem; }
+    .nx-del { font: inherit; font-size: var(--fs-xs); color: var(--ink-faint); cursor: pointer; background: none; border: 0; padding: 0; }
+    .nx-del:hover { color: var(--coral); }
+    .nx-cmt-del { margin-left: auto; }
+
+    /* #28 tribe-visibility selector */
+    .nx-vis-row { display: flex; gap: .4rem; margin: .2rem 0; }
+    .nx-vis { flex: 1; font: inherit; font-size: var(--fs-sm); padding: .5rem; border-radius: var(--r-md); border: 1px solid var(--line-strong); background: var(--surface); color: var(--ink-soft); cursor: pointer; }
+    .nx-vis.on { border-color: var(--aqua); color: var(--ink); background: rgba(91,192,255,.1); }
+    /* #24 long-form composer + rendering */
+    .nx-disc-row textarea { flex: 1; min-width: 0; padding: .8rem 1.05rem; border-radius: var(--r-md); background: var(--surface); border: 1px solid var(--line-strong); color: var(--ink); font: inherit; font-size: var(--fs-md); line-height: 1.45; resize: vertical; min-height: 46px; max-height: 220px; }
+    .nx-disc-row textarea:focus { outline: none; border-color: var(--aqua); }
+    .nx-disc-text { white-space: pre-wrap; overflow-wrap: anywhere; }
+    /* #27 threaded replies */
+    .nx-cmt-main { flex: 1; min-width: 0; }
+    .nx-cmt-main p { white-space: pre-wrap; }
+    .nx-cmt-acts { display: flex; gap: .8rem; align-items: center; margin-top: .25rem; }
+    .nx-reply-btn { font: inherit; font-size: var(--fs-xs); color: var(--ink-faint); background: none; border: 0; padding: 0; cursor: pointer; }
+    .nx-reply-btn:hover { color: var(--aqua-ink); }
+    .nx-reply-hint { display: flex; align-items: center; gap: .5rem; font-size: var(--fs-xs); color: var(--ink-soft); margin: .2rem 0 .5rem; }
+    .nx-reply-hint button { background: none; border: 0; color: var(--ink-faint); cursor: pointer; font-size: .9rem; }
+    /* #38 host close */
+    .nx-room-close { font: inherit; font-size: var(--fs-xs); font-weight: 600; color: var(--coral); background: var(--surface); border: 1px solid rgba(255,107,157,.3); border-radius: var(--r-pill); padding: .3rem .7rem; cursor: pointer; }
+    .nx-room-close:hover { border-color: var(--coral); }
+    html[data-theme="light"] .nx-room-close { color: var(--coral-ink); }
+    /* #36 onboarding + #32 discover */
+    .nx-onboard { display: flex; align-items: center; gap: .8rem; background: var(--glass-strong); border: 1px solid var(--line-strong); border-radius: var(--r-lg); padding: .9rem 1.1rem; margin-bottom: 1rem; }
+    .nx-onboard[hidden] { display: none; }
+    .nx-onboard p { font-size: var(--fs-sm); color: var(--ink-soft); line-height: 1.5; margin: 0; flex: 1; }
+    .nx-onboard b { color: var(--ink); }
+    .nx-onboard button { flex: none; font: inherit; font-size: var(--fs-sm); font-weight: 650; color: #06231C; background: linear-gradient(135deg, var(--mint), var(--aqua)); border: 0; border-radius: var(--r-pill); padding: .5rem 1rem; cursor: pointer; }
+    .nx-discover { display: flex; flex-direction: column; gap: .6rem; }
   </style>
 
   <script>

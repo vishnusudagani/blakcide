@@ -356,12 +356,54 @@ const nav = [
         if (want && want !== location.pathname && want !== here()) { location.replace(want); return; }
       } catch (e) {}
 
+      await ageGate(session);
+
       const email = session.user && session.user.email;
       if (email) { const av = document.getElementById('ap-avatar'); if (av) av.textContent = email[0].toUpperCase(); }
 
       initNotifications(session.user.id);
       setupSwipe();
     })();
+
+    // 18+ age gate (NEXUS-GAPS.md Phase 1, #9). One-time DOB confirmation, stored on
+    // the auth user. Additive + FAIL-OPEN: the app loads underneath and any error is
+    // swallowed, so a bug here can never lock anyone out. Under-18 → signed out.
+    async function ageGate(session) {
+      try {
+        const md = (session.user && session.user.user_metadata) || {};
+        if (md.dob || md.age_confirmed_at) return; // already confirmed
+        const ov = document.createElement('div');
+        ov.id = 'blk-agegate';
+        ov.style.cssText = 'position:fixed;inset:0;z-index:2147483646;background:var(--bg,#0B0D1F);display:grid;place-items:center;padding:1.4rem;';
+        ov.innerHTML = '<div style="max-width:380px;width:100%;text-align:center;font-family:var(--font-body,system-ui)">'
+          + '<h2 style="font-size:1.4rem;font-weight:650;margin:0 0 .5rem;color:var(--ink,#fff)">One quick thing</h2>'
+          + '<p style="color:var(--ink-soft,#b9bdd6);margin:0 0 1.2rem;line-height:1.5">Blaksyd is for adults. Please confirm your date of birth.</p>'
+          + '<input id="blk-dob" type="date" style="width:100%;box-sizing:border-box;padding:.8rem 1rem;border-radius:12px;border:1px solid var(--line-strong,#2a2d4a);background:var(--surface,#15172e);color:var(--ink,#fff);font-size:16px;margin-bottom:.4rem" />'
+          + '<p id="blk-dob-err" style="color:#ff6b8b;font-size:.85rem;min-height:1.1rem;margin:.2rem 0 .6rem"></p>'
+          + '<button id="blk-dob-go" type="button" style="width:100%;padding:.85rem;border:0;border-radius:999px;font-weight:650;font-size:1rem;cursor:pointer;background:linear-gradient(135deg,#6AD3B8,#5BC0FF);color:#06231C">Continue</button>'
+          + '</div>';
+        document.body.appendChild(ov);
+        const go = ov.querySelector('#blk-dob-go'), err = ov.querySelector('#blk-dob-err');
+        go.addEventListener('click', async () => {
+          const v = ov.querySelector('#blk-dob').value;
+          if (!v) { err.textContent = 'Please enter your date of birth.'; return; }
+          const dob = new Date(v), now = new Date();
+          let age = now.getFullYear() - dob.getFullYear();
+          const mo = now.getMonth() - dob.getMonth();
+          if (mo < 0 || (mo === 0 && now.getDate() < dob.getDate())) age--;
+          if (isNaN(age)) { err.textContent = 'Please enter a valid date.'; return; }
+          if (age < 18) {
+            ov.innerHTML = '<div style="max-width:360px;text-align:center;color:var(--ink,#fff);font-family:var(--font-body,system-ui)"><h2 style="font-size:1.3rem;margin:0 0 .6rem">You must be 18 or older</h2><p style="color:var(--ink-soft,#b9bdd6)">Blaksyd isn’t available to under-18s yet. Thanks for understanding.</p></div>';
+            try { await supabase.auth.signOut(); } catch (e) {}
+            setTimeout(() => { location.href = '/'; }, 2800);
+            return;
+          }
+          go.disabled = true; go.textContent = 'Saving…';
+          try { await supabase.auth.updateUser({ data: { dob: v, age_confirmed_at: new Date().toISOString() } }); } catch (e) {}
+          ov.remove();
+        });
+      } catch (e) { /* fail open */ }
+    }
 
     // App-wide in-app notification banner. Listens to the `notifications` inbox
     // (realtime + a poll fallback) and surfaces the latest unread — tap to act,
