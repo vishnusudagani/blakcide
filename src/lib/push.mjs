@@ -1,6 +1,6 @@
 // Web-push opt-in helpers. The VAPID public key is public by design (safe to embed);
 // the private key lives only in the push-send edge function's secrets.
-const VAPID_PUBLIC = 'BAvQwHfR6adu-OnLnNWMzG_t_VbiVKm-VGR9ip5Y_-6Pg2c28derYkM-3nUHidtecn-eQ67nic_OQcQHstNvWM8';
+const VAPID_PUBLIC = 'BI6R0g_vLRzjK0VA_ir1iGSHOGgjgy9BvJTXkTM38-BjpTl9Eo785CReN1cgZ7O_JOSbpq2752Srpavx6i7mRVk';
 
 function b64ToU8(b64) {
   const pad = '='.repeat((4 - (b64.length % 4)) % 4);

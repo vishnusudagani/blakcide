@@ -12,13 +12,16 @@ const PER_RUN = parseInt(process.env.NUDGES_PER_RUN || '60', 10);   // bound cos
 
 export default async () => {
     try {
-        const { activeUserIds, maybeGenerateNudge } = await import('../../symp-core/lib/proactive.mjs');
+        const { activeUserIds, maybeGenerateNudge, pushDueNudges } = await import('../../symp-core/lib/proactive.mjs');
         const users = await activeUserIds(14, PER_RUN);
         let made = 0;
         for (const uid of users) {
             try { const n = await maybeGenerateNudge(uid); if (n) made++; } catch (_) { /* per-user best-effort */ }
         }
-        return new Response(JSON.stringify({ ok: true, considered: users.length, nudged: made }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+        // Deliver freshly-made + now-due nudges to subscribed devices.
+        let pushed = 0;
+        try { pushed = await pushDueNudges(); } catch (_) { /* best-effort */ }
+        return new Response(JSON.stringify({ ok: true, considered: users.length, nudged: made, pushed }), { status: 200, headers: { 'Content-Type': 'application/json' } });
     } catch (e) {
         return new Response(JSON.stringify({ ok: false, error: String(e && e.message || e) }), { status: 200, headers: { 'Content-Type': 'application/json' } });
     }
