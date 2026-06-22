@@ -51,6 +51,15 @@
   status = 301
   force = true
 
+# Canonicalize www.blaksyd.com -> blaksyd.com so there is ONE auth origin. Without
+# this, www.blaksyd.com is served at 200 (separate origin/storage) and Google login
+# started there fails to persist a session. Apex blaksyd.com is the canonical host.
+[[redirects]]
+  from = "https://www.blaksyd.com/*"
+  to = "https://blaksyd.com/:splat"
+  status = 301
+  force = true
+
 # Default crawler convention: many bots try /sitemap.xml before reading robots.txt.
 # Astro emits /sitemap-index.xml, so rewrite /sitemap.xml to the generated index.
 [[redirects]]

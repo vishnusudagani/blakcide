@@ -5,27 +5,27 @@ import AppLayout from '../../layouts/AppLayout.astro';
   <div class="ap-page px">
     <p class="ap-kicker">Persona · your digital self</p>
     <h1 class="ap-h1">A you that speaks <span class="px-accent">in your own voice.</span></h1>
-    <p class="ap-sub">Record your voice a few times per language — the more you give it (different moods, different sentences), the closer it gets to sounding exactly like you. Then talk, and your persona answers back in your voice.</p>
+    <p class="ap-sub">Build your Persona by just talking. Answer a few questions out loud — in any language you like. The more you say, the more it becomes you.</p>
 
     <div id="px-app" hidden>
-      <!-- ── 1. YOUR VOICE — enrollment ─────────────────────────── -->
+      <!-- ── 1. YOUR VOICE — interview enrollment ─────────────────── -->
       <section class="ap-card px-card">
         <div class="px-card-head">
-          <h2 class="px-card-title">Your voice</h2>
-          <span class="px-card-tag" id="px-voice-tag">not recorded yet</span>
+          <h2 class="px-card-title">Meet your Persona</h2>
+          <span class="px-card-tag" id="px-voice-tag">not started</span>
         </div>
 
-        <div class="px-langs" id="px-enroll-langs" role="tablist" aria-label="Language to record"></div>
+        <div class="px-progress" id="px-progress" aria-hidden="true"></div>
 
-        <p class="px-phrase-label">Read this aloud, clearly, once:</p>
-        <blockquote class="px-phrase" id="px-phrase"></blockquote>
+        <p class="px-phrase-label" id="px-q-label">Answer out loud, in any language:</p>
+        <blockquote class="px-phrase" id="px-question"></blockquote>
 
         <div class="px-rec">
-          <button type="button" class="px-mic" id="px-rec-btn" aria-label="Record">
+          <button type="button" class="px-mic" id="px-rec-btn" aria-label="Record your answer">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v4"/></svg>
           </button>
           <div class="px-rec-meta">
-            <span class="px-rec-state" id="px-rec-state">Tap to record</span>
+            <span class="px-rec-state" id="px-rec-state">Tap to answer</span>
             <span class="px-rec-timer" id="px-rec-timer">0:00</span>
           </div>
         </div>
@@ -33,7 +33,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
         <div class="px-review" id="px-review" hidden>
           <audio id="px-review-audio" controls></audio>
           <div class="px-review-actions">
-            <button type="button" class="px-btn px-btn-go" id="px-save">Save my voice</button>
+            <button type="button" class="px-btn px-btn-go" id="px-save">Save &amp; next</button>
             <button type="button" class="px-btn px-btn-ghost" id="px-redo">Re-record</button>
           </div>
         </div>
@@ -41,37 +41,32 @@ import AppLayout from '../../layouts/AppLayout.astro';
         <p class="px-msg" id="px-enroll-msg" role="status"></p>
 
         <div class="px-enrolled" id="px-enrolled" hidden>
-          <p class="px-enrolled-label">Your recorded voices</p>
-          <ul class="px-enrolled-list" id="px-enrolled-list"></ul>
+          <p class="px-enrolled-label" id="px-enrolled-label"></p>
           <button type="button" class="px-btn px-btn-danger" id="px-delete">Delete my voice</button>
         </div>
       </section>
 
-      <!-- ── 2. TALK TO YOUR PERSONA ────────────────────────────── -->
+      <!-- ── 2. TALK TO YOUR PERSONA ──────────────────────────────── -->
       <section class="ap-card px-card">
         <div class="px-card-head">
           <h2 class="px-card-title">Talk to your persona</h2>
-          <div class="px-talk-lang">
-            <label for="px-talk-select">Voice</label>
-            <select id="px-talk-select"></select>
-          </div>
         </div>
 
         <div class="px-thread" id="px-thread" aria-live="polite">
-          <div class="px-bubble px-bubble-ai">Record your voice above, then say something here — I’ll answer back in your voice.</div>
+          <div class="px-bubble px-bubble-ai">Record a few answers above, then say anything here — in any language — and I’ll reply in your voice.</div>
         </div>
 
         <form class="px-composer" id="px-form">
           <button type="button" class="px-mic-sm" id="px-voicein" aria-label="Speak" title="Speak">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v4"/></svg>
           </button>
-          <input type="text" id="px-input" placeholder="Say something to your persona…" autocomplete="off" />
+          <input type="text" id="px-input" placeholder="Say something — any language…" autocomplete="off" />
           <button type="submit" class="px-send" aria-label="Send"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
         </form>
         <audio id="px-talk-audio" hidden></audio>
       </section>
 
-      <p class="px-note">Your voice is stored privately, only for you, and only after you read the phrase aloud (so it’s really you). One‑tap delete any time. Nothing is ever sent as you without your approval.</p>
+      <p class="px-note">Your voice is stored privately, only for you. One‑tap delete any time. Nothing is ever sent as you without your approval.</p>
     </div>
   </div>
 
@@ -79,20 +74,16 @@ import AppLayout from '../../layouts/AppLayout.astro';
     .px-accent { font-family: var(--font-serif); font-style: italic; font-weight: 400; background: linear-gradient(110deg, var(--lavender), var(--lavender-deep)); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
     html[data-theme="light"] .px-accent { background: linear-gradient(110deg, var(--lavender-ink), #5b46ad); -webkit-background-clip: text; background-clip: text; }
 
-    .px-gate { padding: 1.4rem 1.5rem; margin-top: 1.6rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
-    .px-gate p { margin: 0; color: var(--ink-soft); font-size: var(--fs-lg); }
-
     .px-card { padding: 1.3rem 1.4rem 1.5rem; margin-top: 1.6rem; }
     .px-card-head { display: flex; align-items: center; gap: .8rem; padding-bottom: 1rem; border-bottom: 1px solid var(--line); margin-bottom: 1.1rem; }
     .px-card-title { font-family: var(--font-display); font-weight: 600; font-size: var(--fs-xl); margin: 0; }
     .px-card-tag { margin-left: auto; font-family: var(--font-mono); font-size: var(--fs-3xs); letter-spacing: .12em; text-transform: uppercase; color: var(--lavender); border: 1px solid rgba(201,184,255,.4); border-radius: 999px; padding: .2rem .6rem; }
     .px-card-tag.is-ready { color: var(--mint); border-color: rgba(127, 224, 183, .45); }
 
-    .px-langs { display: flex; flex-wrap: wrap; gap: .5rem; margin-bottom: 1.2rem; }
-    .px-lang { font: inherit; font-size: var(--fs-md); font-weight: 500; color: var(--ink-soft); background: var(--surface); border: 1px solid var(--line-strong); border-radius: var(--r-pill); padding: .5rem 1rem; cursor: pointer; transition: .18s; display: inline-flex; align-items: center; gap: .45rem; }
-    .px-lang:hover { color: var(--ink); transform: translateY(-1px); }
-    .px-lang.is-on { color: var(--ink); background: var(--surface-strong); box-shadow: inset 0 0 0 1px var(--lavender); }
-    .px-lang .px-check { width: 7px; height: 7px; border-radius: 50%; background: var(--mint); box-shadow: 0 0 6px var(--mint); }
+    .px-progress { display: flex; gap: .4rem; margin-bottom: 1.1rem; }
+    .px-progress .px-dot { flex: 1; height: 4px; border-radius: 2px; background: var(--line-strong); transition: background .25s; }
+    .px-progress .px-dot.is-done { background: var(--mint); }
+    .px-progress .px-dot.is-now { background: var(--lavender); }
 
     .px-phrase-label { margin: 0 0 .5rem; font-size: var(--fs-sm); color: var(--ink-faint); }
     .px-phrase { margin: 0 0 1.3rem; padding: 1rem 1.15rem; border-radius: 6px 16px 16px 16px; background: rgba(201,184,255,.10); border: 1px solid rgba(201,184,255,.22); font-size: var(--fs-lg); line-height: 1.55; color: var(--ink); }
@@ -126,15 +117,9 @@ import AppLayout from '../../layouts/AppLayout.astro';
     .px-msg.is-busy { color: var(--ink-faint); }
 
     .px-enrolled { margin-top: 1.4rem; padding-top: 1.2rem; border-top: 1px solid var(--line); }
-    .px-enrolled-label { margin: 0 0 .6rem; font-size: var(--fs-sm); color: var(--ink-faint); }
-    .px-enrolled-list { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: .5rem; }
-    .px-enrolled-list li { font-size: var(--fs-sm); color: var(--ink); background: var(--surface); border: 1px solid var(--line-strong); border-radius: var(--r-pill); padding: .35rem .8rem; display: inline-flex; align-items: center; gap: .4rem; }
-    .px-enrolled-list li .px-check { width: 7px; height: 7px; border-radius: 50%; background: var(--mint); box-shadow: 0 0 6px var(--mint); }
+    .px-enrolled-label { margin: 0; font-size: var(--fs-sm); color: var(--ink-soft); }
 
     /* talk */
-    .px-talk-lang { margin-left: auto; display: flex; align-items: center; gap: .5rem; }
-    .px-talk-lang label { font-size: var(--fs-sm); color: var(--ink-faint); }
-    .px-talk-lang select { font: inherit; font-size: var(--fs-md); color: var(--ink); background: var(--surface); border: 1px solid var(--line-strong); border-radius: var(--r-md); padding: .4rem .6rem; }
     .px-thread { display: flex; flex-direction: column; gap: .7rem; max-height: 320px; overflow-y: auto; padding: .3rem .1rem .6rem; }
     .px-bubble { max-width: 85%; padding: .75rem 1rem; border-radius: 16px; font-size: var(--fs-base); line-height: 1.55; }
     .px-bubble-ai { align-self: flex-start; border-radius: 6px 16px 16px 16px; background: rgba(201,184,255,.12); border: 1px solid rgba(201,184,255,.22); color: var(--ink); }
@@ -143,7 +128,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
     .px-bubble.is-thinking { color: var(--ink-faint); font-style: italic; }
 
     .px-composer { display: flex; gap: .5rem; margin-top: 1.1rem; align-items: center; }
-    .px-composer input { flex: 1; min-width: 0; padding: .8rem 1.05rem; border-radius: var(--r-pill); background: var(--surface); border: 1px solid var(--line-strong); color: var(--ink); font: inherit; font-size: var(--fs-md); }
+    .px-composer input { flex: 1; min-width: 0; padding: .8rem 1.05rem; border-radius: var(--r-pill); background: var(--surface); border: 1px solid var(--line-strong); color: var(--ink); font: inherit; font-size: 16px; }
     .px-composer input:focus { outline: none; border-color: var(--lavender); }
     .px-mic-sm, .px-send { flex: none; width: 44px; height: 44px; border-radius: 50%; border: 0; cursor: pointer; display: grid; place-items: center; color: #fff; }
     .px-mic-sm { background: var(--surface); border: 1px solid var(--line-strong); color: var(--ink-soft); }
@@ -153,7 +138,6 @@ import AppLayout from '../../layouts/AppLayout.astro';
     .px-mic-sm svg, .px-send svg { width: 18px; height: 18px; }
 
     .px-note { margin: 1.2rem .2rem 0; font-size: var(--fs-xs); color: var(--ink-faint); text-align: center; line-height: 1.6; }
-    .px-clip-count { color: var(--ink-faint); font-weight: 400; font-size: .9em; }
   </style>
 
   <script>
@@ -163,20 +147,23 @@ import AppLayout from '../../layouts/AppLayout.astro';
     // dev against a running symp-backend, set PUBLIC_API_BASE=http://localhost:4000.
     const API = (import.meta.env.PUBLIC_API_BASE || '').replace(/\/+$/, '');
 
-    const LANGS = [
-      { code: 'en', label: 'English', stt: 'en-US',
-        phrase: 'Hello, this is my own voice, and today I am recording it to create my persona.' },
-      { code: 'hi', label: 'हिन्दी', stt: 'hi-IN',
-        phrase: 'नमस्ते, यह मेरी अपनी आवाज़ है। आज मैं इसे रिकॉर्ड कर रहा हूँ।' },
-      { code: 'te', label: 'తెలుగు', stt: 'te-IN',
-        phrase: 'నమస్తే, ఇది నా సొంత గొంతు. ఈ రోజు నేను దీన్ని రికార్డ్ చేస్తున్నాను.' },
+    // The interview — open, warm questions; the user answers out loud in ANY language.
+    // No language picker, no fixed phrase: enrollment auto-detects the language server-side.
+    const QUESTIONS = [
+      "How's your day going so far?",
+      "Tell me about something you're looking forward to.",
+      "What's a place you love — and why?",
+      "Describe someone who really matters to you.",
+      "What's something that made you laugh recently?",
+      "What's been on your mind lately?",
+      "If you had a totally free afternoon, what would you do?",
+      "Tell me anything you'd want your Persona to know about you.",
     ];
 
     const $ = (id) => document.getElementById(id);
     let session = null;          // { token, userId }
-    let enrolled = new Set();    // languages with a ready clone
-    let clipCounts = {};         // per-language clip count (the growing library)
-    let enrollLang = 'en';
+    let answersCount = 0;        // interview answers saved (server is the source of truth)
+    let qIndex = 0;              // which question is showing
     let recBlob = null;          // last recorded WAV blob
     const history = [];          // chat history for /api/chat
 
@@ -246,24 +233,23 @@ import AppLayout from '../../layouts/AppLayout.astro';
     }
     const blobToB64 = (blob) => new Promise((res) => { const fr = new FileReader(); fr.onload = () => res(String(fr.result).split(',')[1]); fr.readAsDataURL(blob); });
 
-    // ── enroll UI ─────────────────────────────────────────────────────────
-    function curLang() { return LANGS.find((l) => l.code === enrollLang); }
-    function renderEnrollLangs() {
-      const wrap = $('px-enroll-langs'); wrap.innerHTML = '';
-      LANGS.forEach((l) => {
-        const b = document.createElement('button');
-        b.className = 'px-lang' + (l.code === enrollLang ? ' is-on' : '');
-        b.type = 'button';
-        b.innerHTML = (enrolled.has(l.code) ? '<span class="px-check"></span>' : '') + l.label;
-        b.onclick = () => { enrollLang = l.code; renderEnrollLangs(); $('px-phrase').textContent = curLang().phrase; resetReview(); };
-        wrap.appendChild(b);
-      });
-      $('px-phrase').textContent = curLang().phrase;
+    // ── interview UI ────────────────────────────────────────────────────────
+    function renderQuestion() {
+      $('px-question').textContent = QUESTIONS[qIndex % QUESTIONS.length];
+      $('px-q-label').textContent = answersCount === 0
+        ? 'Answer out loud, in any language:'
+        : 'Question ' + (qIndex + 1) + ' · answer in any language:';
+      const prog = $('px-progress'); prog.innerHTML = '';
+      for (let i = 0; i < QUESTIONS.length; i++) {
+        const d = document.createElement('span');
+        d.className = 'px-dot' + (i < answersCount ? ' is-done' : (i === (qIndex % QUESTIONS.length) ? ' is-now' : ''));
+        prog.appendChild(d);
+      }
     }
     function resetReview() {
       recBlob = null;
       $('px-review').hidden = true;
-      $('px-rec-state').textContent = 'Tap to record';
+      $('px-rec-state').textContent = 'Tap to answer';
       $('px-rec-timer').textContent = '0:00';
     }
     function setMsg(el, kind, text) { el.className = 'px-msg' + (kind ? ' is-' + kind : ''); el.textContent = text || ''; }
@@ -286,7 +272,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
       try {
         await startRec();
         btn.classList.add('is-rec');
-        $('px-rec-state').textContent = 'Recording… tap to stop';
+        $('px-rec-state').textContent = 'Listening… tap to stop';
       } catch (e) {
         setMsg($('px-enroll-msg'), 'err', 'Microphone permission is needed to record your voice.');
       }
@@ -294,28 +280,30 @@ import AppLayout from '../../layouts/AppLayout.astro';
 
     async function onSave() {
       if (!recBlob) return;
-      const l = curLang();
       const btn = $('px-save'); btn.disabled = true;
-      setMsg($('px-enroll-msg'), 'busy', 'Checking it’s really you and saving privately…');
+      setMsg($('px-enroll-msg'), 'busy', 'Saving privately…');
       try {
         const audio_base64 = await blobToB64(recBlob);
         const r = await fetch(API + '/api/voice-clone/enroll', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + session.token },
-          body: JSON.stringify({ language: l.code, audio_base64, mime_type: 'audio/wav', prompt_phrase: l.phrase }),
+          body: JSON.stringify({ audio_base64, mime_type: 'audio/wav', prompt_phrase: QUESTIONS[qIndex % QUESTIONS.length] }),
         });
         const j = await r.json();
         if (j.ok) {
-          const n = (clipCounts[l.code] || 0) + 1;
-          setMsg($('px-enroll-msg'), 'ok', 'Saved — ' + n + ' ' + l.label + ' clip' + (n > 1 ? 's' : '') + '. The more you record (different moods, sentences), the more it sounds like you — record another?');
+          qIndex++;
           resetReview();
-          await loadStatus();
+          await loadStatus();              // refreshes answersCount from the server
+          renderQuestion();
+          const done = answersCount >= QUESTIONS.length;
+          setMsg($('px-enroll-msg'), 'ok', done
+            ? 'Your Persona is ready — answer more any time to make it even more you.'
+            : 'Got it (' + answersCount + '/' + QUESTIONS.length + '). Here’s the next one.');
         } else {
           const code = j.error && j.error.code;
           const map = {
-            liveness_failed: 'That didn’t match the phrase — please read it aloud, exactly, clearly.',
-            clip_too_short: 'Too short — read the whole phrase, then stop.',
-            liveness_unavailable: 'Couldn’t verify the recording just now. Please try again.',
+            clip_too_short: 'A bit short — say a full sentence or two.',
+            no_speech: 'Didn’t catch any speech — try again, a little louder.',
           };
           setMsg($('px-enroll-msg'), 'err', map[code] || (j.error && j.error.message) || 'Could not save. Try again.');
         }
@@ -325,36 +313,31 @@ import AppLayout from '../../layouts/AppLayout.astro';
     }
 
     async function loadStatus() {
+      let total = 0, ready = false;
       try {
         const r = await fetch(API + '/api/voice-clone/status', { headers: { Authorization: 'Bearer ' + session.token } });
         const j = await r.json();
-        enrolled = new Set(((j.data && j.data.clones) || []).filter((c) => c.status === 'ready').map((c) => c.language));
-        clipCounts = (j.data && j.data.clips) || {};
-      } catch { /* leave enrolled as-is */ }
-      // reflect everywhere
-      const ready = enrolled.size > 0;
-      const totalClips = Object.values(clipCounts).reduce((a, b) => a + b, 0) || enrolled.size;
-      $('px-voice-tag').textContent = ready
-        ? totalClips + ' recording' + (totalClips > 1 ? 's' : '') + ' · ' + enrolled.size + ' language' + (enrolled.size > 1 ? 's' : '')
-        : 'not recorded yet';
+        const counts = (j.data && j.data.clips) || {};
+        total = Object.values(counts).reduce((a, b) => a + b, 0);
+        if (!total && j.data && Array.isArray(j.data.clones)) total = j.data.clones.filter((c) => c.status === 'ready').length;
+        ready = total > 0;
+      } catch { /* keep current */ }
+      answersCount = total;
+      if (qIndex < answersCount) qIndex = answersCount;   // resume where they left off
+      $('px-voice-tag').textContent = ready ? (total + ' answer' + (total > 1 ? 's' : '') + ' recorded') : 'not started';
       $('px-voice-tag').classList.toggle('is-ready', ready);
-      renderEnrollLangs();
-      const list = $('px-enrolled-list'); list.innerHTML = '';
-      LANGS.filter((l) => enrolled.has(l.code)).forEach((l) => {
-        const n = clipCounts[l.code] || 1;
-        const li = document.createElement('li');
-        li.innerHTML = '<span class="px-check"></span>' + l.label + ' <span class="px-clip-count">· ' + n + ' clip' + (n > 1 ? 's' : '') + '</span>';
-        list.appendChild(li);
-      });
       $('px-enrolled').hidden = !ready;
-      renderTalkOptions();
+      if (ready) $('px-enrolled-label').textContent = total + ' answer' + (total > 1 ? 's' : '') + ' saved — your Persona can speak in your voice.';
+      renderQuestion();
     }
 
     async function onDelete() {
-      if (!confirm('Delete your voice in all languages? This removes your recordings permanently.')) return;
+      if (!confirm('Delete your voice? This removes all your saved recordings permanently.')) return;
       const btn = $('px-delete'); btn.disabled = true;
       try {
         await fetch(API + '/api/voice-clone', { method: 'DELETE', headers: { Authorization: 'Bearer ' + session.token } });
+        qIndex = 0;
+        for (const k in refCache) delete refCache[k];
         await loadStatus();
         setMsg($('px-enroll-msg'), 'ok', 'Your voice was deleted.');
       } catch { setMsg($('px-enroll-msg'), 'err', 'Could not delete. Try again.'); }
@@ -362,16 +345,6 @@ import AppLayout from '../../layouts/AppLayout.astro';
     }
 
     // ── talk ──────────────────────────────────────────────────────────────
-    function renderTalkOptions() {
-      const sel = $('px-talk-select'); const prev = sel.value;
-      sel.innerHTML = '';
-      LANGS.forEach((l) => {
-        const o = document.createElement('option'); o.value = l.code;
-        o.textContent = l.label + (enrolled.has(l.code) ? ' · your voice' : ' · stand-in');
-        sel.appendChild(o);
-      });
-      if (prev) sel.value = prev;
-    }
     function addBubble(kind, text) {
       const d = document.createElement('div');
       d.className = 'px-bubble px-bubble-' + kind;
@@ -382,45 +355,48 @@ import AppLayout from '../../layouts/AppLayout.astro';
     }
 
     // ── Streaming voice pipeline ────────────────────────────────────────────
-    // To feel real-time (~1–2s) on a NON-streaming clone engine, we don't wait for
-    // the whole reply: as the LLM streams, we cut it into sentences, synthesize each
-    // the moment it completes, and play them back-to-back. First audio lands after
-    // sentence 1 — not the whole answer. A turn id lets a new turn cancel the old
-    // pipeline (basic barge-in).
+    // As the LLM streams, we cut the reply into sentences, synthesize each the moment
+    // it completes, and play them back-to-back. First audio lands after ~1 sentence,
+    // not the whole answer. A turn id lets a new turn cancel the old pipeline (barge-in).
     let turnSeq = 0;
     let synthQ = [], synthRunning = false;
     let audioQ = [], audioPlaying = false;
-    let speakingBubble = null, tapBtnShown = false;
+    let speakingBubble = null, tapBtnShown = false, firstChunkEmitted = false;
 
-    // Split a running buffer into [completeSentences, remainder]. Handles . ? ! plus
-    // the Devanagari/Telugu danda (।) and newlines.
     function extractSentences(buf) {
       const out = []; const re = /[^.!?।\n]*[.!?।\n]+/g; let m, last = 0;
       while ((m = re.exec(buf)) !== null) { out.push(m[0]); last = re.lastIndex; }
       return [out, buf.slice(last)];
     }
+    function takeFirstChunk(buf) {
+      const m = buf.match(/^[^.!?।\n]*[.!?।\n]+/);
+      if (m) return [m[0], buf.slice(m[0].length)];
+      const c = buf.search(/[,;—–]/);
+      if (c >= 25) return [buf.slice(0, c + 1), buf.slice(c + 1)];
+      if (buf.length >= 60) { let cut = buf.lastIndexOf(' ', 60); if (cut < 30) cut = 60; return [buf.slice(0, cut), buf.slice(cut)]; }
+      return [null, buf];
+    }
 
     function resetPipeline() {
       if (speakingBubble) speakingBubble.classList.remove('is-speaking');
-      turnSeq++; synthQ = []; audioQ = []; synthRunning = false; audioPlaying = false; tapBtnShown = false;
+      turnSeq++; synthQ = []; audioQ = []; synthRunning = false; audioPlaying = false; tapBtnShown = false; firstChunkEmitted = false;
       const a = $('px-talk-audio'); try { a.pause(); a.removeAttribute('src'); a.load(); } catch (e) {}
       return turnSeq;
     }
 
-    function enqueueSentence(turn, lang, s) {
+    function enqueueSentence(turn, s) {
       s = (s || '').trim(); if (!s) return;
-      synthQ.push({ turn, lang, s });
+      synthQ.push({ turn, s });
       if (!synthRunning) runSynthWorker();
     }
 
-    // One sentence at a time: preserves voice order and doesn't dogpile the single GPU.
     async function runSynthWorker() {
       synthRunning = true;
-      const warm = await ensureWarm();              // gate synth on a warm engine (cached after first)
+      const warm = await ensureWarm();
       while (synthQ.length) {
         const job = synthQ.shift();
-        if (!warm || job.turn !== turnSeq) continue;  // engine down / stale turn → drop
-        const blob = await synthSentence(job.s, job.lang).catch(() => null);
+        if (!warm || job.turn !== turnSeq) continue;
+        const blob = await synthSentence(job.s).catch(() => null);
         if (blob && job.turn === turnSeq) enqueueAudio(job.turn, blob);
       }
       synthRunning = false;
@@ -439,9 +415,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
       const url = URL.createObjectURL(job.blob);
       a.src = url;
       a.onended = () => { URL.revokeObjectURL(url); playNextAudio(); };
-      a.play().catch(() => {           // autoplay blocked → requeue + offer a tap
-        URL.revokeObjectURL(url); audioQ.unshift(job); audioPlaying = false; offerTapToHear();
-      });
+      a.play().catch(() => { URL.revokeObjectURL(url); audioQ.unshift(job); audioPlaying = false; offerTapToHear(); });
     }
     function offerTapToHear() {
       if (tapBtnShown || !speakingBubble) return;
@@ -454,22 +428,17 @@ import AppLayout from '../../layouts/AppLayout.astro';
     }
 
     async function sendTurn(text) {
-      const lang = $('px-talk-select').value;
-      const myTurn = resetPipeline();              // cancel any prior turn's audio (barge-in)
+      const myTurn = resetPipeline();
       addBubble('me', text);
       history.push({ role: 'user', content: text });
       const thinking = addBubble('ai', '…'); thinking.classList.add('is-thinking');
       speakingBubble = thinking;
 
-      // Warm the engine + prefetch the voice reference NOW, in parallel with the chat
-      // stream, so synthesis can start the instant the first sentence is ready.
       const warmStatus = document.createElement('div');
       warmStatus.style.cssText = 'font-size:.82em;opacity:.75;margin-top:.45rem;';
       thinking.appendChild(warmStatus);
-      ensureWarm(warmStatus).then((okWarm) => {
-        warmStatus.textContent = okWarm ? '' : '(voice unavailable right now — your reply is above)';
-      });
-      getUserRef(lang).catch(() => null);
+      ensureWarm(warmStatus).then((okWarm) => { warmStatus.textContent = okWarm ? '' : '(voice unavailable right now — your reply is above)'; });
+      getUserRef().catch(() => null);
 
       try {
         const cr = await fetch(API + '/api/chat', {
@@ -477,7 +446,6 @@ import AppLayout from '../../layouts/AppLayout.astro';
           body: JSON.stringify({ user_id: session.userId, messages: history.slice(-12) }),
         });
         if (!cr.ok || !cr.body) throw new Error('http_' + cr.status);
-        // /api/chat streams SSE: data: {"delta":"…"} … data: {"done":true}
         const reader = cr.body.getReader();
         const decoder = new TextDecoder();
         let reply = '', buf = '', sentBuf = '';
@@ -498,13 +466,19 @@ import AppLayout from '../../layouts/AppLayout.astro';
             if (obj.delta) {
               reply += obj.delta; sentBuf += obj.delta;
               thinking.textContent = reply; $('px-thread').scrollTop = $('px-thread').scrollHeight;
-              const [sents, rest] = extractSentences(sentBuf); sentBuf = rest;
-              for (const s of sents) enqueueSentence(myTurn, lang, s);   // synth as we stream
+              if (!firstChunkEmitted) {
+                const [fc, rest0] = takeFirstChunk(sentBuf);
+                if (fc) { sentBuf = rest0; firstChunkEmitted = true; enqueueSentence(myTurn, fc); }
+              }
+              if (firstChunkEmitted) {
+                const [sents, rest] = extractSentences(sentBuf); sentBuf = rest;
+                for (const s of sents) enqueueSentence(myTurn, s);
+              }
             }
             if (obj.error) throw new Error(String(obj.error));
           }
         }
-        if (sentBuf.trim()) enqueueSentence(myTurn, lang, sentBuf);       // flush the tail sentence
+        if (sentBuf.trim()) enqueueSentence(myTurn, sentBuf);
         reply = (reply.trim()) || 'Sorry, I could not reply just now.';
         thinking.textContent = reply;
         history.push({ role: 'assistant', content: reply });
@@ -513,16 +487,11 @@ import AppLayout from '../../layouts/AppLayout.astro';
       }
     }
 
-    // ── Voice: talk back via the self-hosted Svara-TTS engine (Modal GPU), called
-    // DIRECTLY from the browser so the GPU cold-start (~2 min, one-time) isn't bound
-    // by a serverless function timeout. Phase 1 = natural language preset voice;
-    // phase 2 will swap to the user's clone (reference_audio + reference_transcript). ──
-    // Your own voice-infer engine (OmniVoice — cross-lingual clone incl. Telugu).
+    // ── Voice: the self-hosted OmniVoice engine (Modal GPU), called directly from the
+    // browser. OmniVoice is multilingual and speaks whatever language the text is in —
+    // no language param needed; it clones from the user's saved reference. ──
     const SVARA_URL = 'https://ceo-91462--voice-infer-fastapi-app.modal.run';
     let svaraWarm = false;
-    // Unlock the <audio> element during a real user gesture (the Send tap) by playing
-    // 0.1s of silence — so the browser lets us auto-play the spoken reply later, even
-    // after the synth delay (otherwise autoplay is blocked and only a manual tap works).
     let audioUnlocked = false;
     function unlockAudio() {
       if (audioUnlocked) return;
@@ -535,14 +504,9 @@ import AppLayout from '../../layouts/AppLayout.astro';
       } catch (e) {}
     }
     function svaraWarmPing() {
-      // Fire-and-forget no-cors warm-up — kicks the GPU container awake WITHOUT
-      // tripping CORS on Modal's cold-start redirect (no-cors fetches skip CORS).
       try { fetch(SVARA_URL + '/health', { mode: 'no-cors', cache: 'no-store' }); } catch (e) {}
     }
     async function svaraReady() {
-      // A real CORS GET returns 200 ONLY once the container is warm. While it's cold,
-      // Modal 303-redirects to a polling URL with no CORS header, so this fetch throws —
-      // we treat that throw as "still warming" and poll until it answers a clean 200.
       try { const r = await fetch(SVARA_URL + '/health', { cache: 'no-store' }); return r.ok; }
       catch (e) { return false; }
     }
@@ -551,48 +515,42 @@ import AppLayout from '../../layouts/AppLayout.astro';
       svaraWarmPing();
       for (let i = 0; i < 75; i++) {
         if (await svaraReady()) { svaraWarm = true; return true; }
-        if (status) status.textContent = '🔊 warming up your voice (first time, ~2 min)…';
+        if (status) status.textContent = '🔊 warming up your voice (first time, ~30s)…';
         await new Promise((r) => setTimeout(r, 4000));
       }
       return false;
     }
-    // Fetch the user's saved reference clip (base64) so the engine speaks in THEIR
-    // voice. Cached per language. Falls back to null → preset voice if none saved.
+    // Fetch the user's best saved reference clip (base64) so the engine speaks in THEIR
+    // voice. No language needed — the engine clones cross-lingually and speaks the text.
     const refCache = {};
-    async function getUserRef(language) {
-      if (refCache[language] !== undefined) return refCache[language];
+    async function getUserRef() {
+      if (refCache.best !== undefined) return refCache.best;
       let ref = null;
       try {
         if (session && session.token) {
-          const r = await fetch(API + '/api/voice-clone/ref?language=' + encodeURIComponent(language), { headers: { Authorization: 'Bearer ' + session.token } });
+          const r = await fetch(API + '/api/voice-clone/ref', { headers: { Authorization: 'Bearer ' + session.token } });
           if (r.ok) {
             const d = (await r.json()).data || {};
             if (d.audio_base64) ref = { b64: d.audio_base64, transcript: d.transcript || '' };
           }
         }
       } catch (e) { ref = null; }
-      refCache[language] = ref;
+      refCache.best = ref;
       return ref;
     }
     // Synthesize ONE sentence in the user's cloned voice → audio Blob (or null).
-    // Clone mode uses the saved reference clip; falls back to a preset voice if the
-    // clone call fails, so the persona still speaks. Playback is the queue's job.
-    async function synthSentence(text, language) {
-      const ref = await getUserRef(language).catch(() => null);
-      const body = { language, text, mode: (ref && ref.b64) ? 'clone' : 'preset', format: 'mp3' };
+    async function synthSentence(text) {
+      const ref = await getUserRef().catch(() => null);
+      const body = { text, mode: (ref && ref.b64) ? 'clone' : 'preset', format: 'mp3' };
       if (ref && ref.b64) { body.reference_base64 = ref.b64; body.reference_transcript = ref.transcript; }
-      const synth = (b) => fetch(SVARA_URL + '/synthesize', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(b),
-      });
+      const synth = (b) => fetch(SVARA_URL + '/synthesize', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(b) });
       let res = await synth(body).catch(() => null);
-      if ((!res || !res.ok) && body.mode === 'clone') {
-        res = await synth({ language, text, mode: 'preset', format: 'mp3' }).catch(() => null);
-      }
+      if ((!res || !res.ok) && body.mode === 'clone') res = await synth({ text, mode: 'preset', format: 'mp3' }).catch(() => null);
       if (!res || !res.ok) return null;
       return await res.blob();
     }
 
-    // browser speech-to-text for hands-free input (optional, no backend cost)
+    // Hands-free voice input — browser STT in the user's own locale (no language picker).
     let recog = null, listening = false;
     function setupVoiceIn() {
       const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -600,9 +558,9 @@ import AppLayout from '../../layouts/AppLayout.astro';
       $('px-voicein').onclick = () => {
         if (listening) { recog && recog.stop(); return; }
         recog = new SR();
-        recog.lang = (LANGS.find((l) => l.code === $('px-talk-select').value) || LANGS[0]).stt;
+        recog.lang = navigator.language || 'en-US';
         recog.interimResults = false; recog.maxAlternatives = 1;
-        recog.onresult = (e) => { const t = e.results[0][0].transcript; if (t) sendTurn(t.trim()); };
+        recog.onresult = (e) => { const t = e.results[0][0].transcript; if (t) { unlockAudio(); sendTurn(t.trim()); } };
         recog.onend = () => { listening = false; $('px-voicein').classList.remove('is-rec'); };
         recog.onerror = () => { listening = false; $('px-voicein').classList.remove('is-rec'); };
         listening = true; $('px-voicein').classList.add('is-rec'); recog.start();
@@ -611,16 +569,11 @@ import AppLayout from '../../layouts/AppLayout.astro';
 
     // ── boot ──────────────────────────────────────────────────────────────
     (async () => {
-      // AppLayout gates the whole beta app, so by here the user is signed in.
-      svaraWarmPing();   // start warming the voice GPU now — overlaps with the user recording/reading
+      svaraWarmPing();   // start warming the voice GPU now — overlaps with the interview
       session = await getSession();
-      // After a hard refresh the Supabase session can hydrate a beat late — retry
-      // briefly so the first loadStatus() runs with a real token (fixes the saved
-      // voice wrongly showing as "deleted" on reload).
       for (let i = 0; !session && i < 20; i++) { await new Promise((r) => setTimeout(r, 150)); session = await getSession(); }
       $('px-app').hidden = false;
-      renderEnrollLangs();
-      renderTalkOptions();
+      renderQuestion();
       setupVoiceIn();
       $('px-rec-btn').onclick = onRecClick;
       $('px-save').onclick = onSave;
@@ -629,12 +582,10 @@ import AppLayout from '../../layouts/AppLayout.astro';
       $('px-form').addEventListener('submit', (e) => {
         e.preventDefault();
         const v = $('px-input').value.trim(); if (!v) return;
-        unlockAudio();                 // bless audio playback within this user gesture
+        unlockAudio();
         $('px-input').value = ''; sendTurn(v);
       });
       await loadStatus();
-      // Keep the token fresh and re-sync the saved voice whenever auth hydrates or
-      // the token auto-refreshes — so a reload never loses the recorded voice.
       if (supabase) {
         supabase.auth.onAuthStateChange((_event, s) => {
           if (s) { session = { token: s.access_token, userId: s.user.id, email: s.user.email }; loadStatus(); }

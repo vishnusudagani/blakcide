@@ -537,7 +537,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
       }
       function showSessionExpired() {
         immersive(false);
-        root.innerHTML = `<div class="mnx-msg">Your sign-in has expired. Please sign in again to keep talking.<div class="mnx-retry"><a href="/?auth=1" class="mnx-go" style="display:inline-flex;width:auto;padding:.7rem 1.4rem;text-decoration:none">Sign in again</a></div></div>`;
+        root.innerHTML = `<div class="mnx-msg">Your sign-in has expired. Please sign in again to keep talking.<div class="mnx-retry"><a href="/beta/?auth=1" class="mnx-go" style="display:inline-flex;width:auto;padding:.7rem 1.4rem;text-decoration:none">Sign in again</a></div></div>`;
       }
 
       function showSchedule(isAnonymous) {

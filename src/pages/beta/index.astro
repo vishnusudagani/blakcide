@@ -22,12 +22,28 @@ const starters = ["I'm overwhelmed", 'Plan my day', 'Help me focus', 'Just talk'
         <span class="hx-blak-id"><b>Blak</b><i><span class="hx-dot"></span>always on · knows you</i></span>
         <a class="hx-blak-open" href="/beta/blak/">Open<span aria-hidden="true"> →</span></a>
       </div>
-      <p class="hx-blak-say" id="hx-blak-say">What's on your mind? I'm right here.</p>
+      <p class="hx-blak-say" id="hx-blak-say">Blak noticed a few things worth keeping close.</p>
+      <div class="hx-insights" id="hx-insights" aria-label="Blak insights">
+        <a class="hx-insight" href="/beta/blak/?q=why%20am%20I%20happier%20on%20Wednesdays">
+          <span class="hx-insight-dot" aria-hidden="true"></span>
+          <strong>You seem happier on Wednesdays.</strong>
+          <span>See why</span>
+        </a>
+        <a class="hx-insight" href="/beta/blak/?q=remind%20me%20to%20call%20Raj%20at%205PM">
+          <span class="hx-insight-dot warm" aria-hidden="true"></span>
+          <strong>Call Raj at 5 PM.</strong>
+          <span>Reminder</span>
+        </a>
+      </div>
       <form class="hx-ask" action="/beta/blak/" method="get">
         <input type="text" id="hx-ask-input" name="q" autocomplete="off" enterkeyhint="send" placeholder="Message Blak…" aria-label="Message Blak" />
-        <button type="submit" aria-label="Send to Blak">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        <button class="hx-action-btn" type="button" id="hx-call" aria-label="Call Blak">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
         </button>
+        <button class="hx-action-btn" type="button" id="hx-add" aria-label="Add media or voice note">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+        </button>
+        <input type="file" id="hx-add-file" accept="image/*,audio/*,video/*" hidden />
       </form>
 
       <!-- real recent chats (filled from localStorage); falls back to starters -->
@@ -97,16 +113,25 @@ const starters = ["I'm overwhelmed", 'Plan my day', 'Help me focus', 'Just talk'
     .hx-blak-open { margin-left: auto; flex: none; font-size: var(--fs-sm); font-weight: 600; color: var(--coral); text-decoration: none; padding: .35rem .7rem; border-radius: var(--r-pill); transition: background .18s var(--ease-out); }
     .hx-blak-open:hover { background: rgba(255,107,157,.1); }
     html[data-theme="light"] .hx-blak-open { color: var(--coral-ink); }
-    .hx-blak-say { margin: 1rem 0 .9rem; font-size: var(--fs-xl); line-height: 1.4; color: var(--ink); }
+    .hx-blak-say { margin: 1rem 0 .7rem; font-size: var(--fs-xl); line-height: 1.4; color: var(--ink); transition: opacity .22s var(--ease-out), transform .22s var(--ease-out), max-height .22s var(--ease-out), margin .22s var(--ease-out); }
+    .hx-blak.is-chatting .hx-blak-say,
+    .hx-blak.is-chatting .hx-insights { opacity: 0; transform: translateY(8px); max-height: 0; margin: 0; pointer-events: none; overflow: hidden; }
 
-    .hx-ask { display: flex; align-items: center; gap: .5rem; padding: .35rem .35rem .35rem 1rem; border-radius: var(--r-pill); background: var(--surface); border: 1px solid var(--line-strong); transition: border-color .18s var(--ease-out), box-shadow .18s var(--ease-out); }
-    .hx-ask:focus-within { border-color: var(--coral); box-shadow: 0 0 0 3px rgba(255,107,157,.14); }
-    .hx-ask input { flex: 1; min-width: 0; border: 0; background: none; color: var(--ink); font: inherit; font-size: var(--fs-md); padding: .55rem 0; }
+    .hx-insights { display: flex; flex-direction: column; gap: .48rem; margin: 0 0 .95rem; max-height: 140px; transition: opacity .22s var(--ease-out), transform .22s var(--ease-out), max-height .22s var(--ease-out), margin .22s var(--ease-out); }
+    .hx-insight { display: grid; grid-template-columns: 18px minmax(0, 1fr) auto; align-items: center; gap: .55rem; min-height: 48px; padding: .6rem .78rem; border-radius: var(--r-pill); background: var(--glass); border: 1px solid var(--line-strong); color: inherit; text-decoration: none; backdrop-filter: blur(18px) saturate(140%); }
+    .hx-insight-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--lavender); box-shadow: 0 0 12px rgba(201,184,255,.55); justify-self: center; }
+    .hx-insight-dot.warm { background: var(--gold); box-shadow: 0 0 12px rgba(255,210,122,.55); }
+    .hx-insight strong { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-md); font-weight: 650; color: var(--ink); }
+    .hx-insight span:last-child { font-family: var(--font-mono); font-size: var(--fs-3xs); letter-spacing: .08em; text-transform: uppercase; color: var(--ink-faint); white-space: nowrap; }
+
+    .hx-ask { display: grid; grid-template-columns: minmax(0, 1fr) 44px 44px; align-items: center; gap: .55rem; padding: 0; border-radius: 0; background: transparent; border: 0; }
+    .hx-ask:focus-within input { border-color: var(--coral); box-shadow: 0 0 0 3px rgba(255,107,157,.14); }
+    .hx-ask input { flex: 1; min-width: 0; height: 48px; border: 1px solid var(--line-strong); border-radius: var(--r-pill); background: var(--glass); color: var(--ink); font: inherit; font-size: var(--fs-md); padding: 0 1rem; backdrop-filter: blur(18px) saturate(140%); }
     .hx-ask input::placeholder { color: var(--ink-faint); }
     .hx-ask input:focus { outline: none; }
-    .hx-ask button { flex: none; width: 40px; height: 40px; border-radius: 50%; border: 0; cursor: pointer; color: var(--cta-ink); background: var(--cta); box-shadow: var(--shadow-cta); display: grid; place-items: center; transition: transform .16s var(--ease-out); }
-    .hx-ask button:hover { transform: scale(1.06); }
-    .hx-ask button svg { width: 18px; height: 18px; }
+    .hx-action-btn { flex: none; width: 44px; height: 44px; border-radius: 50%; border: 1px solid var(--line-strong); cursor: pointer; color: var(--ink); background: var(--glass); box-shadow: none; display: grid; place-items: center; transition: transform .16s var(--ease-out), border-color .16s var(--ease-out), background .16s var(--ease-out); backdrop-filter: blur(18px) saturate(140%); }
+    .hx-action-btn:hover { transform: scale(1.06); border-color: var(--coral); background: var(--surface-strong); }
+    .hx-action-btn svg { width: 18px; height: 18px; }
 
     .hx-mini { font-family: var(--font-mono); font-size: var(--fs-2xs); letter-spacing: .1em; text-transform: uppercase; color: var(--ink-faint); margin: 1.1rem 0 .5rem; }
     .hx-recent[hidden] { display: none; }
@@ -201,6 +226,20 @@ const starters = ["I'm overwhelmed", 'Plan my day', 'Help me focus', 'Just talk'
         "Here whenever you are. What's going on?"
       ];
       var say = document.getElementById('hx-blak-say'); if (say) say.textContent = lines[h % lines.length];
+      say = document.getElementById('hx-blak-say'); if (say) say.textContent = 'Blak noticed a few things worth keeping close.';
+
+      var blakCard = document.querySelector('.hx-blak');
+      var ask = document.getElementById('hx-ask-input');
+      var call = document.getElementById('hx-call');
+      var add = document.getElementById('hx-add');
+      var file = document.getElementById('hx-add-file');
+      function chatMode() { if (blakCard) blakCard.classList.add('is-chatting'); }
+      if (ask) {
+        ask.addEventListener('focus', chatMode);
+        ask.addEventListener('input', chatMode);
+      }
+      if (call) call.addEventListener('click', function () { window.location.href = '/beta/blak/?call=1'; });
+      if (add && file) add.addEventListener('click', function () { file.click(); });
     })();
   </script>
 

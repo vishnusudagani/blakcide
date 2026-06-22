@@ -392,7 +392,9 @@
     // Send OAuth / magic-link straight to the app. /beta/ loads the Supabase client
     // (see AppLayout) which consumes the token and establishes the session right
     // there — no homepage round-trip / redirect-timing to get wrong.
-    var redirectTo = window.location.origin + '/beta/';
+    // Always return to the canonical (non-www) origin, so the OAuth token-hash is never
+    // lost to a www->non-www redirect and the session lands on one consistent store.
+    var redirectTo = window.location.origin.replace('://www.', '://') + '/beta/';
 
 
     function clearNote() { note.hidden = true; note.textContent = ''; note.classList.remove('is-error', 'is-ok'); }

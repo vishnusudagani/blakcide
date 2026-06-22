@@ -3,649 +3,1004 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Blaksyd</title>
+    <title>Blaksyd Beta</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="app-style.css">
-    <link rel="stylesheet" href="blakcide-ui-v3.css">
+    <link rel="stylesheet" href="blaksyd-pulse.css?v=20260428b">
     <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
     <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        html, body {
-            height: 100dvh;
-            background: var(--bg);
-            overflow: hidden;
+        :root {
+            --beta-bg: #08091A;
+            --beta-text: #F8F4EA;
+            --beta-muted: rgba(248, 244, 234, 0.76);
+            --beta-soft: rgba(248, 244, 234, 0.58);
+            --glass: rgba(8, 9, 26, 0.52);
+            --glass-strong: rgba(8, 9, 26, 0.72);
+            --glass-line: rgba(248, 244, 234, 0.18);
+            --input-bg: rgba(250, 244, 236, 0.12);
+            --input-text: #F8F4EA;
+            --input-placeholder: rgba(248, 244, 234, 0.58);
+            --cyan: #5BC0FF;
+            --pink: #FF6B9D;
+            --violet: #C9B8FF;
+            --lime: #B4F0DE;
+            --orange: #FFD27A;
+            --bg-a: rgba(255, 210, 122, 0.16);
+            --bg-b: rgba(255, 107, 157, 0.18);
+            --bg-c: rgba(201, 184, 255, 0.16);
+            --bg-solid-1: #08091A;
+            --bg-solid-2: #11132E;
+            --bg-solid-3: #1F1A3C;
+            --shadow-neon: 0 18px 60px rgba(255, 210, 122, 0.13), 0 24px 90px rgba(201, 184, 255, 0.12);
         }
 
-        /* App shell */
-        .dashboard-layout {
-            display: flex;
+        body.light-mode {
+            --beta-bg: #FAF4EC;
+            --beta-text: #14122A;
+            --beta-muted: rgba(20, 18, 42, 0.74);
+            --beta-soft: rgba(20, 18, 42, 0.56);
+            --glass: rgba(250, 244, 236, 0.72);
+            --glass-strong: rgba(250, 244, 236, 0.90);
+            --glass-line: rgba(20, 18, 42, 0.16);
+            --input-bg: rgba(255, 255, 255, 0.74);
+            --input-text: #14122A;
+            --input-placeholder: rgba(20, 18, 42, 0.50);
+            --cyan: #1872B0;
+            --pink: #C71F66;
+            --violet: #7459CE;
+            --lime: #1E7D62;
+            --orange: #8A6410;
+            --bg-a: rgba(255, 212, 184, 0.70);
+            --bg-b: rgba(255, 207, 216, 0.64);
+            --bg-c: rgba(201, 184, 255, 0.52);
+            --bg-solid-1: #FAF4EC;
+            --bg-solid-2: #F2E9D5;
+            --bg-solid-3: #FFFCF4;
+            --shadow-neon: 0 18px 60px rgba(60, 40, 20, 0.14), 0 24px 90px rgba(199, 31, 102, 0.09);
+        }
+
+        * { box-sizing: border-box; }
+        html, body {
+            width: 100%;
+            height: 100dvh;
+            margin: 0;
+            overflow: hidden;
+            background: var(--beta-bg);
+            color: var(--beta-text);
+            font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            letter-spacing: 0;
+        }
+
+        body::before {
+            content: "";
+            position: fixed;
+            inset: 0;
+            background:
+                radial-gradient(circle at 16% 18%, var(--bg-a), transparent 28%),
+                radial-gradient(circle at 84% 16%, var(--bg-b), transparent 30%),
+                radial-gradient(circle at 50% 92%, var(--bg-c), transparent 38%),
+                linear-gradient(160deg, var(--bg-solid-1) 0%, var(--bg-solid-2) 48%, var(--bg-solid-3) 100%);
+            pointer-events: none;
+        }
+
+        .beta-shell {
+            position: relative;
             width: 100vw;
             height: 100dvh;
+            isolation: isolate;
             overflow: hidden;
-            position: relative;
         }
 
-        /* Scrollable main area */
-        .dashboard-main {
-            flex: 1;
+        .ambient-veil {
+            position: absolute;
+            inset: -20%;
+            background:
+                conic-gradient(from 180deg at 50% 50%, rgba(56, 255, 231, 0.16), rgba(255, 77, 240, 0.18), rgba(215, 255, 84, 0.10), rgba(56, 255, 231, 0.16));
+            filter: blur(30px);
+            opacity: 1;
+            animation: floatHue 18s ease-in-out infinite alternate;
+            z-index: -2;
+        }
+
+        .grain {
+            position: absolute;
+            inset: 0;
+            background-image: linear-gradient(rgba(255,255,255,0.035) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+            background-size: 42px 42px;
+            mask-image: radial-gradient(circle at center, black, transparent 78%);
+            opacity: 0.26;
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        @keyframes floatHue {
+            from { transform: rotate(-4deg) scale(1); }
+            to { transform: rotate(7deg) scale(1.08); }
+        }
+
+        .top-rail {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 30;
+            display: grid;
+            grid-template-columns: 52px 1fr 52px 52px;
+            align-items: center;
+            gap: 10px;
+            padding: calc(env(safe-area-inset-top, 0px) + 12px) 16px 8px;
+            pointer-events: none;
+        }
+
+        .world-title {
+            min-width: 0;
+            text-align: center;
+            pointer-events: none;
+        }
+
+        .world-kicker {
+            display: block;
+            font-size: 0.62rem;
+            font-weight: 800;
+            color: var(--beta-soft);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .world-name {
+            display: block;
+            margin-top: 2px;
+            font-size: 1.08rem;
+            font-weight: 800;
+            letter-spacing: 0;
+        }
+
+        .glass-icon {
+            width: 46px;
+            height: 46px;
+            border: 1px solid var(--glass-line);
+            border-radius: 50%;
+            color: #fff;
+            background: linear-gradient(145deg, var(--glass-strong), var(--glass));
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.38), 0 14px 34px rgba(0,0,0,0.28);
+            backdrop-filter: blur(24px) saturate(170%);
+            -webkit-backdrop-filter: blur(24px) saturate(170%);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+            cursor: pointer;
+            pointer-events: auto;
+            -webkit-tap-highlight-color: transparent;
+            transition: transform 180ms ease, border-color 180ms ease, background 180ms ease;
+        }
+
+        .glass-icon:active { transform: scale(0.92); }
+        .glass-icon:hover { border-color: rgba(255,255,255,0.38); background: linear-gradient(145deg, rgba(255,255,255,0.25), rgba(255,255,255,0.09)); }
+
+        body.light-mode .glass-icon {
+            color: #111426;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.88), 0 14px 34px rgba(65, 82, 112, 0.16);
+        }
+
+        .profile-dot {
+            overflow: hidden;
+            justify-self: end;
+        }
+
+        .profile-dot img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 50%;
+            display: none;
+        }
+
+        .world-viewport {
+            height: 100%;
+            overflow: hidden;
+            touch-action: pan-y;
+        }
+
+        .world-track {
+            height: 100%;
+            display: flex;
+            width: 300vw;
+            transform: translate3d(-100vw, 0, 0);
+            transition: transform 420ms cubic-bezier(0.22, 1, 0.36, 1);
+            will-change: transform;
+        }
+
+        .world-track.dragging { transition: none; }
+
+        .world {
+            width: 100vw;
+            height: 100dvh;
+            flex: 0 0 100vw;
             overflow-y: auto;
             overflow-x: hidden;
             -webkit-overflow-scrolling: touch;
-            min-width: 0;
+            padding: calc(env(safe-area-inset-top, 0px) + 88px) 16px calc(env(safe-area-inset-bottom, 0px) + 112px);
         }
 
-        .home-wrap {
-            min-height: 100%;
+        .world-inner {
+            width: min(100%, 880px);
+            min-height: calc(100dvh - 210px);
+            margin: 0 auto;
             display: flex;
             flex-direction: column;
-            padding-top: env(safe-area-inset-top, 0px);
-            padding-bottom: 32px;
+            gap: 14px;
         }
 
-        /* Mobile header */
-        .dash-mobile-header {
-            display: none;
-            height: var(--header-h);
-            padding: 0 16px;
-            background: var(--surface-1);
-            border-bottom: 1px solid var(--border);
-            align-items: center;
-            justify-content: space-between;
-            flex-shrink: 0;
-            z-index: 50;
-            overflow: hidden;          /* prevent oversized logo bleed */
+        .hero-card,
+        .glass-card {
+            border: 1px solid var(--glass-line);
+            background: linear-gradient(145deg, rgba(255,255,255,0.16), rgba(255,255,255,0.055));
+            box-shadow: var(--shadow-neon), inset 0 1px 0 rgba(255,255,255,0.28);
+            backdrop-filter: blur(28px) saturate(175%);
+            -webkit-backdrop-filter: blur(28px) saturate(175%);
         }
-        .dash-mobile-brand {
+
+        .hero-card {
+            position: relative;
+            overflow: hidden;
+            border-radius: 30px;
+            padding: 26px;
+            min-height: 268px;
+        }
+
+        .hero-card::before {
+            content: "";
+            position: absolute;
+            inset: -1px;
+            background:
+                radial-gradient(circle at 18% 12%, rgba(255,255,255,0.34), transparent 16%),
+                radial-gradient(circle at 82% 28%, rgba(95,255,238,0.24), transparent 30%),
+                radial-gradient(circle at 48% 100%, rgba(255,108,243,0.18), transparent 34%);
+            pointer-events: none;
+        }
+
+        .hero-content { position: relative; z-index: 1; }
+
+        .pill {
             display: inline-flex;
             align-items: center;
-            gap: 8px;
-            line-height: 1;
-            min-width: 0;
-            overflow: hidden;
-        }
-        .dash-mobile-logo {
-            height: 22px;
-            width: auto;
-            max-width: 130px;
-            object-fit: contain;
-            display: block;
-            flex-shrink: 0;
-        }
-        /* The PNG already contains the "blaksyd" wordmark — hide the duplicate text. */
-        .dash-mobile-wordmark { display: none; }
-        @media (max-width: 768px) {
-            .dash-mobile-header { display: flex; }
-            .home-header { display: none; }
+            gap: 7px;
+            padding: 7px 11px;
+            border-radius: 999px;
+            border: 1px solid rgba(255,255,255,0.20);
+            background: rgba(255,255,255,0.10);
+            color: rgba(255,255,255,0.82);
+            font-size: 0.72rem;
+            font-weight: 800;
         }
 
-        /* ── Header ── */
-        .home-header {
+        .hero-title {
+            max-width: 620px;
+            margin: 18px 0 8px;
+            font-size: clamp(2.4rem, 12vw, 5.2rem);
+            line-height: 0.92;
+            font-weight: 800;
+            letter-spacing: 0;
+        }
+
+        .hero-sub {
+            max-width: 520px;
+            margin: 0;
+            color: var(--beta-muted);
+            font-size: 1rem;
+            line-height: 1.55;
+        }
+
+        .blak-orb {
+            position: absolute;
+            right: 20px;
+            bottom: 20px;
+            width: min(36vw, 210px);
+            aspect-ratio: 1;
+            border-radius: 50%;
+            background:
+                radial-gradient(circle at 30% 22%, rgba(255,255,255,0.95), rgba(255,255,255,0.08) 18%, transparent 26%),
+                radial-gradient(circle at 60% 48%, rgba(95,255,238,0.65), transparent 34%),
+                radial-gradient(circle at 44% 58%, rgba(255,108,243,0.56), transparent 42%),
+                rgba(255,255,255,0.08);
+            filter: saturate(130%);
+            box-shadow: inset 0 0 42px rgba(255,255,255,0.18), 0 0 60px rgba(95,255,238,0.20), 0 0 90px rgba(255,108,243,0.18);
+            animation: breathe 5.5s ease-in-out infinite;
+            z-index: 0;
+        }
+
+        @keyframes breathe {
+            0%, 100% { transform: scale(1); opacity: 0.78; }
+            50% { transform: scale(1.045); opacity: 1; }
+        }
+
+        .quick-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .glass-card {
+            border-radius: 24px;
+            padding: 16px;
+            color: var(--beta-text);
+            text-decoration: none;
+        }
+
+        .mini-label {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 18px 22px 10px;
-        }
-        .home-brand {
+            gap: 12px;
+            color: var(--beta-soft);
             font-size: 0.72rem;
             font-weight: 800;
-            letter-spacing: 5px;
-            color: var(--text);
-            opacity: 0.25;
             text-transform: uppercase;
         }
-        .header-icon-btn {
-            width: 36px; height: 36px;
-            display: flex; align-items: center; justify-content: center;
-            background: none; border: none;
-            color: var(--text-3); font-size: 1.2rem;
-            cursor: pointer; border-radius: 50%;
-            transition: color 0.2s, background 0.2s;
-            -webkit-tap-highlight-color: transparent;
-        }
-        .header-icon-btn:hover { color: var(--text); background: var(--surface-2); }
 
-        /* ── Profile row ── */
-        .home-profile-row {
-            display: flex;
-            align-items: center;
-            gap: 14px;
-            padding: 6px 22px 26px;
-            cursor: pointer;
-            -webkit-tap-highlight-color: transparent;
-        }
-        .home-avatar-wrap { position: relative; flex-shrink: 0; }
-        .home-avatar {
-            width: 48px; height: 48px;
-            border-radius: 50%; object-fit: cover;
-            border: 2px solid var(--border-md);
-            background: var(--surface-3);
-            display: block;
-        }
-        .home-avatar-placeholder {
-            width: 48px; height: 48px;
-            border-radius: 50%;
-            border: 2px solid var(--border-md);
-            background: var(--surface-3);
-            display: flex; align-items: center; justify-content: center;
-            font-size: 1.2rem; color: var(--text-3);
-            flex-shrink: 0;
-        }
-        .home-greeting-text { flex: 1; }
-        .home-greeting { font-size: 0.72rem; color: var(--text-3); font-weight: 500; margin-bottom: 2px; text-transform: uppercase; letter-spacing: 0.5px; }
-        .home-name {
-            font-size: 1.1rem;
-            font-weight: 700;
-            color: var(--text);
+        .mini-title {
+            margin-top: 11px;
+            font-size: 1.04rem;
+            font-weight: 800;
             line-height: 1.2;
         }
 
-        /* ── Section label ── */
-        .section-label {
-            font-size: 0.65rem;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            color: var(--text-3);
-            padding: 0 22px;
-            margin-bottom: 12px;
+        .mini-body {
+            margin-top: 8px;
+            color: var(--beta-muted);
+            font-size: 0.86rem;
+            line-height: 1.45;
         }
 
-        /* ── Feature cards ── */
-        .feature-cards {
+        .action-composer {
+            margin-top: auto;
+            display: grid;
+            grid-template-columns: 1fr 52px 52px;
+            gap: 10px;
+            align-items: center;
+            padding: 11px;
+            border-radius: 28px;
+            border: 1px solid rgba(255,255,255,0.20);
+            background: var(--glass);
+            backdrop-filter: blur(26px) saturate(180%);
+            -webkit-backdrop-filter: blur(26px) saturate(180%);
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.26);
+        }
+
+        .blak-home.chatting .blak-insights {
+            opacity: 0;
+            transform: translateY(10px) scale(0.98);
+            pointer-events: none;
+            max-height: 0;
+            margin: 0;
+            padding: 0;
+            border-width: 0;
+            overflow: hidden;
+        }
+
+        .blak-home {
+            justify-content: flex-end;
+            padding-top: min(18vh, 150px);
+        }
+
+        .blak-top-actions {
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        .theme-toggle-icon .moon,
+        body.light-mode .theme-toggle-icon .sun { display: none; }
+
+        body.light-mode .theme-toggle-icon .moon { display: block; }
+
+        .ambient-line {
+            padding: 0 4px 10px;
+            color: var(--beta-muted);
+            font-size: clamp(1.05rem, 3.8vw, 1.45rem);
+            font-weight: 700;
+            line-height: 1.25;
+            max-width: 560px;
+        }
+
+        .persona-float {
+            position: static;
+            width: 48px;
+            height: 48px;
+        }
+
+        .blak-insights {
+            display: grid;
+            gap: 8px;
+            transition: opacity 240ms ease, transform 240ms ease, max-height 260ms ease, padding 260ms ease, margin 260ms ease;
+            max-height: 180px;
+        }
+
+        .insight-line {
+            display: grid;
+            grid-template-columns: 34px 1fr auto;
+            gap: 10px;
+            align-items: center;
+            min-height: 58px;
+            padding: 10px 12px;
+            border-radius: 24px;
+            border: 1px solid var(--glass-line);
+            background: linear-gradient(145deg, var(--glass-strong), var(--glass));
+            color: var(--beta-text);
+            backdrop-filter: blur(20px) saturate(160%);
+            -webkit-backdrop-filter: blur(20px) saturate(160%);
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.16), 0 12px 42px rgba(0,0,0,0.12);
+        }
+
+        .insight-line ion-icon {
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            padding: 8px;
+            color: #1b1030;
+            background: linear-gradient(135deg, var(--orange), var(--pink), var(--violet));
+        }
+
+        .insight-line strong {
+            display: block;
+            font-size: 0.94rem;
+            line-height: 1.25;
+        }
+
+        .insight-line span {
+            color: var(--beta-soft);
+            font-size: 0.76rem;
+            font-weight: 800;
+            white-space: nowrap;
+        }
+
+        .action-composer input {
+            min-width: 0;
+            height: 48px;
+            border: 0;
+            outline: 0;
+            border-radius: 20px;
+            padding: 0 16px;
+            background: var(--input-bg);
+            color: var(--input-text);
+            font: inherit;
+            font-size: 0.94rem;
+        }
+
+        .action-composer input::placeholder { color: var(--input-placeholder); }
+
+        .composer-btn {
+            width: 52px;
+            height: 52px;
+            border-radius: 50%;
+            border: 1px solid rgba(255,255,255,0.22);
+            color: #06121a;
+            background: linear-gradient(135deg, var(--cyan), #ffffff);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.26rem;
+            cursor: pointer;
+        }
+
+        .composer-btn.voice { background: linear-gradient(135deg, var(--pink), #ffe1fb); }
+
+        .minit-hero {
+            text-align: center;
+            min-height: 510px;
             display: flex;
             flex-direction: column;
-            gap: 10px;
-            padding: 0 16px;
-            margin-bottom: 8px;
+            justify-content: center;
+            align-items: center;
         }
 
-        .feature-card {
+        .human-ring {
+            width: 174px;
+            height: 174px;
+            border-radius: 50%;
+            display: grid;
+            place-items: center;
+            margin-bottom: 28px;
+            background:
+                radial-gradient(circle at 50% 50%, rgba(255,255,255,0.26), rgba(255,255,255,0.04) 56%, transparent 58%),
+                conic-gradient(from 10deg, var(--cyan), var(--pink), var(--orange), var(--cyan));
+            box-shadow: 0 0 80px rgba(95,255,238,0.22), 0 0 80px rgba(255,108,243,0.16);
+        }
+
+        .human-ring-inner {
+            width: 134px;
+            height: 134px;
+            border-radius: 50%;
+            display: grid;
+            place-items: center;
+            background: rgba(7, 8, 17, 0.72);
+            border: 1px solid rgba(255,255,255,0.22);
+            backdrop-filter: blur(18px);
+            font-size: 3.1rem;
+        }
+
+        .primary-cta {
+            width: min(100%, 390px);
+            min-height: 68px;
+            margin-top: 26px;
+            border: 0;
+            border-radius: 999px;
+            color: #07101a;
+            background: linear-gradient(135deg, #ffffff 0%, var(--cyan) 45%, var(--pink) 100%);
+            font-size: 1rem;
+            font-weight: 900;
+            cursor: pointer;
+            box-shadow: 0 22px 54px rgba(95,255,238,0.20), 0 18px 48px rgba(255,108,243,0.18);
+        }
+
+        .speed-meta {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 8px;
+            margin-top: 18px;
+        }
+
+        .nexus-top {
             display: flex;
             align-items: center;
-            gap: 16px;
-            padding: 20px 18px;
-            border-radius: 20px;
-            cursor: pointer;
-            transition: transform 0.15s, opacity 0.15s;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 6px;
+        }
+
+        .nexus-logo {
+            font-size: 2rem;
+            font-weight: 900;
+        }
+
+        .rooms-strip {
+            display: flex;
+            gap: 12px;
+            overflow-x: auto;
+            padding: 4px 2px 10px;
+            scrollbar-width: none;
+        }
+
+        .rooms-strip::-webkit-scrollbar { display: none; }
+
+        .room-bubble {
+            width: 84px;
+            flex: 0 0 84px;
+            text-align: center;
+            color: var(--beta-text);
             text-decoration: none;
-            color: var(--text);
-            -webkit-tap-highlight-color: transparent;
-            position: relative;
-            overflow: hidden;
-            border: 1px solid var(--border);
         }
-        .feature-card:active { transform: scale(0.975); opacity: 0.9; }
 
-        /* Card themes */
-        .card-ai {
-            background: linear-gradient(135deg, #0d1a2a 0%, #0a1520 50%, #061018 100%);
-            border-color: rgba(0,212,170,0.18);
-        }
-        .card-ai::before {
-            content: '';
-            position: absolute; top: -30px; right: -30px;
-            width: 120px; height: 120px;
+        .room-ring {
+            width: 74px;
+            height: 74px;
+            margin: 0 auto 8px;
+            padding: 3px;
             border-radius: 50%;
-            background: radial-gradient(circle, rgba(0,212,170,0.12) 0%, transparent 70%);
-            pointer-events: none;
+            background: conic-gradient(var(--cyan), var(--pink), var(--lime), var(--cyan));
         }
 
-        .card-journal {
-            background: linear-gradient(135deg, #160d26 0%, #110820 50%, #0c0618 100%);
-            border-color: rgba(160,103,255,0.2);
-        }
-        .card-journal::before {
-            content: '';
-            position: absolute; top: -30px; right: -30px;
-            width: 120px; height: 120px;
+        .room-face {
+            width: 100%;
+            height: 100%;
             border-radius: 50%;
-            background: radial-gradient(circle, rgba(160,103,255,0.12) 0%, transparent 70%);
-            pointer-events: none;
+            display: grid;
+            place-items: center;
+            background: var(--glass-strong);
+            border: 2px solid var(--glass-line);
+            font-size: 1.4rem;
+            font-weight: 900;
         }
 
-        .card-connect {
-            background: linear-gradient(135deg, #0a1a16 0%, #081410 50%, #060f0c 100%);
-            border-color: rgba(0,212,170,0.14);
-        }
-        .card-connect::before {
-            content: '';
-            position: absolute; top: -30px; right: -30px;
-            width: 120px; height: 120px;
-            border-radius: 50%;
-            background: radial-gradient(circle, rgba(0,212,170,0.08) 0%, transparent 70%);
-            pointer-events: none;
+        .room-name {
+            font-size: 0.72rem;
+            color: var(--beta-muted);
+            line-height: 1.15;
         }
 
-        .fc-icon-wrap {
-            width: 50px; height: 50px;
-            border-radius: 16px;
-            display: flex; align-items: center; justify-content: center;
-            font-size: 1.65rem;
-            flex-shrink: 0;
-            position: relative; z-index: 1;
-        }
-        .card-ai     .fc-icon-wrap { background: rgba(0,212,170,0.12);  color: var(--accent); }
-        .card-journal .fc-icon-wrap { background: rgba(160,103,255,0.12); color: #a067ff; }
-        .card-connect .fc-icon-wrap { background: rgba(0,212,170,0.1);   color: var(--accent); }
-
-        .fc-text { flex: 1; min-width: 0; position: relative; z-index: 1; }
-        .fc-label { font-weight: 700; font-size: 1.02rem; }
-        .fc-desc  { font-size: 0.75rem; opacity: 0.45; margin-top: 3px; }
-
-        .fc-chips {
-            display: flex; gap: 5px; margin-top: 8px;
-        }
-        .fc-chip {
-            font-size: 0.65rem; font-weight: 600;
-            padding: 3px 9px;
-            border-radius: 20px;
-            letter-spacing: 0.2px;
-        }
-        .card-ai .fc-chip, .card-connect .fc-chip {
-            background: rgba(0,212,170,0.1);
-            border: 1px solid rgba(0,212,170,0.2);
-            color: rgba(0,212,170,0.7);
-        }
-        .card-journal .fc-chip {
-            background: rgba(160,103,255,0.1);
-            border: 1px solid rgba(160,103,255,0.2);
-            color: rgba(160,103,255,0.75);
+        .tribe-card {
+            display: grid;
+            grid-template-columns: 58px 1fr auto;
+            gap: 13px;
+            align-items: center;
+            text-decoration: none;
+            color: var(--beta-text);
         }
 
-        .fc-arrow { font-size: 0.9rem; opacity: 0.3; flex-shrink: 0; position: relative; z-index: 1; }
+        .tribe-mark {
+            width: 58px;
+            height: 58px;
+            border-radius: 18px;
+            display: grid;
+            place-items: center;
+            color: #07101a;
+            background: linear-gradient(135deg, var(--cyan), var(--pink));
+            font-weight: 900;
+            font-size: 1rem;
+        }
 
-        /* ── Mood strip ── */
-        .mood-section {
-            padding: 18px 16px 0;
+        .tribe-name {
+            font-size: 1rem;
+            font-weight: 850;
         }
-        .mood-card {
-            background: var(--surface-1);
-            border: 1px solid var(--border);
-            border-radius: 20px;
-            padding: 16px 18px;
+
+        .tribe-desc {
+            margin-top: 4px;
+            font-size: 0.82rem;
+            color: var(--beta-muted);
+            line-height: 1.35;
         }
-        .mood-label {
-            font-size: 0.72rem; font-weight: 700;
-            text-transform: uppercase; letter-spacing: 1.5px;
-            color: var(--text-3); margin-bottom: 12px;
+
+        .tribe-meta {
+            margin-top: 8px;
+            color: var(--beta-soft);
+            font-size: 0.74rem;
+            font-weight: 700;
         }
-        .mood-row {
-            display: flex; gap: 6px; justify-content: space-between;
+
+        .bottom-nav {
+            position: fixed;
+            left: 50%;
+            bottom: calc(env(safe-area-inset-bottom, 0px) + 16px);
+            transform: translateX(-50%);
+            z-index: 35;
+            width: min(92vw, 380px);
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            padding: 8px;
+            border: 1px solid var(--glass-line);
+            border-radius: 999px;
+            background: var(--glass);
+            backdrop-filter: blur(30px) saturate(180%);
+            -webkit-backdrop-filter: blur(30px) saturate(180%);
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.32), 0 20px 60px rgba(0,0,0,0.32);
         }
-        .mood-btn {
-            flex: 1;
-            display: flex; flex-direction: column; align-items: center; gap: 5px;
-            padding: 10px 4px;
-            border-radius: 14px;
-            background: var(--surface-2);
-            border: 1.5px solid transparent;
+
+        .nav-pill {
+            height: 54px;
+            border: 0;
+            border-radius: 999px;
+            background: transparent;
+            color: var(--beta-soft);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            font: inherit;
+            font-size: 0.78rem;
+            font-weight: 850;
             cursor: pointer;
-            transition: background 0.2s, border-color 0.2s, transform 0.12s;
-            -webkit-tap-highlight-color: transparent;
         }
-        .mood-btn:active { transform: scale(0.92); }
-        .mood-btn.selected {
-            background: var(--accent-dim);
-            border-color: var(--accent-mid);
+
+        .nav-pill ion-icon { font-size: 1.3rem; }
+        .nav-pill.active {
+            color: #1b1030;
+            background: linear-gradient(135deg, var(--orange), var(--pink), var(--violet));
+            box-shadow: 0 10px 28px rgba(255,107,157,0.20);
         }
-        .mood-emoji { font-size: 1.4rem; line-height: 1; }
-        .mood-word  { font-size: 0.58rem; font-weight: 600; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.5px; }
-        .mood-btn.selected .mood-word { color: var(--accent); }
+
+        body.light-mode .nav-pill.active {
+            color: #fff;
+        }
+
+        .drawer,
+        .persona-panel {
+            position: fixed;
+            inset: 0;
+            z-index: 60;
+            display: none;
+            background: rgba(8, 9, 26, 0.45);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+
+        .drawer.open,
+        .persona-panel.open { display: block; }
+
+        .drawer-sheet {
+            width: min(86vw, 360px);
+            height: 100%;
+            padding: calc(env(safe-area-inset-top, 0px) + 18px) 14px 18px;
+            background: var(--glass-strong);
+            border-right: 1px solid var(--glass-line);
+            box-shadow: 22px 0 70px rgba(0,0,0,0.34);
+            backdrop-filter: blur(34px) saturate(180%);
+            -webkit-backdrop-filter: blur(34px) saturate(180%);
+        }
+
+        .drawer-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 4px 4px 18px;
+        }
+
+        .drawer-title {
+            font-size: 1.12rem;
+            font-weight: 900;
+        }
+
+        .history-list {
+            display: flex;
+            flex-direction: column;
+            gap: 9px;
+        }
+
+        .history-item {
+            border-radius: 18px;
+            padding: 13px;
+            background: rgba(255,255,255,0.09);
+            border: 1px solid rgba(255,255,255,0.13);
+        }
+
+        .history-item strong {
+            display: block;
+            font-size: 0.9rem;
+        }
+
+        .history-item span {
+            display: block;
+            margin-top: 4px;
+            color: var(--beta-muted);
+            font-size: 0.78rem;
+            line-height: 1.35;
+        }
+
+        .persona-card {
+            position: absolute;
+            left: 50%;
+            bottom: calc(env(safe-area-inset-bottom, 0px) + 28px);
+            transform: translateX(-50%);
+            width: min(92vw, 440px);
+            border-radius: 30px;
+            padding: 20px;
+        }
+
+        .persona-row {
+            display: grid;
+            grid-template-columns: 52px 1fr auto;
+            gap: 12px;
+            align-items: center;
+            padding: 13px 0;
+            border-top: 1px solid rgba(255,255,255,0.12);
+        }
+
+        .persona-avatar {
+            width: 52px;
+            height: 52px;
+            border-radius: 18px;
+            display: grid;
+            place-items: center;
+            background: linear-gradient(135deg, var(--violet), var(--pink));
+            color: #fff;
+            font-weight: 900;
+        }
+
+        .desktop-frame {
+            height: 100%;
+        }
+
+        @media (min-width: 760px) {
+            .world { padding-left: 34px; padding-right: 34px; }
+            .quick-row { grid-template-columns: repeat(4, 1fr); }
+            .minit-hero { min-height: 560px; }
+            .hero-card { padding: 34px; }
+        }
+
+        @media (max-width: 420px) {
+            .top-rail { grid-template-columns: 46px 1fr 46px; padding-left: 12px; padding-right: 12px; }
+            .glass-icon { width: 42px; height: 42px; }
+            .world { padding-left: 12px; padding-right: 12px; }
+            .hero-card { border-radius: 26px; padding: 20px; min-height: 252px; }
+            .hero-title { font-size: 3rem; }
+            .quick-row { grid-template-columns: 1fr; }
+            .nav-pill span { display: none; }
+            .top-rail { grid-template-columns: 46px 1fr 46px 46px; }
+        }
     </style>
-    <link rel="stylesheet" href="blaksyd-pulse.css?v=20260428b">
 </head>
 <body class="dark-mode" data-page="dashboard">
+    <main class="beta-shell">
+        <div class="ambient-veil"></div>
+        <div class="grain"></div>
 
-<div class="dashboard-layout">
-
-<div id="mobile-overlay" class="mobile-overlay"></div>
-
-<!-- ── SIDEBAR ── -->
-<aside class="sidebar glass-panel" id="main-sidebar">
-    <div class="sidebar-header">
-        <span class="brand-small-btn" style="cursor:default;display:inline-flex;align-items:center;">
-            <img src="blaksyd-logo-white.png" alt="Blaksyd" style="height:22px;width:auto;max-width:110px;object-fit:contain;display:block;">
-        </span>
-        <button id="toggle-sidebar-btn" class="collapse-btn">
-            <ion-icon name="chevron-back-outline"></ion-icon>
-        </button>
-    </div>
-
-    <!-- Navigation -->
-    <div class="sidebar-section-label">Menu</div>
-    <nav class="sidebar-nav-section">
-        <a class="snav-item active" href="dashboard.html">
-            <ion-icon name="home"></ion-icon><span>Home</span>
-        </a>
-        <a class="snav-item" href="chat.html">
-            <ion-icon name="sparkles-outline"></ion-icon><span>Echo</span>
-        </a>
-        <a class="snav-item" href="journal.html">
-            <ion-icon name="book-outline"></ion-icon><span>Journal</span>
-        </a>
-        <a class="snav-item" href="connect.html">
-            <ion-icon name="people-outline"></ion-icon><span>Listeners</span>
-        </a>
-        <a class="snav-item" href="nexus.html">
-            <ion-icon name="planet-outline"></ion-icon><span>Nexus</span>
-        </a>
-    </nav>
-
-    <div class="sidebar-divider"></div>
-
-    <!-- Quick actions -->
-    <div class="sidebar-section-label">Quick Actions</div>
-    <nav class="sidebar-nav-section">
-        <button class="snav-item" onclick="window.location.href='chat.html'">
-            <ion-icon name="chatbubble-outline"></ion-icon><span>New Chat</span>
-        </button>
-        <button class="snav-item" onclick="window.location.href='journal.html'">
-            <ion-icon name="create-outline"></ion-icon><span>New Entry</span>
-        </button>
-        <button class="snav-item" onclick="window.location.href='connect.html'">
-            <ion-icon name="person-add-outline"></ion-icon><span>Find Listener</span>
-        </button>
-    </nav>
-
-    <div class="sidebar-spacer"></div>
-    <div class="sidebar-divider"></div>
-
-    <!-- Theme toggle -->
-    <button class="theme-toggle-btn">
-        <ion-icon name="sunny-outline"></ion-icon><span>Light mode</span>
-    </button>
-
-    <!-- User profile footer -->
-    <div class="user-profile glass-panel-inner" id="open-profile-btn"
-         onclick="document.getElementById('global-profile-modal').style.display='flex'">
-        <img class="global-avatar avatar-circle" id="sidebar-avatar" style="display:none;">
-        <div id="sidebar-avatar-placeholder" class="avatar-circle-placeholder">
-            <ion-icon name="person"></ion-icon>
-        </div>
-        <div class="user-info">
-            <span class="global-name user-name" id="sidebar-name-display">Loading…</span>
-            <span class="user-email" id="sidebar-email-display">…</span>
-        </div>
-        <button class="logout-link" title="Logout" id="sidebar-logout-btn"
-                onclick="event.stopPropagation(); window.universalLogout && window.universalLogout()">
-            <ion-icon name="log-out-outline"></ion-icon>
-        </button>
-    </div>
-</aside>
-
-<!-- ── MAIN CONTENT ── -->
-<div class="dashboard-main">
-
-<!-- Mobile header (hidden on desktop, the desktop header below renders instead) -->
-<div class="dash-mobile-header">
-    <button class="mobile-menu-btn" id="mobile-menu-btn">
-        <ion-icon name="menu-outline"></ion-icon>
-    </button>
-    <span class="dash-mobile-brand">
-        <img src="blaksyd-logo-white.png" alt="" class="dash-mobile-logo">
-        <span class="dash-mobile-wordmark">BLAKSYD</span>
-    </span>
-    <button id="logout-btn-mobile" class="mobile-menu-btn" title="Logout" style="font-size:1.2rem;">
-        <ion-icon name="log-out-outline"></ion-icon>
-    </button>
-</div>
-
-<div class="home-wrap">
-
-    <!-- Header (desktop only — mobile header above takes its place under 880px) -->
-    <header class="home-header">
-        <span class="home-brand" style="display:inline-flex;align-items:center;opacity:0.85;">
-            <img src="blaksyd-logo-white.png" alt="Blaksyd" style="height:26px;width:auto;max-width:140px;object-fit:contain;display:block;">
-        </span>
-        <div style="display:flex;align-items:center;gap:4px;">
-            <button id="logout-btn" class="header-icon-btn" title="Logout">
-                <ion-icon name="log-out-outline"></ion-icon>
+        <header class="top-rail">
+            <button class="glass-icon" id="context-menu-btn" aria-label="Open recent activity">
+                <ion-icon name="menu-outline"></ion-icon>
             </button>
-        </div>
-    </header>
+            <div class="world-title" aria-live="polite">
+                <span class="world-kicker" id="world-kicker">Live home</span>
+                <span class="world-name" id="world-name">Blak</span>
+            </div>
+            <button class="glass-icon profile-dot" id="open-profile-btn" aria-label="Open profile">
+                <img class="global-avatar" alt="">
+                <ion-icon name="person-outline"></ion-icon>
+            </button>
+            <button class="glass-icon theme-toggle-icon" id="theme-toggle" aria-label="Toggle dark and light mode">
+                <ion-icon class="sun" name="sunny-outline"></ion-icon>
+                <ion-icon class="moon" name="moon-outline"></ion-icon>
+            </button>
+        </header>
 
-    <!-- Profile row -->
-    <div class="home-profile-row" onclick="document.getElementById('global-profile-modal').style.display='flex'">
-        <div class="home-avatar-wrap">
-            <img class="global-avatar home-avatar" src="" alt="Avatar">
-        </div>
-        <div class="home-greeting-text">
-            <div class="home-greeting" id="time-greeting" data-v3-greeting>Good morning</div>
-            <div class="home-name global-name">Welcome back</div>
-        </div>
-        <ion-icon name="chevron-forward-outline" style="font-size:0.9rem;color:var(--text-3);opacity:0.5;"></ion-icon>
-    </div>
+        <section class="world-viewport" id="world-viewport">
+            <div class="world-track" id="world-track">
+                <article class="world" data-world="minit">
+                    <div class="world-inner">
+                        <section class="hero-card minit-hero">
+                            <div class="hero-content">
+                                <div class="human-ring"><div class="human-ring-inner"><ion-icon name="people-outline"></ion-icon></div></div>
+                                <span class="pill"><ion-icon name="flash-outline"></ion-icon> Average wait under 60 seconds</span>
+                                <h1 class="hero-title" style="font-size:clamp(2.4rem, 10vw, 4.6rem);">A real human, now.</h1>
+                                <p class="hero-sub" style="margin-left:auto;margin-right:auto;">Tap once. Blak shares context, not content, and the next available trained listener joins warm.</p>
+                                <button class="primary-cta" onclick="window.location.href='connect.html'">Talk to someone now</button>
+                                <div class="speed-meta">
+                                    <span class="pill"><ion-icon name="chatbubble-outline"></ion-icon> Text</span>
+                                    <span class="pill"><ion-icon name="call-outline"></ion-icon> Voice</span>
+                                    <span class="pill"><ion-icon name="shield-checkmark-outline"></ion-icon> Anonymous</span>
+                                </div>
+                            </div>
+                        </section>
 
-    <!-- ── v3 HERO: streak + momentum + meta ─────────────────────────── -->
-    <section class="v3-hero v3-rise" data-d="1" aria-label="Your momentum">
-        <div class="v3-hero-row">
-            <div class="v3-ring" id="dash-streak-ring" data-target="42" style="--p:0;--sz:104px;">
+                        <div class="quick-row">
+                            <a class="glass-card" href="connect.html">
+                                <div class="mini-label">Instant <ion-icon name="arrow-forward-outline"></ion-icon></div>
+                                <div class="mini-title">Next listener</div>
+                                <div class="mini-body">Fastest path into a live session.</div>
+                            </a>
+                            <a class="glass-card" href="connect.html">
+                                <div class="mini-label">Reconnect <ion-icon name="reload-outline"></ion-icon></div>
+                                <div class="mini-title">Recent listener</div>
+                                <div class="mini-body">Pick up from a human who already knows your rhythm.</div>
+                            </a>
+                        </div>
+                    </div>
+                </article>
+
+                <article class="world" data-world="blak">
+                    <div class="world-inner blak-home" id="blak-home">
+                        <div class="blak-top-actions">
+                            <button class="glass-icon persona-float" id="persona-open" type="button" aria-label="Open Persona">
+                                <ion-icon name="layers-outline"></ion-icon>
+                            </button>
+                        </div>
+
+                        <div class="ambient-line">Blak noticed a few things worth keeping close.</div>
+
+                        <section class="blak-insights" id="blak-insights" aria-label="Blak insights">
+                            <div class="insight-line">
+                                <ion-icon name="pulse-outline"></ion-icon>
+                                <strong>You seem happier on Wednesdays.</strong>
+                                <span>See why</span>
+                            </div>
+                            <div class="insight-line">
+                                <ion-icon name="alarm-outline"></ion-icon>
+                                <strong>Call Raj at 5 PM.</strong>
+                                <span>Reminder</span>
+                            </div>
+                        </section>
+
+                        <form class="action-composer" id="blak-composer" onsubmit="event.preventDefault(); window.location.href='chat.html';">
+                            <input aria-label="Message Blak" placeholder="Say anything to Blak..." onfocus="document.getElementById('blak-home').classList.add('chatting')" oninput="document.getElementById('blak-home').classList.add('chatting')">
+                            <button class="composer-btn voice" type="button" onclick="window.location.href='chat.html?call=1'" aria-label="Call Blak">
+                                <ion-icon name="mic-outline"></ion-icon>
+                            </button>
+                            <button class="composer-btn" type="submit" aria-label="Send to Blak">
+                                <ion-icon name="arrow-up-outline"></ion-icon>
+                            </button>
+                        </form>
+                    </div>
+                </article>
+
+                <article class="world" data-world="nexus">
+                    <div class="world-inner">
+                        <div class="nexus-top">
+                            <div>
+                                <div class="nexus-logo">Nexus</div>
+                                <p class="hero-sub">Live rooms above. Tribes below. Anonymous texts on the right.</p>
+                            </div>
+                            <button class="glass-icon" onclick="window.location.href='group-chat.html'" aria-label="Anonymous texts">
+                                <ion-icon name="chatbubbles-outline"></ion-icon>
+                            </button>
+                        </div>
+
+                        <nav class="rooms-strip" aria-label="Live discussion rooms">
+                            <a class="room-bubble" href="nexus.html"><div class="room-ring"><div class="room-face">LT</div></div><div class="room-name">Late thoughts</div></a>
+                            <a class="room-bubble" href="nexus.html"><div class="room-ring"><div class="room-face">AI</div></div><div class="room-name">AI friends</div></a>
+                            <a class="room-bubble" href="nexus.html"><div class="room-ring"><div class="room-face">20</div></div><div class="room-name">20s chaos</div></a>
+                            <a class="room-bubble" href="nexus.html"><div class="room-ring"><div class="room-face">ST</div></div><div class="room-name">Study room</div></a>
+                            <a class="room-bubble" href="nexus.html"><div class="room-ring"><div class="room-face">+</div></div><div class="room-name">Start room</div></a>
+                        </nav>
+
+                        <a class="glass-card tribe-card" href="nexus.html">
+                            <div class="tribe-mark">M</div>
+                            <div>
+                                <div class="tribe-name">Minds in motion</div>
+                                <div class="tribe-desc">For people rebuilding their days, habits, confidence, and inner momentum.</div>
+                                <div class="tribe-meta">12.4k resonance · 286 active</div>
+                            </div>
+                            <ion-icon name="chevron-forward-outline"></ion-icon>
+                        </a>
+                        <a class="glass-card tribe-card" href="nexus.html">
+                            <div class="tribe-mark" style="background:linear-gradient(135deg,var(--lime),var(--cyan));">N</div>
+                            <div>
+                                <div class="tribe-name">Night lobby</div>
+                                <div class="tribe-desc">Anonymous, gentle, alive when the rest of the world gets quiet.</div>
+                                <div class="tribe-meta">8.8k resonance · 104 active</div>
+                            </div>
+                            <ion-icon name="chevron-forward-outline"></ion-icon>
+                        </a>
+                        <a class="glass-card tribe-card" href="nexus.html">
+                            <div class="tribe-mark" style="background:linear-gradient(135deg,var(--orange),var(--pink));">B</div>
+                            <div>
+                                <div class="tribe-name">Blak taught me</div>
+                                <div class="tribe-desc">People sharing useful reflections their Blak surfaced, without exposing private content.</div>
+                                <div class="tribe-meta">5.1k resonance · 72 active</div>
+                            </div>
+                            <ion-icon name="chevron-forward-outline"></ion-icon>
+                        </a>
+                    </div>
+                </article>
+            </div>
+        </section>
+
+        <nav class="bottom-nav" aria-label="Beta worlds">
+            <button class="nav-pill" data-go="0"><ion-icon name="people-outline"></ion-icon><span>Minit</span></button>
+            <button class="nav-pill active" data-go="1"><ion-icon name="sparkles-outline"></ion-icon><span>Blak</span></button>
+            <button class="nav-pill" data-go="2"><ion-icon name="planet-outline"></ion-icon><span>Nexus</span></button>
+        </nav>
+    </main>
+
+    <aside class="drawer" id="activity-drawer" aria-hidden="true">
+        <div class="drawer-sheet">
+            <div class="drawer-head">
                 <div>
-                    <div class="v3-ring-num" id="dash-streak-num">3</div>
-                    <span class="v3-ring-label">Day streak</span>
+                    <div class="world-kicker" id="drawer-kicker">Blak history</div>
+                    <div class="drawer-title" id="drawer-title">Recent threads</div>
                 </div>
+                <button class="glass-icon" id="drawer-close" aria-label="Close">
+                    <ion-icon name="close-outline"></ion-icon>
+                </button>
             </div>
-            <div class="v3-hero-text">
-                <div class="v3-hero-eyebrow">Your week so far</div>
-                <h2 class="v3-hero-title">You showed up <span style="color:var(--pulse-1);">three days in a row</span>.</h2>
-                <p class="v3-hero-sub">Tiny steps build a quieter mind. Keep going at your own pace.</p>
-            </div>
+            <div class="history-list" id="drawer-list"></div>
         </div>
-        <div class="v3-hero-meta">
-            <div class="v3-meta-cell">
-                <div class="v3-meta-num" id="dash-meta-chats">12<small>×</small></div>
-                <span class="v3-meta-lbl">Chats</span>
-            </div>
-            <div class="v3-meta-cell">
-                <div class="v3-meta-num" id="dash-meta-entries">5<small>×</small></div>
-                <span class="v3-meta-lbl">Journal</span>
-            </div>
-            <div class="v3-meta-cell">
-                <div class="v3-meta-num"><span class="v3-pulse-dot" style="margin-right:5px;"></span><span id="dash-meta-listeners">2</span></div>
-                <span class="v3-meta-lbl">Listeners online</span>
+    </aside>
+
+    <section class="persona-panel" id="persona-panel" aria-hidden="true">
+        <div class="persona-card hero-card">
+            <div class="hero-content">
+                <div class="mini-label">Persona <button class="glass-icon" id="persona-close" type="button" aria-label="Close persona" style="width:38px;height:38px;"><ion-icon name="close-outline"></ion-icon></button></div>
+                <div class="mini-title" style="font-size:1.35rem;margin-bottom:6px;">Available now</div>
+                <p class="mini-body" style="margin-bottom:12px;">Your current Persona space is available as the existing beta flow. This button keeps the new Blak home clean while Persona grows.</p>
+                <div class="persona-row">
+                    <div class="persona-avatar">RP</div>
+                    <div><strong>Real Persona</strong><div class="mini-body" style="margin-top:3px;">Your evolving digital self.</div></div>
+                    <ion-icon name="chevron-forward-outline"></ion-icon>
+                </div>
+                <div class="persona-row">
+                    <div class="persona-avatar" style="background:linear-gradient(135deg,var(--cyan),var(--lime));">FP</div>
+                    <div><strong>Fantasy Personas</strong><div class="mini-body" style="margin-top:3px;">Characters and roles you create.</div></div>
+                    <ion-icon name="chevron-forward-outline"></ion-icon>
+                </div>
             </div>
         </div>
     </section>
 
-    <!-- ── v3 FOCUS: today's invitation (single primary CTA) ─────────── -->
-    <a class="v3-focus v3-rise v3-press" data-d="2" data-v3-invite href="chat.html?call=1">
-        <span class="v3-focus-icon"><ion-icon name="leaf-outline"></ion-icon></span>
-        <span class="v3-focus-text">
-            <div class="v3-focus-eyebrow">Today's invitation</div>
-            <div class="v3-focus-title">Take one slow breath together.</div>
-            <div class="v3-focus-sub">A 30-second pause. Just you and Echo.</div>
-        </span>
-        <ion-icon class="v3-focus-arrow" name="arrow-forward-outline"></ion-icon>
-    </a>
+    <div id="toast-container" class="toast-container"></div>
 
-    <!-- ── v3 QUICK ACTIONS — single source of truth, no duplicates ──── -->
-    <div class="v3-quick v3-rise" data-d="3">
-        <a class="v3-quick-item v3-press" href="chat.html">
-            <ion-icon name="sparkles-outline"></ion-icon>
-            <div class="v3-quick-label">Echo</div>
-            <div class="v3-quick-sub">Your AI companion. Text or voice.</div>
-        </a>
-        <a class="v3-quick-item v3-press tone-iris" href="journal.html">
-            <ion-icon name="create-outline"></ion-icon>
-            <div class="v3-quick-label">Journal</div>
-            <div class="v3-quick-sub">A line a day is enough.</div>
-        </a>
-        <a class="v3-quick-item v3-press tone-coral" href="connect.html">
-            <ion-icon name="people-outline"></ion-icon>
-            <div class="v3-quick-label">Listener</div>
-            <div class="v3-quick-sub">A real human, on call.</div>
-        </a>
-        <a class="v3-quick-item v3-press tone-amber" href="nexus.html">
-            <ion-icon name="planet-outline"></ion-icon>
-            <div class="v3-quick-label">Nexus &nbsp;<span style="font-size:0.62rem;font-weight:800;padding:2px 7px;border-radius:6px;background:rgba(255,179,51,0.15);color:#ffb733;letter-spacing:0.6px;">NEW</span></div>
-            <div class="v3-quick-sub">Anonymous communities.</div>
-        </a>
-    </div>
-
-    <!-- Section label -->
-    <p class="section-label v3-rise" data-d="4" style="display:none;">Your Sanctuary</p>
-
-    <!-- Feature cards intentionally removed — the four v3-quick tiles above
-         are the single source of truth for navigation. -->
-    <div class="feature-cards" hidden></div>
-
-    <!-- Mood check-in -->
-    <div class="mood-section">
-        <div class="mood-card">
-            <div class="mood-label">How are you feeling?</div>
-            <div class="mood-row">
-                <button class="mood-btn" data-mood="great" onclick="selectMood(this)">
-                    <span class="mood-emoji">😊</span>
-                    <span class="mood-word">Great</span>
-                </button>
-                <button class="mood-btn" data-mood="okay" onclick="selectMood(this)">
-                    <span class="mood-emoji">😐</span>
-                    <span class="mood-word">Okay</span>
-                </button>
-                <button class="mood-btn" data-mood="low" onclick="selectMood(this)">
-                    <span class="mood-emoji">😔</span>
-                    <span class="mood-word">Low</span>
-                </button>
-                <button class="mood-btn" data-mood="anxious" onclick="selectMood(this)">
-                    <span class="mood-emoji">😰</span>
-                    <span class="mood-word">Anxious</span>
-                </button>
-                <button class="mood-btn" data-mood="angry" onclick="selectMood(this)">
-                    <span class="mood-emoji">😤</span>
-                    <span class="mood-word">Tense</span>
-                </button>
-            </div>
-        </div>
-    </div>
-
-</div><!-- /.home-wrap -->
-</div><!-- /.dashboard-main -->
-</div><!-- /.dashboard-layout -->
-
-<div id="toast-container" class="toast-container"></div>
-
-<!-- Journal modal kept for dashboard.js compatibility -->
-<div class="overlay-glass" id="journal-modal" style="z-index:9999; display:none;">
-    <div class="glass-pane profile-pane-wide" style="display:flex;flex-direction:column;padding:0;background:var(--bg);">
-        <div class="mobile-top-header" style="display:flex;border-radius:var(--r-lg) var(--r-lg) 0 0;border-bottom:1px solid var(--border);height:54px;">
-            <button class="brand-small-btn" id="close-journal-btn"><ion-icon name="close-outline" style="font-size:1.4rem;"></ion-icon></button>
-            <span class="view-title" style="margin:0;font-style:normal;font-weight:600;">Journal</span>
-            <button class="brand-small-btn" id="write-new-journal-btn"><ion-icon name="create-outline" style="font-size:1.4rem;"></ion-icon></button>
-        </div>
-        <div id="journal-list-view" style="flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:8px;"></div>
-        <div id="journal-write-view" style="display:none;flex:1;flex-direction:column;padding:20px;gap:12px;">
-            <input type="text" id="journal-entry-title-modal" class="minimal-input" placeholder="Title…" style="font-size:1.1rem;font-weight:600;">
-            <textarea id="journal-entry-content-modal" class="minimal-input textarea-input" style="flex:1;min-height:180px;line-height:1.65;" placeholder="What is on your mind?"></textarea>
-            <button id="save-journal-entry-modal" class="btn-solid luxury-btn">Save to Journal</button>
-        </div>
-    </div>
-</div>
-
-<script src="sidebar-common.js"></script>
-<script src="dashboard.js?v=20260428b"></script>
-<script src="spotify-auth.js"></script>
-<script src="profile-manager.js?v=20260428b"></script>
-<script src="nav-bar.js"></script>
-<script src="blakcide-ui-v3.js?v=20260428b"></script>
-<script>
-// v3 — try to populate the hero ring with the user's real streak/metrics.
-// Fully optional: every selector falls back to the seeded "endowed progress"
-// defaults already rendered in the HTML, so the hero never goes blank.
-(function v3HydrateHero() {
-    function setRing(target) {
-        const ring = document.getElementById('dash-streak-ring');
-        const num  = document.getElementById('dash-streak-num');
-        if (!ring) return;
-        // Map streak (days) → ring percentage. Goal = 7-day streak.
-        const days = Math.max(0, Math.min(99, Number(target) || 0));
-        const pct  = Math.min(100, Math.round((days / 7) * 100));
-        ring.setAttribute('data-target', String(pct));
-        if (num) num.textContent = String(days);
-        if (window.blakcideAnimateRings) window.blakcideAnimateRings();
-    }
-    // 1) Try the existing client cache (set by other pages).
-    try {
-        const cached = JSON.parse(localStorage.getItem('blakcide-streak') || 'null');
-        if (cached && typeof cached.days === 'number') return setRing(cached.days);
-    } catch (_) {}
-    // 2) Fallback — keep the friendly seed value of 3 already in the HTML;
-    //    just animate the ring to the matching percentage so it never
-    //    sits empty.
-    setRing(3);
-})();
-</script>
-<script>
-// Mobile sidebar wiring for dashboard
-(function() {
-    function wireDashSidebar() {
-        const menuBtn = document.getElementById('mobile-menu-btn');
-        const sidebar = document.getElementById('main-sidebar');
-        const overlay = document.getElementById('mobile-overlay');
-        const toggleBtn = document.getElementById('toggle-sidebar-btn');
-        if (menuBtn && sidebar) {
-            menuBtn.addEventListener('click', () => {
-                sidebar.classList.add('open');
-                if (overlay) overlay.classList.add('active');
-            });
-        }
-        if (overlay && sidebar) {
-            overlay.addEventListener('click', () => {
-                sidebar.classList.remove('open');
-                overlay.classList.remove('active');
-            });
-        }
-        if (toggleBtn && sidebar) {
-            toggleBtn.addEventListener('click', () => {
-                if (window.innerWidth <= 768) {
-                    sidebar.classList.remove('open');
-                    if (overlay) overlay.classList.remove('active');
-                } else {
-                    sidebar.classList.toggle('collapsed');
-                }
-            });
-        }
-    }
-    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', wireDashSidebar);
-    else wireDashSidebar();
-})();
-</script>
-<script>
-// Time-based greeting
-(function() {
-    const hour = new Date().getHours();
-    const el = document.getElementById('time-greeting');
-    if (!el) return;
-    if (hour < 12) el.textContent = 'Good morning';
-    else if (hour < 17) el.textContent = 'Good afternoon';
-    else el.textContent = 'Good evening';
-})();
-
-// Mood selector
-function selectMood(btn) {
-    document.querySelectorAll('.mood-btn').forEach(b => b.classList.remove('selected'));
-    btn.classList.add('selected');
-    const mood = btn.dataset.mood;
-    const toasts = { great: '✨ Glad you\'re feeling great!', okay: '💙 That\'s okay. Take it easy.', low: '🌿 It\'s okay to feel this way.', anxious: '🫁 Take a slow, deep breath.', angry: '🌊 Let\'s find some calm together.' };
-    const t = document.createElement('div');
-    t.className = 'toast';
-    t.innerText = toasts[mood] || '✓';
-    document.getElementById('toast-container').appendChild(t);
-    setTimeout(() => t.remove(), 3500);
-}
-
-// Logout
-document.getElementById('logout-btn')?.addEventListener('click', () => {
-    if (window.universalLogout) window.universalLogout();
-});
-</script>
-<script src="blaksyd-pulse.js?v=20260428b"></script>
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-    if (window.BlaksydPulse) window.BlaksydPulse.trigger('dashboard', { delayMs: 22000 });
-});
-</script>
+    <script src="dashboard.js?v=20260617-liquid-beta-theme"></script>
+    <script src="spotify-auth.js"></script>
+    <script src="profile-manager.js?v=20260428b"></script>
+    <script src="blaksyd-pulse.js?v=20260428b"></script>
+    <script>
+    document.addEventListener('DOMContentLoaded', function () {
+        if (window.BlaksydPulse) window.BlaksydPulse.trigger('dashboard', { delayMs: 22000 });
+    });
+    </script>
 </body>
 </html>

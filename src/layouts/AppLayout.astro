@@ -5,6 +5,7 @@
 // tab-bar on mobile. Not indexed. Real auth-gating + functionality land per-pillar.
 import '../styles/fonts.css';
 import '../styles/tokens.css';
+import Auth from '../components/Auth.astro';
 
 interface Props { active?: 'home' | 'blak' | 'persona' | 'minit' | 'nexus'; title?: string; soon?: boolean; }
 const { active = 'home', title = 'Home', soon = false } = Astro.props;
@@ -80,6 +81,9 @@ const nav = [
       <slot />
     </main>
   </div>
+
+  <Auth />
+  <button type="button" id="ap-auth-trigger" data-open-auth hidden aria-hidden="true"></button>
 
   <style is:global>
     /* color-scheme follows the theme via tokens.css (:root = dark, [data-theme=light] = light) */
@@ -244,16 +248,17 @@ const nav = [
   </script>
 
   <script>
-    // Beta auth gate — ONE login (on the landing page) unlocks EVERY /beta/ feature.
-    // Not signed in → bounce to the landing login, remembering where you were headed;
-    // after sign-in you're returned to that exact page. Importing the Supabase client
-    // also runs detectSessionInUrl, which consumes the #access_token / ?code on return.
+    // Beta auth gate — ONE login unlocks EVERY /beta/ feature. Keep the visitor in
+    // the app shell and open the current Auth modal in-place, remembering where
+    // they were headed; after sign-in they're returned to that exact page.
+    // Importing the Supabase client also runs detectSessionInUrl, which consumes
+    // the #access_token / ?code on return.
     import { supabase } from '../lib/supabaseClient';
     (async () => {
       if (!supabase) return; // auth env not set → don't lock anyone out
 
       const here = () => location.pathname + location.search;
-      const safeBeta = (p) => (typeof p === 'string' && /^\/beta\//.test(p) && p.indexOf('//') !== 0) ? p : null;
+      const safeBeta = (p) => (typeof p === 'string' && /^\/beta(?:\/|$)/.test(p) && p.indexOf('//') !== 0) ? p : null;
       const getSession = async () => { try { return (await supabase.auth.getSession()).data.session; } catch (e) { return null; } };
 
       let session = await getSession();
@@ -263,8 +268,26 @@ const nav = [
       for (let i = 0; !session && authInUrl && i < 40; i++) { await new Promise((r) => setTimeout(r, 250)); session = await getSession(); }
 
       if (!session) {
+        // A sign-in just came back but no session formed — surface WHY instead of
+        // silently re-popping login, so mobile token/storage failures are diagnosable.
+        if (authInUrl) { try {
+          var _u = (location.hash || '') + (location.search || '');
+          var _er = _u.match(/error[^=]*=([^&]+)/);
+          var _ls = false; try { localStorage.setItem('_blk_t', '1'); _ls = localStorage.getItem('_blk_t') === '1'; localStorage.removeItem('_blk_t'); } catch (e) {}
+          var _key = ''; try { for (var _i = 0; _i < localStorage.length; _i++) { var _k = localStorage.key(_i); if (/sb-.*-auth-token/.test(_k)) _key = _k; } } catch (e) {}
+          var _msg = 'origin: ' + location.origin + '\n' +
+            'token in URL: ' + (/access_token=/.test(_u)) + '\n' +
+            'error: ' + (_er ? decodeURIComponent(_er[1]) : 'none') + '\n' +
+            'localStorage OK: ' + _ls + '\n' +
+            'session key: ' + (_key || 'NONE');
+          var _box = document.createElement('div');
+          _box.style.cssText = 'position:fixed;left:8px;right:8px;bottom:8px;z-index:2147483647;background:#1b1030;color:#fff;border:1px solid #c9b8ff;border-radius:12px;padding:14px;font:12px/1.5 ui-monospace,monospace;white-space:pre-wrap;box-shadow:0 8px 30px rgba(0,0,0,.5)';
+          _box.textContent = 'Sign-in didn’t complete — screenshot this & send it:\n\n' + _msg;
+          document.body.appendChild(_box);
+        } catch (e) {} }
         try { sessionStorage.setItem('blk_redirect', here()); } catch (e) {}
-        location.replace('/?auth=1');
+        const trigger = document.getElementById('ap-auth-trigger');
+        if (trigger) trigger.click();
         return;
       }
 
