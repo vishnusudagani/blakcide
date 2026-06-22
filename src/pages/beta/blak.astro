@@ -507,8 +507,8 @@ import AppLayout from '../../layouts/AppLayout.astro';
     .bx-rem { display: flex; align-items: center; gap: .7rem; padding: .7rem .9rem; border-radius: var(--r-md); background: rgba(255,210,122,.1); border: 1px solid rgba(255,210,122,.3); text-align: left; animation: bx-in .25s var(--ease-out) both; }
     .bx-rem svg { width: 18px; height: 18px; color: var(--gold); flex: none; }
     .bx-rem-tx { flex: 1; min-width: 0; font-size: var(--fs-sm); color: var(--ink); }
-    .bx-rem-done { flex: none; background: none; border: 1px solid var(--line-strong); color: var(--ink-soft); border-radius: var(--r-pill); font: inherit; font-size: var(--fs-xs); padding: .3rem .7rem; cursor: pointer; }
-    .bx-rem-done:hover { color: var(--ink); border-color: var(--gold); }
+    .bx-rem-done, .bx-rem-snooze { flex: none; background: none; border: 1px solid var(--line-strong); color: var(--ink-soft); border-radius: var(--r-pill); font: inherit; font-size: var(--fs-xs); padding: .3rem .7rem; cursor: pointer; }
+    .bx-rem-done:hover, .bx-rem-snooze:hover { color: var(--ink); border-color: var(--gold); }
     html[data-theme="light"] .bx-rem { background: rgba(138,100,16,.07); }
     .bx-nudges { width: 100%; max-width: 420px; display: flex; flex-direction: column; gap: .5rem; }
     .bx-nudges[hidden] { display: none; }
@@ -1071,6 +1071,9 @@ import AppLayout from '../../layouts/AppLayout.astro';
 
     // ── In-app reminders: "remind me to … [when]" → saved + surfaced on home ───
     const REMIND_INTENT = /\b(remind me|set a reminder|reminder to)\b/i;
+    // "cancel my gym reminder" / "delete the reminder" — verb BEFORE "reminder"
+    // only, so it never collides with creating one ("set a reminder to cancel X").
+    const CANCEL_REMIND_INTENT = /\b(cancel|delete|remove|forget|clear|drop|scrap)\b[^.?!]{0,40}\breminders?\b/i;
     function applyClock(d, m) {
       let h = parseInt(m[1], 10); const min = m[3] ? parseInt(m[3], 10) : 0; const ap = (m[4] || '').toLowerCase();
       if (ap === 'pm' && h < 12) h += 12; if (ap === 'am' && h === 12) h = 0;
@@ -1123,6 +1126,47 @@ import AppLayout from '../../layouts/AppLayout.astro';
       history.push(am); addRow('them', reply, { msg: am });
       if (saved) dbInsertMessage('assistant', reply).then((id) => { if (id) am.id = id; });
     }
+    // Cancel an existing reminder by best text match (or the only one, or "all").
+    async function handleCancelReminder(text) {
+      let rows = [];
+      try {
+        const { data } = await supabase.from('blak_reminders')
+          .select('id,text,remind_at').eq('user_id', userId).eq('done', false).order('remind_at', { ascending: true });
+        rows = data || [];
+      } catch (e) {}
+      let reply;
+      if (!rows.length) {
+        reply = "you don't have any reminders set right now 🙂";
+      } else {
+        const q = text.toLowerCase()
+          .replace(/.*\b(cancel|delete|remove|forget|clear|drop|scrap)\b/, '')
+          .replace(/\b(the|my|a|an|that|this|about|to|for|reminders?|please|all|every)\b/g, ' ')
+          .replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
+        // "clear all" or a bare "cancel my reminders" (plural, no specific target) → all
+        const wantAll = /\b(all|every|everything)\b/i.test(text) || (/\breminders\b/i.test(text) && !q);
+        let targets = [];
+        if (wantAll) targets = rows;
+        else if (rows.length === 1) targets = rows;
+        else if (q) {
+          const qw = q.split(' ').filter((w) => w.length > 2);
+          let best = null, bs = 0;
+          for (const r of rows) { const h = (r.text || '').toLowerCase(); let s = 0; for (const w of qw) if (h.includes(w)) s++; if (s > bs) { bs = s; best = r; } }
+          if (best && bs > 0) targets = [best];
+        }
+        if (!targets.length) {
+          reply = 'which one? you\'ve got: ' + rows.map((r) => '“' + r.text + '”').join(', ');
+        } else {
+          try { await supabase.from('blak_reminders').update({ done: true }).in('id', targets.map((t) => t.id)); } catch (e) {}
+          reply = targets.length > 1
+            ? ('done — cleared ' + targets.length + ' reminders ✌️')
+            : ('done — cancelled your reminder to ' + targets[0].text + ' ✌️');
+          loadReminders();
+        }
+      }
+      const am = { role: 'assistant', content: reply, ts: Date.now() };
+      history.push(am); addRow('them', reply, { msg: am });
+      dbInsertMessage('assistant', reply).then((id) => { if (id) am.id = id; });
+    }
     async function loadReminders() {
       const wrap = $('bx-reminders'); if (!wrap || !supabase || !userId) return;
       try {
@@ -1134,11 +1178,16 @@ import AppLayout from '../../layouts/AppLayout.astro';
         wrap.hidden = false; wrap.innerHTML = '';
         for (const r of due) {
           const el = document.createElement('div'); el.className = 'bx-rem';
-          el.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2M9 2h6"/></svg><span class="bx-rem-tx"></span><button type="button" class="bx-rem-done">Done</button>';
+          el.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2M9 2h6"/></svg><span class="bx-rem-tx"></span><button type="button" class="bx-rem-snooze">Snooze 1h</button><button type="button" class="bx-rem-done">Done</button>';
           el.querySelector('.bx-rem-tx').textContent = r.text;
           el.querySelector('.bx-rem-done').onclick = async () => {
             el.remove(); if (!wrap.querySelector('.bx-rem')) wrap.hidden = true;
             try { await supabase.from('blak_reminders').update({ done: true }).eq('id', r.id); } catch (e) {}
+          };
+          el.querySelector('.bx-rem-snooze').onclick = async () => {
+            el.remove(); if (!wrap.querySelector('.bx-rem')) wrap.hidden = true;
+            // push it an hour out and clear pushed_at so it can alert again at the new time
+            try { await supabase.from('blak_reminders').update({ remind_at: new Date(Date.now() + 3600000).toISOString(), pushed_at: null }).eq('id', r.id); } catch (e) {}
           };
           wrap.appendChild(el);
         }
@@ -1245,6 +1294,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
           um.media_description = desc || null;
         }
         dbInsertMessage('user', text, img ? { url: img.url, type: img.type, description: um.media_description } : null).then((id) => { if (id) um.id = id; });
+        if (text && !img && CANCEL_REMIND_INTENT.test(text)) { await handleCancelReminder(text); setBusy(false); return; }   // "cancel my reminder" → clear it (before create)
         if (text && !img && REMIND_INTENT.test(text)) { await handleReminder(text); setBusy(false); return; }   // "remind me to…" → save it
         if (text && !img && HUMAN_INTENT.test(text)) { setBusy(false); offerMinit(); return; }   // wants a real person → offer Minit
         if (text && !img && CALL_INTENT.test(text)) { setBusy(false); offerCall(); return; }   // they asked to call → offer it
