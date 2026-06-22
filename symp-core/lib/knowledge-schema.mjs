@@ -168,3 +168,64 @@ export function missingFields(facts, { limit = 0 } = {}) {
     missing.sort((a, b) => (b.core ? 1 : 0) - (a.core ? 1 : 0));
     return limit > 0 ? missing.slice(0, limit) : missing;
 }
+
+// ── Extended model (profile foundation, 2026-06-21) ───────────────────────
+// Constants/helpers for the hybrid schema (entities, events, goals, visibility,
+// settings, tombstones). Still dependency-free + safe on both server & browser.
+
+export const VISIBILITY = Object.freeze({ SHARED: 'shared', BLAK_ONLY: 'blak_only', PRIVATE: 'private' });
+export const VISIBILITY_IDS = Object.freeze(['shared', 'blak_only', 'private']);
+export const VISIBILITY_META = Object.freeze({
+    shared:    { label: 'Shared with your world', hint: 'Blak can weave this into a Minit brief or your Persona — always previewed before it leaves.' },
+    blak_only: { label: 'Only Blak',              hint: 'Used only in your 1:1 chats & calls with Blak. Never shared anywhere else.' },
+    private:   { label: 'Private',                hint: 'Kept on your profile so you can see it, but Blak never uses it in conversation.' },
+});
+
+export const ENTITY_KINDS = Object.freeze(['person', 'pet', 'place', 'org', 'thing']);
+export const ENTITY_KIND_META = Object.freeze({
+    person: { label: 'Person', emoji: '🧑' },
+    pet:    { label: 'Pet',    emoji: '🐾' },
+    place:  { label: 'Place',  emoji: '📍' },
+    org:    { label: 'Org',    emoji: '🏢' },
+    thing:  { label: 'Thing',  emoji: '✨' },
+});
+
+export const EVENT_KINDS   = Object.freeze(['event', 'milestone', 'anniversary', 'plan', 'memory']);
+export const GOAL_KINDS     = Object.freeze(['goal', 'habit', 'dream', 'win']);
+export const GOAL_STATUSES  = Object.freeze(['active', 'done', 'paused', 'dropped']);
+
+export const PROFILE_SETTINGS_DEFAULTS = Object.freeze({
+    learning_paused: false,
+    enrich_gmail: false, enrich_calendar: false, enrich_music: false, enrich_location: false,
+    share_minit: true, share_persona: true, share_nexus: false,
+    mirror_tone: 'warm',
+});
+
+export function isValidVisibility(v) { return VISIBILITY_IDS.includes(v); }
+
+// Normalize a fact value for tombstone matching + duplicate detection: lowercase,
+// collapse non-alphanumerics to single spaces, trim.
+//   "Favourite colour is Teal!" → "favourite colour is teal"
+export function normalizeValue(s) {
+    return String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+}
+
+// Soft freshness: a fact not re-seen / re-confirmed within `days` reads as stale,
+// so the profile can gently ask "still true?". Pure — the caller decides whether
+// to exempt user-edited facts. Returns true when fresh.
+export function isFresh(fact, { days = 120 } = {}) {
+    if (!fact) return false;
+    const anchor = fact.last_confirmed_at || fact.last_seen_at || fact.updated_at;
+    if (!anchor) return true;
+    return (Date.now() - new Date(anchor).getTime()) < days * 86400000;
+}
+
+// Is this fact allowed to leave the 1:1 Blak context (Minit brief, Persona…)?
+export function isShareable(fact) {
+    return !!fact && fact.visibility === 'shared' && !fact.archived;
+}
+
+// May Blak use this fact in generation at all? ('private' is see-only.)
+export function isUsableInContext(fact) {
+    return !!fact && fact.visibility !== 'private' && !fact.archived;
+}

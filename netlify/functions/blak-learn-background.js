@@ -14,7 +14,7 @@ exports.handler = async (event) => {
 
     let body = {};
     try { body = JSON.parse(event.body || '{}'); } catch (_) { /* ignore */ }
-    const { user_id, userText, assistantText, persona_id, persona_name, skip_global } = body || {};
+    const { user_id, userText, assistantText, persona_id, persona_name, skip_global, threadId } = body || {};
     if (!user_id || !userText) return { statusCode: 200, body: 'noop' };
 
     // Fantasy persona: update the persona's OWN memory of this user — always, since
@@ -31,7 +31,8 @@ exports.handler = async (event) => {
     if (!skip_global) {
         try {
             const { extractKnowledge } = await import('../../symp-core/lib/knowledge-extractor.mjs');
-            await extractKnowledge(user_id, { userText, assistantText });
+            // sourceKind/sourceRef give every learned fact its "why" provenance (#11/#12).
+            await extractKnowledge(user_id, { userText, assistantText, sourceKind: 'chat', sourceRef: threadId || null });
         } catch (e) { console.warn('[learn-bg] extract failed:', e && e.message); }
 
         try {
