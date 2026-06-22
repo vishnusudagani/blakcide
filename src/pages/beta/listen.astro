@@ -197,6 +197,21 @@ import AppLayout from '../../layouts/AppLayout.astro';
     html[data-theme="light"] .lsn-aura { background: radial-gradient(55% 40% at 50% 10%, rgba(106,211,184,.16), transparent 70%), radial-gradient(45% 35% at 84% 6%, rgba(91,192,255,.12), transparent 72%); }
     .lsn-go-online { display: inline-flex; align-items: center; justify-content: center; gap: .5rem; margin-top: 1.5rem; min-height: 46px; padding: .8rem 1.9rem; border: 0; border-radius: var(--r-pill); font: inherit; font-size: var(--fs-lg); font-weight: 650; color: #06231C; cursor: pointer; background: linear-gradient(135deg, var(--mint), var(--mint-deep) 75%, var(--aqua)); box-shadow: 0 12px 32px rgba(106,211,184,.38); transition: transform var(--t-fast) var(--ease-out); }
     .lsn-go-online:hover { transform: translateY(-1px); }
+    .lsn-shifts-btn { display: inline-flex; align-items: center; gap: .4rem; margin: 0 0 1.4rem; background: none; border: 1px dashed var(--line-strong); border-radius: var(--r-pill); color: var(--ink-soft); font: inherit; font-size: var(--fs-sm); padding: .5rem 1rem; min-height: 44px; cursor: pointer; }
+    .lsn-shifts-btn:hover { border-color: var(--mint-deep); color: var(--mint-deep); }
+    .lsn-shifts-btn span { transition: transform var(--t-fast) var(--ease-out); }
+    .lsn-shifts-btn:hover span { transform: translateX(3px); }
+    .lsn-shift-note { font-size: var(--fs-sm); color: var(--ink-soft); line-height: 1.5; margin: 0 0 1rem; }
+    .lsn-shift-gap-k { color: var(--coral); font-weight: 600; }
+    .lsn-shift-grid { display: flex; flex-direction: column; gap: 5px; }
+    .lsn-shift-row { display: flex; gap: 5px; align-items: center; }
+    .lsn-shift-day { flex: 0 0 34px; font-size: var(--fs-xs); color: var(--ink-faint); font-family: var(--font-mono); }
+    .lsn-shift-bh { flex: 1; text-align: center; font-size: 10px; color: var(--ink-faint); font-family: var(--font-mono); }
+    .lsn-shift-cell { flex: 1; min-width: 0; aspect-ratio: 1 / 1; max-height: 46px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--ink-faint); font: inherit; font-size: var(--fs-xs); cursor: pointer; display: grid; place-items: center; transition: background var(--t-fast) var(--ease-out), border-color var(--t-fast) var(--ease-out); }
+    .lsn-shift-cell.gap { border-style: dashed; border-color: rgba(255,107,157,.45); }
+    .lsn-shift-cell.mine { background: linear-gradient(135deg, var(--mint), var(--mint-deep)); color: #06231C; border-color: transparent; font-weight: 700; }
+    .lsn-shift-cell:hover { border-color: var(--mint-deep); }
+    .lsn-shift-back { font: inherit; font-size: var(--fs-sm); color: var(--ink-soft); background: var(--surface); border: 1px solid var(--line-strong); border-radius: var(--r-pill); padding: .5rem 1.1rem; min-height: 44px; cursor: pointer; }
     @media (max-width: 560px) { .lsn-head { flex-wrap: wrap; } .lsn-avail { width: 100%; justify-content: flex-end; margin-top: .4rem; } .lsn-hbtn .lbl { display: none; } .lsn-chat-head { gap: .5rem; } .lsn-hbtns { gap: .3rem; } }
   </style>
 
@@ -399,14 +414,17 @@ import AppLayout from '../../layouts/AppLayout.astro';
         toggleEl.removeAttribute('disabled'); toggleEl.removeAttribute('title'); paintAvailability();
         const stats = await statsHTML();
         const sched = await scheduledHTML();
+        const shiftsBtn = '<button type="button" class="lsn-shifts-btn" id="lsn-shifts-btn">Plan your shifts <span>→</span></button>';
         if (!profile.is_online) {
           if (queueChannel) { supabase.removeChannel(queueChannel); queueChannel = null; }
           if (queuePoll) { clearInterval(queuePoll); queuePoll = 0; }
-          root.innerHTML = stats + sched + `<div class="lsn-state"><div class="lsn-state-orb dim"></div><h3>You’re offline</h3><p>Go online when you’re ready to receive people — you’re in control of when you’re available.</p><button type="button" class="lsn-go-online" id="lsn-go-online">Go online</button></div>`;
+          root.innerHTML = stats + shiftsBtn + sched + `<div class="lsn-state"><div class="lsn-state-orb dim"></div><h3>You’re offline</h3><p>Go online when you’re ready to receive people — you’re in control of when you’re available.</p><button type="button" class="lsn-go-online" id="lsn-go-online">Go online</button></div>`;
           document.getElementById('lsn-go-online')?.addEventListener('click', () => { if (!profile.is_online) toggleAvailability(); });
+          document.getElementById('lsn-shifts-btn')?.addEventListener('click', showShifts);
           return;
         }
-        root.innerHTML = stats + sched + `<p class="lsn-section-label">Incoming · live</p><div id="lsn-queue"></div>`;
+        root.innerHTML = stats + shiftsBtn + sched + `<p class="lsn-section-label">Incoming · live</p><div id="lsn-queue"></div>`;
+        document.getElementById('lsn-shifts-btn')?.addEventListener('click', showShifts);
         subscribeQueue();
         const { data: pend } = await supabase.from('connect_sessions').select('*').eq('listener_id', profile.id).eq('status', 'pending').gte('created_at', new Date(Date.now() - 15 * 60 * 1000).toISOString()).order('created_at', { ascending: true });
         seen.clear();
@@ -414,6 +432,34 @@ import AppLayout from '../../layouts/AppLayout.astro';
         checkEmptyQueue();
         if (queuePoll) clearInterval(queuePoll);
         queuePoll = setInterval(refreshQueue, 3000);
+      }
+
+      // Phase 4 (#2/#3): recurring weekly shifts + coverage gaps.
+      async function showShifts() {
+        const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        const BLK = ['12a', '4a', '8a', '12p', '4p', '8p'];
+        root.innerHTML = `<p class="lsn-section-label">Your shifts</p><div class="lsn-skel"><i></i><i></i><i></i></div>`;
+        let mine = new Set(), cov = {};
+        try { const { data } = await supabase.rpc('minit_shift_grid'); if (data && data.listener !== false) { mine = new Set((data.mine || []).map(Number)); cov = data.coverage || {}; } } catch (e) {}
+        const head = '<div class="lsn-shift-row lsn-shift-head"><span class="lsn-shift-day"></span>' + BLK.map((b) => `<span class="lsn-shift-bh">${b}</span>`).join('') + '</div>';
+        const rows = DAYS.map((dname, d) => {
+          const cells = BLK.map((_, b) => { const slot = d * 10 + b; const n = Number(cov[String(slot)] || 0); const isMine = mine.has(slot); return `<button type="button" class="lsn-shift-cell${isMine ? ' mine' : ''}${n === 0 ? ' gap' : ''}" data-d="${d}" data-b="${b}" aria-label="${dname} ${BLK[b]}, ${n} covering">${n || ''}</button>`; }).join('');
+          return `<div class="lsn-shift-row"><span class="lsn-shift-day">${dname}</span>${cells}</div>`;
+        }).join('');
+        root.innerHTML = `<p class="lsn-section-label">Your shifts · tap to claim</p>
+          <p class="lsn-shift-note">Claim the hours you’ll usually be around. <span class="lsn-shift-gap-k">Dashed</span> blocks are gaps no one covers yet; numbers show how many listeners cover each.</p>
+          <div class="lsn-shift-grid">${head}${rows}</div>
+          <div style="margin-top:1.4rem"><button type="button" class="lsn-shift-back" id="lsn-shift-back">← Back</button></div>`;
+        document.getElementById('lsn-shift-back')?.addEventListener('click', renderHome);
+        root.querySelectorAll('.lsn-shift-cell').forEach((c) => c.addEventListener('click', async () => {
+          const d = Number(c.dataset.d), b = Number(c.dataset.b), isMine = c.classList.contains('mine');
+          c.disabled = true;
+          try {
+            if (isMine) await supabase.from('listener_shifts').delete().eq('listener_id', profile.id).eq('weekday', d).eq('block', b);
+            else await supabase.from('listener_shifts').insert({ listener_id: profile.id, weekday: d, block: b });
+          } catch (e) {}
+          showShifts();
+        }));
       }
 
       async function scheduledHTML() {
