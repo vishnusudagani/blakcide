@@ -14,6 +14,7 @@
 // frequency is gated by blak_prefs.proactivity (none|low|default|high).
 
 import { chatCompleteFailover } from './llm-providers.mjs';
+import { sendWebPush, webPushConfigured } from './webpush.mjs';
 
 const SUPABASE_URL = process.env.SUPABASE_URL || '';
 const SERVICE_KEY  = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
@@ -37,6 +38,22 @@ async function sbInsert(table, body) {
         });
         return r.ok ? await r.json().catch(() => null) : null;
     } catch (e) { return null; }
+}
+async function sbPatch(path, body) {
+    try {
+        const r = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+            method: 'PATCH',
+            headers: { apikey: SERVICE_KEY, Authorization: `Bearer ${SERVICE_KEY}`, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
+            body: JSON.stringify(body),
+        });
+        return r.ok;
+    } catch (e) { return false; }
+}
+async function sbDelete(path) {
+    try {
+        const r = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, { method: 'DELETE', headers: { apikey: SERVICE_KEY, Authorization: `Bearer ${SERVICE_KEY}` } });
+        return r.ok;
+    } catch (e) { return false; }
 }
 
 function parseJson(raw) {
@@ -138,6 +155,45 @@ export async function maybeGenerateNudge(userId) {
         await noteNudge(userId, nudge);
         return nudge;
     } catch (e) { return null; }
+}
+
+// Deliver due, un-pushed nudges as web pushes (payloadless — the SW shows a warm
+// generic line and tapping opens Blak, where the nudge already waits). Coalesces
+// to one push per device per user, marks pushed_at, and prunes dead (404/410)
+// subscriptions. A 12h window keeps a first-deploy backlog from blasting at once.
+//   - immediate nudges (due_at NULL): pushed if created in the last 12h
+//   - followthrough nudges (due_at set): pushed once due_at has passed (within 12h)
+export async function pushDueNudges() {
+    if (!SUPABASE_URL || !SERVICE_KEY || !webPushConfigured()) return 0;
+    const now = Date.now();
+    const nowIso = new Date(now).toISOString();
+    const floorIso = new Date(now - 12 * 3600 * 1000).toISOString();
+    const fl = encodeURIComponent(floorIso), nw = encodeURIComponent(nowIso);
+    const sel = 'select=id,user_id&order=created_at.asc&limit=300';
+    const [immediate, due] = await Promise.all([
+        sbGet(`blak_nudges?pushed_at=is.null&due_at=is.null&created_at=gte.${fl}&${sel}`),
+        sbGet(`blak_nudges?pushed_at=is.null&due_at=lte.${nw}&due_at=gte.${fl}&${sel}`),
+    ]);
+    const all = [...(immediate || []), ...(due || [])];
+    if (!all.length) return 0;
+
+    const byUser = new Map();
+    for (const n of all) {
+        if (!byUser.has(n.user_id)) byUser.set(n.user_id, []);
+        byUser.get(n.user_id).push(n.id);
+    }
+    let sent = 0;
+    for (const [uid, ids] of byUser) {
+        const subs = await sbGet(`push_subscriptions?user_id=eq.${uid}&select=endpoint`);
+        for (const s of (subs || [])) {
+            const res = await sendWebPush(s);
+            if (res.ok) sent++;
+            else if (res.status === 404 || res.status === 410) await sbDelete(`push_subscriptions?endpoint=eq.${encodeURIComponent(s.endpoint)}`);
+        }
+        // Mark pushed regardless of whether a live device existed — avoids retry storms.
+        await sbPatch(`blak_nudges?id=in.(${ids.join(',')})`, { pushed_at: nowIso });
+    }
+    return sent;
 }
 
 // Active users (web chat) in the last `days` days — for the cron to consider.
