@@ -399,7 +399,21 @@ const nav = [
             return;
           }
           go.disabled = true; go.textContent = 'Saving…';
+          const uid = session.user && session.user.id;
           try { await supabase.auth.updateUser({ data: { dob: v, age_confirmed_at: new Date().toISOString() } }); } catch (e) {}
+          // Don't let the DOB dead-end in auth metadata — reflect it in the profile:
+          // the canonical profiles columns AND the visible "Age / birthday" fact on
+          // /beta/profile, so what they entered actually shows up. (Fail-open.)
+          if (uid) {
+            try { await supabase.from('profiles').upsert({ id: uid, dob: v, birthday: v }, { onConflict: 'id' }); } catch (e) {}
+            try {
+              const bday = new Date(v).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+              await supabase.from('symp_knowledge_facts').upsert(
+                { user_id: uid, area: 'identity', key: 'age', label: 'Age / birthday', value: bday, source: 'user', status: 'user_edited', confidence: 1, last_seen_at: new Date().toISOString() },
+                { onConflict: 'user_id,area,key' },
+              );
+            } catch (e) {}
+          }
           ov.remove();
         });
       } catch (e) { /* fail open */ }
