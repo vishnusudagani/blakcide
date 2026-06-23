@@ -101,7 +101,12 @@ export async function runStreamingChatWithTools(opts) {
                 temperature: 0.5,   // warm but coherent — high temp (0.9) made the Telugu-weak model ramble into word-salad
                 max_tokens:  maxTokens,
             };
-            if (useTools && p.supportsTools !== false) {
+            // Run the Groq free-tier FLOOR lean — no tools. Tool defs add ~400
+            // tokens and an empty-first-round double-call, which blows Groq's
+            // ~12k-tokens/min free wall → 429 → the turn dead-ends ("lost my train
+            // of thought"). When we've fallen to the floor, a plain reply beats a
+            // break, so the floor never carries tools (higher tiers still do).
+            if (useTools && p.supportsTools !== false && p.id !== 'groq') {
                 body.tools       = tools;
                 body.tool_choice = 'auto';
             }
@@ -116,7 +121,12 @@ export async function runStreamingChatWithTools(opts) {
                 // user just sees no reply, with no failover. On timeout we abort and
                 // fall through to the next provider (the real "Blak went silent" cause).
                 const ctrl = new AbortController();
-                const to = setTimeout(() => ctrl.abort(), 12000);
+                // First-byte ceiling before failing over. 12s was too tight — Azure
+                // (the quality primary) can take longer to first token on a big
+                // prompt, and a premature abort dumps the turn onto the Groq floor,
+                // which then 429s → "lost my train of thought". 22s is safe: real
+                // headers arrive in 1–3s, so this only catches a truly stuck host.
+                const to = setTimeout(() => ctrl.abort(), 22000);
                 try {
                     const r = await fetch(p.baseUrl, {
                         method:  'POST',
