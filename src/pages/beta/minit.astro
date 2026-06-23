@@ -640,6 +640,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
             <p class="mnx-greet-sub">${gSub}</p>
             ${live}
             <button type="button" class="mnx-go" id="mnx-start"${credits.ok ? '' : ' disabled'}>Start talking <span class="mnx-cta-arrow">→</span></button>
+            <p style="font-size:11px;color:var(--ink-faint);line-height:1.45;margin:.7rem .2rem 0">Minit listeners offer trained human listening — not therapy, medical advice, or emergency support. In an emergency, contact local services.</p>
             <button type="button" class="mnx-anon-min ${anonPref ? 'on' : ''}" id="mnx-anon" aria-pressed="${anonPref}"><span class="mnx-anon-ico">${LOCK_SVG}</span> Anonymous <i>${anonPref ? 'on' : 'off'}</i><span class="mnx-sw2"></span></button>
             <div class="mnx-lang" id="mnx-lang" role="group" aria-label="Preferred language"><span class="mnx-lang-k">Listener speaks</span><span class="mnx-lang-opts">${['English', 'Hindi', 'Telugu'].map((l) => `<button type="button" class="mnx-lang-opt ${l === langPref ? 'on' : ''}" data-l="${l}">${l === 'English' ? 'EN' : l === 'Hindi' ? 'हिं' : 'తె'}</button>`).join('')}</span></div>
             <div class="mnx-meter">
