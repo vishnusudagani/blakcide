@@ -356,6 +356,20 @@ const nav = [
         if (want && want !== location.pathname && want !== here()) { location.replace(want); return; }
       } catch (e) {}
 
+      // Listener auto-routing — a Minit listener (a row in `listeners`, e.g. the
+      // connect@blaksyd.com account) opens straight into its console on app entry
+      // rather than the Blak home. Fires once per browser session so the listener
+      // can still navigate to Blak/Nexus afterward; the seeker page (/beta/minit/)
+      // already bounces listeners to /beta/listen/ the same way.
+      try {
+        const onHome = location.pathname.replace(/\/+$/, '') === '/beta/blak';
+        if (onHome && !sessionStorage.getItem('blk_lsn_routed')) {
+          const { data: lp, error } = await supabase.from('listeners').select('id').eq('user_id', session.user.id).maybeSingle();
+          if (!error) sessionStorage.setItem('blk_lsn_routed', '1');
+          if (lp) { location.replace('/beta/listen/'); return; }
+        }
+      } catch (e) {}
+
       await ageGate(session);
       // In-product boundary (Apple/Google + safety): one-time companionship-not-care notice.
       boundaryNotice(session.user.id);
