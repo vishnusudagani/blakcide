@@ -7,6 +7,10 @@
   command = "npm run build"
   publish = "dist"
   functions = "netlify/functions"
+  # Skip a full site build when a commit changes ONLY paths that can't affect the
+  # published site or its Netlify functions (supabase/** deploys separately; root
+  # docs). Saves build minutes on no-op commits. (ignore: exit 0 = skip, non-0 = build.)
+  ignore = "bash scripts/netlify-ignore.sh"
 
 [build.environment]
   # Netlify secrets scanning flags the Supabase ANON key's value where it appears
