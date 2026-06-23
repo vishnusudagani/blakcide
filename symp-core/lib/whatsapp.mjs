@@ -306,3 +306,11 @@ export async function consumeLinkCode(code, phone) {
     }).catch(() => {});
     return { ok: true, userId: row.user_id };
 }
+
+// TEMP debug — log every inbound webhook payload (any shape) so we can see exactly
+// what coexistence delivers. Remove once the real number is confirmed working.
+export async function captureDebug(payload, note = null) {
+    try {
+        await sbFetch('wa_debug', { method: 'POST', prefer: 'return=minimal', body: { payload, note } });
+    } catch (_) { /* never block the webhook */ }
+}

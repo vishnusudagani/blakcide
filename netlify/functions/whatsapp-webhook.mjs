@@ -10,7 +10,7 @@
 // timeout (which previously cut replies off and forced the canned fallback).
 
 import {
-    verifyWebhookGet, verifySignature, appSecretConfigured,
+    verifyWebhookGet, verifySignature, appSecretConfigured, captureDebug,
 } from '../../symp-core/lib/whatsapp.mjs';
 
 export default async (req) => {
@@ -32,11 +32,16 @@ export default async (req) => {
         return new Response('invalid signature', { status: 401 });
     }
 
+    // TEMP debug: log EVERY inbound webhook (any shape) so we can see exactly what
+    // coexistence delivers. Remove once the real number is confirmed.
+    let parsed = null;
+    try { parsed = JSON.parse(raw); } catch (_) { /* non-json */ }
+    captureDebug(parsed, `field=${parsed?.entry?.[0]?.changes?.[0]?.field || '?'}`);
+
     // Route by webhook field: 'calls' → the voice call bridge (Pipecat/Cloud Run,
     // if WHATSAPP_CALL_BRIDGE_URL is set); everything else ('messages', etc.) → the
     // background chat worker. One Meta callback URL serves both.
-    let field = 'messages';
-    try { field = JSON.parse(raw)?.entry?.[0]?.changes?.[0]?.field || 'messages'; } catch (_) { /* keep default */ }
+    const field = parsed?.entry?.[0]?.changes?.[0]?.field || 'messages';
 
     const bridge = process.env.WHATSAPP_CALL_BRIDGE_URL;
     const target = (field === 'calls' && bridge)
