@@ -36,6 +36,7 @@ import {
     isValidPersona,
 } from './persona-engine.mjs';
 import { chatCompleteFailover } from './llm-providers.mjs';
+import { tavilySearch } from './web-search.mjs';
 
 // ── 1. search_vault ────────────────────────────────────────────────────────
 
@@ -195,16 +196,30 @@ async function execSearchWeb({ args }) {
     const query = String(args?.query || '').trim();
     if (!query) return 'No query provided.';
 
-    // Open-source web grounding: route through OpenRouter's `:online` web plugin
-    // when OPENROUTER_API_KEY is present. Without it, fall back to the
-    // open-source model's own knowledge (clearly hedged) — never OpenAI.
+    // Real live results via Tavily (TAVILY_API_KEY). Return its grounded answer
+    // plus the top sources so the model can weave them in and cite naturally.
+    try {
+        const r = await tavilySearch(query, { maxResults: 5 });
+        if (r && (r.answer || (r.results && r.results.length))) {
+            const lines = [];
+            if (r.answer) lines.push(r.answer);
+            for (const s of (r.results || []).slice(0, 5)) {
+                if (s && s.title) lines.push(`- ${s.title}${s.url ? ` (${s.url})` : ''}: ${String(s.content || '').replace(/\s+/g, ' ').slice(0, 220)}`);
+            }
+            const out = lines.join('\n').trim();
+            if (out) return out.slice(0, 2200);
+        }
+    } catch (_) { /* Tavily down / over quota → fall through to a hedged answer */ }
+
+    // Fallback (no web key or Tavily failed): the model's OWN knowledge, clearly
+    // hedged — never fabricate live data or invent sources.
     try {
         const { text } = await chatCompleteFailover(
             [
-                { role: 'system', content: 'Answer concisely (≤120 words). If live web results are available, ground the answer in them and cite sources inline. If you are not certain the information is current, say so briefly rather than guessing.' },
+                { role: 'system', content: 'Answer concisely (≤120 words). You do NOT have live web access right now, so if the answer might be out of date or you are unsure it is current, say so briefly — never guess at live facts or invent sources.' },
                 { role: 'user',   content: query },
             ],
-            { online: true, maxTokens: 350, temperature: 0.2, timeoutMs: 15000 },
+            { maxTokens: 350, temperature: 0.2, timeoutMs: 15000 },
         );
         return text || 'No result.';
     } catch (e) {
