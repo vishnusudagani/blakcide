@@ -580,6 +580,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
     let userId = null;
     let activeChatId = null;   // uuid of the open chat (server-persisted in `chats`)
     let sending = false;
+    let queuedFollowup = false;   // a message fired off while Blak was still replying (WhatsApp-style)
     let controller = null;
     let atBottom = true;
     let titled = {};           // chatId -> true once auto-titled
@@ -760,7 +761,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
     function setBusy(b) {
       sending = b;
       form.classList.toggle('bx-sending', b);
-      sendBtn.hidden = b; stopBtn.hidden = !b;
+      sendBtn.hidden = false; stopBtn.hidden = !b;   // keep Send available mid-turn so you can fire a follow-up (Stop also shows)
       input.disabled = false;
       if (b) { stream.querySelectorAll('.bx-regen').forEach(x => x.remove()); }
       else { attachRegen(); }
@@ -1041,12 +1042,26 @@ import AppLayout from '../../layouts/AppLayout.astro';
           acc = await attempt(typing);
         }
         acc = acc.trim();
-        const shown = acc || "Mmm — I didn't catch that. Say it once more?";
+        // Blak can fire off a couple of SHORT back-to-back texts like a friend —
+        // separated by a blank line. Render each as its own bubble. Display only:
+        // the full reply is saved as ONE message so history/payload stay clean.
+        // Guard: only split into 2–4 genuinely short bursts; never fragment a long
+        // or structured (list/steps) reply.
+        let parts = acc ? acc.split(/\n\s*\n+/).map(s => s.trim()).filter(Boolean) : [];
+        if (parts.length < 2 || parts.length > 4 || parts.some(p => p.length > 240)) parts = acc ? [acc] : [];
+        const shown = parts.length ? parts[0] : "Mmm — I didn't catch that. Say it once more?";
         typing.bub.innerHTML = renderRich(shown);   // light markdown for the final reply
         stamp(typing);
-        const am = { role: 'assistant', content: shown, ts: typing.ts };
+        const am = { role: 'assistant', content: acc || shown, ts: typing.ts };
         history.push(am);
-        dbInsertMessage('assistant', shown).then((id) => { if (id) am.id = id; });
+        dbInsertMessage('assistant', acc || shown).then((id) => { if (id) am.id = id; });
+        for (let i = 1; i < parts.length; i++) {
+          await new Promise(r => setTimeout(r, 480));   // a beat between texts, like a friend typing the next one
+          const extra = addRow('them', '');
+          extra.bub.innerHTML = renderRich(parts[i]);
+          stamp(extra);
+          scrollToBottom();
+        }
         maybeTitleConvo();
         setBusy(false);
       } catch (e) {
@@ -1060,6 +1075,13 @@ import AppLayout from '../../layouts/AppLayout.astro';
         }
       } finally {
         controller = null;
+        // A message the user fired off WHILE Blak was replying — now that this
+        // turn is done, reply to it (one turn covers all queued messages).
+        if (queuedFollowup && !sending) {
+          queuedFollowup = false;
+          const lu = [...history].reverse().find(m => m.role === 'user');
+          if (lu) runTurn(lu.content || '');
+        }
       }
     }
 
@@ -1267,10 +1289,26 @@ import AppLayout from '../../layouts/AppLayout.astro';
       input.focus();
     }
 
+    // Queue a message the user fires off while Blak is still replying. Appends it
+    // now (the input was already cleared by the form handler); runTurn's finally
+    // picks it up and replies once the current turn ends — WhatsApp-style.
+    async function enqueueFollowup(text, img) {
+      pendingImage = null; showPreview(null);
+      if (!incognito && !activeChatId) { const c = await dbCreateChat((text || 'Shared an image').slice(0, 42)); if (c) activeChatId = c.id; }
+      const um = { role: 'user', content: text, ts: Date.now(), media_url: img ? img.url : null, media_type: img ? img.type : null, media_description: null };
+      history.push(um);
+      addRow('me', text, { media_url: um.media_url, msg: um });
+      updateChips(); scrollToBottom();
+      if (img) { const desc = await Promise.race([visionDescribe(img.url), new Promise((r) => setTimeout(() => r(null), 12000))]); um.media_description = desc || null; }
+      dbInsertMessage('user', text, img ? { url: img.url, type: img.type, description: um.media_description } : null).then((id) => { if (id) um.id = id; });
+      queuedFollowup = true;
+    }
+
     async function send(text) {
       text = (text || '').trim();
       const img = pendingImage;
-      if ((!text && !img) || sending) return;   // empty, or a turn is already in flight
+      if (!text && !img) return;                // nothing to send
+      if (sending) { enqueueFollowup(text, img); return; }   // a turn is live → queue it (WhatsApp-style), replied to when this turn ends
       pendingImage = null; showPreview(null);
       setBusy(true);                             // synchronous in-flight guard — blocks a 2nd send during the awaits below
       try {
