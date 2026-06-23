@@ -365,6 +365,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
       if (ready) $('px-enrolled-label').textContent = total + ' answer' + (total > 1 ? 's' : '') + ' saved — your Persona can speak in your voice.';
       renderQuestion();
       updateTrainUI(total);
+      if (ready) prewarmVoice();   // warm engine + cache the speaker prompt before first chat
     }
 
     async function onDelete() {
@@ -531,6 +532,29 @@ import AppLayout from '../../layouts/AppLayout.astro';
       speakingBubble.appendChild(btn);
     }
 
+    // Speak a whole reply as ONE clip (no sentence chunking). Chunking synthesized each
+    // sentence separately — synth (~5s) is slower than playback (~2s), so it stalled
+    // 1–3s between sentences and could drop the final chunk. One clip = smooth + complete.
+    async function speakVoice(turn, text) {
+      text = (text || '').trim(); if (!text) return;
+      const warm = await ensureWarm();
+      if (!warm || turn !== turnSeq) return;
+      const blob = await synthSentence(text).catch(() => null);
+      if (blob && turn === turnSeq) enqueueAudio(turn, blob);
+    }
+
+    // Build + cache the engine's speaker prompt ahead of the first message (overlaps the
+    // interview) so the first reply isn't a cold prompt-build on top of the cold start.
+    let prewarmed = false;
+    async function prewarmVoice() {
+      if (prewarmed) return; prewarmed = true;
+      try {
+        const warm = await ensureWarm();
+        const ref = await getUserRef().catch(() => null);
+        if (warm && ref && ref.b64) await synthSentence('hello').catch(() => {});
+      } catch (e) { /* best-effort */ }
+    }
+
     async function sendTurn(text) {
       const myTurn = resetPipeline();
       addBubble('me', text);
@@ -557,7 +581,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
         if (!cr.ok || !cr.body) throw new Error('http_' + cr.status);
         const reader = cr.body.getReader();
         const decoder = new TextDecoder();
-        let reply = '', buf = '', sentBuf = '';
+        let reply = '', buf = '';
         thinking.classList.remove('is-thinking'); thinking.textContent = '';
         thinking.classList.add('is-speaking');
         for (;;) {
@@ -573,25 +597,17 @@ import AppLayout from '../../layouts/AppLayout.astro';
             if (!p || p === '[DONE]') continue;
             let obj; try { obj = JSON.parse(p); } catch { continue; }
             if (obj.delta) {
-              reply += obj.delta; sentBuf += obj.delta;
+              reply += obj.delta;   // stream the TEXT live; voice is synthesized once, whole, below
               thinking.textContent = reply; $('px-thread').scrollTop = $('px-thread').scrollHeight;
-              if (!firstChunkEmitted) {
-                const [fc, rest0] = takeFirstChunk(sentBuf);
-                if (fc) { sentBuf = rest0; firstChunkEmitted = true; enqueueSentence(myTurn, fc); }
-              }
-              if (firstChunkEmitted) {
-                const [sents, rest] = extractSentences(sentBuf); sentBuf = rest;
-                for (const s of sents) enqueueSentence(myTurn, s);
-              }
             }
             if (obj.error) throw new Error(String(obj.error));
           }
         }
-        if (sentBuf.trim()) enqueueSentence(myTurn, sentBuf);
         reply = (reply.trim()) || 'Sorry, I could not reply just now.';
         thinking.textContent = reply;
         history.push({ role: 'assistant', content: reply });
         maybeNudgeTrain();   // promote the faster, higher-quality trained voice
+        speakVoice(myTurn, reply);   // synthesize the WHOLE reply as one smooth, complete clip
       } catch (e) {
         if (myTurn === turnSeq) { thinking.classList.remove('is-thinking', 'is-speaking'); thinking.textContent = 'Network error — is the backend reachable?'; }
       }
