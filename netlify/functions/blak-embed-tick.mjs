@@ -15,4 +15,4 @@ export default async () => {
     }
 };
 
-export const config = { schedule: '*/10 * * * *' };
+export const config = { schedule: '0 * * * *' }; // was */10 — hourly to cut Netlify scheduled-function spend (semantic-recall backfill isn't time-critical)

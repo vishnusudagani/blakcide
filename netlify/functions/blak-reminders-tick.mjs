@@ -13,4 +13,4 @@ export default async () => {
     }
 };
 
-export const config = { schedule: '*/5 * * * *' };
+export const config = { schedule: '*/30 * * * *' }; // was */5 — reduced to cut Netlify scheduled-function spend (reminders may land up to ~30 min late)
