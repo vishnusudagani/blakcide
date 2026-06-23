@@ -70,44 +70,8 @@
   force = true
 
 [[redirects]]
-  from = "/api/chat"
-  to = "/.netlify/functions/app"
-  status = 200
-
-[[redirects]]
-  from = "/api/transcribe"
-  to = "/.netlify/functions/transcribe"
-  status = 200
-
-[[redirects]]
   from = "/api/spotify-search"
   to = "/.netlify/functions/spotify-search"
-  status = 200
-
-[[redirects]]
-  from = "/api/vision"
-  to = "/.netlify/functions/vision"
-  status = 200
-
-[[redirects]]
-  from = "/api/summarize"
-  to = "/.netlify/functions/summarize"
-  status = 200
-
-[[redirects]]
-  from = "/api/tts"
-  to = "/.netlify/functions/tts"
-  status = 200
-
-[[redirects]]
-  from = "/api/group-chat"
-  to = "/.netlify/functions/group-chat"
-  status = 200
-  force = true
-
-[[redirects]]
-  from = "/api/realtime-session"
-  to = "/.netlify/functions/realtime-session"
   status = 200
 
 [[redirects]]
@@ -118,11 +82,6 @@
 [[redirects]]
   from = "/api/ice-servers"
   to = "/.netlify/functions/ice-servers"
-  status = 200
-
-[[redirects]]
-  from = "/api/listener-copilot"
-  to = "/.netlify/functions/listener-copilot"
   status = 200
 
 [[redirects]]
