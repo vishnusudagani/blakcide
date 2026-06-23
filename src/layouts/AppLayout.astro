@@ -357,6 +357,8 @@ const nav = [
       } catch (e) {}
 
       await ageGate(session);
+      // In-product boundary (Apple/Google + safety): one-time companionship-not-care notice.
+      boundaryNotice(session.user.id);
 
       const email = session.user && session.user.email;
       if (email) { const av = document.getElementById('ap-avatar'); if (av) av.textContent = email[0].toUpperCase(); }
@@ -364,6 +366,28 @@ const nav = [
       initNotifications(session.user.id);
       setupSwipe();
     })();
+
+    // In-product boundary notice — Blaksyd is companionship/listening, NOT therapy, medical
+    // advice, or emergency support. One-time, acknowledged via localStorage. Informational:
+    // wrapped in try/catch and never blocks the app (mirrors the public safety/terms copy).
+    function boundaryNotice(uid) {
+      try {
+        if (document.getElementById('blk-agegate')) return; // age-blocked → don't stack overlays
+        const KEY = 'bx_boundary_ack_' + (uid || 'anon');
+        if (localStorage.getItem(KEY)) return;
+        const ov = document.createElement('div');
+        ov.id = 'blk-boundary';
+        ov.style.cssText = 'position:fixed;inset:0;z-index:2147483645;background:rgba(8,9,26,.82);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);display:grid;place-items:center;padding:1.4rem;';
+        ov.innerHTML = '<div style="max-width:400px;width:100%;text-align:center;font-family:var(--font-body,system-ui);background:var(--glass-strong,#15172e);border:1px solid var(--line-strong,#2a2d4a);border-radius:18px;padding:1.8rem 1.5rem;box-shadow:0 20px 60px rgba(0,0,0,.45)">'
+          + '<div style="font-size:1.6rem;margin-bottom:.3rem">💛</div>'
+          + '<h2 style="font-size:1.25rem;font-weight:650;margin:0 0 .6rem;color:var(--ink,#fff)">A quick note before you start</h2>'
+          + '<p style="color:var(--ink-soft,#b9bdd6);margin:0 0 1.3rem;line-height:1.55">Blaksyd is for companionship, conversation, and connection — <b style="color:var(--ink,#fff)">not therapy, not medical advice, and not emergency support.</b> If you’re in crisis or in danger, please contact your local emergency services or a crisis helpline.</p>'
+          + '<button id="blk-boundary-ok" type="button" style="width:100%;padding:.8rem;border:0;border-radius:999px;font-weight:650;font-size:1rem;cursor:pointer;background:linear-gradient(135deg,#FF6B9D,#C9B8FF);color:#1b1030">Got it</button>'
+          + '</div>';
+        document.body.appendChild(ov);
+        ov.querySelector('#blk-boundary-ok').addEventListener('click', () => { try { localStorage.setItem(KEY, new Date().toISOString()); } catch (e) {} ov.remove(); });
+      } catch (e) { /* informational — never block */ }
+    }
 
     // 18+ age gate (NEXUS-GAPS.md Phase 1, #9; India DPDP — beta is adults-only).
     // One-time DOB confirmation, now SERVER-AUTHORITATIVE via the age_status / set_my_dob
