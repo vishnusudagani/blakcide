@@ -16,6 +16,7 @@
   },
   "devDependencies": {
     "@astrojs/sitemap": "^3",
+    "@capacitor/assets": "^3.0.5",
     "astro": "^5",
     "sharp": "^0.34"
   },
