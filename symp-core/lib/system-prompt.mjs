@@ -278,15 +278,16 @@ export async function buildChatSystemStack(userId, opts = {}) {
             { role: 'system', content: REAL_TIME_DATA_TEXT },
         ];
         // Memory. Owner chat → the persona's memory of THIS user (the character
-        // remembering you). Shared chat → nothing, UNLESS the owner set reveal to
-        // 'knows_me', in which case the persona may draw on what it remembers about
-        // its CREATOR (a curated relationship summary — never the raw profile/vault).
+        // remembering you — who they are AND your shared history). Shared chat →
+        // nothing, UNLESS the owner set reveal to 'knows_me', in which case the
+        // persona gets only the creator's PROFILE (who they are), never the private
+        // conversation history (jokes, things shared, promises) the persona memory holds.
         if (userId && p.id) {
             try {
                 if (p._shared) {
                     if (p._reveal === 'knows_me' && p.user_id) {
-                        const cmem = await fetchPersonaMemory(p.user_id, p.id);
-                        if (cmem) pstack.push({ role: 'system', content: `=== ABOUT YOUR CREATOR ===\nThings you've come to know about the person who made you. The one talking to you now is SOMEONE NEW (not your creator) — they were given a link to meet you. You can reference what you know about your creator naturally when it fits, but never dump it, and never pretend this new person is them.\n${cmem}\n=== END ===` });
+                        const cprofile = await buildKnowledgeBlock(p.user_id, { latestUserText: opts.latestUserText });
+                        if (cprofile) pstack.push({ role: 'system', content: `=== ABOUT YOUR CREATOR ===\nThis describes your CREATOR — the person who made you. The one messaging you now is SOMEONE NEW (they were given a link to meet you), so none of this is about them. Reference who your creator is naturally when it fits, never recite it, and never assume this new person is your creator or already knows any of it. You're given who your creator IS — not your private history with them.\n${cprofile}\n=== END ===` });
                     }
                 } else {
                     const pmem = await fetchPersonaMemory(userId, p.id);

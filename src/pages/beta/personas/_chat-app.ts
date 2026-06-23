@@ -645,7 +645,7 @@ async function openShareSheet() {
       '</button>' +
       '<button type="button" class="ss-rev" data-rev="knows_me" style="' + revBase + 'margin-bottom:.7rem;">' +
         '<div style="font-weight:600;font-size:13.5px;">Let them know me</div>' +
-        '<div style="font-size:12px;opacity:.65;line-height:1.35;">' + nm + ' can mention what it remembers about you from your chats — never your journals or profile.</div>' +
+        '<div style="font-size:12px;opacity:.65;line-height:1.35;">' + nm + ' will know who you are — your profile — but never your private chat history with ' + nm + '.</div>' +
       '</button>' +
       '<input id="ss-link" readonly value="' + esc(link) + '" style="width:100%;box-sizing:border-box;font-size:13px;padding:.6rem .7rem;border-radius:10px;border:1px solid var(--line,rgba(255,255,255,.14));background:rgba(255,255,255,.06);color:inherit;margin-bottom:.7rem;" />' +
       '<div style="display:flex;gap:.5rem;flex-wrap:wrap;">' +
