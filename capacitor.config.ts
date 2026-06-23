@@ -17,6 +17,28 @@ const config: CapacitorConfig = {
     // OAuth) still open in the system browser, which is what we want for auth.
     allowNavigation: ['blaksyd.com', '*.blaksyd.com'],
   },
+  // Native shell polish (config-only — applies to the remote-URL app without
+  // touching the live web code).
+  plugins: {
+    SplashScreen: {
+      launchShowDuration: 3000,      // hold the branded splash over the cold remote load
+      launchAutoHide: true,
+      launchFadeOutDuration: 400,
+      backgroundColor: '#08091A',    // brand void
+      showSpinner: false,
+      androidScaleType: 'CENTER_CROP',
+      splashFullScreen: true,
+      splashImmersive: true,
+    },
+    StatusBar: {
+      style: 'LIGHT',                // white status-bar content (the app is predominantly dark)
+      backgroundColor: '#08091A',    // Android status-bar background
+      overlaysWebView: false,
+    },
+    Keyboard: {
+      resize: 'none',                // let the web app's visualViewport logic own the keyboard
+    },
+  },
 };
 
 export default config;
