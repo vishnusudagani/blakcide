@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#08091A" />
+  <title>Offline · Blaksyd</title>
+  <style>
+    html, body { height: 100%; margin: 0; }
+    body {
+      background: #08091A; color: #fff;
+      font-family: -apple-system, system-ui, "Segoe UI", Roboto, sans-serif;
+      display: grid; place-items: center; text-align: center;
+      padding: 24px calc(24px + env(safe-area-inset-right)) calc(24px + env(safe-area-inset-bottom)) calc(24px + env(safe-area-inset-left));
+      -webkit-font-smoothing: antialiased;
+    }
+    .mark { width: 64px; height: 64px; margin: 0 auto 28px; opacity: .96; }
+    h1 { font-size: 20px; font-weight: 650; margin: 0 0 8px; letter-spacing: -.01em; }
+    p { color: #b9b9cc; font-size: 15px; line-height: 1.55; margin: 0 0 26px; max-width: 300px; }
+    button {
+      -webkit-appearance: none; appearance: none; border: 0; border-radius: 999px;
+      padding: 14px 30px; font: 600 16px/1 inherit; color: #fff;
+      background: linear-gradient(135deg, #1f7a6b, #2a9d8f); cursor: pointer;
+    }
+    button:active { transform: scale(.98); }
+  </style>
+</head>
+<body>
+  <div>
+    <svg class="mark" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <g transform="translate(33.5 17) scale(0.125)">
+        <path d="M264 396C264 468.902 204.902 528 132 528C59.0984 528 0 468.902 0 396C0 323.098 59.0984 264 132 264C204.902 264 264 323.098 264 396ZM13.2 396C13.2 461.611 66.3886 514.8 132 514.8C197.611 514.8 250.8 461.611 250.8 396C250.8 330.389 197.611 277.2 132 277.2C66.3886 277.2 13.2 330.389 13.2 396Z" fill="#fff"/>
+        <line x1="6.5" x2="6.5" y2="396" stroke="#fff" stroke-width="30" stroke-linecap="round"/>
+      </g>
+    </svg>
+    <h1>You're offline</h1>
+    <p>Blaksyd needs a connection. Your world picks up right where you left off once you're back.</p>
+    <button type="button" onclick="location.reload()">Try again</button>
+  </div>
+</body>
+</html>

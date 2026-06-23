@@ -12,6 +12,7 @@ const config: CapacitorConfig = {
   server: {
     url: 'https://blaksyd.com/beta/',
     cleartext: false,
+    errorPath: 'offline.html',     // branded fallback if the live site can't load (offline)
     // Keep blaksyd.com navigations INSIDE the app webview (otherwise Capacitor
     // hands remote hosts off to external Safari). External hosts (e.g. Google
     // OAuth) still open in the system browser, which is what we want for auth.
