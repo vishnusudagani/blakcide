@@ -29,7 +29,9 @@ const CRITICAL_LANGUAGE_OVERRIDE = [
 ].join('\n');
 
 const MAX_JOURNAL_ENTRIES = 6;     // last 6 (≈3 days, 2 buckets)
-const MAX_MEMORY_CHARS    = 1200;  // truncate user_memory to keep prompt bounded
+const MAX_MEMORY_CHARS    = 2200;  // truncate user_memory to keep prompt bounded
+                                   // (kept >= the updater's ~2000-char target so
+                                   // recent additions are never clipped off the end)
 
 function clip(str, max) {
     if (!str) return '';
