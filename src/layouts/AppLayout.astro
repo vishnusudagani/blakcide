@@ -365,13 +365,36 @@ const nav = [
       setupSwipe();
     })();
 
-    // 18+ age gate (NEXUS-GAPS.md Phase 1, #9). One-time DOB confirmation, stored on
-    // the auth user. Additive + FAIL-OPEN: the app loads underneath and any error is
-    // swallowed, so a bug here can never lock anyone out. Under-18 → signed out.
+    // 18+ age gate (NEXUS-GAPS.md Phase 1, #9; India DPDP — beta is adults-only).
+    // One-time DOB confirmation, now SERVER-AUTHORITATIVE via the age_status / set_my_dob
+    // RPCs, which write user_profiles — the SAME source of truth the fail-closed Minit
+    // gate reads (previously this wrote only auth metadata + profiles, so unknown-age
+    // could still reach Minit and self-set metadata could bypass). Still FAILS OPEN on
+    // any RPC/JS error so a bug can never lock anyone out; the fail-closed Minit RPC
+    // backstops the most sensitive flow. Under-18 → signed out.
+    function blockUnder18() {
+      let ov = document.getElementById('blk-agegate');
+      if (!ov) { ov = document.createElement('div'); ov.id = 'blk-agegate'; ov.style.cssText = 'position:fixed;inset:0;z-index:2147483646;background:var(--bg,#0B0D1F);display:grid;place-items:center;padding:1.4rem;'; document.body.appendChild(ov); }
+      ov.innerHTML = '<div style="max-width:360px;text-align:center;color:var(--ink,#fff);font-family:var(--font-body,system-ui)"><h2 style="font-size:1.3rem;margin:0 0 .6rem">You must be 18 or older</h2><p style="color:var(--ink-soft,#b9bdd6)">Blaksyd isn’t available to under-18s yet. Thanks for understanding.</p></div>';
+      try { supabase.auth.signOut(); } catch (e) {}
+      setTimeout(() => { location.href = '/'; }, 2800);
+    }
     async function ageGate(session) {
       try {
         const md = (session.user && session.user.user_metadata) || {};
-        if (md.dob || md.age_confirmed_at) return; // already confirmed
+        // Server-authoritative decision first — shares one source of truth (user_profiles)
+        // with the Minit gate and closes the user-writable-metadata bypass.
+        let status = null;
+        try { const { data, error } = await supabase.rpc('age_status'); if (!error) status = data; } catch (e) {}
+        if (status === 'adult') return;
+        if (status === 'minor') { blockUnder18(); return; }
+        // Already confirmed under the old metadata-only gate? Trust it, backfill the
+        // canonical user_profiles row (so the Minit gate sees it), and don't re-ask.
+        if (md.dob || md.age_confirmed_at) {
+          if (md.dob) { try { await supabase.rpc('set_my_dob', { p_dob: md.dob }); } catch (e) {} }
+          return;
+        }
+        // status 'unknown' (or RPC unreachable), never confirmed → capture DOB.
         const ov = document.createElement('div');
         ov.id = 'blk-agegate';
         ov.style.cssText = 'position:fixed;inset:0;z-index:2147483646;background:var(--bg,#0B0D1F);display:grid;place-items:center;padding:1.4rem;';
@@ -392,18 +415,13 @@ const nav = [
           const mo = now.getMonth() - dob.getMonth();
           if (mo < 0 || (mo === 0 && now.getDate() < dob.getDate())) age--;
           if (isNaN(age)) { err.textContent = 'Please enter a valid date.'; return; }
-          if (age < 18) {
-            ov.innerHTML = '<div style="max-width:360px;text-align:center;color:var(--ink,#fff);font-family:var(--font-body,system-ui)"><h2 style="font-size:1.3rem;margin:0 0 .6rem">You must be 18 or older</h2><p style="color:var(--ink-soft,#b9bdd6)">Blaksyd isn’t available to under-18s yet. Thanks for understanding.</p></div>';
-            try { await supabase.auth.signOut(); } catch (e) {}
-            setTimeout(() => { location.href = '/'; }, 2800);
-            return;
-          }
+          if (age < 18) { blockUnder18(); return; }   // block before any write (data minimisation)
           go.disabled = true; go.textContent = 'Saving…';
           const uid = session.user && session.user.id;
+          // Authoritative write to user_profiles (server recomputes age) — the value the
+          // fail-closed Minit gate reads. Then mirror into auth metadata + the profile.
+          try { await supabase.rpc('set_my_dob', { p_dob: v }); } catch (e) {}
           try { await supabase.auth.updateUser({ data: { dob: v, age_confirmed_at: new Date().toISOString() } }); } catch (e) {}
-          // Don't let the DOB dead-end in auth metadata — reflect it in the profile:
-          // the canonical profiles columns AND the visible "Age / birthday" fact on
-          // /beta/profile, so what they entered actually shows up. (Fail-open.)
           if (uid) {
             try { await supabase.from('profiles').upsert({ id: uid, dob: v, birthday: v }, { onConflict: 'id' }); } catch (e) {}
             try {
