@@ -370,11 +370,9 @@
 <script>
   import { supabase, supabaseConfigured } from '../lib/supabaseClient';
   // Native (Capacitor) auth: in the packaged app, Google rejects sign-in inside an
-  // embedded webview, so OAuth/magic-link must run in the system browser and return
-  // via a custom URL scheme. These imports are inert no-ops on the web.
-  import { Capacitor } from '@capacitor/core';
-  import { App as CapApp } from '@capacitor/app';
-  import { Browser } from '@capacitor/browser';
+  // embedded webview, so OAuth/magic-link run in the system browser and return via a
+  // custom URL scheme. Accessed through the runtime window.Capacitor bridge (NOT
+  // imported) so this file ships to the web with zero Capacitor deps — inert on web.
 
   (function () {
     var modal = document.getElementById('auth');
@@ -402,7 +400,10 @@
     // the token hash would post back to that separate origin/storage and the session
     // would not persist on apex blaksyd.com — so strip the www. host prefix here.
     // Native app returns sign-in through the custom URL scheme; web uses the canonical origin.
-    var isNative = !!(Capacitor && Capacitor.isNativePlatform && Capacitor.isNativePlatform());
+    var CAP = (typeof window !== 'undefined' && window.Capacitor) || null;
+    var isNative = !!(CAP && CAP.isNativePlatform && CAP.isNativePlatform());
+    var capApp = (isNative && CAP.Plugins && CAP.Plugins.App) || null;
+    var capBrowser = (isNative && CAP.Plugins && CAP.Plugins.Browser) || null;
     var NATIVE_REDIRECT = 'com.blaksyd.app://auth';
     var redirectTo = isNative ? NATIVE_REDIRECT : window.location.origin.replace('://www.', '://') + '/beta/';
 
@@ -412,7 +413,7 @@
       if (!url || url.indexOf(NATIVE_REDIRECT) !== 0 || !supabase) return;
       var frag = (url.split('#')[1] || url.split('?')[1] || '');
       var p = new URLSearchParams(frag);
-      try { Browser.close().catch(function () {}); } catch (e) {}
+      try { if (capBrowser) capBrowser.close().catch(function () {}); } catch (e) {}
       var at = p.get('access_token'), rt = p.get('refresh_token');
       if (at && rt) {
         supabase.auth.setSession({ access_token: at, refresh_token: rt })
@@ -423,9 +424,9 @@
         setBusy(false); setNote(ed ? decodeURIComponent(ed) : 'Sign-in was cancelled.', 'error');
       }
     }
-    if (isNative) {
-      CapApp.addListener('appUrlOpen', function (ev) { handleNativeAuthUrl((ev && ev.url) || ''); });
-      CapApp.getLaunchUrl().then(function (r) { if (r && r.url) handleNativeAuthUrl(r.url); }).catch(function () {});
+    if (isNative && capApp) {
+      capApp.addListener('appUrlOpen', function (ev) { handleNativeAuthUrl((ev && ev.url) || ''); });
+      capApp.getLaunchUrl().then(function (r) { if (r && r.url) handleNativeAuthUrl(r.url); }).catch(function () {});
     }
 
 
@@ -506,7 +507,7 @@
         supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: redirectTo, skipBrowserRedirect: true } })
           .then(function (r) {
             if (r.error || !r.data || !r.data.url) { setBusy(false); setNote((r.error && r.error.message) || 'Could not start Google sign-in.', 'error'); return; }
-            return Browser.open({ url: r.data.url });
+            return capBrowser ? capBrowser.open({ url: r.data.url }) : undefined;
           })
           .catch(function () { setBusy(false); setNote('Could not start Google sign-in.', 'error'); });
         return;
