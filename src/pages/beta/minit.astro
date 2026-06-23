@@ -669,6 +669,16 @@ import AppLayout from '../../layouts/AppLayout.astro';
         document.getElementById('mnx-drawer-close')?.addEventListener('click', closeDrawer);
         document.getElementById('mnx-drawer-scrim')?.addEventListener('click', closeDrawer);
         root.querySelectorAll('.mnx-thread').forEach((t) => t.addEventListener('click', () => openThread(t.getAttribute('data-id'), t.getAttribute('data-lid'))));
+        // Deep-link from Blak's "connect me to a listener" → auto-start matching
+        // (reuses the credit check + startTalking on #mnx-start). Strip the param
+        // so a refresh doesn't re-trigger.
+        try {
+          const sp = new URLSearchParams(location.search);
+          if (sp.get('connect') === '1') {
+            history.replaceState(null, '', location.pathname);
+            document.getElementById('mnx-start')?.click();
+          }
+        } catch (e) {}
       }
 
       async function loadHistory() {

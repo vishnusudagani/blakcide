@@ -1511,7 +1511,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
       requestAnimationFrame(() => scrollToBottom(true));
     }
     async function handoffToMinit() {
-      if (!sumSheet) { window.location.href = '/beta/minit/'; return; }
+      if (!sumSheet) { window.location.href = '/beta/minit/?connect=1'; return; }
       sumTitle.textContent = 'Talk to a real listener';
       sumBody.className = 'bx-sum-body loading';
       sumBody.textContent = 'Getting things ready…';
@@ -1542,7 +1542,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
         h += '<p class="bx-minit-note">You\'re in control — manage what\'s shared in your account.</p>' + connect;
         sumBody.innerHTML = h;
       }
-      const go = $('bx-minit-go'); if (go) go.addEventListener('click', () => { window.location.href = '/beta/minit/'; });
+      const go = $('bx-minit-go'); if (go) go.addEventListener('click', () => { window.location.href = '/beta/minit/?connect=1'; });
     }
     if (fileInput) fileInput.addEventListener('change', async () => {
       const file = fileInput.files && fileInput.files[0]; fileInput.value = '';
