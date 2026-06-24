@@ -119,6 +119,7 @@ export const CORE_IDENTITY_TEXT = [
     '- BE CURIOUS — you actually want to know them. When they drop a thread worth pulling (a person, their team, a plan, something they like or are going through), follow your interest with ONE warm, specific question: "my team" -> "oh nice, who\'s on it?"; "I like Mercedes" -> "ohh you into cars?". That\'s how you get to know them and remember them. Curiosity is NOT interrogation — one natural question, not a list, and not after every single message.',
     '- Have a POINT OF VIEW — opinions, teasing, getting excited, a little pushback. A friend who only mirrors and validates is boring and fake. BUT COMFORT COMES FIRST: when they\'re struggling, make them feel heard before anything else. You earn the right to challenge them or say a hard truth gently, once they feel safe — not up front. (One exception: if they\'re about to get genuinely hurt, don\'t stay quiet.)',
     '- BE VIVID. You\'re expressive — a sharp image, a bit of humour, real emphasis. Sound alive, not flat.',
+    '- HAVE A LITTLE WIT. You\'re quick and a bit funny — a playful jab, a dry one-liner, a touch of mischief or a callback to something they said when the mood is light. Land it naturally, like a friend who makes you laugh, then read the room and drop the jokes the instant things turn heavy. Warmth first, cleverness second — never snark at their expense, and never a joke when they\'re hurting.',
     '- NO FILLER. Drop empty openers like "I\'m here for you", "I understand", "that sounds really hard." Say something specific and real instead. And never gush or over-flatter just to please — that\'s fake, and you\'re not.',
     '- MATCH THEIR ENERGY. Short message → short reply. Hyped → hyped. Quiet/hurting → gentle and close. Mirror their vibe and their length, not just their language. An emoji only when it genuinely fits. Stay plain and conversational by default — reach for a tidy bullet/numbered list or a **bold** label ONLY when the content is genuinely steps, a plan, or a list; never headings.',
     '- Lowercase, fragments, slang, the odd swear — all fine when it fits them. Sound like a person in a chat, never like documentation.',
@@ -145,6 +146,37 @@ export const CARE_AND_SAFETY_TEXT = [
     'SAFETY FLOOR (non-negotiable): if there are real signs of immediate danger — active intent to self-harm or suicide, or someone in danger right now — take it seriously and gently point them to real-world emergency help or a crisis line in their area, alongside offering Minit. Do it warmly, in your own voice; you can do all of this without ever breaking character. Never minimise it, never go quiet on it.',
     '=== END WHEN THINGS GET HEAVY ===',
 ].join('\n');
+
+// ── Current time/date context ───────────────────────────────────────────────
+// The models have NO inherent clock. Without this they guess the time — so Blak
+// would ask "how did your 11am meeting go?" at 10:30, or, on a call, claim it
+// "needs the right tool" to know the time. We inject the user's REAL local date
+// + time, derived from the timezone the client passes (falls back to IST). It is
+// pushed late in the stack so it stays high-salience for the next reply.
+export function buildNowContext(tz) {
+    const zone = (typeof tz === 'string' && tz.trim()) ? tz.trim() : 'Asia/Kolkata';
+    const fmt = (z) => new Date().toLocaleString('en-IN', {
+        timeZone: z, weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+        hour: 'numeric', minute: '2-digit', hour12: true,
+    });
+    let stamp, usedZone = zone;
+    try { stamp = fmt(zone); }
+    catch (_) { try { stamp = fmt('Asia/Kolkata'); usedZone = 'Asia/Kolkata'; } catch (_2) { stamp = new Date().toUTCString(); usedZone = 'UTC'; } }
+    return [
+        '=== RIGHT NOW (ground truth — trust this over any assumption) ===',
+        `It is currently ${stamp} (${usedZone}) for the user.`,
+        'You DO know the time and date — it is the line right above. NEVER say you can\'t check it, that you need a tool or app to know it, or guess a different time. Use it whenever time matters: greetings (morning / afternoon / evening / night), "what time is it", and ESPECIALLY when reasoning about something the user mentioned — work out from the clock above whether it is still UPCOMING or already PAST before you react (e.g. do NOT ask how a meeting went if it has not happened yet). Do the math yourself.',
+        '=== END RIGHT NOW ===',
+    ].join('\n');
+}
+
+// A compact, final-position language nudge. The full rules live in
+// CRITICAL_OVERRIDE (early in the stack), but models weight RECENT context most,
+// so we re-assert per-turn mirroring as the very last line — this is what makes
+// Blak follow a mid-chat / mid-call language switch on its own, instead of the
+// user having to say "talk to me in Hindi" before it flips.
+export const LANGUAGE_TURN_REMINDER =
+    'REPLY-LANGUAGE CHECK — do this every single turn before answering: look ONLY at the user\'s most RECENT message and reply in that exact language and script. If they just switched languages, switch with them immediately — never wait to be asked, and never stay in the chat\'s earlier language out of habit.';
 
 // ── Convenience exports ─────────────────────────────────────────────────────
 
@@ -261,6 +293,10 @@ async function buildSelfCloneCard(userId, { forVoice = false } = {}) {
  * can spread them into the OpenAI request.
  */
 export async function buildChatSystemStack(userId, opts = {}) {
+    // Time + a final per-turn language nudge — pushed late in every path below
+    // (just before the self-correction hint) so they stay high-salience.
+    const nowMsg  = { role: 'system', content: buildNowContext(opts.tz) };
+    const langMsg = { role: 'system', content: LANGUAGE_TURN_REMINDER };
     // ── Digital self / Real Persona: the user talking to a clone of THEMSELVES.
     // A first-person "you ARE <user>" identity replaces Blak's core; care/safety +
     // language mirroring + real-time still wrap it; the FULL profile is injected
@@ -276,7 +312,9 @@ export async function buildChatSystemStack(userId, opts = {}) {
         try { const vaultMsg = await buildVaultContextMessage(userId); if (vaultMsg && vaultMsg.content) cstack.push(vaultMsg); } catch (_) { /* ignore */ }
         try { const knowledge = await buildKnowledgeBlock(userId, { latestUserText: opts.latestUserText }); if (knowledge) cstack.push({ role: 'system', content: knowledge }); } catch (_) { /* ignore */ }
         cstack.push({ role: 'system', content: CHAT_FRAMING_TEXT });
+        cstack.push(nowMsg);
         try { const correction = buildCorrectionHint(userId); if (correction) cstack.push({ role: 'system', content: correction }); } catch (_) { /* ignore */ }
+        cstack.push(langMsg);
         return cstack;
     }
 
@@ -315,7 +353,9 @@ export async function buildChatSystemStack(userId, opts = {}) {
             try { const vaultMsg = await buildVaultContextMessage(userId); if (vaultMsg && vaultMsg.content) pstack.push(vaultMsg); } catch (_) { /* ignore */ }
             try { const knowledge = await buildKnowledgeBlock(userId, { latestUserText: opts.latestUserText }); if (knowledge) pstack.push({ role: 'system', content: knowledge }); } catch (_) { /* ignore */ }
         }
+        pstack.push(nowMsg);
         try { const correction = buildCorrectionHint(userId); if (correction) pstack.push({ role: 'system', content: correction }); } catch (_) { /* ignore */ }
+        pstack.push(langMsg);
         return pstack;
     }
 
@@ -365,13 +405,18 @@ export async function buildChatSystemStack(userId, opts = {}) {
     // and range of the voice call (CALL_FRAMING's written sibling). Late in the
     // stack so it strongly shapes the written reply.
     stack.push({ role: 'system', content: CHAT_FRAMING_TEXT });
+    stack.push(nowMsg);
 
-    // Self-correction hint goes LAST in the system stack — closest to the
+    // Self-correction hint goes near the END of the stack — closest to the
     // model's next response, so it dominates any drift from earlier layers.
     try {
         const correction = buildCorrectionHint(userId);
         if (correction) stack.push({ role: 'system', content: correction });
     } catch (_) { /* ignore */ }
+
+    // Per-turn language check is the very last line — recency makes Blak follow
+    // a mid-chat language switch on its own.
+    stack.push(langMsg);
 
     return stack;
 }
@@ -386,6 +431,9 @@ export async function buildChatSystemStack(userId, opts = {}) {
  * @returns {Promise<string>}
  */
 export async function buildInstructionsText(userId, opts = {}) {
+    // Time + final per-turn language nudge, appended near the end of both paths.
+    const nowText  = buildNowContext(opts.tz);
+    const langText = LANGUAGE_TURN_REMINDER;
     // Fantasy persona call: the persona's identity replaces Blak's core; the
     // user's profile is injected only if they let this persona use it.
     if (opts.persona) {
@@ -404,7 +452,9 @@ export async function buildInstructionsText(userId, opts = {}) {
             try { const knowledge = await buildKnowledgeBlock(userId, {}); if (knowledge) parts.push(knowledge); } catch (_) { /* ignore */ }
         }
         parts.push(CALL_FRAMING_TEXT);
+        parts.push(nowText);
         try { const correction = buildCorrectionHint(userId); if (correction) parts.push(correction); } catch (_) { /* ignore */ }
+        parts.push(langText);
         return parts.join('\n\n');
     }
 
@@ -446,12 +496,16 @@ export async function buildInstructionsText(userId, opts = {}) {
     }
 
     parts.push(CALL_FRAMING_TEXT);
+    parts.push(nowText);
 
-    // Self-correction hint last — overrides everything above for one turn.
+    // Self-correction hint near last — overrides everything above for one turn.
     try {
         const correction = buildCorrectionHint(userId);
         if (correction) parts.push(correction);
     } catch (_) { /* ignore */ }
+
+    // Per-turn language check as the final line.
+    parts.push(langText);
 
     return parts.join('\n\n');
 }

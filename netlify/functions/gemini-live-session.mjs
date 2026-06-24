@@ -53,7 +53,8 @@ export default async (req) => {
     // (scoped to this user) so the call becomes the persona — its instruction
     // stack and its chosen voice instead of Blak's.
     let personaId = null;
-    try { const body = await req.json().catch(() => null); personaId = (body && body.persona_id) || null; } catch (_) { /* no/invalid body */ }
+    let tz = null;
+    try { const body = await req.json().catch(() => null); personaId = (body && body.persona_id) || null; tz = (body && body.tz) || null; } catch (_) { /* no/invalid body */ }
     let persona = null;
     if (personaId) {
         try { const sb = await import('../../symp-core/lib/supabase.mjs'); persona = await sb.fetchFantasyPersona(userId, personaId); } catch (_) { /* fall back to Blak */ }
@@ -62,7 +63,7 @@ export default async (req) => {
     let instructions = FALLBACK_INSTRUCTIONS;
     try {
         const sys = await import('../../symp-core/lib/system-prompt.mjs');
-        instructions = await sys.buildInstructionsText(userId, { persona });
+        instructions = await sys.buildInstructionsText(userId, { persona, tz });
     } catch (e) {
         console.warn('[gemini-live-session] system-prompt import failed, using fallback:', e.message);
     }

@@ -17,6 +17,17 @@ const seen = new Set<string>();   // dedup realtime echo vs optimistic/initial
 
 const stream = () => $('gr-stream');
 function toast(t: string) { const el = $('gr-toast'); if (!el) return; el.textContent = t; el.hidden = false; setTimeout(() => { el.hidden = true; }, 2200); }
+// Robust copy: the async Clipboard API only works in a secure context and can be
+// blocked; fall back to a hidden-textarea execCommand so the invite code is always copyable.
+async function copyText(t: string): Promise<boolean> {
+  try { if (navigator.clipboard && (window as any).isSecureContext) { await navigator.clipboard.writeText(t); return true; } } catch (e) {}
+  try {
+    const ta = document.createElement('textarea');
+    ta.value = t; ta.setAttribute('readonly', ''); ta.style.position = 'fixed'; ta.style.top = '-1000px'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.focus(); ta.select(); ta.setSelectionRange(0, t.length);
+    const ok = document.execCommand('copy'); document.body.removeChild(ta); return ok;
+  } catch (e) { return false; }
+}
 function setLobbyMsg(t: string, err?: boolean) { const m = $('gr-lobby-msg'); if (!m) return; m.hidden = !t; m.textContent = t || ''; m.classList.toggle('err', !!err); }
 function nameFrom(s: any) { const u = s && s.user, m = (u && u.user_metadata) || {}; return String(m.full_name || m.name || (u && u.email ? u.email.split('@')[0] : '') || 'Guest').trim(); }
 function initials(n: string) { return (n || '?').trim().slice(0, 1).toUpperCase(); }
@@ -135,9 +146,12 @@ function wireRoomUI() {
   $('gr-call-leave').addEventListener('click', leaveVoice);
   $('gr-share').addEventListener('click', async () => {
     const txt = 'Join my Blak group — code: ' + roomCode;
-    try { if (navigator.share) { await navigator.share({ text: txt }); } else { await navigator.clipboard.writeText(roomCode); toast('Invite code copied'); } }
-    catch (e) { try { await navigator.clipboard.writeText(roomCode); toast('Invite code copied'); } catch (e2) { toast(roomCode); } }
+    try { if (navigator.share) { await navigator.share({ text: txt }); return; } } catch (e) { /* share cancelled/unsupported → copy instead */ }
+    const ok = await copyText(roomCode); toast(ok ? 'Invite code copied ✓' : roomCode);
   });
+  // Tapping the code chip in the sheet copies it (the obvious gesture users expect).
+  const codeBtn = $('gr-sheet-code');
+  if (codeBtn) codeBtn.addEventListener('click', async () => { const ok = await copyText(roomCode); toast(ok ? 'Invite code copied ✓' : roomCode); });
   $('gr-leave').addEventListener('click', async () => {
     try { await supabase!.from('blak_group_members').delete().eq('room_id', roomId).eq('user_id', userId); } catch (e) {}
     location.href = '/beta/blak/';
@@ -201,7 +215,7 @@ async function openRoom() {
   if (!room) { toast('Group not found or you’re not in it'); setTimeout(() => { location.href = '/beta/group/'; }, 1400); return; }
   roomCode = room.code; isHost = room.creator_id === userId;
   $('gr-title').textContent = room.title || 'Group';
-  $('gr-sheet-code').textContent = 'Invite code: ' + room.code;
+  $('gr-sheet-code').innerHTML = '<span>Invite code</span><span class="gr-code-val">' + room.code + '</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
   if (isHost) $('gr-end').hidden = false;
   wireRoomUI();
   await loadMembers();

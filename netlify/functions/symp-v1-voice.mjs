@@ -43,7 +43,7 @@ export default async (req) => {
     const parsed = await readJson(req);
     if (!parsed.ok) return jsonError(ERROR_CODES.BAD_REQUEST, 'Invalid JSON body', 400, requestId);
 
-    const { user_id, audio, mimetype, text, lane: clientLane } = parsed.data || {};
+    const { user_id, audio, mimetype, text, lane: clientLane, tz = null } = parsed.data || {};
     if (!user_id) return jsonError(ERROR_CODES.MISSING_USER_ID, 'user_id is required', 400, requestId);
 
     // ── 1. Speech → text (Groq Whisper) ──────────────────────────────────
@@ -70,7 +70,7 @@ export default async (req) => {
 
     // ── 2. Brain (gpt-4.1-mini, full Vault context; quality tier = Azure) ─
     let systemStack = [];
-    try { systemStack = await buildChatSystemStack(user_id); } catch (_) { /* soft */ }
+    try { systemStack = await buildChatSystemStack(user_id, { tz }); } catch (_) { /* soft */ }
     // Force the reply language to match what the user JUST spoke — overrides any
     // vibe/vault language bias (fixes "spoke English, got a Hindi reply").
     const replyLang = { role: 'system', content: `The user just spoke in ${langName}. Reply ONLY in ${langName}; do NOT switch to any other language.` };

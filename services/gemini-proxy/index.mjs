@@ -278,12 +278,25 @@ async function bridgeToVertex(browserWs) {
     if (browserWs.readyState === browserWs.OPEN) browserWs.send(data.toString());
   });
 
+  // Keepalive: ping both legs every 20s. When the user is just listening (no
+  // audio flowing), an idle WebSocket gets reaped by Cloud Run / proxies / mobile
+  // networks after ~30-60s — which the user experiences as the call randomly
+  // dropping mid-session. Regular pings keep both hops marked alive. (Browsers
+  // auto-reply to ping at the protocol level; the upstream stays warm too.)
+  const HEARTBEAT_MS = 20000;
+  const heartbeat = setInterval(() => {
+    try { if (browserWs.readyState === browserWs.OPEN) browserWs.ping(); } catch {}
+    try { if (upstream.readyState === WsClient.OPEN) upstream.ping(); } catch {}
+  }, HEARTBEAT_MS);
+  const stopHeartbeat = () => { try { clearInterval(heartbeat); } catch {} };
+
   upstream.on('close', (code, reason) => {
+    stopHeartbeat();
     try { browserWs.close(code >= 1000 && code < 5000 ? code : 1011, String(reason || '').slice(0, 120)); } catch {}
   });
-  upstream.on('error', () => { try { browserWs.close(1011, 'vertex upstream error'); } catch {} });
-  browserWs.on('close', () => { try { upstream.close(); } catch {} });
-  browserWs.on('error', () => { try { upstream.close(); } catch {} });
+  upstream.on('error', () => { stopHeartbeat(); try { browserWs.close(1011, 'vertex upstream error'); } catch {} });
+  browserWs.on('close', () => { stopHeartbeat(); try { upstream.close(); } catch {} });
+  browserWs.on('error', () => { stopHeartbeat(); try { upstream.close(); } catch {} });
 }
 
 server.listen(PORT, () => console.log(`[vertex-proxy] listening on :${PORT} (HTTP + WS /live; backend=${VOICE_BACKEND} model=${LIVE_MODEL})`));
