@@ -40,8 +40,9 @@ import AppLayout from '../../layouts/AppLayout.astro';
       </div>
     </div>
 
-    <!-- Music panel — Spotify search + preview + DJ. Opened from the header music
-         button or a "play …" intent. Full playback opens in Spotify (Web Playback = M2). -->
+    <!-- Music panel — Spotify search + DJ + full in-app playback (Web Playback SDK,
+         Premium) with synced lyrics; preview / open-in-Spotify fallback. Opened from
+         the header music button or a "play …" intent. -->
     <div class="bx-music-sheet" id="bx-music-sheet" hidden>
       <div class="bx-music-card" role="dialog" aria-modal="true" aria-label="Music">
         <div class="bx-music-head">
@@ -49,6 +50,8 @@ import AppLayout from '../../layouts/AppLayout.astro';
           <button type="button" class="bx-music-x" id="bx-music-x" aria-label="Close">&times;</button>
         </div>
         <div class="bx-now" id="bx-now" hidden></div>
+        <div class="bx-player" id="bx-player" hidden></div>
+        <div class="bx-lyrics" id="bx-lyrics" data-noswipe hidden></div>
         <div class="bx-music-search">
           <input id="bx-music-q" type="text" placeholder="Search a song or artist…" autocomplete="off" enterkeyhint="search" />
           <button type="button" id="bx-music-go">Search</button>
@@ -610,6 +613,26 @@ import AppLayout from '../../layouts/AppLayout.astro';
     .bx-track-open svg { width: 16px; height: 16px; }
     .bx-music-foot { color: var(--ink-faint); font-size: .78rem; margin: .7rem 0 0; text-align: center; }
     .bx-music-foot a { color: var(--coral); }
+
+    /* full-playback transport bar (Web Playback SDK) */
+    .bx-player { display: flex; align-items: center; gap: .55rem; padding: .5rem .55rem; margin-bottom: .7rem; border-radius: 14px; border: 1px solid rgba(255,107,157,.35); background: linear-gradient(110deg, rgba(255,107,157,.10), rgba(255,210,122,.08)); }
+    .bx-player[hidden] { display: none; }
+    .bx-player img { width: 44px; height: 44px; border-radius: 8px; flex: none; object-fit: cover; }
+    .bx-player-tx { min-width: 0; flex: 1; }
+    .bx-player-tx b { display: block; color: var(--ink); font-size: var(--fs-md); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .bx-player-tx small { display: block; color: var(--ink-soft); font-size: .72rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .bx-player-btn { width: 34px; height: 34px; flex: none; border: 0; border-radius: 50%; background: var(--surface-strong); color: var(--ink); cursor: pointer; display: grid; place-items: center; font-size: .72rem; font-weight: 700; }
+    .bx-player-btn svg { width: 16px; height: 16px; }
+    .bx-player-btn[data-pact="toggle"] { background: var(--cta-grad); color: #1b1030; width: 38px; height: 38px; }
+    .bx-player-btn.on { background: var(--coral); color: #1b1030; }
+
+    /* synced lyrics */
+    .bx-lyrics { max-height: 34vh; overflow-y: auto; -webkit-overflow-scrolling: touch; margin-bottom: .7rem; padding: .3rem .2rem; border-radius: 12px; background: var(--surface); border: 1px solid var(--line); }
+    .bx-lyrics[hidden] { display: none; }
+    .bx-ly-line { margin: .15rem 0; padding: .12rem .5rem; color: var(--ink-faint); font-size: var(--fs-md); transition: color .2s, transform .2s; text-align: center; }
+    .bx-ly-line.on { color: var(--ink); font-weight: 650; transform: scale(1.04); }
+    .bx-ly-plain { white-space: pre-wrap; color: var(--ink-soft); font-size: var(--fs-md); font-family: var(--font-body); margin: 0; padding: .3rem .5rem; }
+    .bx-ly-status { color: var(--ink-faint); font-size: var(--fs-md); text-align: center; padding: .6rem; margin: 0; }
 
     /* ── Gemini-style home hero ── */
     .bx-hero { display: flex; flex-direction: column; align-items: center; gap: .45rem; }
@@ -1200,6 +1223,16 @@ import AppLayout from '../../layouts/AppLayout.astro';
     // Call-on-request — if the user asks Blak to call (typed or in a voice note),
     // confirm first with a tap-to-call offer instead of a text reply.
     const CALL_INTENT = /\b(call me|call now|gimme a call|give me a call|can you call me|can we (call|talk)|could you call|wanna call|want to call|let'?s (call|hop on)|voice call|hop on a call|jump on a call|ring me|call you now)\b/i;
+    // "pause / next / resume / previous" (alone) → control the live player, not search.
+    const TRANSPORT_INTENT = /^\s*(pause|stop|resume|unpause|skip|next( song| track)?|previous( song| track)?|go back|play it again)\s*(the )?(music|song|track)?\s*[.!]?$/i;
+    function transportAct(t) {
+      const s = String(t || '').toLowerCase();
+      if (/\b(pause|stop)\b/.test(s)) return 'pause';
+      if (/\b(resume|unpause|play it again)\b/.test(s)) return 'resume';
+      if (/\b(skip|next)\b/.test(s)) return 'next';
+      if (/\b(previous|go back)\b/.test(s)) return 'prev';
+      return null;
+    }
     // "play …" / "put on …" / "dj" / anything-spotify → open the music panel.
     const MUSIC_INTENT = /\bspotify\b|\bdj\b|\b(play|put on|queue)\b[^.?!]*\b(song|songs|music|track|tracks|tune|tunes|playlist|album|artist)\b|\bplay me (a|some|the)\b/i;
     function musicQuery(t) {
@@ -1474,6 +1507,9 @@ import AppLayout from '../../layouts/AppLayout.astro';
         if (text && !img && REMIND_INTENT.test(text)) { await handleReminder(text); setBusy(false); return; }   // "remind me to…" → save it
         if (text && !img && HUMAN_INTENT.test(text)) { setBusy(false); offerMinit(); return; }   // wants a real person → offer Minit
         if (text && !img && CALL_INTENT.test(text)) { setBusy(false); offerCall(); return; }   // they asked to call → offer it
+        if (text && !img && _sp && TRANSPORT_INTENT.test(text)) {                               // "pause / next / resume" → control the live player
+          const act = transportAct(text); if (act) { setBusy(false); spTransport(act); return; }
+        }
         if (text && !img && MUSIC_INTENT.test(text)) {                                          // "play …" → DJ: open the music panel
           setBusy(false);
           const q = musicQuery(text);
@@ -1886,6 +1922,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
       if (txt && vh && vh.bub && !vh.bub.querySelector('.bx-vn-cap')) { const cap = document.createElement('p'); cap.className = 'bx-vn-cap'; cap.textContent = '“' + txt + '”'; vh.bub.appendChild(cap); }   // show what Blak heard
       dbInsertMessage('user', '', { url: url || null, type: 'audio', description: txt || null }).then((id) => { if (id) um.id = id; });
       if (txt && CALL_INTENT.test(txt)) { offerCall(); return; }   // voice note asked to call → offer it
+      if (txt && _sp && TRANSPORT_INTENT.test(txt)) { const act = transportAct(txt); if (act) { spTransport(act); return; } }   // voice transport
       if (txt && MUSIC_INTENT.test(txt)) { openMusic(musicQuery(txt)); return; }   // voice note "play …" → music panel
       await runTurn(txt || '');
     }
@@ -2500,14 +2537,16 @@ import AppLayout from '../../layouts/AppLayout.astro';
       if (sheet) sheet.addEventListener('click', (e) => { if (e.target === sheet) sheet.hidden = true; });
     }
 
-    // ── Music (Spotify): search + 30s preview + DJ + now-playing. Opened from the
-    // header 🎵 or a "play …" intent. Full in-app playback / transport control is M2
-    // (Web Playback SDK); here we preview when Spotify exposes a clip, else open the
-    // track in Spotify. Now-playing + taste come from the spotify-now edge function
-    // (only once the user connects Spotify in /beta/account).
+    // ── Music (Spotify): search + DJ + now-playing + FULL in-app playback (Web
+    // Playback SDK, Premium) with synced lyrics (lrclib). Opened from the header 🎵 or
+    // a "play …" intent. Tapping play tries full playback → 30s preview → open in
+    // Spotify. Now-playing/taste + the SDK token come from edge functions, live only
+    // once the user connects Spotify in /beta/account.
     const M_ICON_PLAY = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>';
     const M_ICON_PAUSE = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 5h4v14H7zM13 5h4v14h-4z"/></svg>';
     const M_ICON_OPEN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M9 7h8v8"/></svg>';
+    const M_ICON_PREV = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 6h2v12H7zM20 6v12l-9-6z"/></svg>';
+    const M_ICON_NEXT = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M15 6h2v12h-2zM4 6l9 6-9 6z"/></svg>';
     const MOOD_CHIPS = [
       ['Chill', 'chill lofi calm'], ['Focus', 'focus instrumental study'],
       ['Hype', 'hype workout pump'], ['Happy', 'feel good happy'],
@@ -2522,13 +2561,14 @@ import AppLayout from '../../layouts/AppLayout.astro';
     }
     function mTrackCard(t) {
       const art = '<img src="' + mEsc(t.albumArt || '') + '" alt="" loading="lazy" />';
-      const prev = t.previewUrl
-        ? '<button type="button" class="bx-track-btn" data-mact="prev" data-id="' + mEsc(t.id) + '" data-url="' + mEsc(t.previewUrl) + '" aria-label="Play preview">' + M_ICON_PLAY + '</button>'
-        : '';
+      // Always offer Play: full track (Web Playback SDK, Premium) → 30s preview → open in Spotify.
+      const play = '<button type="button" class="bx-track-btn" data-mact="play" data-id="' + mEsc(t.id) +
+        '" data-uri="spotify:track:' + mEsc(t.id) + '" data-name="' + mEsc(t.name) + '" data-artist="' + mEsc(t.artist) +
+        '" data-preview="' + mEsc(t.previewUrl || '') + '" data-open="' + mEsc(t.spotifyUrl || '') + '" aria-label="Play">' + M_ICON_PLAY + '</button>';
       const open = '<a class="bx-track-open" href="' + mEsc(t.spotifyUrl || '#') + '" target="_blank" rel="noopener" aria-label="Open in Spotify">' + M_ICON_OPEN + '</a>';
       return '<div class="bx-track">' + art +
         '<div class="bx-track-tx"><b>' + mEsc(t.name) + '</b><small>' + mEsc(t.artist) + '</small></div>' +
-        prev + open + '</div>';
+        play + open + '</div>';
     }
     async function mSearch(q) {
       const box = $('bx-music-results'), foot = $('bx-music-foot');
@@ -2580,6 +2620,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
       sheet.hidden = false;
       const input = $('bx-music-q');
       mLoadNow();
+      spInit().catch(() => {});   // warm the Web Playback SDK if the user is connected
       if (prefill) { if (input) input.value = prefill; mSearch(prefill); }
       else if (input && !isMobile()) { try { input.focus(); } catch (e) {} }
     }
@@ -2597,7 +2638,143 @@ import AppLayout from '../../layouts/AppLayout.astro';
         chips.addEventListener('click', (e) => { const b = e.target.closest('[data-q]'); if (b) { const inp = $('bx-music-q'); if (inp) inp.value = b.getAttribute('data-q'); mSearch(b.getAttribute('data-q')); } });
       }
       const results = $('bx-music-results');
-      if (results) results.addEventListener('click', (e) => { const b = e.target.closest('[data-mact="prev"]'); if (b) mPlayPreview(b.getAttribute('data-url'), b.getAttribute('data-id'), b); });
+      if (results) results.addEventListener('click', (e) => { const b = e.target.closest('[data-mact="play"]'); if (b) mPlay(b.dataset, b); });
+      const player = $('bx-player');
+      if (player) player.addEventListener('click', (e) => { const b = e.target.closest('[data-pact]'); if (b) spTransport(b.getAttribute('data-pact')); });
+    }
+
+    // ── M2: full in-app playback via the Spotify Web Playback SDK (needs Premium) +
+    // synced lyrics from lrclib (no key). Degrades to 30s preview / open-in-Spotify.
+    let _sp = null, _spReady = false, _spDevice = null, _spInit = false, _spToken = null, _spTokenExp = 0;
+    let _lyrics = [], _lyricsTimer = 0;
+    const SP_API = 'https://api.spotify.com/v1';
+    async function spGetToken(force) {
+      if (!force && _spToken && Date.now() < _spTokenExp) return _spToken;
+      try {
+        const { data } = await supabase.functions.invoke('spotify-token');
+        if (data && data.connected && data.access_token) { _spToken = data.access_token; _spTokenExp = Date.now() + 50 * 60 * 1000; return _spToken; }
+      } catch (e) {}
+      _spToken = null; return null;
+    }
+    function spLoadScript() {
+      return new Promise((resolve) => {
+        if (window.Spotify) return resolve(true);
+        window.onSpotifyWebPlaybackSDKReady = () => resolve(true);
+        if (!document.getElementById('sp-sdk')) {
+          const s = document.createElement('script'); s.id = 'sp-sdk'; s.src = 'https://sdk.scdn.co/spotify-player.js';
+          s.onerror = () => resolve(false); document.head.appendChild(s);
+        }
+        setTimeout(() => resolve(!!window.Spotify), 9000);
+      });
+    }
+    async function spInit() {
+      if (_spInit) return _spReady;
+      const tok = await spGetToken();
+      if (!tok) return false;                       // not connected → no SDK
+      _spInit = true;
+      const ok = await spLoadScript();
+      if (!ok || !window.Spotify) { _spInit = false; return false; }
+      _sp = new window.Spotify.Player({ name: 'Blaksyd', getOAuthToken: (cb) => { spGetToken().then((t) => cb(t || '')); }, volume: 0.8 });
+      _sp.addListener('ready', ({ device_id }) => { _spDevice = device_id; _spReady = true; });
+      _sp.addListener('not_ready', () => { _spReady = false; });
+      _sp.addListener('authentication_error', () => { _spReady = false; });
+      _sp.addListener('account_error', () => { _spReady = false; });   // not Premium
+      _sp.addListener('player_state_changed', (st) => spOnState(st));
+      try { await _sp.connect(); } catch (e) {}
+      await new Promise((r) => setTimeout(r, 1400));   // let 'ready' fire
+      return _spReady;
+    }
+    async function mPlay(ds, btn) {
+      const uri = ds.uri || ('spotify:track:' + ds.id);
+      mStopPreview();
+      const ready = await spInit();
+      if (ready && _spDevice) {
+        const tok = await spGetToken();
+        try {
+          const r = await fetch(SP_API + '/me/player/play?device_id=' + encodeURIComponent(_spDevice), {
+            method: 'PUT', headers: { Authorization: 'Bearer ' + tok, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ uris: [uri] }),
+          });
+          if (r.ok || r.status === 204) { mFetchLyrics(ds.name, ds.artist); return; }   // full playback ✓
+        } catch (e) {}
+      }
+      if (ds.preview) { mPlayPreview(ds.preview, ds.id, btn); return; }   // fallback: 30s clip
+      const foot = $('bx-music-foot');                                    // last resort: open in Spotify
+      if (foot) foot.innerHTML = 'Connect Spotify Premium in <a href="/beta/account/">your apps</a> for full in-app play.';
+      try { window.open(ds.open || ('https://open.spotify.com/track/' + ds.id), '_blank', 'noopener'); } catch (e) {}
+    }
+    function spOnState(st) {
+      const bar = $('bx-player'); if (!bar) return;
+      const t = st && st.track_window && st.track_window.current_track;
+      if (!t) { bar.hidden = true; spStopLyricSync(); return; }
+      const art = ((t.album && t.album.images && (t.album.images[1] || t.album.images[0])) || {}).url || '';
+      bar.hidden = false;
+      bar.innerHTML = (art ? '<img src="' + mEsc(art) + '" alt=""/>' : '') +
+        '<div class="bx-player-tx"><b>' + mEsc(t.name) + '</b><small>' + mEsc((t.artists || []).map((a) => a.name).join(', ')) + '</small></div>' +
+        '<button class="bx-player-btn" data-pact="prev" aria-label="Previous">' + M_ICON_PREV + '</button>' +
+        '<button class="bx-player-btn" data-pact="toggle" aria-label="Play or pause">' + (st.paused ? M_ICON_PLAY : M_ICON_PAUSE) + '</button>' +
+        '<button class="bx-player-btn" data-pact="next" aria-label="Next">' + M_ICON_NEXT + '</button>' +
+        '<button class="bx-player-btn" data-pact="lyrics" aria-label="Lyrics">Aa</button>';
+      if (_lyrics.length && !st.paused) spStartLyricSync();
+    }
+    async function spTransport(act) {
+      if (act === 'lyrics') { const ly = $('bx-lyrics'); if (ly) ly.hidden = !ly.hidden; return; }
+      if (!_sp) return;
+      try {
+        if (act === 'toggle') await _sp.togglePlay();
+        else if (act === 'pause') await _sp.pause();
+        else if (act === 'resume') await _sp.resume();
+        else if (act === 'next') await _sp.nextTrack();
+        else if (act === 'prev') await _sp.previousTrack();
+      } catch (e) {}
+    }
+    // synced lyrics (lrclib)
+    function parseLrc(lrc) {
+      const out = [];
+      for (const line of String(lrc || '').split('\n')) {
+        const m = line.match(/^((?:\[\d{1,2}:\d{2}(?:\.\d{1,2})?\])+)(.*)$/);
+        if (!m) continue;
+        const text = m[2].trim();
+        const stamps = m[1].match(/\[(\d{1,2}):(\d{2}(?:\.\d{1,2})?)\]/g) || [];
+        for (const s of stamps) { const mm = s.match(/\[(\d{1,2}):(\d{2}(?:\.\d{1,2})?)\]/); if (mm) out.push({ t: (parseInt(mm[1], 10) * 60 + parseFloat(mm[2])) * 1000, line: text }); }
+      }
+      out.sort((a, b) => a.t - b.t);
+      return out;
+    }
+    async function mFetchLyrics(name, artist) {
+      _lyrics = []; spStopLyricSync();
+      const box = $('bx-lyrics'); if (!box) return;
+      box.hidden = false; box.innerHTML = '<p class="bx-ly-status">Finding lyrics…</p>';
+      try {
+        let r = await fetch('https://lrclib.net/api/get?artist_name=' + encodeURIComponent(artist || '') + '&track_name=' + encodeURIComponent(name || ''));
+        let j = r.ok ? await r.json() : null;
+        if (!j || (!j.syncedLyrics && !j.plainLyrics)) {
+          const sr = await fetch('https://lrclib.net/api/search?q=' + encodeURIComponent((name || '') + ' ' + (artist || '')));
+          const arr = sr.ok ? await sr.json() : []; j = (arr && arr[0]) || null;
+        }
+        if (!j) { box.innerHTML = '<p class="bx-ly-status">No lyrics found.</p>'; return; }
+        if (j.syncedLyrics) {
+          _lyrics = parseLrc(j.syncedLyrics);
+          box.innerHTML = _lyrics.map((l, i) => '<p class="bx-ly-line" data-i="' + i + '">' + mEsc(l.line || '♪') + '</p>').join('');
+          spStartLyricSync();
+        } else { box.innerHTML = '<pre class="bx-ly-plain">' + mEsc(j.plainLyrics) + '</pre>'; }
+      } catch (e) { box.innerHTML = '<p class="bx-ly-status">Couldn’t load lyrics.</p>'; }
+    }
+    function spStopLyricSync() { if (_lyricsTimer) { clearInterval(_lyricsTimer); _lyricsTimer = 0; } }
+    function spStartLyricSync() {
+      spStopLyricSync();
+      const box = $('bx-lyrics'); if (!box || !_lyrics.length || !_sp) return;
+      let last = -1;
+      _lyricsTimer = setInterval(async () => {
+        let pos = 0; try { const st = await _sp.getCurrentState(); pos = st ? st.position : 0; if (!st) return; } catch (e) { return; }
+        let idx = 0; for (let i = 0; i < _lyrics.length; i++) { if (_lyrics[i].t <= pos + 250) idx = i; else break; }
+        if (idx !== last) {
+          last = idx;
+          const lines = box.querySelectorAll('.bx-ly-line');
+          lines.forEach((el, i) => el.classList.toggle('on', i === idx));
+          const cur = lines[idx]; if (cur) cur.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        }
+      }, 400);
     }
   </script>
 </AppLayout>

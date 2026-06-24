@@ -7,9 +7,11 @@ import type { SupabaseClient } from "npm:@supabase/supabase-js@2";
 export { signState, verifyState } from "./google-oauth.ts";
 
 // Scopes: top artists/tracks (taste), now-playing + recently-played (DJ context),
-// profile (display name). No playback-control scope yet — that's M2 (Web Playback SDK).
+// profile (display name), and M2 full in-app playback via the Web Playback SDK
+// (streaming + read/modify playback state — full playback needs Spotify Premium).
 const SCOPE =
-  "user-top-read user-read-currently-playing user-read-recently-played user-read-private";
+  "user-top-read user-read-currently-playing user-read-recently-played user-read-private " +
+  "streaming user-read-playback-state user-modify-playback-state";
 const AUTH_URL = "https://accounts.spotify.com/authorize";
 const TOKEN_URL = "https://accounts.spotify.com/api/token";
 
