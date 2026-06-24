@@ -11,9 +11,31 @@ import AppLayout from '../../layouts/AppLayout.astro';
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.1"/><path d="M3.6 19a5.4 5.4 0 0 1 10.8 0"/><path d="M16 6.6a3 3 0 0 1 0 5.4M18.6 19a5.2 5.2 0 0 0-3-4.8"/></svg>
       </button>
       <div class="bx-head-actions">
+        <button type="button" class="bx-streak" id="bx-streak" aria-label="Your streak" title="Your streak" hidden>
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2c1.3 2.7.7 4.6-.7 6.2C9.7 10.2 8 11.9 8 14.2A4 4 0 0 0 16 14c0-1.3-.5-2.4-1.1-3.2 1 .3 1.8 1 2.4 2 1-2.8-.3-6-2.7-7.8.3 1.3-.4 2.2-1.2 2.7.4-2.4-.6-4.8-1.4-5.7z"/></svg>
+          <span id="bx-streak-n">0</span>
+        </button>
         <button type="button" class="bx-avatar" id="bx-profile" aria-label="Your profile" title="Your profile">Y</button>
       </div>
     </header>
+
+    <!-- Streak detail sheet — overall + per-pillar sub-streaks (opened from the flame) -->
+    <div class="bx-streak-sheet" id="bx-streak-sheet" hidden>
+      <div class="bx-streak-card" role="dialog" aria-modal="true" aria-label="Your streaks">
+        <button type="button" class="bx-streak-x" id="bx-streak-x" aria-label="Close">&times;</button>
+        <div class="bx-streak-hero">
+          <span class="bx-streak-flame">🔥</span>
+          <div><b id="bx-ss-overall">0</b><small>day streak</small></div>
+        </div>
+        <p class="bx-streak-best">Longest <b id="bx-ss-long">0</b> · <span id="bx-ss-state">active today</span></p>
+        <div class="bx-streak-rows">
+          <div class="bx-streak-row" style="--sc:var(--coral)"><span>Blak</span><b id="bx-ss-blak">0</b></div>
+          <div class="bx-streak-row" style="--sc:var(--mint-deep)"><span>Minit</span><b id="bx-ss-minit">0</b></div>
+          <div class="bx-streak-row" style="--sc:var(--aqua)"><span>Nexus</span><b id="bx-ss-nexus">0</b></div>
+        </div>
+        <p class="bx-streak-hint">Show up every day to keep the flame alive.</p>
+      </div>
+    </div>
 
     <div class="bx-stream" id="bx-stream" aria-live="polite"></div>
 
@@ -506,6 +528,30 @@ import AppLayout from '../../layouts/AppLayout.astro';
     .bx-icon-soon::after { content: 'soon'; position: absolute; top: -5px; right: -6px; font-family: var(--font-mono); font-size: 7px; letter-spacing: .04em; text-transform: uppercase; color: var(--gold); background: var(--bg); border: 1px solid rgba(255,210,122,.4); border-radius: 999px; padding: 0 3px; line-height: 1.5; }
     html[data-theme="light"] .bx-icon-soon::after { color: var(--gold-ink); }
     .bx-avatar { width: 44px; height: 44px; flex: none; border-radius: 50%; border: 0; cursor: pointer; background: var(--cta-grad); color: #1b1030; font-weight: 700; font-size: var(--fs-md); box-shadow: 0 0 16px rgba(255,107,157,.4); }
+
+    /* ── Visit streak (flame chip + detail sheet) ── */
+    .bx-streak { display: inline-flex; align-items: center; gap: .28rem; height: 44px; padding: 0 .72rem; flex: none; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: #FF8A4C; cursor: pointer; font-family: var(--font-mono); font-weight: 700; font-size: var(--fs-md); transition: .18s var(--ease-out); }
+    .bx-streak:hover { background: var(--surface-strong); border-color: var(--line-strong); }
+    .bx-streak svg { width: 18px; height: 18px; filter: drop-shadow(0 0 5px rgba(255,138,76,.55)); }
+    .bx-streak span { color: var(--ink); }
+    .bx-streak[hidden] { display: none; }
+
+    .bx-streak-sheet { position: fixed; inset: 0; z-index: 60; display: grid; place-items: center; padding: 1.2rem; background: rgba(8,7,18,.55); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); }
+    .bx-streak-sheet[hidden] { display: none; }
+    .bx-streak-card { position: relative; width: 100%; max-width: 320px; border-radius: 22px; border: 1px solid var(--line-strong); background: var(--bg-warm); box-shadow: 0 24px 60px rgba(0,0,0,.5); padding: 1.4rem 1.3rem 1.2rem; text-align: center; }
+    .bx-streak-x { position: absolute; top: .6rem; right: .7rem; width: 32px; height: 32px; border: 0; border-radius: 50%; background: transparent; color: var(--ink-soft); font-size: 1.5rem; line-height: 1; cursor: pointer; }
+    .bx-streak-x:hover { background: var(--surface-strong); color: var(--ink); }
+    .bx-streak-hero { display: flex; align-items: center; justify-content: center; gap: .6rem; margin-bottom: .2rem; }
+    .bx-streak-flame { font-size: 2.2rem; line-height: 1; filter: drop-shadow(0 0 10px rgba(255,138,76,.5)); }
+    .bx-streak-hero b { font-family: var(--font-mono); font-size: 2.2rem; color: var(--ink); display: block; line-height: 1; }
+    .bx-streak-hero small { color: var(--ink-soft); font-size: var(--fs-md); }
+    .bx-streak-best { color: var(--ink-soft); font-size: var(--fs-md); margin: .2rem 0 1rem; }
+    .bx-streak-best b { color: var(--ink); }
+    .bx-streak-rows { display: grid; gap: .5rem; }
+    .bx-streak-row { display: flex; align-items: center; justify-content: space-between; padding: .55rem .8rem; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); border-left: 3px solid var(--sc); }
+    .bx-streak-row span { color: var(--ink-soft); font-size: var(--fs-md); }
+    .bx-streak-row b { color: var(--sc); font-family: var(--font-mono); font-size: 1.05rem; }
+    .bx-streak-hint { color: var(--ink-faint); font-size: .78rem; margin: 1rem 0 0; }
 
     /* ── Gemini-style home hero ── */
     .bx-hero { display: flex; flex-direction: column; align-items: center; gap: .45rem; }
@@ -2313,6 +2359,28 @@ import AppLayout from '../../layouts/AppLayout.astro';
       loadNudges();
       loadNexusSuggestion();
       setupMood();
+      loadStreak();
     })();
+
+    // Visit streak — log today's Blak visit + render the flame chip; tapping it opens
+    // the sheet with the overall streak and the per-pillar (Blak/Minit/Nexus) sub-
+    // streaks. Strict: a fully missed day resets the count (handled server-side).
+    async function loadStreak() {
+      const chip = $('bx-streak'); if (!chip || !supabase) return;
+      let s = null;
+      try { const { data } = await supabase.rpc('blaksyd_log_visit', { p_pillar: 'blak' }); s = data; } catch (e) {}
+      if (!s) { try { const { data } = await supabase.rpc('blaksyd_my_streak'); s = data; } catch (e) {} }
+      if (!s) return;
+      const set = (id, v) => { const el = $(id); if (el) el.textContent = Number(v || 0); };
+      set('bx-streak-n', s.overall);
+      set('bx-ss-overall', s.overall); set('bx-ss-long', s.longest);
+      set('bx-ss-blak', s.blak); set('bx-ss-minit', s.minit); set('bx-ss-nexus', s.nexus);
+      const st = $('bx-ss-state'); if (st) st.textContent = s.active_today ? 'active today' : 'visit today to keep it';
+      chip.hidden = false;
+      const sheet = $('bx-streak-sheet');
+      chip.addEventListener('click', () => { if (sheet) sheet.hidden = false; });
+      const x = $('bx-streak-x'); if (x) x.addEventListener('click', () => { if (sheet) sheet.hidden = true; });
+      if (sheet) sheet.addEventListener('click', (e) => { if (e.target === sheet) sheet.hidden = true; });
+    }
   </script>
 </AppLayout>

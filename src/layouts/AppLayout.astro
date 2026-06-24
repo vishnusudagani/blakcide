@@ -290,6 +290,8 @@ const nav = [
     })();
   </script>
 
+  <script is:inline define:vars={{ pillar: active }}>window.__BLK_PILLAR = pillar;</script>
+
   <script>
     // Beta auth gate — ONE login (on the landing page) unlocks EVERY /beta/ feature.
     // Not signed in → bounce to the landing login, remembering where you were headed;
@@ -379,6 +381,7 @@ const nav = [
 
       initNotifications(session.user.id);
       setupSwipe();
+      logVisit();
     })();
 
     // In-product boundary notice — Blaksyd is companionship/listening, NOT therapy, medical
@@ -401,6 +404,24 @@ const nav = [
         document.body.appendChild(ov);
         ov.querySelector('#blk-boundary-ok').addEventListener('click', () => { try { localStorage.setItem(KEY, new Date().toISOString()); } catch (e) {} ov.remove(); });
       } catch (e) { /* informational — never block */ }
+    }
+
+    // Visit streak — record today's presence (idempotent server-side). The Blak page
+    // logs + renders its own streak in the header, so skip it here to avoid a double
+    // call. Pillar pages (Minit/Nexus) record their sub-streak; everything else just
+    // counts toward the overall "days you showed up" streak.
+    function logVisit() {
+      try {
+        const p = window.__BLK_PILLAR;
+        if (p === 'blak') return;
+        const pillar = (p === 'minit' || p === 'nexus') ? p : null;
+        const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+        const key = 'blk_visit_' + today + '_' + (pillar || 'app');
+        if (localStorage.getItem(key)) return;
+        supabase.rpc('blaksyd_log_visit', { p_pillar: pillar })
+          .then(() => { try { localStorage.setItem(key, '1'); } catch (e) {} })
+          .catch(() => {});
+      } catch (e) {}
     }
 
     // 18+ age gate (NEXUS-GAPS.md Phase 1, #9; India DPDP — beta is adults-only).
