@@ -57,8 +57,12 @@ exports.handler = async (event) => {
             id: track.id,
             name: track.name,
             artist: track.artists.map(a => a.name).join(', '),
+            album: track.album?.name || '',
             albumArt: track.album.images?.[1]?.url || track.album.images?.[0]?.url || '',
-            spotifyUrl: track.external_urls?.spotify || ''
+            spotifyUrl: track.external_urls?.spotify || '',
+            // 30-sec clip — Spotify nulls this for most apps since late 2024, so the
+            // client treats it as optional (falls back to the open-in-Spotify link).
+            previewUrl: track.preview_url || ''
         }));
 
         return { statusCode: 200, headers, body: JSON.stringify({ tracks }) };

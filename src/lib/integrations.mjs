@@ -29,7 +29,11 @@ const state = {
 
 const conn = (provider) => state.connections.find((c) => c.provider === provider) || null;
 const gmailConn = () => conn('gmail');
+const spotifyConn = () => conn('spotify');
 const learningOn = () => !!gmailConn();
+
+// Spotify glyph (kept local — the catalog only ships a mail icon).
+const MUSIC_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="18" r="2.6"/><circle cx="17" cy="16" r="2.6"/><path d="M8.6 18V7l11-2v9"/></svg>';
 
 // ---------- render: app card ----------
 function appCard(app) {
@@ -160,10 +164,30 @@ function masterCard() {
         '<button class="int-connect" data-act="gmail-connect">Connect</button>' +
       '</div>';
   }
+  // Spotify (music) — same connect shape as Gmail, mirroring the OAuth flow.
+  const sp = spotifyConn();
+  let spotifyRow;
+  if (sp) {
+    spotifyRow =
+      '<div class="int-m-row">' +
+        '<span class="int-m-ic on">' + MUSIC_ICON + '</span>' +
+        '<div class="int-m-tx"><b>Spotify connected</b><i>' + esc(sp.display_name || 'Blak knows your music') + '</i></div>' +
+        '<button class="int-ghost" data-act="spotify-sync">Sync taste</button>' +
+        '<button class="int-ghost" data-act="spotify-disconnect">Disconnect</button>' +
+      '</div>';
+  } else {
+    spotifyRow =
+      '<div class="int-m-row">' +
+        '<span class="int-m-ic">' + MUSIC_ICON + '</span>' +
+        '<div class="int-m-tx"><b>Connect Spotify</b><i>Let Blak learn your taste, see what you’re playing &amp; DJ for you.</i></div>' +
+        '<button class="int-connect" data-act="spotify-connect">Connect</button>' +
+      '</div>';
+  }
   const note = state.note ? '<p class="int-note">' + esc(state.note) + '</p>' : '';
   return (
     '<div class="int-master">' +
       gmailRow +
+      spotifyRow +
       note +
       '<div class="int-divider"></div>' +
       '<label class="int-pref-label" for="int-pref">Tell Blak a taste</label>' +
@@ -236,6 +260,50 @@ async function disconnectGmail() {
   state.connections = state.connections.filter((c) => c.provider !== 'gmail');
   state.note = '';
   paint();
+}
+
+async function connectSpotify() {
+  state.note = 'Opening Spotify…';
+  paint();
+  try {
+    const { data, error } = await state.supabase.functions.invoke('spotify-oauth-start');
+    if (error || !data || !data.url) {
+      state.note = 'Couldn’t start Spotify connect — please try again.';
+      paint();
+      return;
+    }
+    window.location.href = data.url; // → Spotify consent → callback → back here
+  } catch (e) {
+    state.note = 'Couldn’t start Spotify connect — please try again.';
+    paint();
+  }
+}
+
+async function disconnectSpotify() {
+  if (!confirm('Disconnect Spotify? Blak will stop seeing your music. What it already learned stays in your profile (you can delete it there).')) return;
+  try {
+    await state.supabase.from('symp_integrations').delete()
+      .eq('user_id', state.user.id).eq('provider', 'spotify');
+  } catch (e) { /* table may not exist yet — fall through */ }
+  state.connections = state.connections.filter((c) => c.provider !== 'spotify');
+  state.note = '';
+  paint();
+}
+
+async function syncSpotify() {
+  state.note = 'Learning your music taste…';
+  paint();
+  try {
+    const { data, error } = await state.supabase.functions.invoke('spotify-learn');
+    if (error) { state.note = 'Couldn’t sync Spotify — please try again.'; paint(); return; }
+    const d = data || {};
+    state.note = 'Synced ✓ learned ' + (d.artists ?? 0) + ' artists · ' + (d.genres ?? 0) + ' genres. See your profile →';
+    await refreshConnections();
+    paint();
+  } catch (e) {
+    state.note = 'Couldn’t sync Spotify — please try again.';
+    paint();
+  }
 }
 
 async function refreshConnections() {
@@ -311,6 +379,9 @@ function onClick(e) {
   else if (act === 'gmail-connect') connectGmail();
   else if (act === 'gmail-sync') syncGmail();
   else if (act === 'gmail-disconnect') disconnectGmail();
+  else if (act === 'spotify-connect') connectSpotify();
+  else if (act === 'spotify-sync') syncSpotify();
+  else if (act === 'spotify-disconnect') disconnectSpotify();
   else if (act === 'book-toggle') { state.booking.open = !state.booking.open; if (state.booking.open) resetBooking(true); paint(); }
   else if (act === 'book-find') { const el = document.getElementById('int-dest'); state.booking.to = el ? el.value.trim() : ''; findRides(); }
   else if (act === 'book-pick') { state.booking.selected = state.booking.options.find((o) => o.id === btn.dataset.id) || null; state.booking.step = 'confirm'; paint(); }
@@ -360,7 +431,21 @@ export async function mountIntegrations({ supabase, user, container }) {
     } else if (g === 'error') {
       state.note = 'Gmail connect didn’t complete — please try again.';
     }
-    if (g) history.replaceState({}, '', location.pathname);
+
+    // Return from the Spotify OAuth redirect (?spotify=connected|error).
+    const sp = new URLSearchParams(location.search).get('spotify');
+    if (sp === 'connected') {
+      state.note = 'Spotify connected ✓ learning your music…';
+      supabase.functions.invoke('spotify-learn').then(async () => {
+        await refreshConnections();
+        state.note = 'Spotify connected ✓ Blak now knows your music.';
+        paint();
+      }).catch(() => {});
+    } else if (sp === 'error') {
+      state.note = 'Spotify connect didn’t complete — please try again.';
+    }
+
+    if (g || sp) history.replaceState({}, '', location.pathname);
   } catch (e) { /* ignore */ }
 
   container.addEventListener('click', onClick);

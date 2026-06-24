@@ -11,3 +11,8 @@ verify_jwt = false
 
 [functions.blak-proactive]
 verify_jwt = false
+
+# Spotify OAuth callback is hit by Spotify's redirect (no JWT) — identity comes
+# from the HMAC-signed state, so the gateway must not require a JWT.
+[functions.spotify-oauth-callback]
+verify_jwt = false

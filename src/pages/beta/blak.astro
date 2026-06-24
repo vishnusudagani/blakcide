@@ -10,6 +10,9 @@ import AppLayout from '../../layouts/AppLayout.astro';
       <button type="button" class="bx-icon" id="bx-persona" aria-label="Personas" title="Personas">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.1"/><path d="M3.6 19a5.4 5.4 0 0 1 10.8 0"/><path d="M16 6.6a3 3 0 0 1 0 5.4M18.6 19a5.2 5.2 0 0 0-3-4.8"/></svg>
       </button>
+      <button type="button" class="bx-icon" id="bx-music-open" aria-label="Music" title="Music">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="18" r="2.4"/><circle cx="17" cy="16" r="2.4"/><path d="M8.4 18V7l11-2v9"/></svg>
+      </button>
       <div class="bx-head-actions">
         <button type="button" class="bx-streak" id="bx-streak" aria-label="Your streak" title="Your streak" hidden>
           <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2c1.3 2.7.7 4.6-.7 6.2C9.7 10.2 8 11.9 8 14.2A4 4 0 0 0 16 14c0-1.3-.5-2.4-1.1-3.2 1 .3 1.8 1 2.4 2 1-2.8-.3-6-2.7-7.8.3 1.3-.4 2.2-1.2 2.7.4-2.4-.6-4.8-1.4-5.7z"/></svg>
@@ -35,6 +38,26 @@ import AppLayout from '../../layouts/AppLayout.astro';
         </div>
         <p class="bx-streak-hint">Show up every day to keep the flame alive.</p>
       </div>
+    </div>
+
+    <!-- Music panel — Spotify search + preview + DJ. Opened from the header music
+         button or a "play …" intent. Full playback opens in Spotify (Web Playback = M2). -->
+    <div class="bx-music-sheet" id="bx-music-sheet" hidden>
+      <div class="bx-music-card" role="dialog" aria-modal="true" aria-label="Music">
+        <div class="bx-music-head">
+          <span class="bx-music-title">🎵 Music</span>
+          <button type="button" class="bx-music-x" id="bx-music-x" aria-label="Close">&times;</button>
+        </div>
+        <div class="bx-now" id="bx-now" hidden></div>
+        <div class="bx-music-search">
+          <input id="bx-music-q" type="text" placeholder="Search a song or artist…" autocomplete="off" enterkeyhint="search" />
+          <button type="button" id="bx-music-go">Search</button>
+        </div>
+        <div class="bx-music-chips" id="bx-music-chips" data-noswipe></div>
+        <div class="bx-music-results" id="bx-music-results" data-noswipe></div>
+        <p class="bx-music-foot" id="bx-music-foot"></p>
+      </div>
+      <audio id="bx-music-audio" preload="none"></audio>
     </div>
 
     <div class="bx-stream" id="bx-stream" aria-live="polite"></div>
@@ -552,6 +575,41 @@ import AppLayout from '../../layouts/AppLayout.astro';
     .bx-streak-row span { color: var(--ink-soft); font-size: var(--fs-md); }
     .bx-streak-row b { color: var(--sc); font-family: var(--font-mono); font-size: 1.05rem; }
     .bx-streak-hint { color: var(--ink-faint); font-size: .78rem; margin: 1rem 0 0; }
+
+    /* ── Music panel (Spotify search + preview + DJ) ── */
+    .bx-music-sheet { position: fixed; inset: 0; z-index: 62; display: grid; place-items: end center; padding: 0; background: rgba(8,7,18,.55); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); }
+    .bx-music-sheet[hidden] { display: none; }
+    .bx-music-card { width: 100%; max-width: 560px; max-height: 82vh; display: flex; flex-direction: column; border-radius: 22px 22px 0 0; border: 1px solid var(--line-strong); border-bottom: 0; background: var(--bg-warm); box-shadow: 0 -18px 60px rgba(0,0,0,.5); padding: 1rem 1rem calc(1rem + env(safe-area-inset-bottom, 0px)); }
+    @media (min-width: 600px) { .bx-music-sheet { place-items: center; } .bx-music-card { border-radius: 22px; border-bottom: 1px solid var(--line-strong); } }
+    .bx-music-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: .7rem; }
+    .bx-music-title { font-weight: 650; color: var(--ink); font-size: var(--fs-lg, 1rem); }
+    .bx-music-x { width: 34px; height: 34px; border: 0; border-radius: 50%; background: var(--surface); color: var(--ink-soft); font-size: 1.5rem; line-height: 1; cursor: pointer; }
+    .bx-music-x:hover { background: var(--surface-strong); color: var(--ink); }
+    .bx-now { display: flex; align-items: center; gap: .6rem; padding: .55rem .65rem; margin-bottom: .7rem; border-radius: 12px; border: 1px solid rgba(106,211,184,.35); background: rgba(106,211,184,.08); }
+    .bx-now img { width: 40px; height: 40px; border-radius: 7px; flex: none; object-fit: cover; }
+    .bx-now-tx { min-width: 0; flex: 1; }
+    .bx-now-tx b { display: block; color: var(--ink); font-size: var(--fs-md); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .bx-now-tx small { color: var(--mint-deep); font-size: .75rem; }
+    .bx-music-search { display: flex; gap: .5rem; }
+    .bx-music-search input { flex: 1; min-width: 0; height: 44px; padding: 0 .9rem; font-size: 16px; border-radius: 999px; border: 1px solid var(--line-strong); background: var(--surface); color: var(--ink); }
+    .bx-music-search input:focus { outline: none; border-color: var(--coral); }
+    .bx-music-search button { height: 44px; padding: 0 1.1rem; flex: none; border: 0; border-radius: 999px; background: var(--cta-grad); color: #1b1030; font-weight: 650; cursor: pointer; }
+    .bx-music-chips { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .7rem; }
+    .bx-music-chip { padding: .35rem .75rem; border-radius: 999px; border: 1px solid var(--line-strong); background: var(--surface); color: var(--ink-soft); font-size: var(--fs-md); cursor: pointer; }
+    .bx-music-chip:hover { background: var(--surface-strong); color: var(--ink); }
+    .bx-music-results { margin-top: .7rem; overflow-y: auto; -webkit-overflow-scrolling: touch; display: grid; gap: .4rem; }
+    .bx-track { display: flex; align-items: center; gap: .65rem; padding: .45rem; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); }
+    .bx-track img { width: 46px; height: 46px; border-radius: 7px; flex: none; object-fit: cover; background: var(--surface-strong); }
+    .bx-track-tx { min-width: 0; flex: 1; }
+    .bx-track-tx b { display: block; color: var(--ink); font-size: var(--fs-md); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .bx-track-tx small { display: block; color: var(--ink-soft); font-size: .75rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .bx-track-btn { width: 38px; height: 38px; flex: none; border: 0; border-radius: 50%; background: var(--surface-strong); color: var(--ink); cursor: pointer; display: grid; place-items: center; }
+    .bx-track-btn svg { width: 16px; height: 16px; }
+    .bx-track-btn.is-playing { background: var(--coral); color: #1b1030; }
+    .bx-track-open { width: 38px; height: 38px; flex: none; border: 0; border-radius: 50%; background: rgba(106,211,184,.16); color: var(--mint-deep); cursor: pointer; display: grid; place-items: center; text-decoration: none; }
+    .bx-track-open svg { width: 16px; height: 16px; }
+    .bx-music-foot { color: var(--ink-faint); font-size: .78rem; margin: .7rem 0 0; text-align: center; }
+    .bx-music-foot a { color: var(--coral); }
 
     /* ── Gemini-style home hero ── */
     .bx-hero { display: flex; flex-direction: column; align-items: center; gap: .45rem; }
@@ -1142,6 +1200,15 @@ import AppLayout from '../../layouts/AppLayout.astro';
     // Call-on-request — if the user asks Blak to call (typed or in a voice note),
     // confirm first with a tap-to-call offer instead of a text reply.
     const CALL_INTENT = /\b(call me|call now|gimme a call|give me a call|can you call me|can we (call|talk)|could you call|wanna call|want to call|let'?s (call|hop on)|voice call|hop on a call|jump on a call|ring me|call you now)\b/i;
+    // "play …" / "put on …" / "dj" / anything-spotify → open the music panel.
+    const MUSIC_INTENT = /\bspotify\b|\bdj\b|\b(play|put on|queue)\b[^.?!]*\b(song|songs|music|track|tracks|tune|tunes|playlist|album|artist)\b|\bplay me (a|some|the)\b/i;
+    function musicQuery(t) {
+      let q = String(t || '');
+      q = q.replace(/.*?\b(play|put on|queue up?|dj|search for|search|find)\b/i, '');
+      q = q.replace(/^\s*(me|some|a|the)\b/i, '');
+      q = q.replace(/\b(songs?|music|tracks?|tunes?|playlists?|please|thanks?|on spotify|for me|right now|now)\b/gi, '');
+      return q.replace(/[^\w\s'&-]/g, ' ').replace(/\s{2,}/g, ' ').trim();
+    }
     function offerCall() {
       const h = addRow('them', '');
       h.bub.textContent = 'want me to call you now?';
@@ -1407,6 +1474,15 @@ import AppLayout from '../../layouts/AppLayout.astro';
         if (text && !img && REMIND_INTENT.test(text)) { await handleReminder(text); setBusy(false); return; }   // "remind me to…" → save it
         if (text && !img && HUMAN_INTENT.test(text)) { setBusy(false); offerMinit(); return; }   // wants a real person → offer Minit
         if (text && !img && CALL_INTENT.test(text)) { setBusy(false); offerCall(); return; }   // they asked to call → offer it
+        if (text && !img && MUSIC_INTENT.test(text)) {                                          // "play …" → DJ: open the music panel
+          setBusy(false);
+          const q = musicQuery(text);
+          const line = q ? ('On it — pulling up “' + q + '” 🎵') : 'Let’s find you something to play 🎵';
+          const am = { role: 'assistant', content: line, ts: Date.now() };
+          history.push(am); addRow('them', line, { msg: am });
+          if (activeChatId) dbInsertMessage('assistant', line).then((id) => { if (id) am.id = id; });
+          openMusic(q); return;
+        }
         // Re-examine a recently shared image when the message clearly asks about it.
         if (text && !img && IMG_REF.test(text) && isImgQuestion(text)) {
           const recentImg = history.slice(0, -1).slice(-6).reverse().find((m) => m.media_type === 'image' && m.media_url);
@@ -1810,6 +1886,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
       if (txt && vh && vh.bub && !vh.bub.querySelector('.bx-vn-cap')) { const cap = document.createElement('p'); cap.className = 'bx-vn-cap'; cap.textContent = '“' + txt + '”'; vh.bub.appendChild(cap); }   // show what Blak heard
       dbInsertMessage('user', '', { url: url || null, type: 'audio', description: txt || null }).then((id) => { if (id) um.id = id; });
       if (txt && CALL_INTENT.test(txt)) { offerCall(); return; }   // voice note asked to call → offer it
+      if (txt && MUSIC_INTENT.test(txt)) { openMusic(musicQuery(txt)); return; }   // voice note "play …" → music panel
       await runTurn(txt || '');
     }
 
@@ -2399,6 +2476,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
       loadNexusSuggestion();
       setupMood();
       loadStreak();
+      setupMusic();
     })();
 
     // Visit streak — log today's Blak visit + render the flame chip; tapping it opens
@@ -2420,6 +2498,106 @@ import AppLayout from '../../layouts/AppLayout.astro';
       chip.addEventListener('click', () => { if (sheet) sheet.hidden = false; });
       const x = $('bx-streak-x'); if (x) x.addEventListener('click', () => { if (sheet) sheet.hidden = true; });
       if (sheet) sheet.addEventListener('click', (e) => { if (e.target === sheet) sheet.hidden = true; });
+    }
+
+    // ── Music (Spotify): search + 30s preview + DJ + now-playing. Opened from the
+    // header 🎵 or a "play …" intent. Full in-app playback / transport control is M2
+    // (Web Playback SDK); here we preview when Spotify exposes a clip, else open the
+    // track in Spotify. Now-playing + taste come from the spotify-now edge function
+    // (only once the user connects Spotify in /beta/account).
+    const M_ICON_PLAY = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>';
+    const M_ICON_PAUSE = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 5h4v14H7zM13 5h4v14h-4z"/></svg>';
+    const M_ICON_OPEN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M9 7h8v8"/></svg>';
+    const MOOD_CHIPS = [
+      ['Chill', 'chill lofi calm'], ['Focus', 'focus instrumental study'],
+      ['Hype', 'hype workout pump'], ['Happy', 'feel good happy'],
+      ['Sad', 'sad emotional acoustic'], ['Romance', 'romantic love songs'],
+    ];
+    let _mAudio = null, _mPlayingId = null;
+    function mEsc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+    function mStopPreview() {
+      if (_mAudio) { try { _mAudio.pause(); } catch (e) {} }
+      _mPlayingId = null;
+      document.querySelectorAll('.bx-track-btn.is-playing').forEach((b) => { b.classList.remove('is-playing'); b.innerHTML = M_ICON_PLAY; });
+    }
+    function mTrackCard(t) {
+      const art = '<img src="' + mEsc(t.albumArt || '') + '" alt="" loading="lazy" />';
+      const prev = t.previewUrl
+        ? '<button type="button" class="bx-track-btn" data-mact="prev" data-id="' + mEsc(t.id) + '" data-url="' + mEsc(t.previewUrl) + '" aria-label="Play preview">' + M_ICON_PLAY + '</button>'
+        : '';
+      const open = '<a class="bx-track-open" href="' + mEsc(t.spotifyUrl || '#') + '" target="_blank" rel="noopener" aria-label="Open in Spotify">' + M_ICON_OPEN + '</a>';
+      return '<div class="bx-track">' + art +
+        '<div class="bx-track-tx"><b>' + mEsc(t.name) + '</b><small>' + mEsc(t.artist) + '</small></div>' +
+        prev + open + '</div>';
+    }
+    async function mSearch(q) {
+      const box = $('bx-music-results'), foot = $('bx-music-foot');
+      q = String(q || '').trim(); if (!q) return;
+      mStopPreview();
+      if (box) box.innerHTML = '';
+      if (foot) foot.textContent = 'Searching…';
+      try {
+        const r = await fetch('/api/spotify-search?q=' + encodeURIComponent(q));
+        const j = await r.json();
+        const list = (j && j.tracks) || [];
+        if (!list.length) { if (foot) foot.textContent = 'No tracks found — try another search.'; return; }
+        if (box) box.innerHTML = list.map(mTrackCard).join('');
+        if (foot) foot.innerHTML = '';
+      } catch (e) {
+        if (foot) foot.textContent = 'Couldn’t reach Spotify — try again.';
+      }
+    }
+    function mPlayPreview(url, id, btn) {
+      if (!url) return;
+      if (_mPlayingId === id) { mStopPreview(); return; }
+      mStopPreview();
+      if (!_mAudio) _mAudio = $('bx-music-audio');
+      if (!_mAudio) return;
+      _mAudio.src = url;
+      _mAudio.play().then(() => { _mPlayingId = id; if (btn) { btn.classList.add('is-playing'); btn.innerHTML = M_ICON_PAUSE; } }).catch(() => {});
+      _mAudio.onended = () => mStopPreview();
+    }
+    async function mLoadNow() {
+      const el = $('bx-now'), foot = $('bx-music-foot');
+      if (!el || !supabase) return;
+      try {
+        const { data } = await supabase.functions.invoke('spotify-now');
+        if (data && data.connected && data.now_playing) {
+          const n = data.now_playing;
+          el.innerHTML = (n.albumArt ? '<img src="' + mEsc(n.albumArt) + '" alt="" />' : '') +
+            '<div class="bx-now-tx"><b>' + mEsc(n.name) + '</b><small>' + (n.isPlaying ? 'Now playing · ' : 'Paused · ') + mEsc(n.artist) + '</small></div>';
+          el.hidden = false;
+        } else {
+          el.hidden = true;
+          if (data && !data.connected && foot && !foot.textContent) {
+            foot.innerHTML = 'Connect Spotify in <a href="/beta/account/">your apps</a> so Blak knows your music.';
+          }
+        }
+      } catch (e) { el.hidden = true; }
+    }
+    function openMusic(prefill) {
+      const sheet = $('bx-music-sheet'); if (!sheet) return;
+      sheet.hidden = false;
+      const input = $('bx-music-q');
+      mLoadNow();
+      if (prefill) { if (input) input.value = prefill; mSearch(prefill); }
+      else if (input && !isMobile()) { try { input.focus(); } catch (e) {} }
+    }
+    function closeMusic() { const s = $('bx-music-sheet'); if (s) s.hidden = true; mStopPreview(); }
+    function setupMusic() {
+      const openBtn = $('bx-music-open'); if (openBtn) openBtn.addEventListener('click', () => openMusic());
+      const x = $('bx-music-x'); if (x) x.addEventListener('click', closeMusic);
+      const sheet = $('bx-music-sheet'); if (sheet) sheet.addEventListener('click', (e) => { if (e.target === sheet) closeMusic(); });
+      const go = $('bx-music-go'), input = $('bx-music-q');
+      if (go && input) go.addEventListener('click', () => mSearch(input.value));
+      if (input) input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); mSearch(input.value); } });
+      const chips = $('bx-music-chips');
+      if (chips) {
+        chips.innerHTML = MOOD_CHIPS.map(([label, q]) => '<button type="button" class="bx-music-chip" data-q="' + mEsc(q) + '">' + mEsc(label) + '</button>').join('');
+        chips.addEventListener('click', (e) => { const b = e.target.closest('[data-q]'); if (b) { const inp = $('bx-music-q'); if (inp) inp.value = b.getAttribute('data-q'); mSearch(b.getAttribute('data-q')); } });
+      }
+      const results = $('bx-music-results');
+      if (results) results.addEventListener('click', (e) => { const b = e.target.closest('[data-mact="prev"]'); if (b) mPlayPreview(b.getAttribute('data-url'), b.getAttribute('data-id'), b); });
     }
   </script>
 </AppLayout>
