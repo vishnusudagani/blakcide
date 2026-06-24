@@ -57,7 +57,7 @@ import AppLayout from '../../../layouts/AppLayout.astro';
       <div class="gr-sheet-scrim" id="gr-sheet-scrim"></div>
       <div class="gr-sheet-card">
         <div class="gr-sheet-h">In this group</div>
-        <div class="gr-sheet-code" id="gr-sheet-code"></div>
+        <button type="button" class="gr-sheet-code" id="gr-sheet-code" title="Tap to copy the invite code"></button>
         <div class="gr-members" id="gr-members"></div>
         <button type="button" class="gr-btn gr-leave" id="gr-leave">Leave group</button>
         <button type="button" class="gr-btn gr-end" id="gr-end" hidden>End group for everyone</button>
@@ -137,7 +137,10 @@ import AppLayout from '../../../layouts/AppLayout.astro';
   .gr-sheet-scrim { position: absolute; inset: 0; background: color-mix(in srgb, var(--bg) 70%, transparent); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); }
   .gr-sheet-card { position: absolute; left: 50%; bottom: 0; transform: translateX(-50%); width: min(560px, 100%); background: var(--surface); border: 1px solid var(--line); border-radius: 20px 20px 0 0; padding: 1.1rem 1rem calc(1.4rem + env(safe-area-inset-bottom, 0px)); }
   .gr-sheet-h { font-weight: 700; }
-  .gr-sheet-code { font-size: var(--fs-sm); color: var(--ink-soft); margin: .2rem 0 .8rem; }
+  .gr-sheet-code { display: inline-flex; align-items: center; gap: .5rem; font: inherit; font-size: var(--fs-sm); color: var(--ink-soft); margin: .3rem 0 .9rem; padding: .4rem .7rem; border: 1px solid var(--line); border-radius: var(--r-pill); background: var(--surface-strong); cursor: pointer; -webkit-tap-highlight-color: transparent; }
+  .gr-sheet-code:hover { color: var(--coral); border-color: var(--coral); }
+  .gr-sheet-code .gr-code-val { font-weight: 700; letter-spacing: .12em; color: var(--ink); }
+  .gr-sheet-code svg { width: 15px; height: 15px; flex: none; }
   .gr-members { display: flex; flex-direction: column; gap: .35rem; margin-bottom: 1rem; max-height: 40vh; overflow-y: auto; }
   .gr-member { display: flex; align-items: center; gap: .6rem; padding: .35rem 0; }
   .gr-member-av { width: 30px; height: 30px; border-radius: 50%; background: var(--accent-grad, linear-gradient(135deg,#FFD27A,#FF6B9D)); color: #3a1430; display: grid; place-items: center; font-weight: 700; font-size: 13px; flex: none; }
