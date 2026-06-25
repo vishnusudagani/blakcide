@@ -5,9 +5,13 @@
 //   1) OpenAI omni-moderation-latest  — FREE endpoint, supports image inputs (needs
 //      OPENAI_API_KEY). Blocks sexual / minors / graphic-violence / self-harm.
 //   2) Gemini vision (OpenAI-compat)  — reuses the existing GEMINI_BASE_URL proxy.
-//   3) FAIL OPEN — if no provider is configured or anything errors, allow the image
-//      (image sharing must never break); the call is also gated client-side behind
-//      PUBLIC_NEXUS_PROXY so prod is unaffected until cutover.
+//   3) FAIL OPEN by default — if no provider is configured or anything errors, allow
+//      the image (image sharing must never break); the call is also gated client-side
+//      behind PUBLIC_NEXUS_PROXY so prod is unaffected until cutover.
+//
+// Set MODERATION_MODE=closed to FAIL CLOSED instead: when no provider is configured
+// (or one errors out) the image is BLOCKED. Only flip this once a vision provider
+// (OPENAI_API_KEY / GEMINI_API_KEY) is set, or every image will be rejected.
 //
 // CSAM hash-matching (PhotoDNA / NCMEC — free for qualifying platforms) is a separate
 // hardening step: apply for access, then add a hash check here. TODO(csam).
@@ -21,6 +25,10 @@ const cors = {
 };
 const json = (o: unknown, status = 200) =>
   new Response(JSON.stringify(o), { status, headers: { ...cors, "Content-Type": "application/json" } });
+
+// Default-open preserves today's behavior; set MODERATION_MODE=closed to block
+// when no moderation verdict can be obtained (no provider / provider error).
+const FAIL_ALLOW = (Deno.env.get("MODERATION_MODE") ?? "open").toLowerCase() !== "closed";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
@@ -40,7 +48,7 @@ Deno.serve(async (req) => {
     if (!imgUrl) return json({ allow: true, reason: "no-url" });
     return json(await classify(imgUrl));
   } catch (e) {
-    return json({ allow: true, reason: "error:" + ((e as Error)?.message || "x") });
+    return json({ allow: FAIL_ALLOW, reason: (FAIL_ALLOW ? "error:" : "error-failclosed:") + ((e as Error)?.message || "x") });
   }
 });
 
@@ -92,6 +100,6 @@ async function classify(imgUrl: string): Promise<{ allow: boolean; reason: strin
       }
     } catch (_) { /* fall through */ }
   }
-  // 3) fail open — never break image sharing
-  return { allow: true, reason: "no-provider" };
+  // 3) no verdict available — fail open by default, or block if MODERATION_MODE=closed
+  return { allow: FAIL_ALLOW, reason: FAIL_ALLOW ? "no-provider" : "no-provider-failclosed" };
 }
