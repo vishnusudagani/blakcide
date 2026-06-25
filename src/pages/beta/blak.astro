@@ -328,6 +328,8 @@ import AppLayout from '../../layouts/AppLayout.astro';
     .bx-mood-b { width: 46px; height: 46px; border-radius: 50%; border: 1px solid var(--line-strong); background: var(--surface); font-size: 1.45rem; line-height: 1; cursor: pointer; display: grid; place-items: center; transition: transform var(--t-fast) var(--ease-out), border-color var(--t-fast) var(--ease-out), background var(--t-fast) var(--ease-out); }
     .bx-mood-b:hover { transform: translateY(-2px); }
     .bx-mood-b.on { border-color: var(--coral); background: rgba(255,107,157,.14); transform: translateY(-2px); }
+    /* incognito = off the record: hide the learning surfaces (mood + insight) */
+    html.bx-incognito #bx-mood, html.bx-incognito .bx-insights { display: none !important; }
     .bx-insight-ic.ic-mint { color: var(--mint-deep); background: rgba(106,211,184,.14); border: 1px solid rgba(106,211,184,.26); }
     .bx-insight-ic.ic-coral { color: var(--coral); background: rgba(255,107,157,.13); border: 1px solid rgba(255,107,157,.26); }
     html[data-theme="light"] .bx-insight-ic.ic-mint { color: var(--mint-ink); }
@@ -1617,7 +1619,13 @@ import AppLayout from '../../layouts/AppLayout.astro';
     // ── Incognito: a private chat that isn't saved or learned from ────────────
     let incognito = false;
     const incogPill = $('bx-incog-pill');
-    function setIncognito(on) { incognito = on; if (incogPill) incogPill.hidden = !on; }
+    function setIncognito(on) {
+      incognito = on; if (incogPill) incogPill.hidden = !on;
+      // Incognito = "not saved or learned from": hide the learning surfaces (mood
+      // logger + insight card) via a class on <html> so it survives re-renders.
+      // The mood WRITE is also skipped in setupMood.
+      document.documentElement.classList.toggle('bx-incognito', on);
+    }
     function enterIncognito() {
       if (sending && controller) { try { controller.abort(); } catch (e) {} }
       activeChatId = null; history = []; cancelEdit();
@@ -2441,6 +2449,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
       } catch (e) {}
       wrap.querySelectorAll('.bx-mood-b').forEach((b) => b.addEventListener('click', async () => {
         const mood = b.getAttribute('data-mood'); done(mood);
+        if (incognito) return;   // incognito = off the record — don't persist mood
         try { const u = (await supabase.auth.getUser())?.data?.user; if (u) await supabase.from('mood_logs').insert([{ user_id: u.id, mood }]); } catch (e) {}
       }));
     }

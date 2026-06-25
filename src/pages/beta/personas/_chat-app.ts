@@ -370,7 +370,8 @@ async function vnFinish() {
     const j = await r.json().catch(() => null);
     const text = String((j && (j.data ? j.data.text : j.text)) || '').trim();
     if (text) send(text);
-  } catch (e) { /* transcription failed — silent no-op */ }
+    else toast("Couldn't catch that — try again");   // was a silent no-op
+  } catch (e) { toast("Voice note failed — try again"); }
   finally { if (voiceBtn) voiceBtn.classList.remove('busy'); }
 }
 if (voiceBtn) voiceBtn.onclick = () => { if (vnRecording) vnStop(); else vnStart(); };
