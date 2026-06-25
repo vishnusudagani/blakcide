@@ -33,9 +33,14 @@
 /** @type {CapabilitySpec[]} */
 export const CAPABILITY_SPEC = [
     // ── Notifications & messaging (primitive: notify() queue) ──────────────
-    { id: 'push.web', group: 'Notifications', label: 'Web push (VAPID)', where: 'Netlify + Supabase Edge',
+    { id: 'push.web', group: 'Notifications', label: 'Web push (VAPID)', where: 'Supabase Edge (push-send) + Netlify (Blak crons)',
+      // Public key is baked into src/lib/push.mjs (safe to embed); only the
+      // private key + subject are secret. NOTE: two senders today use different
+      // names for the SAME keypair — the edge push-send fn uses VAPID_PRIVATE_KEY,
+      // the Node proactive crons use VAPID_PRIVATE_PKCS8. Set both to cover both
+      // paths until they're unified.
       unlocks: 'Proactive Blak / Minit / Nexus / Persona reach while the web app is closed.',
-      need: ['VAPID_PUBLIC_KEY', 'VAPID_PRIVATE_PKCS', 'VAPID_SUBJECT'] },
+      need: ['VAPID_SUBJECT', ['VAPID_PRIVATE_KEY', 'VAPID_PRIVATE_PKCS8']] },
     { id: 'push.native', group: 'Notifications', label: 'Native push (APNs / FCM)', where: 'Netlify + Supabase Edge',
       unlocks: 'iOS / Android push once the apps are wrapped (Capacitor).',
       need: [['APNS_KEY_P8', 'FCM_SERVER_KEY', 'FCM_SERVICE_ACCOUNT']] },
@@ -85,9 +90,11 @@ export const CAPABILITY_SPEC = [
       need: [['VISION_MOD_API_KEY', 'AZURE_CONTENT_SAFETY_KEY', 'OPENAI_MOD_KEY']] },
 
     // ── Observability ─────────────────────────────────────────────────────
-    { id: 'analytics', group: 'Observability', label: 'Product analytics', where: 'Netlify (PUBLIC_) + Edge',
+    { id: 'analytics', group: 'Observability', label: 'Product analytics', where: 'Netlify (PUBLIC_)',
+      // PUBLIC_ANALYTICS=1 turns on the zero-dependency first-party sink
+      // (public.analytics_events); a provider key additionally forwards events.
       unlocks: 'Funnels, retention, feature-usage — stop flying blind at scale.',
-      need: [['PUBLIC_POSTHOG_KEY', 'POSTHOG_KEY', 'PUBLIC_PLAUSIBLE_DOMAIN', 'PUBLIC_GA_MEASUREMENT_ID']] },
+      need: [['PUBLIC_ANALYTICS', 'PUBLIC_POSTHOG_KEY', 'PUBLIC_PLAUSIBLE_DOMAIN', 'PUBLIC_GA_MEASUREMENT_ID']] },
     { id: 'errors', group: 'Observability', label: 'Error monitoring', where: 'Netlify (PUBLIC_) + Edge',
       unlocks: 'Server + client crash/error capture.',
       need: [['SENTRY_DSN', 'PUBLIC_SENTRY_DSN']] },
