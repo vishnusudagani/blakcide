@@ -433,7 +433,9 @@ function renderPrivacy() {
       ${toggleRow('enrich_music', 'Music', 'Enrich your tastes from what you listen to.', { soon: true })}
       ${toggleRow('enrich_location', 'Place & rhythm', 'Use city / time-of-day to colour Blak’s greeting.', { soon: true })}
       <div class="pf-toggle"><div><b>Export everything</b><span class="pf-ent-sub">Download all of this as a file. It’s yours.</span></div>
-        <button class="pf-btn" data-act="export">Download</button></div></section>`;
+        <button class="pf-btn" data-act="export">Download</button></div>
+      <div class="pf-toggle"><div><b>Erase everything Blak knows</b><span class="pf-ent-sub">Permanently delete every fact, person, event &amp; goal Blak has learned about you.</span></div>
+        <button class="pf-btn danger" data-act="erase-all">Erase</button></div></section>`;
 }
 
 // The "context, not content" brief — computed client-side from SHARED items only,
@@ -577,6 +579,31 @@ async function exportAll() {
     a.href = URL.createObjectURL(blob); a.download = 'blak-profile.json'; a.click();
     URL.revokeObjectURL(a.href);
 }
+// DPDP "right to be forgotten" — wipe everything Blak has learned about the user.
+// Deletes are RLS-scoped to the caller's own rows. Two confirms (this is permanent),
+// and we suggest exporting first.
+async function eraseAll(btn) {
+    if (!confirm('Permanently delete everything Blak knows about you — every fact, person, event and goal? This cannot be undone.\n\nTip: “Download” first if you want a copy.')) return;
+    if (!confirm('Last check: erase it all for good?')) return;
+    if (btn) { btn.disabled = true; btn.textContent = 'Erasing…'; }
+    const uid = user.id;
+    try {
+        await Promise.all([
+            supabase.from('symp_knowledge_facts').delete().eq('user_id', uid),
+            supabase.from('symp_knowledge_entities').delete().eq('user_id', uid),
+            supabase.from('symp_knowledge_events').delete().eq('user_id', uid),
+            supabase.from('symp_goals').delete().eq('user_id', uid),
+            supabase.from('symp_profile_synthesis').delete().eq('user_id', uid),
+            supabase.from('symp_knowledge_tombstones').delete().eq('user_id', uid),
+        ]);
+        facts = []; entities = []; events = []; goals = []; synthesis = null;
+        alert('Done — Blak’s memory of you has been erased.');
+        await reload();
+    } catch (e) {
+        if (btn) { btn.disabled = false; btn.textContent = 'Erase'; }
+        alert('Could not erase everything — please try again.');
+    }
+}
 async function refreshSynthesis(btn) {
     try {
         if (btn) { btn.disabled = true; btn.textContent = '…reflecting'; }
@@ -631,6 +658,7 @@ root.addEventListener('click', (e) => {
         case 'set-toggle': setSetting(btn.dataset.col); break;
         case 'minit-preview': showMinitBrief(); break;
         case 'export': exportAll(); break;
+        case 'erase-all': eraseAll(btn); break;
         case 'synth-refresh': refreshSynthesis(btn); break;
         case 'curio-add': editing = btn.dataset.area + ':' + btn.dataset.key; render(); break;
         case 'curio-dismiss': curiosityDismissed = true; render(); break;
