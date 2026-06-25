@@ -299,6 +299,10 @@ const nav = [
     // after sign-in you're returned to that exact page. Importing the Supabase client
     // also runs detectSessionInUrl, which consumes the #access_token / ?code on return.
     import { supabase } from '../lib/supabaseClient';
+    import { initAnalytics, initErrorMonitoring } from '../lib/analytics';
+    // Analytics ships dark — no-op until PUBLIC_ANALYTICS / a provider key is set.
+    initAnalytics(supabase);
+    initErrorMonitoring(supabase);
     (async () => {
       if (!supabase) return; // auth env not set → don't lock anyone out
 

@@ -108,7 +108,7 @@ export default async (req) => {
         'admin/credits/grant', 'admin/credits/lookup', 'admin/users/search',
         // Admin dashboard feeds (all admin-role-gated server-side):
         'admin/overview', 'admin/users/list', 'admin/users/detail',
-        'admin/symp-status', 'admin/recent-activity',
+        'admin/symp-status', 'admin/recent-activity', 'admin/capabilities',
         // action-loop/run intentionally omitted — CRON-only, never browser
     ]);
     if (!ALLOWED.has(splat)) {

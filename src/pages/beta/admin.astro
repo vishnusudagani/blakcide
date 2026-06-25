@@ -85,6 +85,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
         root.innerHTML = `
           <div class="adm-stats">${stat(s.completed, 'completed')}${stat(s.active, 'active now')}${stat(s.flagged, 'flagged')}${stat(bans.length, 'banned')}${stat(listeners.length, 'listeners')}</div>
           ${outcomes}
+          <div class="adm-sec" id="adm-readiness"></div>
           <div class="adm-sec"><h2>Flagged sessions <span class="adm-count">${flagged.length}</span></h2>${flagged.length ? flagged.map(flagRow).join('') : '<div class="adm-empty">No flags. All quiet.</div>'}</div>
           <div class="adm-sec"><h2>Banned users <span class="adm-count">${bans.length}</span></h2>${bans.length ? bans.map(banRow).join('') : '<div class="adm-empty">No active bans.</div>'}</div>
           <div class="adm-sec"><h2>Listeners <span class="adm-count">${listeners.length}</span></h2>${listeners.length ? listeners.map(lRow).join('') : '<div class="adm-empty">No listeners yet.</div>'}</div>
@@ -141,6 +142,31 @@ import AppLayout from '../../layouts/AppLayout.astro';
           load();
         });
         renderNexus();
+        renderReadiness();
+      }
+
+      // Platform readiness — the capability "control panel". Reads the live
+      // capability registry via the admin proxy (Netlify runtime env). Shows
+      // each gap as wired / needs-keys with the exact env names still missing.
+      async function renderReadiness() {
+        const box = document.getElementById('adm-readiness'); if (!box) return;
+        let token = null;
+        try { const { data } = await supabase.auth.getSession(); token = data?.session?.access_token; } catch (e) {}
+        if (!token) { box.innerHTML = ''; return; }
+        let payload = null;
+        try {
+          const res = await fetch('/api/blaksyd/symp/admin/capabilities', { headers: { Authorization: 'Bearer ' + token } });
+          const j = await res.json();
+          payload = j && j.data ? j.data : null;
+        } catch (e) { box.innerHTML = ''; return; }
+        const caps = (payload && payload.capabilities) || [];
+        if (!caps.length) { box.innerHTML = ''; return; }
+        const sum = payload.summary || {};
+        const groups = {};
+        caps.forEach((c) => { (groups[c.group] ||= []).push(c); });
+        const capRow = (c) => `<div class="adm-row${c.enabled ? '' : ' flag'}"><div class="adm-row-main"><b>${esc(c.label)}</b> <span class="adm-tag ${c.enabled ? 'on' : 'off'}">${c.enabled ? 'wired' : 'needs keys'}</span><i>${esc(c.unlocks)}</i>${c.enabled ? '' : `<i class="mono" style="margin-top:.3rem">set ${esc((c.missing || []).join(', '))} · in ${esc(c.where)}</i>`}</div></div>`;
+        const groupBlock = (g) => `<h2 style="font-size:var(--fs-md);margin:1.2rem 0 .5rem">${esc(g)} <span class="adm-count">${groups[g].filter((c) => c.enabled).length}/${groups[g].length}</span></h2>${groups[g].map(capRow).join('')}`;
+        box.innerHTML = `<h2>Platform readiness <span class="adm-count">${sum.enabled || 0}/${sum.total || caps.length} wired</span></h2>` + Object.keys(groups).map(groupBlock).join('');
       }
 
       async function renderNexus() {
