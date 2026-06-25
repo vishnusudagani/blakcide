@@ -832,7 +832,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
       const col = row.querySelector('.bx-col');
       const bub = row.querySelector('.bx-bub');
       if (opts.typing) {
-        bub.innerHTML = '<span class="bx-typing"><span class="bx-dot"></span><span class="bx-dot"></span><span class="bx-dot"></span></span>';
+        bub.innerHTML = '<span class="bx-typing" aria-hidden="true"><span class="bx-dot"></span><span class="bx-dot"></span><span class="bx-dot"></span></span>';
       } else {
         if (opts.media_type === 'audio' && opts.media_url) {
           const au = document.createElement('audio'); au.className = 'bx-audio'; au.controls = true; au.preload = 'metadata'; au.src = opts.media_url; bub.appendChild(au);
@@ -1179,7 +1179,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
           acc = ''; // fall through to one auto-retry
         }
         if (!acc) {
-          typing.bub.innerHTML = '<span class="bx-typing"><span class="bx-dot"></span><span class="bx-dot"></span><span class="bx-dot"></span></span>';
+          typing.bub.innerHTML = '<span class="bx-typing" aria-hidden="true"><span class="bx-dot"></span><span class="bx-dot"></span><span class="bx-dot"></span></span>';
           await new Promise(r => setTimeout(r, 700)); // let a rate-limited provider's window breathe before the backstop retry
           acc = await attempt(typing);
         }
@@ -1587,7 +1587,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
       const blob = await processImage(file);
       const path = (userId || 'anon') + '/' + ((window.crypto && crypto.randomUUID) ? crypto.randomUUID() : (Date.now() + '-' + Math.round(Math.random() * 1e9))) + '.jpg';
       const { error } = await supabase.storage.from('chat_images').upload(path, blob, { contentType: blob.type || 'image/jpeg', upsert: false });
-      if (error) { alert('Image upload failed — try again.'); return null; }
+      if (error) { bxToast('Image upload failed — try again.'); return null; }
       return supabase.storage.from('chat_images').getPublicUrl(path).data.publicUrl;
     }
     function showPreview(url) {
@@ -1859,7 +1859,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
     async function vnStartRec() {
       if (sending || !vnBar) return;
       try { vnStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } }); }
-      catch (e) { alert('Allow microphone access to record a voice note.'); vnReset(); return; }
+      catch (e) { bxToast('Allow mic access to record a voice note.'); vnReset(); return; }
       if (!vnHolding) { try { vnStream.getTracks().forEach(t => t.stop()); } catch (e) {} vnStream = null; return; }   // released during the permission prompt
       vnChunks = [];
       const mime = (window.MediaRecorder && MediaRecorder.isTypeSupported('audio/webm')) ? 'audio/webm'
@@ -1908,7 +1908,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
       const ext = (blob.type && blob.type.includes('mp4')) ? 'mp4' : (blob.type && blob.type.includes('ogg')) ? 'ogg' : 'webm';
       const path = (userId || 'anon') + '/' + ((window.crypto && crypto.randomUUID) ? crypto.randomUUID() : (Date.now() + '-' + Math.round(Math.random() * 1e9))) + '.' + ext;
       const { error } = await supabase.storage.from('voice_notes').upload(path, blob, { contentType: blob.type || 'audio/webm', upsert: false });
-      if (error) { alert('Voice note upload failed — try again.'); return null; }
+      if (error) { bxToast('Voice note upload failed — try again.'); return null; }
       return supabase.storage.from('voice_notes').getPublicUrl(path).data.publicUrl;
     }
 
@@ -2040,6 +2040,21 @@ import AppLayout from '../../layouts/AppLayout.astro';
     }
     function openDrawer() { const s = $('bx-cv-search'); if (s) s.value = ''; renderConvoList(); convoDrawer.hidden = false; }
     function closeDrawer() { convoDrawer.hidden = true; }
+    // Non-blocking toast (replaces jarring alert() on mobile for transient errors).
+    function bxToast(msg) {
+      try {
+        let t = document.getElementById('bx-toast');
+        if (!t) {
+          t = document.createElement('div'); t.id = 'bx-toast'; t.setAttribute('role', 'status');
+          t.style.cssText = 'position:fixed;left:50%;bottom:calc(104px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:90;max-width:88%;padding:.6rem 1rem;border-radius:999px;background:var(--surface-strong);border:1px solid var(--line-strong);color:var(--ink);font-size:var(--fs-sm);box-shadow:var(--shadow-soft);opacity:0;transition:opacity .2s;pointer-events:none;text-align:center';
+          document.body.appendChild(t);
+        }
+        t.textContent = msg; requestAnimationFrame(() => { t.style.opacity = '1'; });
+        clearTimeout(t._h); t._h = setTimeout(() => { t.style.opacity = '0'; }, 2800);
+      } catch (e) {}
+    }
+    // Esc closes the history drawer (non-destructive; the call overlay keeps its own end button).
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && convoDrawer && !convoDrawer.hidden) closeDrawer(); });
     if (historyBtn) historyBtn.addEventListener('click', openDrawer);
     { let cvT = null; const cvS = $('bx-cv-search'); if (cvS) cvS.addEventListener('input', () => { clearTimeout(cvT); cvT = setTimeout(() => renderConvoList(cvS.value), 220); }); }
     if (cvNew) cvNew.addEventListener('click', newConvo);
