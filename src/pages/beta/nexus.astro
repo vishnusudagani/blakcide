@@ -22,11 +22,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
 
     <div class="nx-standing" id="nx-standing" hidden></div>
 
-    <!-- ── FOR YOU (resonance-ranked feed) ── -->
-    <div class="nx-sec-head"><h2 class="nx-sec-title">For you <span class="nx-sec-sub">resonance</span></h2></div>
-    <div class="nx-feed" id="nx-feed" data-noswipe><div class="nx-pulse-explain" style="margin:0">Loading your feed…</div></div>
-
-    <!-- ── LIVE ROOMS (horizontal strip; + Start leads) ── -->
+    <!-- ── LIVE ROOMS (horizontal strip; + Start leads) — first per product order ── -->
     <div class="nx-sec-head">
       <h2 class="nx-sec-title"><span class="nx-livedot"></span>Live Rooms <span class="nx-sec-sub" id="nx-rooms-sub">real-time</span></h2>
     </div>
@@ -48,6 +44,10 @@ import AppLayout from '../../layouts/AppLayout.astro';
       <div class="nx-dots" id="nx-tribes-dots"></div>
       <button type="button" class="nx-car-arrow" id="nx-tribes-next" aria-label="Next">›</button>
     </div>
+
+    <!-- ── FOR YOU (resonance-ranked feed / threads) — third per product order ── -->
+    <div class="nx-sec-head" style="margin-top:2rem"><h2 class="nx-sec-title">For you <span class="nx-sec-sub">resonance</span></h2></div>
+    <div class="nx-feed" id="nx-feed" data-noswipe><div class="nx-pulse-explain" style="margin:0">Loading your feed…</div></div>
 
     <div class="nx-sec-head" style="margin-top:2rem"><h2 class="nx-sec-title">Discover</h2></div>
     <div class="nx-discover" id="nx-discover" data-noswipe></div>

@@ -211,6 +211,15 @@ const FANTASY_PURPOSE_GUIDE = {
     custom:      '',
 };
 
+// Persona language codes (from the editor's chips) → display names. Used to tell a
+// persona which languages it speaks so it doesn't drift to Hindi by default.
+const LANG_NAMES = {
+    en: 'English', hi: 'Hindi', te: 'Telugu', ta: 'Tamil', kn: 'Kannada', ml: 'Malayalam',
+    mr: 'Marathi', bn: 'Bengali', gu: 'Gujarati', pa: 'Punjabi', ur: 'Urdu', or: 'Odia',
+    es: 'Spanish', fr: 'French', de: 'German', pt: 'Portuguese', ar: 'Arabic', ja: 'Japanese',
+    ko: 'Korean', zh: 'Chinese', ru: 'Russian', it: 'Italian',
+};
+
 export function buildFantasyPersonaCard(p, { forVoice = false } = {}) {
     const name = String((p && p.name) || 'this character').trim();
     const N = name.toUpperCase();
@@ -222,6 +231,21 @@ export function buildFantasyPersonaCard(p, { forVoice = false } = {}) {
     if (p.backstory) lines.push(`Your story: ${p.backstory}`);
     if (Array.isArray(p.traits) && p.traits.length) lines.push(`Your personality: ${p.traits.join(', ')}.`);
     if (p.voice_tone) lines.push(`How you talk: ${p.voice_tone}`);
+    // Configured languages — the owner picked which languages this character speaks.
+    // This must win over the model's tendency to drift to Hindi for ambiguous romanized
+    // Indian text (the reported "set Telugu, still replies Hindi" bug).
+    if (Array.isArray(p.languages) && p.languages.length) {
+        const names = p.languages.map((l) => LANG_NAMES[l] || l);
+        const list = names.join(' and ');
+        let line = `LANGUAGES YOU SPEAK: ${list} — and only these. Reply in whichever of these the person is currently using, matching their message.`;
+        if (!p.languages.includes('hi')) {
+            const nonEng = names.filter((n) => n !== 'English');
+            const pref = nonEng[0] || list;
+            line += ` You do NOT speak Hindi — never reply in Hindi. If a message is in romanized/Latin letters that could be mistaken for Hindi, read it as ${nonEng.join(' or ') || pref} and reply in ${pref}, NOT Hindi.`;
+        }
+        line += ` If someone writes in a language you don't speak, warmly ask them to use ${list}.`;
+        lines.push(line);
+    }
     if (p.knowledge_note) lines.push(`WHAT YOU KNOW — your world, lore and facts you always know (treat as true; reference it naturally, don't dump it all):\n${p.knowledge_note}`);
     if (p.example_dialogues) lines.push(`HOW YOU TALK — example lines in your own voice. Match this rhythm, wording and tone closely:\n${p.example_dialogues}`);
     if (p.corrections) lines.push(`ADJUSTMENTS the user has asked you to make — ALWAYS honor these; they override the defaults above:\n${p.corrections}`);
@@ -442,9 +466,23 @@ export async function buildInstructionsText(userId, opts = {}) {
             buildFantasyPersonaCard(p, { forVoice: true }),
             CARE_AND_SAFETY_TEXT, CRITICAL_OVERRIDE_TEXT, REAL_TIME_DATA_TEXT,
         ];
-        // Persona's own memory of this user + history — always on (see chat path).
+        // Memory. Owner call → the persona's memory of THIS user. Shared call →
+        // NOTHING, unless the owner set reveal='knows_me', in which case the persona
+        // gets only the creator's PROFILE (who they are), never the private
+        // conversation history. Mirrors buildChatSystemStack — previously the voice
+        // path leaked the owner's history to guests.
         if (userId && p.id) {
-            try { const pmem = await fetchPersonaMemory(userId, p.id); if (pmem) parts.push(`=== WHAT YOU REMEMBER ===\nYour private memory of this person and your history together (you are ${p.name}). Weave it in naturally, never recite.\n${pmem}\n=== END MEMORY ===`); } catch (_) { /* ignore */ }
+            try {
+                if (p._shared) {
+                    if (p._reveal === 'knows_me' && p.user_id) {
+                        const cprofile = await buildKnowledgeBlock(p.user_id, {});
+                        if (cprofile) parts.push(`=== ABOUT YOUR CREATOR ===\nThis describes your CREATOR — the person who made you. The one talking to you now is SOMEONE NEW (they reached you via a link), so none of this is about them. Reference who your creator is naturally when it fits, never recite, and never assume this new person is your creator or already knows any of it. You're given who your creator IS — not your private history with them.\n${cprofile}\n=== END ===`);
+                    }
+                } else {
+                    const pmem = await fetchPersonaMemory(userId, p.id);
+                    if (pmem) parts.push(`=== WHAT YOU REMEMBER ===\nYour private memory of this person and your history together (you are ${p.name}). Weave it in naturally, never recite.\n${pmem}\n=== END MEMORY ===`);
+                }
+            } catch (_) { /* ignore */ }
         }
         if (userId && p.can_use_profile === true) {
             try { const vibe = await getVibe(userId); const snap = renderVibeSnapshot(vibe); if (snap) parts.push(snap); } catch (_) { /* ignore */ }
