@@ -159,7 +159,7 @@ export async function maybeGenerateNudge(userId) {
 
 // One push per device for a user, with a prune of dead subscriptions. payload =
 // { title, body, url, tag } (encrypted so the real line shows on the lock screen).
-async function pushToUser(uid, payload) {
+export async function pushToUser(uid, payload) {
     const subs = await sbGet(`push_subscriptions?user_id=eq.${uid}&select=endpoint,p256dh,auth`);
     let sent = 0;
     for (const s of (subs || [])) {
