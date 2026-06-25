@@ -44,6 +44,11 @@ import AppLayout from '../../../layouts/AppLayout.astro';
         <button type="button" class="gr-callbar-btn" id="gr-call-mute">Mute</button>
         <button type="button" class="gr-callbar-btn leave" id="gr-call-leave">Leave</button>
       </div>
+      <button type="button" class="gr-joincall" id="gr-joincall" hidden>
+        <span class="gr-joincall-dot"></span>
+        <span class="gr-joincall-tx" id="gr-joincall-tx">Voice call in progress</span>
+        <span class="gr-joincall-go">Join</span>
+      </button>
       <div class="gr-stream" id="gr-stream"></div>
 
       <form class="gr-form" id="gr-form" autocomplete="off">
@@ -111,6 +116,13 @@ import AppLayout from '../../../layouts/AppLayout.astro';
   .gr-callbar-people { flex: 1; min-width: 0; font-size: var(--fs-xs); color: var(--ink-soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .gr-callbar-btn { flex: none; border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: var(--r-pill); padding: .3rem .7rem; font: inherit; font-size: var(--fs-xs); font-weight: 600; cursor: pointer; }
   .gr-callbar-btn.leave { background: #ff4d4f; color: #fff; border: none; }
+
+  /* "someone started a voice call — tap to join" banner, shown to everyone NOT yet in the call */
+  .gr-joincall { display: flex; align-items: center; gap: .55rem; width: calc(100% - .4rem); padding: .55rem .8rem; margin: .4rem .2rem 0; border-radius: 14px; background: color-mix(in srgb, var(--coral, #ff6b6b) 12%, var(--surface)); border: 1px solid color-mix(in srgb, var(--coral, #ff6b6b) 32%, transparent); cursor: pointer; font: inherit; text-align: left; }
+  .gr-joincall[hidden] { display: none; }
+  .gr-joincall-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--coral, #ff6b6b); box-shadow: 0 0 8px var(--coral, #ff6b6b); animation: gr-pulse 1.4s ease-in-out infinite; flex: none; }
+  .gr-joincall-tx { flex: 1; min-width: 0; font-size: var(--fs-sm); font-weight: 600; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .gr-joincall-go { flex: none; background: var(--coral, #ff6b6b); color: #fff; border-radius: var(--r-pill); padding: .3rem .8rem; font-size: var(--fs-xs); font-weight: 700; }
 
   .gr-stream { flex: 1; min-height: 0; overflow-y: auto; padding: 1rem .2rem 1.2rem; display: flex; flex-direction: column; gap: .5rem; }
   .gr-row { display: flex; flex-direction: column; max-width: 82%; }
