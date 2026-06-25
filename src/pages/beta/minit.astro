@@ -391,9 +391,12 @@ import AppLayout from '../../layouts/AppLayout.astro';
     // Boundary protection (4d): nudge once if a message looks like contact-sharing / meeting offline.
     const CONTACT_RE = /(\+?\d[\d\s().-]{6,}\d)|([\w.+-]+@[\w-]+\.[a-z]{2,})|\b(whats\s?app|telegram|insta(gram)?|snap(chat)?|signal)\b|@[\w.]{3,}|\b(meet\s?(up|me)|in person|my number|your number|call me)\b/i;
     let boundaryNudged = false;
-    // Crisis resources (4b). Fill with VERIFIED region helplines, e.g.
-    //   { name: 'KIRAN (India)', tel: '18005990019', detail: '24/7 · toll-free' }
-    const CRISIS_HELPLINES = [];
+    // Crisis resources (4b). KIRAN is India's official Govt mental-health helpline —
+    // the SAME number already vetted + shipped in Nexus (nexus.astro). Add more
+    // verified region lines here once the team confirms each number.
+    const CRISIS_HELPLINES = [
+      { name: 'KIRAN (India) · Govt mental-health helpline', tel: '18005990019', detail: '24/7 · toll-free' },
+    ];
     function openCrisis() {
       const m = document.createElement('div'); m.className = 'mnx-modal';
       const lines = CRISIS_HELPLINES.length

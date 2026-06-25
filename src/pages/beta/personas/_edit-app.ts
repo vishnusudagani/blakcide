@@ -413,8 +413,12 @@ $('pf-save').addEventListener('click', async () => {
     proactive: $('pf-proactive').classList.contains('on'),
   };
   try {
-    if (editId) { row.updated_at = new Date().toISOString(); await supabase!.from('fantasy_personas').update(row).eq('id', editId); }
-    else { await supabase!.from('fantasy_personas').insert(row); }
+    // supabase-js does NOT throw on RLS/constraint failures — it returns { error }.
+    // Check it, or a failed save shows the success modal while the persona never exists.
+    const { error } = editId
+      ? await supabase!.from('fantasy_personas').update({ ...row, updated_at: new Date().toISOString() }).eq('id', editId)
+      : await supabase!.from('fantasy_personas').insert(row);
+    if (error) throw error;
     // success moment, then back to the gallery
     $('pf-done-av').src = avatarUrl(avatar);
     $('pf-done-name').textContent = name;

@@ -569,7 +569,9 @@ async function togglePause() {
     await reload();
 }
 async function exportAll() {
-    const payload = { exported_at: new Date().toISOString(), facts, entities, events, settings };
+    // "Download everything" must mean everything — goals + the About-you synthesis
+    // were loaded but previously dropped from the export (DPDP portability gap).
+    const payload = { exported_at: new Date().toISOString(), facts, entities, events, goals, synthesis, settings };
     const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob); a.download = 'blak-profile.json'; a.click();

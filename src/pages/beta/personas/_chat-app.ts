@@ -609,11 +609,13 @@ async function ensureShareCode(): Promise<{ code: string; reveal: string }> {
   }
   return { code, reveal };
 }
-async function setReveal(reveal: string) {
-  try { await supabase!.from('persona_shares').update({ reveal }).eq('persona_id', personaId).eq('owner_id', userId).eq('revoked', false); } catch (e) {}
+// Return true only if the write actually succeeded — callers show a security
+// confirmation ("link no longer works") that must NOT lie if the update failed.
+async function setReveal(reveal: string): Promise<boolean> {
+  try { const { error } = await supabase!.from('persona_shares').update({ reveal }).eq('persona_id', personaId).eq('owner_id', userId).eq('revoked', false); return !error; } catch (e) { return false; }
 }
-async function stopSharing() {
-  try { await supabase!.from('persona_shares').update({ revoked: true }).eq('persona_id', personaId).eq('owner_id', userId).eq('revoked', false); } catch (e) {}
+async function stopSharing(): Promise<boolean> {
+  try { const { error } = await supabase!.from('persona_shares').update({ revoked: true }).eq('persona_id', personaId).eq('owner_id', userId).eq('revoked', false); return !error; } catch (e) { return false; }
 }
 // Hand the conversation off to Blak (the action hub — Blak is the one that can act
 // across the user's apps). Carries the last thing the user said into Blak's composer
@@ -660,14 +662,14 @@ async function openShareSheet() {
   let curReveal = reveal;
   const revBtns = Array.from(shareSheet.querySelectorAll('.ss-rev')) as HTMLElement[];
   const paintReveal = () => revBtns.forEach((b) => { const on = b.dataset.rev === curReveal; b.style.border = on ? '1.5px solid #e0746a' : '1px solid var(--line,rgba(255,255,255,.14))'; b.style.background = on ? 'rgba(224,116,106,.12)' : 'rgba(255,255,255,.04)'; });
-  revBtns.forEach((b) => { b.onclick = () => { curReveal = b.dataset.rev || 'persona_only'; paintReveal(); setReveal(curReveal); }; });
+  revBtns.forEach((b) => { b.onclick = async () => { const prev = curReveal; curReveal = b.dataset.rev || 'persona_only'; paintReveal(); const ok = await setReveal(curReveal); if (!ok) { curReveal = prev; paintReveal(); toast("Couldn't update — try again."); } }; });
   paintReveal();
   const linkEl = document.getElementById('ss-link') as HTMLInputElement | null;
   if (linkEl) linkEl.onclick = () => linkEl.select();
   const copyBtn = document.getElementById('ss-copy');
   if (copyBtn) copyBtn.onclick = async () => { try { await navigator.clipboard.writeText(link); copyBtn.textContent = 'Copied ✓'; setTimeout(() => { copyBtn.textContent = 'Copy link'; }, 1600); } catch (e) { if (linkEl) linkEl.select(); } };
   const stopBtn = document.getElementById('ss-stop') as HTMLButtonElement | null;
-  if (stopBtn) stopBtn.onclick = async () => { stopBtn.disabled = true; stopBtn.textContent = 'Stopping…'; await stopSharing(); closeShareSheet(); toast('Sharing stopped — that link no longer works.'); };
+  if (stopBtn) stopBtn.onclick = async () => { stopBtn.disabled = true; stopBtn.textContent = 'Stopping…'; const ok = await stopSharing(); if (ok) { closeShareSheet(); toast('Sharing stopped — that link no longer works.'); } else { stopBtn.disabled = false; stopBtn.textContent = 'Stop sharing'; toast("Couldn't stop sharing — try again."); } };
   const doneBtn = document.getElementById('ss-done');
   if (doneBtn) doneBtn.onclick = closeShareSheet;
 }
