@@ -44,9 +44,9 @@ export const CAPABILITY_SPEC = [
     { id: 'push.native', group: 'Notifications', label: 'Native push (APNs / FCM)', where: 'Netlify + Supabase Edge',
       unlocks: 'iOS / Android push once the apps are wrapped (Capacitor).',
       need: [['APNS_KEY_P8', 'FCM_SERVER_KEY', 'FCM_SERVICE_ACCOUNT']] },
-    { id: 'email', group: 'Notifications', label: 'Transactional email', where: 'Netlify + Supabase Edge',
+    { id: 'email', group: 'Notifications', label: 'Transactional email', where: 'Netlify',
       unlocks: 'Email notifications, Minit callbacks, receipts, account mail.',
-      need: [['RESEND_API_KEY', 'POSTMARK_TOKEN', 'SMTP_URL']] },
+      need: [['RESEND_API_KEY', 'POSTMARK_TOKEN']] },
     { id: 'messaging.whatsapp', group: 'Notifications', label: 'WhatsApp', where: 'Netlify + Supabase Edge',
       unlocks: 'WhatsApp OTP + Minit "a listener is free" callbacks.',
       need: ['WHATSAPP_TOKEN', 'WHATSAPP_PHONE_NUMBER_ID'] },
@@ -86,8 +86,10 @@ export const CAPABILITY_SPEC = [
 
     // ── Trust & safety ──────────────────────────────────────────────────────
     { id: 'moderation.image', group: 'Trust & safety', label: 'Image moderation', where: 'Supabase Edge (nexus-image-mod)',
-      unlocks: 'Fail-CLOSED UGC image scanning (currently fails open without a key).',
-      need: [['VISION_MOD_API_KEY', 'AZURE_CONTENT_SAFETY_KEY', 'OPENAI_MOD_KEY']] },
+      // A provider gives real verdicts; set MODERATION_MODE=closed to also block
+      // when no verdict is available (fail-closed). Without a key it fails open.
+      unlocks: 'Real UGC image scanning + the option to fail CLOSED on no verdict.',
+      need: [['OPENAI_API_KEY', 'GEMINI_API_KEY']] },
 
     // ── Observability ─────────────────────────────────────────────────────
     { id: 'analytics', group: 'Observability', label: 'Product analytics', where: 'Netlify (PUBLIC_)',
