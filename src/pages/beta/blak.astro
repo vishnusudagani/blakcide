@@ -259,6 +259,8 @@ import AppLayout from '../../layouts/AppLayout.astro';
     .bx-calloffer:disabled { opacity: .6; cursor: default; }
     .bx-call-turn .bx-bub::after { content: ' 📞'; font-size: .78em; opacity: .4; }
     .bx-row.them .bx-bub { background: var(--surface-strong); border: 1px solid var(--line); border-bottom-left-radius: 6px; color: var(--ink); }
+    /* a reply the user hit Stop on — make clear it was cut off, not a finished thought */
+    .bx-row.bx-stopped .bx-bub::after { content: ' ⏹ stopped'; color: var(--ink-faint); font-size: .82em; white-space: nowrap; }
     .bx-row.me .bx-bub { background: rgba(91,192,255,.14); border: 1px solid rgba(91,192,255,.26); border-bottom-right-radius: 6px; color: var(--ink); }
     html[data-theme="light"] .bx-row.me .bx-bub { background: rgba(24,114,176,.1); border-color: rgba(24,114,176,.22); }
     .bx-time { font-family: var(--font-mono); font-size: var(--fs-3xs); color: var(--ink-faint); padding: 0 .35rem; opacity: .8; }
@@ -1180,6 +1182,9 @@ import AppLayout from '../../layouts/AppLayout.astro';
           acc = await attempt(typing);
         }
         acc = acc.trim();
+        // Genuinely empty after the retry = a real backend outage, NOT something to
+        // paper over with a canned "didn't catch that" final reply. Offer Try again.
+        if (!acc) { showError(typing, srcText); return; }
         // Blak can fire off a couple of SHORT back-to-back texts like a friend —
         // separated by a blank line. Render each as its own bubble. Display only:
         // the full reply is saved as ONE message so history/payload stay clean.
@@ -1205,7 +1210,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
       } catch (e) {
         if (e.name === 'AbortError') {
           const partial = (typing.bub.textContent || '').trim();
-          if (partial) { stamp(typing); const am = { role: 'assistant', content: partial, ts: typing.ts }; history.push(am); dbInsertMessage('assistant', partial).then((id) => { if (id) am.id = id; }); }
+          if (partial) { stamp(typing); typing.row.classList.add('bx-stopped'); const am = { role: 'assistant', content: partial, ts: typing.ts, stopped: true }; history.push(am); dbInsertMessage('assistant', partial).then((id) => { if (id) am.id = id; }); }
           else typing.row.remove();
           setBusy(false);
         } else {

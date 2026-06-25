@@ -13,6 +13,7 @@ let roomCode = '';
 let ended = false;
 let channel: any = null;
 let members: any[] = [];
+let wasMember = false;   // have we ever seen ourselves in the roster (to detect removal)
 const seen = new Set<string>();   // dedup realtime echo vs optimistic/initial
 
 const stream = () => $('gr-stream');
@@ -87,6 +88,28 @@ async function loadMembers() {
   try { const { data } = await supabase!.from('blak_group_members').select('user_id,display_name,role').eq('room_id', roomId); members = data || []; } catch { members = []; }
   $('gr-sub').textContent = members.length + (members.length === 1 ? ' person' : ' people') + ' · ' + roomCode;
   renderMembers();
+  // Removed by the host: once we've seen ourselves in the roster, if we later
+  // vanish from it, tell us and stop the room (was silent — input stayed live
+  // until the next RLS-blocked send).
+  if (members.some((m) => m.user_id === userId)) wasMember = true;
+  else if (wasMember && !ended) markRemoved();
+}
+function markRemoved() {
+  ended = true;
+  const e = $('gr-ended'); if (e) { e.textContent = 'You were removed from this group.'; e.hidden = false; }
+  $('gr-input').disabled = true; $('gr-send').disabled = true;
+  { const jc = $('gr-joincall'); if (jc) jc.hidden = true; }
+  if (inVoice) leaveVoice();
+}
+// Backstop for a dropped realtime INSERT: re-pull recent messages periodically and
+// let renderMsg's `seen` dedup append anything peers missed (so a Realtime hiccup
+// doesn't make a message permanently invisible).
+async function backstopMessages() {
+  if (ended) return;
+  try {
+    const { data } = await supabase!.from('blak_group_messages').select('*').eq('room_id', roomId).order('created_at', { ascending: false }).limit(30);
+    for (const m of (data || []).reverse()) renderMsg(m);
+  } catch (e) {}
 }
 function renderMembers() {
   const box = $('gr-members'); if (!box) return;
@@ -117,7 +140,7 @@ function subscribe() {
     .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'blak_group_rooms', filter: 'id=eq.' + roomId }, (p: any) => { if (p.new && p.new.status === 'ended') markEnded(); })
     .on('presence', { event: 'sync' }, () => updateJoinBanner())
     .subscribe();
-  setInterval(loadMembers, 15000);   // roster backstop (DELETE events aren't filterable)
+  setInterval(() => { loadMembers(); backstopMessages(); }, 15000);   // roster + missed-message backstop (DELETE / dropped INSERTs aren't otherwise caught)
 }
 // Names of OTHER people currently in the voice call (from presence).
 function voicePeersOther(): string[] {
