@@ -80,6 +80,7 @@ function markEnded() {
   $('gr-ended').hidden = false;
   $('gr-input').disabled = true; $('gr-send').disabled = true;
   $('gr-end').hidden = true;
+  { const jc = $('gr-joincall'); if (jc) jc.hidden = true; }
   if (inVoice) leaveVoice();
 }
 async function loadMembers() {
@@ -107,12 +108,44 @@ async function loadMessages() {
   scrollBottom(true);
 }
 function subscribe() {
-  channel = supabase!.channel('bg:' + roomId)
+  // Presence (keyed by user) powers the "voice call in progress — Join" banner:
+  // anyone in the call tracks { in_voice:true }, so everyone else sees it live and
+  // can join — instead of each person having to discover the call on their own.
+  channel = supabase!.channel('bg:' + roomId, { config: { presence: { key: userId || 'anon' } } })
     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'blak_group_messages', filter: 'room_id=eq.' + roomId }, (p: any) => renderMsg(p.new))
     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'blak_group_members', filter: 'room_id=eq.' + roomId }, () => loadMembers())
     .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'blak_group_rooms', filter: 'id=eq.' + roomId }, (p: any) => { if (p.new && p.new.status === 'ended') markEnded(); })
+    .on('presence', { event: 'sync' }, () => updateJoinBanner())
     .subscribe();
   setInterval(loadMembers, 15000);   // roster backstop (DELETE events aren't filterable)
+}
+// Names of OTHER people currently in the voice call (from presence).
+function voicePeersOther(): string[] {
+  if (!channel) return [];
+  try {
+    const st = channel.presenceState() as Record<string, any[]>;
+    const names: string[] = [];
+    for (const key of Object.keys(st)) {
+      if (key === userId) continue;                       // skip myself
+      const meta = (st[key] || [])[0] || {};
+      if (meta.in_voice) names.push(meta.name || 'Someone');
+    }
+    return names;
+  } catch (e) { return []; }
+}
+function updateJoinBanner() {
+  const el = $('gr-joincall'); if (!el) return;
+  const others = voicePeersOther();
+  // Hide while I'm already in the call (I have the callbar) or the group ended.
+  if (inVoice || ended || others.length === 0) { el.hidden = true; return; }
+  const tx = $('gr-joincall-tx');
+  if (tx) tx.textContent = others.length === 1 ? `${others[0]} is in a voice call` : `${others.length} people in a voice call`;
+  el.hidden = false;
+}
+async function trackVoice(on: boolean) {
+  if (!channel) return;
+  try { if (on) await channel.track({ in_voice: true, name: myName }); else await channel.untrack(); } catch (e) {}
+  updateJoinBanner();
 }
 async function mediate() {
   try {
@@ -142,6 +175,7 @@ function wireRoomUI() {
   $('gr-menu-btn').addEventListener('click', openSheet);
   $('gr-sheet-scrim').addEventListener('click', closeSheet);
   $('gr-voice-btn').addEventListener('click', startVoice);
+  $('gr-joincall').addEventListener('click', startVoice);   // tap the banner to join an in-progress call
   $('gr-call-mute').addEventListener('click', toggleMute);
   $('gr-call-leave').addEventListener('click', leaveVoice);
   $('gr-share').addEventListener('click', async () => {
@@ -178,6 +212,7 @@ function endVoiceUI() {
   $('gr-callbar').hidden = true; $('gr-voice-btn').classList.remove('live'); $('gr-call-mute').textContent = 'Mute';
   document.querySelectorAll('audio[data-lk]').forEach((e) => e.remove());
   releaseWake();
+  trackVoice(false);            // drop my presence so others' "Join" banner updates
 }
 async function startVoice() {
   if (inVoice || ended) return;
@@ -201,7 +236,7 @@ async function startVoice() {
     await lkRoom.connect(cfg.data.url, cfg.data.token);
     await lkRoom.localParticipant.setMicrophoneEnabled(true);
     inVoice = true; $('gr-callbar').hidden = false; $('gr-voice-btn').classList.add('live');
-    acquireWake(); renderVoicePeople();
+    acquireWake(); renderVoicePeople(); trackVoice(true);   // announce to the room so others get the "Join" banner
   } catch (e) { $('gr-voice-btn').classList.remove('live'); toast('Could not join voice'); try { if (lkRoom) await lkRoom.disconnect(); } catch (e2) {} lkRoom = null; }
 }
 async function leaveVoice() { try { if (lkRoom) await lkRoom.disconnect(); } catch (e) {} lkRoom = null; endVoiceUI(); }

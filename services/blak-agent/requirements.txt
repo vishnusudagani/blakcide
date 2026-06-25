@@ -1,1 +1,3 @@
-livekit-agents[google]~=1.0
+# Pinned: the active-speaker multi-party code in agent.py targets the 1.6.x
+# RoomInputOptions(close_on_disconnect=...) + RoomIO.set_participant() API.
+livekit-agents[google]==1.6.4
