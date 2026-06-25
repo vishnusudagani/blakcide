@@ -639,7 +639,10 @@ import AppLayout from '../../layouts/AppLayout.astro';
     async function ensureWarm(status) {
       if (svaraWarm) return true;
       svaraWarmPing();
-      for (let i = 0; i < 75; i++) {
+      // Cap the wait at ~48s (was 5 min): a cold GPU warms in ~30s, but if it's
+      // down we must NOT hang the chat — the text reply is already shown and voice
+      // is supplementary, so fail fast to the honest "voice unavailable" fallback.
+      for (let i = 0; i < 12; i++) {
         if (await svaraReady()) { svaraWarm = true; return true; }
         if (status) status.textContent = '🔊 warming up your voice (first time, ~30s)…';
         await new Promise((r) => setTimeout(r, 4000));
