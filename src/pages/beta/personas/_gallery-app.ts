@@ -52,6 +52,9 @@ function cardEl(p: any) {
       if (!full || !uid) throw new Error('no');
       const row: any = { ...full };
       delete row.id; delete row.created_at; delete row.updated_at;
+      // A copy is a fresh character: don't inherit the original's accumulated
+      // in-chat tuning or its proactive-greeting state (the user didn't author those for the copy).
+      delete row.corrections; delete row.proactive_last_at; row.proactive = false;
       row.user_id = uid;
       row.name = ((full.name || 'Persona') + ' (copy)').slice(0, 40);
       const { data: created } = await supabase!.from('fantasy_personas').insert(row).select('id,name,tagline,purpose,avatar').single();
