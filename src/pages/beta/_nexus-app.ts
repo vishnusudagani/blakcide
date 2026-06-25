@@ -29,6 +29,11 @@
       t.textContent = msg; t.classList.add('show');
       clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), 2600);
     }
+    // Logged-out actions were dead-ends ("Sign in to …" toast with no way to sign in).
+    // Offer a real path to the beta's auth entry instead.
+    function promptSignIn(action) {
+      if (confirm('Sign in to ' + (action || 'continue') + '? You can come right back to Nexus.')) location.href = '/?auth=1';
+    }
 
     // ── image sharing: re-encode via canvas to STRIP EXIF (incl. GPS → anonymity)
     //    and cap dimensions, then upload to the public nexus-img bucket ──
@@ -244,7 +249,7 @@
         const input = form.querySelector('[data-tile-input]'); const v = input.value.trim();
         const fileEl = form.querySelector('[data-tile-img]'); const file = fileEl && fileEl.files && fileEl.files[0];
         if (!v && !file) return;
-        if (!(await ensureSession())) { toast('Sign in to post.'); return; }
+        if (!(await ensureSession())) { promptSignIn('post'); return; }
         const btn = form.querySelector('button[type="submit"]'); if (btn) btn.disabled = true;
         let imgUrl = null; if (file) { imgUrl = await uploadImage(file); if (!imgUrl) { if (btn) btn.disabled = false; return; } }
         let data;
@@ -472,7 +477,7 @@
         box.querySelector('[data-cform]').addEventListener('submit', async (ev) => {
           ev.preventDefault();
           const inp = ev.currentTarget.querySelector('input'); const v = inp.value.trim(); if (!v) return;
-          if (!(await ensureSession())) { toast('Sign in to reply.'); return; }
+          if (!(await ensureSession())) { promptSignIn('reply'); return; }
           inp.value = '';
           try { await NexusData.createComment(postId, curTribe ? curTribe.id : '', v, SESSION.user.id, replyParent); }
           catch (e) { toast('Could not post your reply — try again.'); return; }
@@ -503,7 +508,7 @@
         if (dm) { openDM(curTribe.id, dm.getAttribute('data-dm-token'), dm.getAttribute('data-dm-handle'), 'tribe'); return; }
         const r = e.target.closest('[data-reso]');
         if (r) {
-          if (!(await ensureSession())) { toast('Sign in to resonate.'); return; }
+          if (!(await ensureSession())) { promptSignIn('resonate'); return; }
           const b = r.querySelector('b'); const on = r.classList.contains('on');
           r.classList.toggle('on'); b.textContent = Math.max(0, (+b.textContent) + (on ? -1 : 1));
           try { const c = await NexusData.setResonance(id, !on, SESSION.user.id); if (typeof c === 'number') b.textContent = c; }
@@ -580,7 +585,7 @@
         const inp = el('nx-disc-input'), titleInp = el('nx-disc-title');
         const v = inp.value.trim(), t = titleInp ? titleInp.value.trim() : '';
         if (!v && !discImg) return;
-        if (!(await ensureSession())) { toast('Sign in to post a discussion.'); return; }
+        if (!(await ensureSession())) { promptSignIn('post a discussion'); return; }
         const goBtn = el('nx-disc-form').querySelector('button[type="submit"]'); if (goBtn) goBtn.disabled = true;
         let imgUrl = null;
         if (discImg) { imgUrl = await uploadImage(discImg); if (!imgUrl) { if (goBtn) goBtn.disabled = false; return; } }
@@ -600,7 +605,7 @@
 
       el('nx-tribe-join').addEventListener('click', async () => {
         if (!curTribe) return;
-        if (!(await ensureSession())) { toast('Sign in to join this tribe.'); return; }
+        if (!(await ensureSession())) { promptSignIn('join this tribe'); return; }
         const btn = el('nx-tribe-join'); const joined = btn.dataset.joined === '1'; btn.disabled = true;
         if (joined) {
           const { error } = await supabase.from('nexus_community_members').delete().eq('community_id', curTribe.id).eq('user_id', SESSION.user.id);
@@ -649,7 +654,7 @@
         msgs.forEach((m) => dmAppend(m));
       }
       async function openDM(communityId, otherToken, otherHandle, from) {
-        if (!(await ensureSession())) { toast('Sign in to message.'); return; }
+        if (!(await ensureSession())) { promptSignIn('message'); return; }
         if (!otherToken || !communityId) return;
         dmOther = otherToken; dmThreadComm = communityId; dmBackView = (from === 'inbox') ? 'inbox' : 'tribe';
         el('nx-dm-title').textContent = '@' + (otherHandle || 'someone');
@@ -665,7 +670,7 @@
         subscribeGlobalDM();
       }
       async function openMsgInbox(commId) {
-        if (!(await ensureSession())) { toast('Sign in to see messages.'); return; }
+        if (!(await ensureSession())) { promptSignIn('see messages'); return; }
         dmOther = null; dmInboxComm = commId || null;
         { const dmMore = el('nx-dm-more'); if (dmMore) dmMore.hidden = true; }
         el('nx-dm-title').textContent = 'Messages';
@@ -722,7 +727,7 @@
       // ── create tribe (persistent community; signed-in only) ───────────────
       const tribeModal = el('nx-tribe-modal');
       const openTribeCreate = () => {
-        if (!SESSION) { toast('Sign in to create a tribe.'); return; }
+        if (!SESSION) { promptSignIn('create a tribe'); return; }
         tribeModal.hidden = false; setTimeout(() => el('nx-tribe-name-in').focus(), 30);
       };
       const closeTribeCreate = () => { tribeModal.hidden = true; el('nx-tribe-form').reset(); };
@@ -733,7 +738,7 @@
       document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !tribeModal.hidden) closeTribeCreate(); });
       el('nx-tribe-form').addEventListener('submit', async (e) => {
         e.preventDefault();
-        if (!SESSION) { toast('Sign in to create a tribe.'); return; }
+        if (!SESSION) { promptSignIn('create a tribe'); return; }
         const name = el('nx-tribe-name-in').value.trim(); if (!name) return;
         const desc = el('nx-tribe-desc-in').value.trim();
         const goBtn = el('nx-tribe-form').querySelector('.nx-modal-go'); if (goBtn) goBtn.disabled = true;
