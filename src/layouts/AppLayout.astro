@@ -14,7 +14,7 @@ const { active = 'home', title = 'Home', soon = false, chat = false } = Astro.pr
 // Blak = spark (coral) · Minit = caring message (mint) · Nexus = constellation (aqua) · Persona = identity frame (lavender).
 const nav = [
   { id: 'blak',    href: '/beta/blak/',    label: 'Blak',    c: 'coral', svg: '<path d="M12 4l1.7 5 5 1.7-5 1.7L12 17.4l-1.7-5L5.3 10.7l5-1.7z"/><path d="M18.8 3.6l.5 1.6 1.6.5-1.6.5-.5 1.6-.5-1.6-1.6-.5 1.6-.5z"/>' },
-  { id: 'persona', href: '/beta/persona/', label: 'Persona', c: 'lav',   soon: true, svg: '<rect x="4" y="4" width="16" height="16" rx="5.5"/><circle cx="12" cy="10" r="2.5"/><path d="M7.9 17.3a4.5 4.5 0 0 1 8.2 0"/>' },
+  { id: 'persona', href: '/beta/personas/', label: 'Persona', c: 'lav',   svg: '<rect x="4" y="4" width="16" height="16" rx="5.5"/><circle cx="12" cy="10" r="2.5"/><path d="M7.9 17.3a4.5 4.5 0 0 1 8.2 0"/>' },
   { id: 'minit',   href: '/beta/minit/',   label: 'Minit',   c: 'mint',  svg: '<path d="M20 11.5a7.5 7.5 0 0 1-10.8 6.7L4 20l1.8-4.7A7.5 7.5 0 1 1 20 11.5z"/><path d="M12 14.7l-2.3-2.2a1.55 1.55 0 1 1 2.3-2.05 1.55 1.55 0 1 1 2.3 2.05z"/>' },
   { id: 'nexus',   href: '/beta/nexus/',   label: 'Nexus',   c: 'aqua',  svg: '<circle cx="6" cy="7" r="2.1"/><circle cx="18" cy="7" r="2.1"/><circle cx="12" cy="17.5" r="2.1"/><path d="M7.9 8 10.6 15.6M16.1 8 13.4 15.6M8.1 7h7.8"/>' },
 ];
@@ -205,9 +205,10 @@ const nav = [
         box-shadow: 0 12px 36px rgba(60, 40, 20, .16), inset 0 1px 0 rgba(255, 255, 255, .9);
       }
       /* three level icon buttons; the active one gets a lighter rounded-rect highlight */
-      .ap-link { flex: none; padding: .5rem 1.25rem; gap: 0; border-radius: var(--r-pill); justify-content: center; align-items: center; transition: background var(--t-base) var(--ease-soft); }
-      .ap-link span { display: none; }                              /* icons only — Instagram-style */
-      .ap-link svg { width: 26px; height: 26px; opacity: .62; transition: opacity var(--t-fast) var(--ease-out); }
+      .ap-link { flex: none; flex-direction: column; padding: .3rem .55rem; gap: 2px; border-radius: var(--r-md); justify-content: center; align-items: center; transition: background var(--t-base) var(--ease-soft); }
+      .ap-link span { display: block; font-size: 9.5px; font-weight: 600; line-height: 1; opacity: .65; }   /* labeled tabs — discoverability over icon-only */
+      .ap-link svg { width: 22px; height: 22px; opacity: .62; transition: opacity var(--t-fast) var(--ease-out); }
+      .ap-link.is-on span { opacity: 1; }
       .ap-link:hover { background: transparent; }
       .ap-link.is-on { box-shadow: none !important; background: rgba(255, 255, 255, .2); }
       html[data-theme="light"] .ap-link.is-on { background: rgba(20, 16, 10, .08); }
@@ -221,11 +222,11 @@ const nav = [
       .ap--chat .ap-main { padding-bottom: 0; }
 
       /* ── Instagram-style bar: Blak · Minit · Nexus — three level icons, active highlighted ── */
-      .ap-nav .ap-link[data-nav="home"],
-      .ap-nav .ap-link[data-nav="persona"] { display: none; }
-      .ap-nav .ap-link[data-nav="minit"] { order: 1; }
-      .ap-nav .ap-link[data-nav="blak"]  { order: 2; }
-      .ap-nav .ap-link[data-nav="nexus"] { order: 3; }
+      .ap-nav .ap-link[data-nav="home"] { display: none; }
+      .ap-nav .ap-link[data-nav="minit"]   { order: 1; }
+      .ap-nav .ap-link[data-nav="blak"]    { order: 2; }
+      .ap-nav .ap-link[data-nav="nexus"]   { order: 3; }
+      .ap-nav .ap-link[data-nav="persona"] { order: 4; }   /* Persona is a live pillar — show it on mobile too */
       /* each icon carries its pillar colour — muted at rest, vivid + pill when active */
       .ap-nav .ap-link[data-nav="minit"] { color: var(--mint-deep); }
       .ap-nav .ap-link[data-nav="blak"]  { color: var(--coral); }

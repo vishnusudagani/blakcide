@@ -2009,6 +2009,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
       }
     }
     async function deleteConvo(id) {
+      if (!confirm('Delete this chat permanently? This can’t be undone.')) return;   // the ✕ is always visible on touch — guard the irreversible purge
       await dbDeleteChat(id);
       if (id === activeChatId) {
         const arr = await dbListChats();
@@ -2371,18 +2372,16 @@ import AppLayout from '../../layouts/AppLayout.astro';
     // welcome, not a wall you hit on every single open. The endpoint grounds it
     // in the user's Vault + profile; if there's nothing real to say it stays a
     // soft check-in, which we still show only once a day.
-    function proactiveGateOk() {
-      try {
-        const k = 'blak_proactive_' + userId;
-        const today = new Date().toISOString().slice(0, 10);
-        if (localStorage.getItem(k) === today) return false;
-        localStorage.setItem(k, today);
-        return true;
-      } catch (e) { return true; }
+    function proactiveGateKey() { return 'blak_proactive_' + userId; }
+    function proactiveGateOk() {                       // read-only check (don't consume yet)
+      try { return localStorage.getItem(proactiveGateKey()) !== new Date().toISOString().slice(0, 10); } catch (e) { return true; }
+    }
+    function consumeProactiveGate() {                  // mark used — only AFTER a real opener shows
+      try { localStorage.setItem(proactiveGateKey(), new Date().toISOString().slice(0, 10)); } catch (e) {}
     }
     async function maybeProactiveOpener() {
-      if (history.length > 0 || !activeChatId) return;   // only into an empty chat
-      if (!proactiveGateOk()) return;                    // at most once per day
+      if (history.length > 0 || incognito) return;       // only into a genuinely empty, non-incognito home
+      if (!proactiveGateOk()) return;                    // at most once per day (read-only check)
       const jwt = await getToken(); if (!jwt) return;
       try {
         const r = await fetch('/api/blaksyd/symp/proactive-checkin', {
@@ -2392,10 +2391,14 @@ import AppLayout from '../../layouts/AppLayout.astro';
         const j = await r.json().catch(() => null);
         const msg = j && j.data && j.data.message;
         if (msg && history.length === 0) {
+          // Ensure a chat to attach it to (so the opener persists), creating one on
+          // demand — only now that we actually have a message, so failures don't spawn empty chats.
+          if (!activeChatId) { const c = await dbCreateChat('👋'); if (c) activeChatId = c.id; }
           const am = { role: 'assistant', content: msg, ts: Date.now() };
           history = [am];
           render(); updateChips();
-          dbInsertMessage('assistant', msg).then((id) => { if (id) am.id = id; });
+          if (activeChatId) dbInsertMessage('assistant', msg).then((id) => { if (id) am.id = id; });
+          consumeProactiveGate();                        // burn the daily gate ONLY after a real opener shows
         }
       } catch (e) { /* no opener — the home hero already welcomes them */ }
     }
@@ -2554,6 +2557,7 @@ import AppLayout from '../../layouts/AppLayout.astro';
       setupMood();
       loadStreak();
       setupMusic();
+      maybeProactiveOpener();   // "Blak reaches out first" — was built but never called; gated ≤1/day into an empty home
     })();
 
     // Visit streak — log today's Blak visit + render the flame chip; tapping it opens

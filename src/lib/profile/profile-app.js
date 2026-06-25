@@ -413,10 +413,15 @@ function renderDupes() {
 // ── render: privacy, sharing & enrichment (#16/#18/#19/#41/#44/#46–50) ───────
 function settingOn(col, dflt) { return settings ? !!settings[col] : !!dflt; }
 function toggleRow(col, title, sub, opts) {
+    const soon = !!(opts && opts.soon);
     const on = settingOn(col, opts && opts.dflt);
-    const soon = opts && opts.soon ? ' <span class="pf-chip">soon</span>' : '';
-    return `<div class="pf-toggle"><div><b>${title}${soon}</b><span class="pf-ent-sub">${sub}</span></div>
-      <button class="pf-switch ${on ? 'on' : ''}" data-act="set-toggle" data-col="${col}" aria-pressed="${on ? 'true' : 'false'}"><span></span></button></div>`;
+    const tag = soon ? ' <span class="pf-chip">soon</span>' : '';
+    // "soon" rows are inert — disabled, no data-act — so flipping them can't persist
+    // a consent flag that does nothing (was misleading: it stuck on but did nothing).
+    const sw = soon
+      ? `<button class="pf-switch" disabled aria-disabled="true" title="Coming soon" style="opacity:.4;cursor:default"><span></span></button>`
+      : `<button class="pf-switch ${on ? 'on' : ''}" data-act="set-toggle" data-col="${col}" aria-pressed="${on ? 'true' : 'false'}"><span></span></button>`;
+    return `<div class="pf-toggle"><div><b>${title}${tag}</b><span class="pf-ent-sub">${sub}</span></div>${sw}</div>`;
 }
 function renderPrivacy() {
     return `<section class="ap-card pf-privacy"><div class="pf-area-head"><h2 class="pf-area-title">Privacy & control</h2></div>
