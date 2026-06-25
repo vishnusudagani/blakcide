@@ -195,10 +195,18 @@ export default async (req) => {
         // its own words would echo the clone's guesses back into the profile. So learn
         // only from what the USER actually said.
         const learnAssistant = mode === 'clone' ? '' : assembled;
+        // Perf: each turn fans out to 2 LLM-backed background jobs (knowledge-learn +
+        // vibe-classify). Pure acknowledgements carry no profile/mood signal, so skip
+        // the fan-out for them — at scale these acks are a big share of LLM call volume.
+        // (Kept precise: only exact ack tokens; emoji-with-feeling like 😔 still count.)
+        const ACK_RE = /^(k|kk|ok|oka?y|ya|yea?h?|yep|yup|sure|no+|nope|nah|hi+|hey+|hello|sup|lo+l|lmao|ha(ha)+|he(he)+|thanks?|thx|ty|cool|nice|great|done|👍|🙏)$/i;
+        const trivialTurn = ACK_RE.test(lastUser.trim());
         // Fantasy persona: its OWN memory of you always updates (that's how the
         // character remembers your history); the global profile/vibe stay gated by
         // the build_profile_from consent toggle. Blak/clone path is unchanged.
-        if (persona && !isShared) {
+        if (trivialTurn) {
+            /* no-signal ack → skip learn + vibe */
+        } else if (persona && !isShared) {
             await fireLearn(req, user_id, lastUser, learnAssistant, { persona_id, persona_name: persona.name, skip_global: !mayLearn });
             if (mayLearn) {
                 recordEventAsync(user_id, { source: 'ai_chat', sourceSessionId: source_session_id, evidence: learnAssistant ? `User: ${lastUser}\n\nAssistant: ${learnAssistant}` : `User: ${lastUser}` });
