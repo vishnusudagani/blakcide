@@ -371,7 +371,12 @@ async function loadExisting() {
       $('pf-knowledge').value = data.knowledge_note || '';
       $('pf-examples').value = data.example_dialogues || '';
       selectedVoice = data.voice || 'Aoede';
-      avatar = data.avatar && (data.avatar.style || data.avatar.type === 'image') ? data.avatar : avatar;
+      // Use the saved avatar; if there isn't one, fall back to a STABLE seed from
+      // the persona id (not the random default), so re-saving never silently
+      // changes the character's face.
+      avatar = (data.avatar && (data.avatar.style || data.avatar.type === 'image'))
+        ? data.avatar
+        : { style: 'adventurer', seed: 'blak-' + (editId || 'persona') };
       initAvatarState();
       traits = Array.isArray(data.traits) ? data.traits.slice() : [];
       renderPurpose(); renderTags(); renderVoices(); renderCustomChips();
