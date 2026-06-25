@@ -64,6 +64,12 @@ import AppLayout from '../../layouts/AppLayout.astro';
       <h2 class="ac-h">Your data</h2>
       <p class="ac-sub">It's all yours. Download everything Blaksyd has saved about you — your profile, chats, journals, moods and reminders — any time.</p>
       <div class="ac-save-row"><button type="button" class="ac-save" id="ac-export">Download my data</button><span class="ac-saved" id="ac-exported"></span></div>
+      <div class="ac-danger">
+        <b>Delete your account</b>
+        <span class="ac-sub">Permanently delete your account and everything in it — chats, journals, moods, your profile, Minit &amp; Nexus activity, personas. This can’t be undone.</span>
+        <button type="button" class="ac-del" id="ac-del">Delete my account</button>
+        <span class="ac-saved" id="ac-del-msg"></span>
+      </div>
     </section>
 
     <section class="ac-card">
@@ -133,6 +139,11 @@ import AppLayout from '../../layouts/AppLayout.astro';
     .ac-out { display: block; width: 100%; margin-top: 1.4rem; min-height: 48px; border-radius: var(--r-pill); background: var(--surface); border: 1px solid rgba(255,107,157,.3); color: var(--coral); font: inherit; font-size: var(--fs-md); font-weight: 600; cursor: pointer; transition: border-color var(--t-fast) var(--ease-out); }
     html[data-theme="light"] .ac-out { color: var(--coral-ink); }
     .ac-out:hover { border-color: rgba(255,107,157,.65); }
+    .ac-danger { display: flex; flex-direction: column; gap: .35rem; margin-top: 1.1rem; padding-top: 1rem; border-top: 1px solid var(--line); }
+    .ac-danger > b { color: var(--ink); font-size: var(--fs-sm); }
+    .ac-del { align-self: flex-start; margin-top: .3rem; min-height: 44px; border-radius: var(--r-pill); background: rgba(255,77,79,.1); border: 1px solid rgba(255,77,79,.45); color: #ff4d4f; font: inherit; font-weight: 600; padding: .4rem 1rem; cursor: pointer; }
+    .ac-del:hover { background: rgba(255,77,79,.18); }
+    .ac-del[disabled] { opacity: .6; cursor: default; }
     .ac-ver { text-align: center; font-size: var(--fs-xs); color: var(--ink-ghost); margin-top: 1rem; }
 
     /* ---- App integrations — the "Your apps" grid ---- */
@@ -351,6 +362,24 @@ import AppLayout from '../../layouts/AppLayout.astro';
           $('ac-out').setAttribute('disabled', ''); $('ac-out').textContent = 'Logging out…';
           try { await supabase.auth.signOut(); } catch (e) {}
           location.href = '/';
+        });
+
+        const delBtn = $('ac-del'), delMsg = $('ac-del-msg');
+        if (delBtn) delBtn.addEventListener('click', async () => {
+          if (!confirm('Permanently delete your account and ALL your data? This cannot be undone.\n\nTip: “Download my data” first if you want a copy.')) return;
+          const typed = prompt('To confirm, type DELETE');
+          if ((typed || '').trim().toUpperCase() !== 'DELETE') { delMsg.textContent = 'Cancelled.'; setTimeout(() => { delMsg.textContent = ''; }, 3000); return; }
+          delBtn.setAttribute('disabled', ''); delBtn.textContent = 'Deleting…'; delMsg.textContent = '';
+          try {
+            const { error } = await supabase.rpc('delete_my_account');
+            if (error) throw error;
+            try { await supabase.auth.signOut(); } catch (e) {}
+            alert('Your account and data have been permanently deleted.');
+            location.href = '/';
+          } catch (e) {
+            delBtn.removeAttribute('disabled'); delBtn.textContent = 'Delete my account';
+            delMsg.textContent = 'Couldn’t delete — please email privacy@blaksyd.com and we’ll erase it.';
+          }
         });
       })();
     }

@@ -1,0 +1,65 @@
+---
+// Public (no-login) account-deletion instructions. Required by Google Play's
+// data-deletion policy (a publicly reachable URL) and good practice for Apple /
+// DPDP. The actual deletion is self-service in-app (Account → Delete my account,
+// which calls the delete_my_account RPC); this page documents it + offers a
+// contact for anyone who can't reach the in-app control.
+import Base from '../layouts/Base.astro';
+import Footer from '../components/Footer.astro';
+const contact = 'privacy@blaksyd.com';
+---
+
+<Base
+  title="Delete your Blaksyd account"
+  description="How to permanently delete your Blaksyd account and all associated data."
+>
+  <main class="del" id="main" tabindex="-1">
+    <header class="del-head">
+      <a href="/" class="del-brand" aria-label="Blaksyd — home"><span class="bm" aria-hidden="true"></span></a>
+      <h1>Delete your account</h1>
+      <p class="del-meta">Blaksyd LLP · blaksyd.com</p>
+    </header>
+
+    <article class="del-body">
+      <p class="lede">You can permanently delete your Blaksyd account and everything in it, any time, directly in the app.</p>
+
+      <h2>Delete it yourself (fastest)</h2>
+      <ol>
+        <li>Open the app and sign in.</li>
+        <li>Tap your avatar (top right) to open <b>Account</b>.</li>
+        <li>Under <b>Your data</b>, tap <b>Delete my account</b> and confirm.</li>
+      </ol>
+      <p>This is immediate and permanent — there is no recovery.</p>
+
+      <h2>What gets deleted</h2>
+      <p>Your account and all personal data tied to it are erased, including: your profile and everything Blak learned about you, your chats, journals, moods, reminders and goals, your Minit sessions, your Nexus posts/comments/DMs and community memberships, your Personas and voice data, connected-app tokens, and your login itself. Once deleted, it cannot be restored.</p>
+      <p>We retain only what the law requires us to keep (e.g. minimal transaction/abuse records where applicable), for the shortest period required, and never for product use.</p>
+
+      <h2>Prefer we do it for you?</h2>
+      <p>If you can’t reach the in-app control, email <a href={`mailto:${contact}`}>{contact}</a> from your account’s email address with the subject “Delete my account.” We’ll verify and erase your account and data, and confirm when it’s done.</p>
+
+      <p>Questions about your data or this process are covered in our <a href="/privacy">Privacy Policy</a> and <a href="/grievance">Grievance &amp; data-rights</a> page.</p>
+
+      <a href="/" class="del-back"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M12 19l-7-7 7-7"/></svg> Back to Blaksyd</a>
+    </article>
+  </main>
+  <Footer />
+</Base>
+
+<style>
+  .del { max-width: 720px; margin: 0 auto; padding: clamp(2rem, 6vh, 4rem) 1.2rem 4rem; }
+  .del-head { margin-bottom: 2rem; }
+  .del-brand .bm { display: inline-block; width: 30px; height: 30px; border-radius: 50%; background: var(--cta-grad); }
+  .del-head h1 { margin: 1rem 0 .35rem; font-size: clamp(1.8rem, 5vw, 2.4rem); }
+  .del-meta { color: var(--ink-faint); font-size: var(--fs-sm); }
+  .del-body { color: var(--ink-soft); line-height: 1.7; }
+  .del-body .lede { color: var(--ink); font-size: var(--fs-lg); }
+  .del-body h2 { color: var(--ink); margin: 1.8rem 0 .6rem; font-size: var(--fs-lg); }
+  .del-body ol { padding-left: 1.2rem; }
+  .del-body li { margin: .3rem 0; }
+  .del-body a { color: var(--coral); text-decoration: underline; text-underline-offset: 2px; }
+  html[data-theme="light"] .del-body a { color: var(--coral-ink); }
+  .del-back { display: inline-flex; align-items: center; gap: .5rem; margin-top: 3rem; font-weight: 600; color: var(--ink-soft); }
+  .del-back:hover { color: var(--ink); }
+  .del-back svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+</style>
