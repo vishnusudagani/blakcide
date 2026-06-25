@@ -400,30 +400,21 @@ export async function buildChatSystemStack(userId, opts = {}) {
     }
     stack.push({ role: 'system', content: personaCard });
 
-    try {
-        const vibe = await getVibe(userId);
-        const snapshot = renderVibeSnapshot(vibe);
-        if (snapshot) stack.push({ role: 'system', content: snapshot });
-    } catch (_) { /* ignore */ }
-
-    if (userId) {
-        try {
-            const vaultMsg = await buildVaultContextMessage(userId);
-            if (vaultMsg && vaultMsg.content) stack.push(vaultMsg);
-        } catch (_) { /* ignore */ }
-        try {
-            const knowledge = await buildKnowledgeBlock(userId, { latestUserText: opts.latestUserText });
-            if (knowledge) stack.push({ role: 'system', content: knowledge });
-        } catch (_) { /* ignore */ }
-        try {
-            const commitments = await buildCommitmentsBlock(userId);
-            if (commitments) stack.push({ role: 'system', content: commitments });
-        } catch (_) { /* ignore */ }
-        try {
-            const recall = await buildRecallBlock(userId, opts.latestUserText);
-            if (recall) stack.push({ role: 'system', content: recall });
-        } catch (_) { /* ignore */ }
-    }
+    // Perf: these per-turn context reads are independent, so fetch them in PARALLEL
+    // (was ~5 sequential DB round-trips, latency-additive on every message) and then
+    // push in the same order. Each tolerates its own failure, as before.
+    const [vibe, vaultMsg, knowledge, commitments, recall] = await Promise.all([
+        getVibe(userId).catch(() => null),
+        userId ? buildVaultContextMessage(userId).catch(() => null) : null,
+        userId ? buildKnowledgeBlock(userId, { latestUserText: opts.latestUserText }).catch(() => null) : null,
+        userId ? buildCommitmentsBlock(userId).catch(() => null) : null,
+        userId ? buildRecallBlock(userId, opts.latestUserText).catch(() => null) : null,
+    ]);
+    try { const snapshot = renderVibeSnapshot(vibe); if (snapshot) stack.push({ role: 'system', content: snapshot }); } catch (_) { /* ignore */ }
+    if (vaultMsg && vaultMsg.content) stack.push(vaultMsg);
+    if (knowledge) stack.push({ role: 'system', content: knowledge });
+    if (commitments) stack.push({ role: 'system', content: commitments });
+    if (recall) stack.push({ role: 'system', content: recall });
 
     // Texting framing — text-specific expressiveness so chat matches the warmth
     // and range of the voice call (CALL_FRAMING's written sibling). Late in the
