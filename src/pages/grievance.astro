@@ -1,0 +1,89 @@
+---
+// Grievance & data-rights page — required by India's IT Rules 2021 (intermediary
+// must publish a Grievance Officer + redressal timelines) and the DPDP Act 2023
+// (data-principal rights + a contact for grievances / a Data Protection Officer).
+// NOTE: not legal advice — have counsel review. The OFFICER NAMES below are
+// placeholders that MUST be filled with real appointees before this is relied on.
+import Base from '../layouts/Base.astro';
+import Footer from '../components/Footer.astro';
+
+const grievanceEmail = 'grievance@blaksyd.com';
+const dpoEmail = 'dpo@blaksyd.com';
+const grievanceOfficer = '[Grievance Officer name — to be appointed]';
+const dpo = '[Data Protection Officer name — to be appointed]';
+const address = 'Blaksyd LLP, Hyderabad, Telangana, India';
+---
+
+<Base
+  title="Grievance & Data Rights — Blaksyd"
+  description="How to raise a grievance, exercise your data rights, or report content — and how quickly we respond."
+>
+  <main class="gr" id="main" tabindex="-1">
+    <header class="gr-head">
+      <a href="/" class="gr-brand" aria-label="Blaksyd — home"><span class="bm" aria-hidden="true"></span></a>
+      <h1>Grievance &amp; Data Rights</h1>
+      <p class="gr-meta">Blaksyd LLP · blaksyd.com</p>
+    </header>
+
+    <article class="gr-body">
+      <p class="lede">We take your rights and any complaint seriously. This page tells you who to contact, what you can ask for, and how fast we’ll respond — as required under India’s Information Technology Rules, 2021 and the Digital Personal Data Protection Act, 2023.</p>
+
+      <h2>Grievance Officer (IT Rules 2021)</h2>
+      <p>For complaints about content, conduct, safety, or any aspect of the platform:</p>
+      <ul>
+        <li><b>Name:</b> {grievanceOfficer}</li>
+        <li><b>Email:</b> <a href={`mailto:${grievanceEmail}`}>{grievanceEmail}</a></li>
+        <li><b>Address:</b> {address}</li>
+      </ul>
+      <p>We will <b>acknowledge your grievance within 24 hours</b> and <b>resolve it within 15 days</b> of receipt. Complaints about non-consensual or unlawful content are actioned as a priority.</p>
+
+      <h2>Reporting content or a user</h2>
+      <p>Inside the app you can report or block any post, comment, message, or member directly (tap the ⋯ menu on the item). Reports reach our moderation team and are reviewed promptly; the Grievance Officer above is the escalation path if you need it.</p>
+
+      <h2>Your data rights (DPDP Act 2023)</h2>
+      <p>As a Data Principal you can, at any time:</p>
+      <ul>
+        <li><b>Access / download</b> your data — in the app: Account → “Download my data.”</li>
+        <li><b>Correct</b> what we hold — in the app: your Profile lets you edit or remove anything Blak has learned.</li>
+        <li><b>Erase</b> your data and account — in the app: Account → “Delete my account,” or see <a href="/account-deletion">Delete your account</a>. This is permanent.</li>
+        <li><b>Withdraw consent</b> — toggle data-sharing in Account, or contact us below.</li>
+      </ul>
+
+      <h2>Data Protection Officer / data grievances</h2>
+      <p>For questions about how we handle your personal data, to exercise the rights above, or to escalate a data-protection concern:</p>
+      <ul>
+        <li><b>Name:</b> {dpo}</li>
+        <li><b>Email:</b> <a href={`mailto:${dpoEmail}`}>{dpoEmail}</a></li>
+      </ul>
+
+      <h2>Data breach</h2>
+      <p>If a personal-data breach occurs, we will notify the Data Protection Board of India and affected users as required under the DPDP Act, without undue delay. To report a suspected security issue, email <a href={`mailto:${dpoEmail}`}>{dpoEmail}</a>.</p>
+
+      <h2>Age</h2>
+      <p>Blaksyd is for adults (18+). We do not knowingly collect data from anyone under 18; if you believe a minor is using the service, contact the Grievance Officer above.</p>
+
+      <p>See also our <a href="/privacy">Privacy Policy</a> and <a href="/terms">Terms</a>.</p>
+
+      <a href="/" class="gr-back"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M12 19l-7-7 7-7"/></svg> Back to Blaksyd</a>
+    </article>
+  </main>
+  <Footer />
+</Base>
+
+<style>
+  .gr { max-width: 720px; margin: 0 auto; padding: clamp(2rem, 6vh, 4rem) 1.2rem 4rem; }
+  .gr-head { margin-bottom: 2rem; }
+  .gr-brand .bm { display: inline-block; width: 30px; height: 30px; border-radius: 50%; background: var(--cta-grad); }
+  .gr-head h1 { margin: 1rem 0 .35rem; font-size: clamp(1.8rem, 5vw, 2.4rem); }
+  .gr-meta { color: var(--ink-faint); font-size: var(--fs-sm); }
+  .gr-body { color: var(--ink-soft); line-height: 1.7; }
+  .gr-body .lede { color: var(--ink); font-size: var(--fs-lg); }
+  .gr-body h2 { color: var(--ink); margin: 1.8rem 0 .6rem; font-size: var(--fs-lg); }
+  .gr-body ul { padding-left: 1.2rem; }
+  .gr-body li { margin: .35rem 0; }
+  .gr-body a { color: var(--coral); text-decoration: underline; text-underline-offset: 2px; }
+  html[data-theme="light"] .gr-body a { color: var(--coral-ink); }
+  .gr-back { display: inline-flex; align-items: center; gap: .5rem; margin-top: 3rem; font-weight: 600; color: var(--ink-soft); }
+  .gr-back:hover { color: var(--ink); }
+  .gr-back svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+</style>
