@@ -833,8 +833,14 @@
       }
       async function loadFeed() {
         if (!feedEl) return;
-        let posts = [];
-        try { posts = await NexusData.getFeed(24); } catch (e) {}
+        let posts;
+        try { posts = await NexusData.getFeed(24); }
+        catch (e) {
+          // Real load failure → offer a retry, don't pretend the feed is empty.
+          feedEl.innerHTML = '<p class="nx-pulse-explain" style="margin:0">Couldn’t load your feed. <button type="button" class="nx-feed-retry" style="background:none;border:0;color:var(--aqua-ink);font:inherit;cursor:pointer;text-decoration:underline">Retry</button></p>';
+          const rb = feedEl.querySelector('.nx-feed-retry'); if (rb) rb.addEventListener('click', () => { feedEl.innerHTML = '<div class="nx-pulse-explain" style="margin:0">Loading your feed…</div>'; loadFeed().catch(() => {}); });
+          return;
+        }
         if (!posts.length) { feedEl.innerHTML = '<p class="nx-pulse-explain" style="margin:0">Nothing here yet — join a tribe or post something, and your feed fills in.</p>'; return; }
         feedEl.innerHTML = posts.map(feedCard).join('');
       }

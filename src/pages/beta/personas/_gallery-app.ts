@@ -80,15 +80,24 @@ function refreshEmpty() {
 async function load() {
   const uid = await userId();
   if (!uid) return;
-  let rows: any[] = [];
   try {
-    const { data } = await supabase!.from('fantasy_personas')
+    const { data, error } = await supabase!.from('fantasy_personas')
       .select('id,name,tagline,purpose,avatar')
       .eq('user_id', uid).order('created_at', { ascending: false }).limit(100);
-    rows = data || [];
-  } catch (e) { rows = []; }
-  for (const p of rows) grid.insertBefore(cardEl(p), createCard);
-  refreshEmpty();
+    if (error) throw error;                                  // a failed fetch must NOT look like "you have none"
+    for (const p of (data || [])) grid.insertBefore(cardEl(p), createCard);
+    refreshEmpty();
+  } catch (e) {
+    if (emptyEl) emptyEl.hidden = true;                      // don't show the create-first empty state on an error
+    const err = document.createElement('div');
+    err.style.cssText = 'grid-column:1/-1;text-align:center;color:var(--ink-soft);padding:1.5rem;border:1px solid var(--line);border-radius:var(--r-lg)';
+    err.innerHTML = '<p>Couldn’t load your personas.</p>';
+    const btn = document.createElement('button');
+    btn.textContent = 'Retry'; btn.style.cssText = 'margin-top:.6rem;padding:.4rem 1rem;border-radius:var(--r-pill);border:1px solid var(--line-strong);background:var(--surface);color:var(--ink);cursor:pointer;font:inherit';
+    btn.onclick = () => { err.remove(); load(); };
+    err.appendChild(btn);
+    grid.insertBefore(err, createCard);
+  }
 }
 
 load();

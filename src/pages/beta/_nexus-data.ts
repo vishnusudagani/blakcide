@@ -356,11 +356,11 @@ export async function getStanding(): Promise<NxStanding | null> {
 // ── #17 "For you" feed (heuristic resonance ranking) ──────────────────────
 export interface NxFeedPost extends NxPost { community_name: string; resonance: number; }
 export async function getFeed(limit = 24): Promise<NxFeedPost[]> {
-  try {
-    const { data, error } = await sb().rpc('nexus_feed', { p_limit: limit });
-    if (error) return [];
-    return (data || []) as NxFeedPost[];
-  } catch (e) { return []; }
+  // Throw on a real error so the caller can show "couldn't load — retry" instead
+  // of an empty-feed state (a failed load must not masquerade as "nothing here yet").
+  const { data, error } = await sb().rpc('nexus_feed', { p_limit: limit });
+  if (error) throw error;
+  return (data || []) as NxFeedPost[];
 }
 
 // ── #31 search posts/discussions ───────────────────────────────────────────
