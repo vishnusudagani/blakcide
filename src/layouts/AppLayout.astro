@@ -376,6 +376,8 @@ const nav = [
       await ageGate(session);
       // In-product boundary (Apple/Google + safety): one-time companionship-not-care notice.
       boundaryNotice(session.user.id);
+      // First-run welcome that introduces the pillars (sequences after the gates above).
+      onboardingWelcome(session.user.id);
 
       const email = session.user && session.user.email;
       if (email) { const av = document.getElementById('ap-avatar'); if (av) av.textContent = email[0].toUpperCase(); }
@@ -405,6 +407,36 @@ const nav = [
         document.body.appendChild(ov);
         ov.querySelector('#blk-boundary-ok').addEventListener('click', () => { try { localStorage.setItem(KEY, new Date().toISOString()); } catch (e) {} ov.remove(); });
       } catch (e) { /* informational — never block */ }
+    }
+
+    // First-run welcome — a brand-new user otherwise lands on a chat box and never
+    // discovers the other pillars (calls, Personas, Minit humans, Nexus). Shown ONCE,
+    // and only after the age + boundary overlays clear (so they never stack).
+    function onboardingWelcome(uid) {
+      try {
+        const KEY = 'blaksyd_onboarded_' + (uid || 'anon');
+        if (localStorage.getItem(KEY)) return;
+        if (document.getElementById('blk-agegate') || document.getElementById('blk-boundary')) { setTimeout(() => onboardingWelcome(uid), 600); return; }
+        const ov = document.createElement('div');
+        ov.id = 'blk-onboard';
+        ov.style.cssText = 'position:fixed;inset:0;z-index:2147483644;background:rgba(8,9,26,.86);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);display:grid;place-items:center;padding:1.4rem';
+        const row = (ic, name, sub) => '<div style="display:flex;gap:.7rem;align-items:flex-start;text-align:left;padding:.5rem 0"><span style="flex:none;width:30px;height:30px;border-radius:9px;display:grid;place-items:center;background:rgba(255,255,255,.07);font-size:1rem">' + ic + '</span><span style="font-size:.92rem;line-height:1.4"><b style="color:var(--ink,#fff)">' + name + '</b><br><span style="color:var(--ink-soft,#b9bdd6)">' + sub + '</span></span></div>';
+        ov.innerHTML = '<div style="max-width:420px;width:100%;font-family:var(--font-body,system-ui);background:var(--glass-strong,#15172e);border:1px solid var(--line-strong,#2a2d4a);border-radius:20px;padding:1.7rem 1.5rem;box-shadow:0 24px 70px rgba(0,0,0,.5)">'
+          + '<div style="width:54px;height:54px;border-radius:50%;margin:0 auto .8rem;background:linear-gradient(135deg,#FF6B9D,#FFD27A);box-shadow:0 0 38px -6px rgba(255,107,157,.6);display:grid;place-items:center;color:#fff;font-size:1.35rem">✦</div>'
+          + '<h2 style="text-align:center;font-size:1.35rem;font-weight:680;margin:0 0 .3rem;color:var(--ink,#fff)">Welcome to Blaksyd</h2>'
+          + '<p style="text-align:center;color:var(--ink-soft,#b9bdd6);margin:0 0 1rem;line-height:1.5">Human + AI, all around you — four ways to feel less alone:</p>'
+          + row('✦', 'Blak — your AI friend', 'Chat anytime, or tap the phone to talk out loud.')
+          + row('🪞', 'Personas', 'Create AI characters to talk to — or your own digital self.')
+          + row('💬', 'Minit', 'Talk to a real, trained human listener, anytime.')
+          + row('🌐', 'Nexus', 'Your anonymous community — tribes, rooms, people.')
+          + '<button id="blk-onb-ok" type="button" style="width:100%;margin-top:1.2rem;padding:.85rem;border:0;border-radius:999px;font-weight:680;font-size:1rem;cursor:pointer;background:linear-gradient(135deg,#FF6B9D,#C9B8FF);color:#1b1030">Start with Blak</button>'
+          + '</div>';
+        document.body.appendChild(ov);
+        const close = () => { try { localStorage.setItem(KEY, new Date().toISOString()); } catch (e) {} ov.remove(); };
+        ov.querySelector('#blk-onb-ok').addEventListener('click', close);
+        ov.addEventListener('click', (e) => { if (e.target === ov) close(); });
+        document.addEventListener('keydown', function esc(e) { if (e.key === 'Escape') { close(); document.removeEventListener('keydown', esc); } });
+      } catch (e) { /* never block */ }
     }
 
     // Visit streak — record today's presence (idempotent server-side). The Blak page
