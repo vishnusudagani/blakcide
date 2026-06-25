@@ -61,7 +61,7 @@ function showLobby() {
   });
   const join = async () => {
     const code = $('gr-join-code').value.trim().toUpperCase();
-    if (code.length < 4) { setLobbyMsg('Enter the 6-letter code.', true); return; }
+    if (code.length < 6) { setLobbyMsg('Enter the full 6-letter code.', true); return; }
     $('gr-join').disabled = true; setLobbyMsg('Joining…');
     try {
       const { data, error } = await supabase!.rpc('bg_join', { p_code: code, p_display_name: myName });

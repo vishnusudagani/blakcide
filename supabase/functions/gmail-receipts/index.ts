@@ -45,30 +45,16 @@ Deno.serve(async (req: Request) => {
     emails = await fetchReceipts(token);
   }
 
-  // Parse + collect diagnostics (TEMPORARY, for tuning extractors to real email
-  // formats). Logs sender/subject/extracted-fields/snippet of the user's own
-  // receipts to this project's function logs; remove once extractors are tuned.
+  // Parse receipts. NOTE: we deliberately do NOT log sender/subject/body — that
+  // was a temporary extractor-tuning aid and leaks the user's private email
+  // content into function logs. Only aggregate, non-PII counts are logged.
   const orders: Order[] = [];
-  const diag: Record<string, unknown>[] = [];
   for (const e of emails) {
     const o = parseEmail(e);
     if (o) orders.push(o);
-    if (diag.length < 40) {
-      diag.push({
-        from: (e.from || "").slice(0, 70),
-        subject: (e.subject || "").slice(0, 90),
-        provider: o ? o.provider : "unmatched",
-        amt: o ? o.amountInr : null,
-        merchant: o ? o.merchant : null,
-        dest: o ? o.destination : null,
-        items: o ? o.items.length : 0,
-        snippet: (e.text || "").replace(/\s+/g, " ").slice(0, 220),
-      });
-    }
   }
   const facts = deriveFacts(orders);
-  console.log(`gmail-receipts diag: scanned=${emails.length} parsed=${orders.length} facts=${facts.length}`);
-  for (const d of diag) console.log("RCPT " + JSON.stringify(d));
+  console.log(`gmail-receipts: scanned=${emails.length} parsed=${orders.length} facts=${facts.length}`);
 
   // Upsert facts as Blak-inferred knowledge (idempotent on user_id, area, key).
   if (facts.length) {
