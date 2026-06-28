@@ -141,7 +141,11 @@ const pageSchema = [
   <script is:inline>
     (function () {
       try {
-        if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) {
+        var __cap = window.Capacitor;
+        // Don't intercept the sign-in bounce (AppLayout sends signed-out users to /?auth=1)
+        // or an OAuth code/token return — only boot to /beta/ from a clean home URL.
+        var __authy = /[?&](auth|code)=/.test(window.location.search) || window.location.hash.indexOf('access_token') >= 0;
+        if (__cap && __cap.isNativePlatform && __cap.isNativePlatform() && !__authy) {
           window.location.replace('/beta/');
         }
       } catch (e) {}
