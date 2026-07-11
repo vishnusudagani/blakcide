@@ -222,7 +222,11 @@ export async function buildCreatorBioForShare(userId, { maxChars = 600 } = {}) {
     const picked = (facts || []).filter((f) => safe(f) && SHARE_BIO_FIELDS.has(`${f.area}:${f.key}`));
 
     const nameFact = (facts || []).find((f) => f.area === 'identity' && f.key === 'preferred_name' && safe(f));
-    const name = clean((nameFact && nameFact.value) || (profile && profile.full_name) || '').slice(0, 80);
+    // Prefer a share-safe preferred_name fact; otherwise the profile's FIRST name
+    // only — a friendly "who you are" for a link that may be forwarded onward,
+    // without exposing a full/legal name the creator never marked shareable.
+    const firstName = String((profile && profile.full_name) || '').trim().split(/\s+/)[0] || '';
+    const name = clean((nameFact && nameFact.value) || firstName).slice(0, 80);
 
     const bioLines = picked
         .map((f) => `- ${clean(f.label || fieldMeta(f.area, f.key)?.label || f.key)}: ${clean(f.value).slice(0, 140)}`)
