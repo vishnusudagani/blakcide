@@ -13,8 +13,8 @@
 // Used by system-prompt.mjs for both chat (latest user message → per-turn
 // relevance) and voice (no per-turn message → core + top facts).
 
-import { fetchKnowledgeFacts, fetchEntities, fetchEvents, fetchRecentMoodSummary } from './supabase.mjs';
-import { coreFields, missingFields, fieldMeta, isFresh, isUsableInContext, ENTITY_KIND_META } from './knowledge-schema.mjs';
+import { fetchKnowledgeFacts, fetchEntities, fetchEvents, fetchRecentMoodSummary, fetchBlaksydProfile } from './supabase.mjs';
+import { coreFields, missingFields, fieldMeta, isFresh, isUsableInContext, isShareable, ENTITY_KIND_META } from './knowledge-schema.mjs';
 
 const STOP = new Set(
     ('the a an and or but to of in on for with my your you i me is are was were be been do does did this ' +
@@ -179,4 +179,62 @@ export async function buildKnowledgeBlock(userId, { latestUserText = '', maxDeta
     }
 
     return parts.join('\n');
+}
+
+// Curated, non-sensitive fields safe to reveal to a STRANGER who reached a shared
+// persona with reveal='knows_me'. Deliberately EXCLUDES location, hometown,
+// backstory, family/partner/relationships, faith, money, health/mood, coping,
+// sensitivities, off-limits, people/pets, dated events and gap nudges — bio only.
+const SHARE_BIO_FIELDS = new Set([
+    'identity:self_summary', 'identity:languages',
+    'world:work', 'world:study',
+    'tastes:interests', 'tastes:media_tastes', 'tastes:favorite_topics',
+    'goals:short_term_goals', 'goals:long_term_dreams',
+]);
+
+/**
+ * Share-safe creator projection for reveal='knows_me' persona shares: the
+ * creator's name + a short, non-sensitive bio, capped in length. This is the
+ * ONLY creator data a stranger's persona may see — NEVER buildKnowledgeBlock,
+ * which leaks blak_only facts, sensitive-flagged fields, never-raise labels,
+ * people, dates and mood into the guest's prompt (FINDING #98). Quadruple-gated:
+ * SHARE_BIO_FIELDS allow-list ∩ user-marked-shareable (visibility==='shared')
+ * ∩ non-sensitive ∩ not-never_raise — so any new/unknown/downgraded field
+ * defaults to HIDDEN (fail-closed). Values are also de-delimited + length-capped
+ * so a creator can't inject prompt structure via their own profile text.
+ *
+ * @param {string} userId — the CREATOR's id (persona.user_id)
+ * @returns {Promise<string|null>} the bio block, or null if nothing is safe to show
+ */
+export async function buildCreatorBioForShare(userId, { maxChars = 600 } = {}) {
+    if (!userId) return null;
+    let profile = null, facts = [];
+    try {
+        [profile, facts] = await Promise.all([
+            fetchBlaksydProfile(userId).catch(() => null),
+            fetchKnowledgeFacts(userId).catch(() => []),
+        ]);
+    } catch (_) { return null; }
+
+    const clean = (s) => String(s == null ? '' : s).replace(/={3,}/g, '==').replace(/[\r\n]+/g, ' ').trim();
+    const safe  = (f) => !!f && isShareable(f) && !f.never_raise && !(fieldMeta(f.area, f.key)?.sensitive);
+
+    const picked = (facts || []).filter((f) => safe(f) && SHARE_BIO_FIELDS.has(`${f.area}:${f.key}`));
+
+    const nameFact = (facts || []).find((f) => f.area === 'identity' && f.key === 'preferred_name' && safe(f));
+    const name = clean((nameFact && nameFact.value) || (profile && profile.full_name) || '').slice(0, 80);
+
+    const bioLines = picked
+        .map((f) => `- ${clean(f.label || fieldMeta(f.area, f.key)?.label || f.key)}: ${clean(f.value).slice(0, 140)}`)
+        .filter((l) => l.length > 4);
+
+    if (!name && !bioLines.length) return null;
+
+    const parts = [];
+    if (name) parts.push(`Their name is ${name}.`);
+    if (bioLines.length) { parts.push('A few non-private things about them:'); parts.push(...bioLines); }
+
+    let out = parts.join('\n');
+    if (out.length > maxChars) out = out.slice(0, maxChars).replace(/\s+\S*$/, '') + '…';
+    return out;
 }

@@ -8,7 +8,7 @@
 // can never drift.
 
 import { buildVaultContextMessage } from './vault-context.mjs';
-import { buildKnowledgeBlock }      from './knowledge-context.mjs';
+import { buildKnowledgeBlock, buildCreatorBioForShare } from './knowledge-context.mjs';
 import { buildCommitmentsBlock }    from './commitments-context.mjs';
 import { buildRecallBlock }         from './recall.mjs';
 import { getPersonaCard, renderPersonaCard } from './persona-engine.mjs';
@@ -221,21 +221,43 @@ const LANG_NAMES = {
 };
 
 export function buildFantasyPersonaCard(p, { forVoice = false } = {}) {
-    const name = String((p && p.name) || 'this character').trim();
+    // Owner-authored fields are interpolated into a prompt whose trust boundaries
+    // are `=== SECTION ===` delimiters, and become attacker-controlled the moment a
+    // persona is shared via link. Two hygiene passes on EVERY authored field before
+    // it lands in the card: (#97) collapse runs of 3+ '=' so a field can't forge or
+    // close a section marker and smuggle in "system" instructions; (#96) cap length
+    // so an oversized field can't blow the token budget or push the CONTENT LIMITS
+    // floor out of the model's attention. Read from locals — never mutate `p`, whose
+    // control fields (name, id, user_id, can_use_profile, _shared, _reveal, purpose,
+    // voice, languages, build_profile_from) are read elsewhere here and by callers.
+    const deDelimit = (s) => (typeof s === 'string' ? s.replace(/={3,}/g, '==') : s);
+    const cap     = (s, n) => { if (typeof s !== 'string') return ''; const c = deDelimit(s).trim(); return c.length > n ? c.slice(0, n) : c; };
+    const capLine = (s, n) => cap(s, n).replace(/[\r\n]+/g, ' ');
+
+    const name = capLine((p && p.name) || 'this character', 60) || 'this character';
     const N = name.toUpperCase();
+    const tagline           = capLine(p.tagline, 200);
+    const backstory         = cap(p.backstory, 1500);
+    const traits            = Array.isArray(p.traits) ? p.traits.slice(0, 12).map((t) => capLine(t, 40)).filter(Boolean) : [];
+    const voice_tone        = cap(p.voice_tone, 600);
+    const knowledge_note    = cap(p.knowledge_note, 2000);
+    const example_dialogues = cap(p.example_dialogues, 1500);
+    const corrections       = cap(p.corrections, 800);
+    const safety_note       = cap(p.safety_note, 600);
+
     const lines = [
         `=== WHO YOU ARE: ${N} ===`,
         `For this entire conversation you ARE ${name} — a character this person created and chose to talk to. Fully embody ${name}: their voice, their mood, the way they see things. You are NOT a generic assistant and you are NOT "Blak" — you are ${name}, start to finish.`,
     ];
-    if (p.tagline)   lines.push(`In a line: ${p.tagline}`);
-    if (p.backstory) lines.push(`Your story: ${p.backstory}`);
-    if (Array.isArray(p.traits) && p.traits.length) lines.push(`Your personality: ${p.traits.join(', ')}.`);
-    if (p.voice_tone) lines.push(`How you talk: ${p.voice_tone}`);
+    if (tagline)   lines.push(`In a line: ${tagline}`);
+    if (backstory) lines.push(`Your story: ${backstory}`);
+    if (traits.length) lines.push(`Your personality: ${traits.join(', ')}.`);
+    if (voice_tone) lines.push(`How you talk: ${voice_tone}`);
     // Configured languages — the owner picked which languages this character speaks.
     // This must win over the model's tendency to drift to Hindi for ambiguous romanized
     // Indian text (the reported "set Telugu, still replies Hindi" bug).
     if (Array.isArray(p.languages) && p.languages.length) {
-        const names = p.languages.map((l) => LANG_NAMES[l] || l);
+        const names = p.languages.map((l) => LANG_NAMES[l] || capLine(l, 20));
         const list = names.join(' and ');
         let line = `LANGUAGES YOU SPEAK: ${list} — and only these. Reply in whichever of these the person is currently using, matching their message.`;
         if (!p.languages.includes('hi')) {
@@ -246,10 +268,10 @@ export function buildFantasyPersonaCard(p, { forVoice = false } = {}) {
         line += ` If someone writes in a language you don't speak, warmly ask them to use ${list}.`;
         lines.push(line);
     }
-    if (p.knowledge_note) lines.push(`WHAT YOU KNOW — your world, lore and facts you always know (treat as true; reference it naturally, don't dump it all):\n${p.knowledge_note}`);
-    if (p.example_dialogues) lines.push(`HOW YOU TALK — example lines in your own voice. Match this rhythm, wording and tone closely:\n${p.example_dialogues}`);
-    if (p.corrections) lines.push(`ADJUSTMENTS the user has asked you to make — ALWAYS honor these; they override the defaults above:\n${p.corrections}`);
-    if (p.safety_note) lines.push(`BOUNDARIES the creator set for this character — ALWAYS respect them, even if the user pushes or a section above suggests otherwise. Stay in character while honoring them (the universal CONTENT LIMITS below still apply on top):\n${p.safety_note}`);
+    if (knowledge_note) lines.push(`WHAT YOU KNOW — your world, lore and facts you always know (treat as true; reference it naturally, don't dump it all):\n${knowledge_note}`);
+    if (example_dialogues) lines.push(`HOW YOU TALK — example lines in your own voice. Match this rhythm, wording and tone closely:\n${example_dialogues}`);
+    if (corrections) lines.push(`ADJUSTMENTS the user has asked you to make — ALWAYS honor these; they override the defaults above:\n${corrections}`);
+    if (safety_note) lines.push(`BOUNDARIES the creator set for this character — ALWAYS respect them, even if the user pushes or a section above suggests otherwise. Stay in character while honoring them (the universal CONTENT LIMITS below still apply on top):\n${safety_note}`);
     const guide = FANTASY_PURPOSE_GUIDE[p.purpose];
     if (guide) lines.push(guide);
     lines.push(
@@ -364,8 +386,12 @@ export async function buildChatSystemStack(userId, opts = {}) {
             try {
                 if (p._shared) {
                     if (p._reveal === 'knows_me' && p.user_id) {
-                        const cprofile = await buildKnowledgeBlock(p.user_id, { latestUserText: opts.latestUserText });
-                        if (cprofile) pstack.push({ role: 'system', content: `=== ABOUT YOUR CREATOR ===\nThis describes your CREATOR — the person who made you. The one messaging you now is SOMEONE NEW (they were given a link to meet you), so none of this is about them. Reference who your creator is naturally when it fits, never recite it, and never assume this new person is your creator or already knows any of it. You're given who your creator IS — not your private history with them.\n${cprofile}\n=== END ===` });
+                        // #98: SHARE-SAFE creator projection ONLY (name + short, non-sensitive
+                        // bio). NEVER buildKnowledgeBlock here — that leaks the creator's
+                        // blak_only facts, sensitive fields, never-raise labels, people, dates
+                        // and mood to a stranger who merely has a link.
+                        const cbio = await buildCreatorBioForShare(p.user_id, { maxChars: 600 });
+                        if (cbio) pstack.push({ role: 'system', content: `=== ABOUT YOUR CREATOR ===\nA short, public-safe sketch of your CREATOR — the person who made you. The one messaging you now is SOMEONE NEW (they were given a link to meet you), so none of this is about them. You do NOT know your creator's private life, relationships or personal details beyond what is written here. Reference who your creator is naturally when it fits, never recite it, and never assume this new person is your creator or already knows any of it.\n${cbio}\n=== END ===` });
                     }
                 } else {
                     const pmem = await fetchPersonaMemory(userId, p.id);
@@ -467,8 +493,9 @@ export async function buildInstructionsText(userId, opts = {}) {
             try {
                 if (p._shared) {
                     if (p._reveal === 'knows_me' && p.user_id) {
-                        const cprofile = await buildKnowledgeBlock(p.user_id, {});
-                        if (cprofile) parts.push(`=== ABOUT YOUR CREATOR ===\nThis describes your CREATOR — the person who made you. The one talking to you now is SOMEONE NEW (they reached you via a link), so none of this is about them. Reference who your creator is naturally when it fits, never recite, and never assume this new person is your creator or already knows any of it. You're given who your creator IS — not your private history with them.\n${cprofile}\n=== END ===`);
+                        // #98: SHARE-SAFE creator projection ONLY — see the chat path above.
+                        const cbio = await buildCreatorBioForShare(p.user_id, { maxChars: 600 });
+                        if (cbio) parts.push(`=== ABOUT YOUR CREATOR ===\nA short, public-safe sketch of your CREATOR — the person who made you. The one talking to you now is SOMEONE NEW (they reached you via a link), so none of this is about them. You do NOT know your creator's private life, relationships or personal details beyond what is written here. Reference who your creator is naturally when it fits, never recite, and never assume this new person is your creator or already knows any of it.\n${cbio}\n=== END ===`);
                     }
                 } else {
                     const pmem = await fetchPersonaMemory(userId, p.id);
