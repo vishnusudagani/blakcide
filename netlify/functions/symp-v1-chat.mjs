@@ -27,7 +27,7 @@ import {
 } from '../../symp-core/lib/middleware.mjs';
 import { buildChatSystemStack } from '../../symp-core/lib/system-prompt.mjs';
 import { fetchFantasyPersona, fetchFantasyPersonaById, verifyPersonaShare } from '../../symp-core/lib/supabase.mjs';
-import { TOOL_DEFS, executeTool } from '../../symp-core/lib/tools.mjs';
+import { TOOL_DEFS, toolsForPersona, executeTool } from '../../symp-core/lib/tools.mjs';
 import { runStreamingChatWithTools } from '../../symp-core/lib/chat-runner.mjs';
 import { chatProviders } from '../../symp-core/lib/llm-providers.mjs';
 import { recordEventAsync } from '../../symp-core/lib/vibe-tracker.mjs';
@@ -113,7 +113,7 @@ export default async (req) => {
     // Add any higher-capacity provider (Gemini credits / a Qwen key) and full
     // tools switch back on automatically — no code change.
     const floorOnly   = providers.length === 1 && providers[0].id === 'groq';
-    const activeTools = floorOnly ? [] : TOOL_DEFS;
+    let   activeTools = floorOnly ? [] : TOOL_DEFS;
 
     // ── Build the layered system stack ───────────────────────────────────
     const latestUserText = [...messages].reverse().find(m => m.role === 'user')?.content || '';
@@ -138,6 +138,12 @@ export default async (req) => {
             } catch (_) { /* no access → falls back to Blak */ }
         }
     }
+    // #94: a fantasy persona only gets the SAFE tool subset, and the two
+    // vault-readers only when the owner let this persona use their profile.
+    // Applied AFTER the floorOnly reduction so the Groq floor stays one lean call;
+    // shared personas (can_use_profile force-false above) drop the vault tools too,
+    // closing the tool-layer bypass of the prompt's consent gate.
+    activeTools = toolsForPersona(persona, activeTools);
     // Incognito (no_learn) AND guest/shared chats skip ALL learning + memory.
     const mayLearn = (!persona || persona.build_profile_from !== false) && no_learn !== true && !isShared;
     let systemStack = [];
