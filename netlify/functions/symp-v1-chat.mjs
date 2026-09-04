@@ -37,6 +37,10 @@ import { recordEventAsync } from '../../symp-core/lib/vibe-tracker.mjs';
 import { analyseTurn } from '../../symp-core/lib/diagnostic.mjs';
 import SympContract from '../../symp-core/contract/endpoints.js';
 
+// The only chat modes this endpoint honours. 'clone' is privileged: it selects
+// the self-clone system stack, which injects the caller's vault verbatim.
+const CHAT_MODES = new Set(['normal', 'clone']);
+
 const { ENDPOINTS, ERROR_CODES, SYMP_REQUEST_ID_HEADER } = SympContract;
 
 // Fire-and-forget trigger to the background learning function. The 202 returns
@@ -86,7 +90,13 @@ export default async (req) => {
         return jsonError(ERROR_CODES.BAD_REQUEST, 'Invalid JSON body', 400, requestId);
     }
 
-    const { user_id, messages, stream = true, source_session_id = null, persona_id = null, mode = 'normal', no_learn = false, share_code = null, tz = null } = parsed.data || {};
+    const { user_id, messages, stream = true, source_session_id = null, persona_id = null, mode: requestedMode = 'normal', no_learn = false, share_code = null, tz = null } = parsed.data || {};
+
+    // `mode` arrives unvalidated off the request body and is handed to
+    // buildChatSystemStack, where 'clone' selects a branch that injects the
+    // caller's full vault (recent journals) with no consent check. Anything
+    // outside this allow-list falls back to 'normal' rather than being trusted.
+    const mode = CHAT_MODES.has(requestedMode) ? requestedMode : 'normal';
 
     if (!user_id) {
         logAccess({ requestId, endpoint: ENDPOINTS.CHAT, statusCode: 400, latencyMs: Date.now() - t0, errorCode: 'MISSING_USER_ID' });

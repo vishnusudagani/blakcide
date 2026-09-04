@@ -348,7 +348,12 @@ export async function buildChatSystemStack(userId, opts = {}) {
     // A first-person "you ARE <user>" identity replaces Blak's core; care/safety +
     // language mirroring + real-time still wrap it; the FULL profile is injected
     // (it IS the self), and post-turn learning grows it (handler, mayLearn=true).
-    if (opts.mode === 'clone' && userId) {
+    // `!opts.persona` is load-bearing. This branch returns before the persona
+    // branch below, so without it a request carrying BOTH persona_id and
+    // mode:'clone' would skip the can_use_profile gate entirely and receive the
+    // vault anyway — the tool filter strips the readers, this used to hand over
+    // the contents. The genuine self-clone path sends no persona_id.
+    if (opts.mode === 'clone' && userId && !opts.persona) {
         const cstack = [
             { role: 'system', content: await buildSelfCloneCard(userId) },
             { role: 'system', content: CARE_AND_SAFETY_TEXT },
