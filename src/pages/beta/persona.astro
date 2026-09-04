@@ -613,11 +613,11 @@ import AppLayout from '../../layouts/AppLayout.astro';
       }
     }
 
-    // ── Voice: the self-hosted OmniVoice engine (Modal GPU), called directly from the
-    // browser. OmniVoice is multilingual and clones the user's voice cross-lingually,
-    // but the engine REQUIRES a `language` field per request (see detectLang below). ──
-    const SVARA_URL = 'https://ceo-91462--voice-infer-fastapi-app.modal.run';
-    let svaraWarm = false;
+    // ── Voice: synthesis goes through the JWT-gated backend proxy
+    // (POST /api/voice-clone/speak), never straight to the GPU. The proxy selects the
+    // reference clip SERVER-side from the caller's own consented clips, so a client
+    // structurally cannot ask the engine to clone an arbitrary voice (SEC-001). It also
+    // degrades fine-tuned -> zero-shot -> preset by itself, so nothing is warmed here. ──
     let audioUnlocked = false;
     function unlockAudio() {
       if (audioUnlocked) return;
@@ -629,26 +629,13 @@ import AppLayout from '../../layouts/AppLayout.astro';
         else audioUnlocked = true;
       } catch (e) {}
     }
-    function svaraWarmPing() {
-      try { fetch(SVARA_URL + '/health', { mode: 'no-cors', cache: 'no-store' }); } catch (e) {}
-    }
-    async function svaraReady() {
-      try { const r = await fetch(SVARA_URL + '/health', { cache: 'no-store' }); return r.ok; }
-      catch (e) { return false; }
-    }
-    async function ensureWarm(status) {
-      if (svaraWarm) return true;
-      svaraWarmPing();
-      // Cap the wait at ~48s (was 5 min): a cold GPU warms in ~30s, but if it's
-      // down we must NOT hang the chat — the text reply is already shown and voice
-      // is supplementary, so fail fast to the honest "voice unavailable" fallback.
-      for (let i = 0; i < 12; i++) {
-        if (await svaraReady()) { svaraWarm = true; return true; }
-        if (status) status.textContent = '🔊 warming up your voice (first time, ~30s)…';
-        await new Promise((r) => setTimeout(r, 4000));
-      }
-      return false;
-    }
+    // The engine's lifecycle now belongs to the backend: /speak warms it on first use
+    // and ALWAYS answers, falling back to the preset voice rather than failing cold.
+    // So there is no client-visible warm-up left. These stay as no-ops so the six call
+    // sites below read unchanged, and because returning true is now the honest answer —
+    // voice is never "unavailable", it is at worst the preset voice.
+    function svaraWarmPing() { /* no-op: the proxy owns engine lifecycle */ }
+    async function ensureWarm(status) { return true; }
     // Fetch the user's best saved reference clip (base64) so the engine speaks in THEIR
     // voice. The engine clones cross-lingually; synthSentence supplies the language code.
     const refCache = {};
@@ -701,15 +688,22 @@ import AppLayout from '../../layouts/AppLayout.astro';
           }
         } catch { /* fall through */ }
       }
-      const ref = await getUserRef().catch(() => null);
+      // SEC-001: one authenticated call. The proxy chooses the reference clip from the
+      // caller's OWN consented clips and degrades fine-tuned -> zero-shot -> preset, so
+      // the client no longer carries reference audio and no longer knows the GPU's host.
+      if (!session || !session.token) return null;
       const language = detectLang(text);
-      const body = { text, language, mode: (ref && ref.b64) ? 'clone' : 'preset', format: 'mp3' };
-      if (ref && ref.b64) { body.reference_base64 = ref.b64; body.reference_transcript = ref.transcript; }
-      const synth = (b) => fetch(SVARA_URL + '/synthesize', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(b) });
-      let res = await synth(body).catch(() => null);
-      if ((!res || !res.ok) && body.mode === 'clone') res = await synth({ text, language, mode: 'preset', format: 'mp3' }).catch(() => null);
-      if (!res || !res.ok) return null;
-      return await res.blob();
+      try {
+        const r = await fetch(API + '/api/voice-clone/speak', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + session.token },
+          body: JSON.stringify({ text, language }),
+        });
+        if (!r.ok) return null;
+        const d = ((await r.json()) || {}).data || {};
+        if (!d.audio_base64) return null;
+        return b64ToBlob(d.audio_base64, d.mime_type || 'audio/mpeg');
+      } catch { return null; }
     }
 
     // Hands-free voice input — browser STT in the user's own locale (no language picker).
