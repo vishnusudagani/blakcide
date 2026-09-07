@@ -365,6 +365,39 @@ export const VOICE_TOOL_DEFS = [
     FETCH_SOFT_INSIGHT_TOOL_DEF,
 ];
 
+// ── Fantasy-persona tool scoping ────────────────────────────────────────────
+// A fantasy persona is its OWN character, not the Blak companion. It must NOT
+// get Blak-companion mechanics (swap_persona / set_persona_fact write the user's
+// Blak state; escalate_to_human / suggest_switch_to_text fire Blak UI cards), and
+// the two VAULT-READING tools (search_vault, fetch_soft_insight) must obey the
+// persona's `can_use_profile` consent — mirroring the prompt-layer gate in
+// system-prompt.mjs (buildChatSystemStack / buildInstructionsText). Without this,
+// a persona set to can_use_profile=false — including EVERY shared/guest chat,
+// where it is forced false — could still pull the user's private journals via a
+// tool call, bypassing the consent the prompt layer already honors.
+const PERSONA_SAFE_TOOLS    = new Set(['get_live_context', 'search_web']);
+const PERSONA_PROFILE_TOOLS = new Set(['search_vault', 'fetch_soft_insight']);
+
+/**
+ * Narrow a base tool set for a fantasy-persona chat/call. Non-persona (Blak /
+ * clone) paths are unchanged. FILTERS (never replaces) so an already-reduced set
+ * — e.g. the Groq-floor `[]` — stays reduced.
+ *
+ * @param {Object|null} persona   — the fantasy persona, or null for Blak/clone
+ * @param {Array}       baseTools — the tool set to narrow (defaults to TOOL_DEFS)
+ * @returns {Array}
+ */
+export function toolsForPersona(persona, baseTools = TOOL_DEFS) {
+    if (!persona) return baseTools;                         // Blak / clone: unchanged
+    const allowProfile = persona.can_use_profile === true;  // strict: undefined ≠ allowed
+    return baseTools.filter((t) => {
+        const name = t?.function?.name;
+        if (PERSONA_SAFE_TOOLS.has(name))    return true;
+        if (PERSONA_PROFILE_TOOLS.has(name)) return allowProfile;
+        return false;
+    });
+}
+
 const EXECUTORS = {
     search_vault:           execSearchVault,
     get_live_context:       execGetLiveContext,

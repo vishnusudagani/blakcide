@@ -85,6 +85,11 @@ export async function runStreamingChatWithTools(opts) {
     let preferred = candidates[0];
 
     const hasTools = Array.isArray(tools) && tools.length > 0;
+    // Only tools we actually OFFERED this call may be executed. Withholding a tool
+    // from `tools` (e.g. a fantasy persona that isn't allowed the vault-readers —
+    // see toolsForPersona) must also prevent an open model from *invoking* it by
+    // emitting the name anyway. Defense-in-depth for the tool-layer consent gate.
+    const offeredToolNames = new Set((Array.isArray(tools) ? tools : []).map(t => t?.function?.name).filter(Boolean));
 
     // Stream a single completion round against the current `messages`. Forwards
     // content deltas to the client as they arrive. Returns the round outcome.
@@ -252,10 +257,15 @@ export async function runStreamingChatWithTools(opts) {
             try { parsedArgs = JSON.parse(tc.argsBuf || '{}'); } catch (_) { parsedArgs = {}; }
 
             // Never let a throwing tool kill the stream — feed the error back so
-            // the model can recover and still answer.
+            // the model can recover and still answer. Reject any tool that wasn't
+            // offered this call (a withheld/hallucinated name) before it can run.
             let result;
-            try { result = await executeTool(tc.name, parsedArgs, toolCtx); }
-            catch (e) { result = `tool_error: ${e?.message || e}`; }
+            if (!offeredToolNames.has(tc.name)) {
+                result = `tool_error: "${tc.name}" is not available.`;
+            } else {
+                try { result = await executeTool(tc.name, parsedArgs, toolCtx); }
+                catch (e) { result = `tool_error: ${e?.message || e}`; }
+            }
 
             // Side-channel meta event so the frontend can render a UI card.
             if (META_TOOLS.has(tc.name)) {
